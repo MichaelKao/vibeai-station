@@ -29,6 +29,20 @@ export const SEXES = ['男生','女生'];
 export const CITIES = ['基隆','台北','新北','桃園','新竹','苗栗','台中','彰化','南投',
   '雲林','嘉義','台南','高雄','屏東','宜蘭','花蓮','台東','澎湖','金門','馬祖','海外'];
 
+/** 版面樣式（無名的「網誌樣式」）。auto = 相簿橘／網誌藍，跟原站預設一致。 */
+export const THEMES = [
+  { id:'',        name:'預設（相簿橘／網誌藍）', sw1:'#DE750B', sw2:'#326EC8' },
+  { id:'orange',  name:'經典橘',   sw1:'#E48A41', sw2:'#FFD196' },
+  { id:'blue',    name:'經典藍',   sw1:'#447AC4', sw2:'#8AB9F4' },
+  { id:'pink',    name:'甜心粉',   sw1:'#C94F7C', sw2:'#FBD7E4' },
+  { id:'green',   name:'草地綠',   sw1:'#4E8B3B', sw2:'#D8EEC4' },
+  { id:'purple',  name:'夢幻紫',   sw1:'#6B4E9B', sw2:'#DCD2F0' },
+  { id:'black',   name:'酷炫黑',   sw1:'#333333', sw2:'#555555' },
+  { id:'cyan',    name:'海洋藍',   sw1:'#1E7C8C', sw2:'#CFECF1' },
+  { id:'brown',   name:'咖啡棕',   sw1:'#6B4A2F', sw2:'#E6D5C3' },
+];
+export const isTheme = t => THEMES.some(x => x.id === t);
+
 export const isAlbumTopic = t => ALBUM_TOPICS.includes(t);
 export const isBlogTopic  = t => BLOG_TOPICS.includes(t);
 export const isPlace      = p => PLACES.includes(p);

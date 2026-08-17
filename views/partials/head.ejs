@@ -2,7 +2,7 @@
 <title><%= title %> - vibeai 小站</title><link rel="stylesheet" href="/style.css">
 <% if (u && u.css) { %><style><%- u.css.replace(/<\/style/gi,'') %></style><% } %></head>
 <%# 相簿頁走橘色主題、網誌頁走藍色主題，個人小站頁固定 700px（同無名） %>
-<body class="<%= u?'personal':'' %> <%= nav==='album'?'t-album':(nav==='blog'?'t-blog':'') %>">
+<body class="<%= u?'personal':'' %> <%= (u&&u.theme) ? ('t-x-'+u.theme) : (nav==='album'?'t-album':(nav==='blog'?'t-blog':'')) %>">
 <div id="topbar"><a href="/">vibeai 小站</a><a href="/albums">相簿</a><a href="/blogs">網誌</a><a href="/rank">排行榜</a><a href="/search">搜尋</a><a href="/help">服務說明</a>
 <span style="float:right"><% if (me) { %>您好，<a href="/<%= me.name %>"><b><%= me.nick %></b></a>！<a href="/<%= me.name %>/settings">個人設定</a><% if (me.admin) { %><a href="/admin">後台</a><% } %><form method="post" action="/logout" style="display:inline"><button class="lnk">登出</button></form><% } else { %>您還沒登入喔　<a href="/login">會員登入</a><a href="/register"><b class="orange">免費註冊</b></a><% } %></span></div>
 <div id="wrap">

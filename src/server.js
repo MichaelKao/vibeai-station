@@ -6,7 +6,7 @@ import { one, all, run } from './db.js';
 import { hash, salt, check, requireLogin, requireOwner } from './auth.js';
 import { save, remove, hasR2, diskFree } from './storage.js';
 import { UPLOAD_DIR } from './paths.js';
-import { ALBUM_TOPICS, BLOG_TOPICS, PLACES, MOODS, WEATHERS, ZODIACS, BLOODS, SEXES, CITIES, isAlbumTopic, isBlogTopic, isPlace } from './taxonomy.js';
+import { ALBUM_TOPICS, BLOG_TOPICS, PLACES, MOODS, WEATHERS, ZODIACS, BLOODS, SEXES, CITIES, THEMES, isAlbumTopic, isBlogTopic, isPlace, isTheme } from './taxonomy.js';
 
 const app = express();
 app.set('view engine','ejs'); app.set('views', path.resolve('views'));
@@ -223,11 +223,11 @@ site.get('/',(req,res)=>{
     gb:all("SELECT * FROM guestbook WHERE user_id=? AND secret=0 ORDER BY id DESC LIMIT 3",u.id)});
 });
 // 個人設定
-site.get('/settings',requireLogin,requireOwner,(req,res)=>res.render('settings',{nav:'user'}));
+site.get('/settings',requireLogin,requireOwner,(req,res)=>res.render('settings',{nav:'user',themes:THEMES}));
 site.post('/settings',requireLogin,requireOwner,upload.single('avatar'),async(req,res)=>{
   const {nick,intro,music,css,pass,pass2}=req.body, u=U(res);
   let avatar=u.avatar; if(req.file){ const s=await save(req.file); avatar=s.thumb; await remove(u.avatar); }
-  run('UPDATE users SET nick=?,intro=?,music=?,css=?,avatar=? WHERE id=?',(nick||u.nick).trim().slice(0,20),(intro||'').slice(0,500),cleanMusic(music),(css||'').slice(0,20000),avatar,u.id);
+  run('UPDATE users SET nick=?,intro=?,music=?,css=?,avatar=?,theme=? WHERE id=?',(nick||u.nick).trim().slice(0,20),(intro||'').slice(0,500),cleanMusic(music),(css||'').slice(0,20000),avatar,isTheme(req.body.theme)?req.body.theme:'',u.id);
   if(pass){ if(pass!==pass2) {flash(req,'兩次密碼不一致，其他設定已儲存');return res.redirect(`/${u.name}/settings`);} const s=salt(); run('UPDATE users SET pass=?,salt=? WHERE id=?',hash(pass,s),s,u.id); }
   flash(req,'設定已儲存'); res.redirect(`/${u.name}/settings`);
 });

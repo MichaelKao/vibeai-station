@@ -233,3 +233,75 @@ table.grid3 td{ width:120px; vertical-align:top; text-align:center; }
 /* 網誌日期分隔（無名的 .datediv） */
 .datediv{ font-weight:bold; padding:6px 0 2px; border-bottom:1px solid #ccc; margin-top:6px; }
 body.t-blog .datediv{ color:#D9E7FA; border-color:#326EC8; }
+
+/* =====================================================================
+   使用者可選版面樣式（無名的「網誌樣式」）
+   每個主題只需要定義四個色：底色 / 內容區 / 標題條 / 文字，其餘沿用相同結構
+   ===================================================================== */
+body[class*="t-x-"] #wrap{ padding:0 5px; }
+body[class*="t-x-"] .box h3{ letter-spacing:3px; text-align:center; font-weight:bold; border-color:#fff; }
+body[class*="t-x-"] .box h3 span{ letter-spacing:0; font-weight:normal; }
+body[class*="t-x-"] .btn{ background:#fff; border-color:#222; color:#222; }
+body[class*="t-x-"] .tabs a{ border-color:#fff; }
+
+.t-x-orange{ background:#E48A41; color:#894500; }
+.t-x-orange #wrap,.t-x-orange .box,.t-x-orange .box .in{ background:#FFD196; }
+.t-x-orange .box{ border-color:#DE750B; } .t-x-orange .box h3,.t-x-orange #header,.t-x-orange #nav,.t-x-orange .tabs a{ background:#DE750B; color:#fff; }
+.t-x-orange a,.t-x-orange .entry h4 a{ color:#774004; } .t-x-orange .gray{ color:#A96B1A; }
+.t-x-orange #nav a:hover,.t-x-orange #nav a.on,.t-x-orange .tabs a.on{ background:#894500; color:#fff; }
+.t-x-orange #footer{ color:#894500; }
+
+.t-x-blue{ background:#447AC4; color:#326EC8; }
+.t-x-blue #wrap,.t-x-blue .box,.t-x-blue .box .in{ background:#8AB9F4; }
+.t-x-blue .box{ border-color:#326EC8; } .t-x-blue .box h3,.t-x-blue #header,.t-x-blue #nav,.t-x-blue .tabs a{ background:#326EC8; color:#D9E7FA; }
+.t-x-blue a,.t-x-blue .entry h4 a{ color:#092D5E; } .t-x-blue .gray{ color:#31589a; }
+.t-x-blue #nav a:hover,.t-x-blue #nav a.on,.t-x-blue .tabs a.on{ background:#092D5E; color:#fff; }
+.t-x-blue #footer{ color:#D9E7FA; }
+
+.t-x-pink{ background:#C94F7C; color:#7A2144; }
+.t-x-pink #wrap,.t-x-pink .box,.t-x-pink .box .in{ background:#FBD7E4; }
+.t-x-pink .box{ border-color:#C94F7C; } .t-x-pink .box h3,.t-x-pink #header,.t-x-pink #nav,.t-x-pink .tabs a{ background:#C94F7C; color:#fff; }
+.t-x-pink a,.t-x-pink .entry h4 a{ color:#992B57; } .t-x-pink .gray{ color:#a4637d; }
+.t-x-pink #nav a:hover,.t-x-pink #nav a.on,.t-x-pink .tabs a.on{ background:#7A2144; color:#fff; }
+.t-x-pink #footer{ color:#7A2144; }
+
+.t-x-green{ background:#4E8B3B; color:#2C5121; }
+.t-x-green #wrap,.t-x-green .box,.t-x-green .box .in{ background:#D8EEC4; }
+.t-x-green .box{ border-color:#4E8B3B; } .t-x-green .box h3,.t-x-green #header,.t-x-green #nav,.t-x-green .tabs a{ background:#4E8B3B; color:#fff; }
+.t-x-green a,.t-x-green .entry h4 a{ color:#2C5121; } .t-x-green .gray{ color:#5f7a4e; }
+.t-x-green #nav a:hover,.t-x-green #nav a.on,.t-x-green .tabs a.on{ background:#2C5121; color:#fff; }
+.t-x-green #footer{ color:#2C5121; }
+
+.t-x-purple{ background:#6B4E9B; color:#3D2A5E; }
+.t-x-purple #wrap,.t-x-purple .box,.t-x-purple .box .in{ background:#DCD2F0; }
+.t-x-purple .box{ border-color:#6B4E9B; } .t-x-purple .box h3,.t-x-purple #header,.t-x-purple #nav,.t-x-purple .tabs a{ background:#6B4E9B; color:#fff; }
+.t-x-purple a,.t-x-purple .entry h4 a{ color:#4A3272; } .t-x-purple .gray{ color:#6d5f8a; }
+.t-x-purple #nav a:hover,.t-x-purple #nav a.on,.t-x-purple .tabs a.on{ background:#3D2A5E; color:#fff; }
+.t-x-purple #footer{ color:#3D2A5E; }
+
+.t-x-black{ background:#222; color:#ddd; }
+.t-x-black #wrap,.t-x-black .box,.t-x-black .box .in{ background:#3a3a3a; }
+.t-x-black .box{ border-color:#555; } .t-x-black .box h3,.t-x-black #header,.t-x-black #nav,.t-x-black .tabs a{ background:#555; color:#fff; }
+.t-x-black a,.t-x-black .entry h4 a{ color:#8fd0ff; } .t-x-black .gray{ color:#aaa; }
+.t-x-black #nav a:hover,.t-x-black #nav a.on,.t-x-black .tabs a.on{ background:#000; color:#fff; }
+.t-x-black #footer{ color:#aaa; } .t-x-black .entry{ border-color:#555; } .t-x-black .msg{ border-color:#555; }
+
+.t-x-cyan{ background:#1E7C8C; color:#0D4A55; }
+.t-x-cyan #wrap,.t-x-cyan .box,.t-x-cyan .box .in{ background:#CFECF1; }
+.t-x-cyan .box{ border-color:#1E7C8C; } .t-x-cyan .box h3,.t-x-cyan #header,.t-x-cyan #nav,.t-x-cyan .tabs a{ background:#1E7C8C; color:#fff; }
+.t-x-cyan a,.t-x-cyan .entry h4 a{ color:#0D4A55; } .t-x-cyan .gray{ color:#4d7a82; }
+.t-x-cyan #nav a:hover,.t-x-cyan #nav a.on,.t-x-cyan .tabs a.on{ background:#0D4A55; color:#fff; }
+.t-x-cyan #footer{ color:#0D4A55; }
+
+.t-x-brown{ background:#6B4A2F; color:#4A3220; }
+.t-x-brown #wrap,.t-x-brown .box,.t-x-brown .box .in{ background:#E6D5C3; }
+.t-x-brown .box{ border-color:#6B4A2F; } .t-x-brown .box h3,.t-x-brown #header,.t-x-brown #nav,.t-x-brown .tabs a{ background:#6B4A2F; color:#fff; }
+.t-x-brown a,.t-x-brown .entry h4 a{ color:#4A3220; } .t-x-brown .gray{ color:#7c6650; }
+.t-x-brown #nav a:hover,.t-x-brown #nav a.on,.t-x-brown .tabs a.on{ background:#4A3220; color:#fff; }
+.t-x-brown #footer{ color:#4A3220; }
+
+/* 樣式選擇器 */
+.themepick a{ display:inline-block; width:96px; margin:4px; text-align:center; font-size:11px; border:2px solid transparent; padding:2px; }
+.themepick a.on{ border-color:#e36511; }
+.themepick .sw{ height:26px; border:1px solid #999; }
+.themepick .sw i{ display:block; height:13px; }

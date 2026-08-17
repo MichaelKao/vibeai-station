@@ -50,6 +50,8 @@ try { db.exec("ALTER TABLE comments ADD COLUMN homepage TEXT DEFAULT ''"); } cat
 try { db.exec("ALTER TABLE comments ADD COLUMN reply TEXT DEFAULT ''"); } catch {}
 // 留言板：主題欄位；系統訊息與檢舉
 try { db.exec("ALTER TABLE guestbook ADD COLUMN subject TEXT DEFAULT ''"); } catch {}
+// 版面樣式（無名的「網誌樣式」）
+try { db.exec("ALTER TABLE users ADD COLUMN theme TEXT DEFAULT ''"); } catch {}
 
 export const q = (sql)=>db.prepare(sql);
 export const one=(sql,...a)=>db.prepare(sql).get(...a);
