@@ -23,7 +23,7 @@
 <tr><td>內容：</td><td><textarea name="body" cols="50" rows="4" maxlength="500" required></textarea></td></tr>
 <tr><td></td><td><label><input type="checkbox" name="secret"> 悄悄話（只有板主看得到）</label> <input type="submit" class="btn" value="送出留言"></td></tr></table></form></div></div>
 
-<div class="box"><h3>留言板 <span>共 <%= msgs.length %> 則</span></h3><div class="in">
+<div class="box"><h3>留言板 <span>共 <%= total %> 則</span></h3><div class="in">
 <table class="grid gbhead"><tr><th width="28%">標題</th><th width="18%">來自</th><th>內容</th><th width="14%">回覆</th></tr></table>
 <% if(!msgs.length){ %><span class="gray">還沒有留言</span><% } %>
 <% msgs.forEach(m=>{ %>

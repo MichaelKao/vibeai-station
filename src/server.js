@@ -511,11 +511,11 @@ site.get('/guestbook',(req,res)=>{
     if(!res.locals.isOwner) return res.status(403).render('msg',{title:'沒有權限',msg:'系統訊息只有本人看得到',back:`/${U(res).name}/guestbook`});
     const total=one('SELECT count(*) c FROM sysmsg WHERE user_id=?',U(res).id).c;
     run('UPDATE sysmsg SET seen=1 WHERE user_id=?',U(res).id);
-    return res.render('guestbook',{nav:'gb',tab,page,pages:Math.ceil(total/per),msgs:[],
+    return res.render('guestbook',{nav:'gb',tab,page,pages:Math.ceil(total/per),total,msgs:[],
       sys:all('SELECT * FROM sysmsg WHERE user_id=? ORDER BY id DESC LIMIT ? OFFSET ?',U(res).id,per,(page-1)*per),unread:0});
   }
   const total=one('SELECT count(*) c FROM guestbook WHERE user_id=?',U(res).id).c;
-  res.render('guestbook',{nav:'gb',tab,page,pages:Math.ceil(total/per),sys:[],
+  res.render('guestbook',{nav:'gb',tab,page,pages:Math.ceil(total/per),total,sys:[],
     unread: res.locals.isOwner ? one('SELECT count(*) c FROM sysmsg WHERE user_id=? AND seen=0',U(res).id).c : 0,
     msgs:all('SELECT * FROM guestbook WHERE user_id=? ORDER BY id DESC LIMIT ? OFFSET ?',U(res).id,per,(page-1)*per)}); });
 site.post('/guestbook',(req,res)=>{ const {author,subject,body,secret}=req.body; const who=res.locals.me?.nick||author;

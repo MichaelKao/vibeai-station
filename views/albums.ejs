@@ -13,7 +13,7 @@
 
 <div class="box"><h3><%= topic||'全部相簿' %><%= place?' ・ '+place:'' %></h3><div class="in">
 <% if(!albums.length){ %><span class="gray">這個分類還沒有相簿</span><% } %>
-<% albums.forEach(a=>{ %><div class="thumb"><a href="/<%= a.uname %>/album/<%= a.id %>"><img src="<%= a.cover %>" alt=""></a>
+<% albums.forEach(a=>{ %><div class="thumb albums-grid"><a href="/<%= a.uname %>/album/<%= a.id %>"><img src="<%= a.cover %>" alt=""></a>
 <div class="cap"><a href="/<%= a.uname %>/album/<%= a.id %>"><%= a.title %></a><br><span class="gray"><%= a.nick %><br><%= a.n %>張照片</span></div></div><% }) %>
 <div class="clear"></div>
 <%- include('partials/pager') %>

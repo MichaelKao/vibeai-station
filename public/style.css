@@ -318,3 +318,5 @@ body[class*="t-x-"] .tabs a{ border-color:#fff; }
 img.inpost{ max-width:100%; margin:4px 0; }
 .mystat{ font-size:12px; }
 .mystat .motto{ margin-top:3px; font-style:italic; }
+/* 相簿總站的格子要放三行（相簿名 / 帳號 / 張數） */
+.albums-grid .cap{ height:auto; min-height:52px; line-height:1.4; }
