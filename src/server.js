@@ -144,6 +144,15 @@ site.post('/settings',requireLogin,requireOwner,upload.single('avatar'),async(re
   if(pass){ if(pass!==pass2) {flash(req,'兩次密碼不一致，其他設定已儲存');return res.redirect(`/${u.name}/settings`);} const s=salt(); run('UPDATE users SET pass=?,salt=? WHERE id=?',hash(pass,s),s,u.id); }
   flash(req,'設定已儲存'); res.redirect(`/${u.name}/settings`);
 });
+// 刪除自己的帳號（需再次輸入密碼），連同照片一起清掉
+site.post('/settings/delete',requireLogin,requireOwner,async(req,res)=>{
+  const u=one('SELECT * FROM users WHERE id=?',U(res).id);
+  if(!check(u,req.body.pass||'')){ flash(req,'密碼錯誤，帳號未刪除'); return res.redirect(`/${u.name}/settings`); }
+  for(const p of all('SELECT p.url FROM photos p JOIN albums a ON a.id=p.album_id WHERE a.user_id=?',u.id)) await remove(p.url);
+  if(u.avatar && u.avatar!=='/img/avatar.png') await remove(u.avatar);
+  run('DELETE FROM users WHERE id=?',u.id);
+  req.session.destroy(()=>res.redirect('/'));
+});
 // 好友
 site.post('/friend',requireLogin,(req,res)=>{ const me=res.locals.me.id,u=U(res).id; if(me!==u){ if(isFriend(me,u)) run('DELETE FROM friends WHERE user_id=? AND friend_id=?',me,u); else run("INSERT OR IGNORE INTO friends(user_id,friend_id) VALUES(?,?)",me,u);} res.redirect('/'+U(res).name); });
 site.get('/friends',(req,res)=>res.render('friends',{nav:'user',friends:all('SELECT u.name,u.nick,u.avatar,u.intro FROM friends f JOIN users u ON u.id=f.friend_id WHERE f.user_id=? ORDER BY f.created DESC',U(res).id),fans:all('SELECT u.name,u.nick,u.avatar FROM friends f JOIN users u ON u.id=f.user_id WHERE f.friend_id=? ORDER BY f.created DESC',U(res).id)}));

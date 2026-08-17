@@ -9,5 +9,9 @@
 <tr><td>自訂樣式</td><td><textarea name="css" cols="60" rows="8" maxlength="20000" placeholder="/* 你的小站專屬 CSS，例如 */&#10;body{background:#000 url(...)}&#10;.box h3{background:#f9c}"><%= u.css %></textarea><br><span class="gray">會套在你的每一頁上。玩壞了清空即可復原。</span></td></tr>
 <tr><td>新密碼</td><td><input name="pass" type="password" size="12"> 再輸入一次 <input name="pass2" type="password" size="12"> <span class="gray">不改請留空</span></td></tr>
 <tr><td></td><td><input type="submit" class="btn" value="儲存設定"></td></tr></table></form></div></div>
+<div class="box"><h3>刪除帳號</h3><div class="in">
+<span class="gray">刪除後你的相簿、照片、網誌、留言板都會一起消失，無法復原。</span>
+<form method="post" action="/<%= u.name %>/settings/delete" onsubmit="return confirm('真的要刪除帳號嗎？所有內容都會消失，無法復原。')" style="margin-top:4px">
+輸入密碼確認：<input name="pass" type="password" size="14" required> <button class="btn red">永久刪除我的帳號</button></form></div></div>
 </td><%- include('partials/side') %></tr></table>
 <%- include('partials/foot') %>
