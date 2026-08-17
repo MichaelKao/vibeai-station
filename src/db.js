@@ -12,6 +12,8 @@ CREATE TABLE IF NOT EXISTS trackbacks(id INTEGER PRIMARY KEY, post_id INTEGER RE
 CREATE TABLE IF NOT EXISTS guestbook(id INTEGER PRIMARY KEY, user_id INTEGER REFERENCES users(id) ON DELETE CASCADE, author TEXT, body TEXT, secret INTEGER DEFAULT 0, reply TEXT DEFAULT '', created TEXT DEFAULT (datetime('now','localtime')));
 CREATE TABLE IF NOT EXISTS visitors(id INTEGER PRIMARY KEY, user_id INTEGER REFERENCES users(id) ON DELETE CASCADE, who TEXT, created TEXT DEFAULT (datetime('now','localtime')));
 CREATE TABLE IF NOT EXISTS friends(user_id INTEGER, friend_id INTEGER, created TEXT DEFAULT (datetime('now','localtime')), PRIMARY KEY(user_id,friend_id));
+CREATE TABLE IF NOT EXISTS favs(user_id INTEGER REFERENCES users(id) ON DELETE CASCADE, post_id INTEGER REFERENCES posts(id) ON DELETE CASCADE, created TEXT DEFAULT (datetime('now','localtime')), PRIMARY KEY(user_id,post_id));
+CREATE TABLE IF NOT EXISTS acts(id INTEGER PRIMARY KEY, user_id INTEGER REFERENCES users(id) ON DELETE CASCADE, kind TEXT, title TEXT, url TEXT, created TEXT DEFAULT (datetime('now','localtime')));
 CREATE TABLE IF NOT EXISTS sysmsg(id INTEGER PRIMARY KEY, user_id INTEGER REFERENCES users(id) ON DELETE CASCADE, title TEXT, body TEXT, seen INTEGER DEFAULT 0, created TEXT DEFAULT (datetime('now','localtime')));
 CREATE TABLE IF NOT EXISTS reports(id INTEGER PRIMARY KEY, kind TEXT, target_id INTEGER, url TEXT, reason TEXT, reporter TEXT, done INTEGER DEFAULT 0, created TEXT DEFAULT (datetime('now','localtime')));
 CREATE TABLE IF NOT EXISTS notices(id INTEGER PRIMARY KEY, body TEXT, created TEXT DEFAULT (datetime('now','localtime')));

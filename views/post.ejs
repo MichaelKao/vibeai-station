@@ -2,7 +2,7 @@
 <table id="main"><tr><td>
 <div class="box"><h3><a href="/<%= u.name %>/blog">網誌</a> &raquo; <%= post.category %></h3><div class="in">
 <div class="entry" style="border:0"><h4><%= post.title %></h4><div class="meta"><%= post.created %> ｜ 人氣：<%= post.views %> ｜ 推薦：<%= post.likes %><% if(post.mood){ %> ｜ 心情：<%= post.mood %><% } %><% if(post.weather){ %> ｜ 天氣：<%= post.weather %><% } %></div><div class="body"><%= post.body %></div>
-<div class="meta"><form method="post" action="/<%= u.name %>/blog/<%= post.id %>/like" style="display:inline"><button class="lnk">推薦</button></form>｜ <% if(me && !isOwner){ %><form method="post" action="/<%= u.name %>/blog/<%= post.id %>/trackback" style="display:inline"><button class="lnk">引用到我的網誌</button></form>｜ <% } %><% if(isOwner){ %><a href="/<%= u.name %>/blog/<%= post.id %>/edit">編輯</a> ｜ <form method="post" action="/<%= u.name %>/blog/<%= post.id %>/del" style="display:inline" onsubmit="return confirm('刪除這篇文章？')"><button class="lnk">刪除</button></form><% } %></div></div>
+<div class="meta"><form method="post" action="/<%= u.name %>/blog/<%= post.id %>/like" style="display:inline"><button class="lnk">推薦</button></form>｜ <% if(me){ %><form method="post" action="/<%= u.name %>/blog/<%= post.id %>/fav" style="display:inline"><button class="lnk"><%= faved?"取消收藏":"收藏" %><% if(favN){ %>(<%= favN %>)<% } %></button></form>｜ <% } %><a href="#" class="reportlink" data-kind="post" data-id="<%= post.id %>">檢舉</a>｜ <% if(me && !isOwner){ %><form method="post" action="/<%= u.name %>/blog/<%= post.id %>/trackback" style="display:inline"><button class="lnk">引用到我的網誌</button></form>｜ <% } %><% if(isOwner){ %><a href="/<%= u.name %>/blog/<%= post.id %>/edit">編輯</a> ｜ <form method="post" action="/<%= u.name %>/blog/<%= post.id %>/del" style="display:inline" onsubmit="return confirm('刪除這篇文章？')"><button class="lnk">刪除</button></form><% } %></div></div>
 <div class="gray" style="margin-top:8px"><% if(prev){ %>« <a href="/<%= u.name %>/blog/<%= prev.id %>"><%= prev.title %></a><% } %><span style="float:right"><% if(next){ %><a href="/<%= u.name %>/blog/<%= next.id %>"><%= next.title %></a> »<% } %></span></div>
 </div></div>
 <% if(trackbacks.length){ %><div class="box"><h3>引用 <span><%= trackbacks.length %></span></h3><div class="in"><% trackbacks.forEach(t=>{ %><div>↳ <a href="/<%= t.uname %>/blog/<%= t.pid %>"><%= t.title %></a> <span class="gray"><%= t.created.slice(0,10) %></span></div><% }) %></div></div><% } %>
@@ -19,4 +19,22 @@
 <tr><td>迴響內容<br><span class="gray" style="font-size:10px">（最多1000字）</span></td><td><textarea name="body" cols="55" rows="5" maxlength="1000" required></textarea></td></tr>
 <tr><td></td><td><input type="submit" class="btn" value="送出"></td></tr></table></form></div></div>
 </td><%- include('partials/blogside') %></tr></table>
+<div id="reportbox" style="display:none">
+<div class="box" style="width:420px;margin:10px auto"><h3>檢舉</h3><div class="in">
+<form method="post" action="/report">
+<input type="hidden" name="kind" id="rkind"><input type="hidden" name="target" id="rtarget">
+<input type="hidden" name="url" value="/<%= u.name %>/blog/<%= post.id %>">
+請說明檢舉原因：<br><textarea name="reason" cols="45" rows="3" maxlength="500" required></textarea><br>
+<button class="btn">送出檢舉</button> <button type="button" class="btn" id="rcancel">取消</button>
+</form></div></div></div>
+<script>
+document.addEventListener('click',function(e){
+  var a=e.target.closest('.reportlink');
+  if(a){ e.preventDefault();
+    document.getElementById('rkind').value=a.getAttribute('data-kind');
+    document.getElementById('rtarget').value=a.getAttribute('data-id');
+    var b=document.getElementById('reportbox'); b.style.display='block'; b.scrollIntoView({behavior:'smooth'}); }
+  if(e.target.id==='rcancel'){ document.getElementById('reportbox').style.display='none'; }
+});
+</script>
 <%- include('partials/foot') %>

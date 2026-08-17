@@ -1,0 +1,11 @@
+<%- include('partials/head',{title:u.nick+'的收藏'}) %>
+<table id="main"><tr><td>
+<div class="box"><h3><%= u.nick %> 收藏的文章 <span>共 <%= favs.length %> 篇</span></h3><div class="in">
+<% if(!favs.length){ %><span class="gray">還沒有收藏任何文章。看到喜歡的文章可以按「收藏」。</span><% } %>
+<ul class="list">
+<% favs.forEach(f=>{ %><li><a href="/<%= f.uname %>/blog/<%= f.id %>"><%= f.title %></a>
+  <span class="gray">— <a href="/<%= f.uname %>"><%= f.nick %></a> ・ <%= f.created.slice(0,10) %></span></li><% }) %>
+</ul>
+</div></div>
+</td><%- include('partials/side',{visitors,friends}) %></tr></table>
+<%- include('partials/foot') %>

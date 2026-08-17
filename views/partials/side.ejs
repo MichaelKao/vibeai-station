@@ -6,7 +6,7 @@
 <div class="hits">累積人氣：<span class="counter"><%= String(u.visits).padStart(6,'0') %></span></div>
 <div class="gray">加入日期：<%= u.created.slice(0,10) %></div>
 <% if (me && !isOwner) { %><form method="post" action="/<%= u.name %>/friend"><button class="btn"><%= isFriend?'取消好友':'加為好友' %></button></form><% } %>
-<% if (isOwner) { %><a href="/<%= u.name %>/settings">修改資料</a><% } %></div></div>
+<% if (isOwner) { %><a href="/<%= u.name %>/settings">修改資料</a><br><a href="/<%= u.name %>/feed">好友動態</a> ｜ <a href="/<%= u.name %>/favs">我的收藏</a><% } else { %><br><a href="/<%= u.name %>/favs">TA的收藏</a><% } %></div></div>
 <% if (typeof visitors!=='undefined') { %><div class="box"><h3>誰來我家</h3><div class="in"><% if(!visitors.length){ %><span class="gray">還沒有人來過…</span><% } visitors.forEach(v=>{ %><div><a href="/<%= v.who %>"><%= v.who %></a> <span class="gray"><%= v.created.slice(5,16) %></span></div><% }) %></div></div><% } %>
 <% if (typeof friends!=='undefined') { %><div class="box"><h3>好友連結 <span><a href="/<%= u.name %>/friends">全部</a></span></h3><div class="in"><ul class="list"><% friends.forEach(f=>{ %><li><a href="/<%= f.name %>"><%= f.nick %></a></li><% }) %><% if(!friends.length){ %><li class="gray">還沒有好友</li><% } %></ul></div></div><% } %>
 <div class="box"><h3>音樂盒</h3><div class="in gray">

@@ -43,6 +43,9 @@ function quotaError(uid, incoming){
 }
 const isFriend=(a,b)=>!!one('SELECT 1 FROM friends WHERE user_id=? AND friend_id=?',a,b);
 
+// 動態：記一筆使用者活動，供「好友動態」讀取
+const act=(uid,kind,title,url)=>run('INSERT INTO acts(user_id,kind,title,url) VALUES(?,?,?,?)',uid,kind,String(title).slice(0,100),url);
+
 // 音樂盒網址：一行一個，只收 http(s)，避免 javascript: 之類的東西被存進來
 const cleanMusic = s => (s||'').split('\n').map(x=>x.trim())
   .filter(x=>{ try { return ['http:','https:'].includes(new URL(x).protocol); } catch { return false; } })
@@ -288,6 +291,7 @@ site.post('/album/:id/upload',requireLogin,requireOwner,albumOf,upload.array('ph
   if(err) return res.status(413).render('msg',{title:'空間不足',msg:err,back:`/${U(res).name}/album/${a.id}`});
   for(const f of files){ const s=await save(f); if(!first) first=s.thumb; run('INSERT INTO photos(album_id,url,thumb,caption,bytes) VALUES(?,?,?,?,?)',a.id,s.url,s.thumb,(req.body.caption||'').slice(0,100),s.bytes); }
   if(first && !a.cover) run('UPDATE albums SET cover=? WHERE id=?',first,a.id);
+  if(first) act(U(res).id,'album',a.title,`/${U(res).name}/album/${a.id}`);
   flash(req,`上傳了 ${req.files?.length||0} 張照片`); res.redirect(`/${U(res).name}/album/${a.id}`);
 });
 site.get('/photo/:pid',(req,res,next)=>{
@@ -345,6 +349,7 @@ site.get('/blog/new',requireLogin,requireOwner,(req,res)=>res.render('post_edit'
 site.post('/blog/new',requireLogin,requireOwner,(req,res)=>{ const {title,body,category,mood,weather}=req.body;
   if(!title?.trim()||!body?.trim()) return res.redirect(`/${U(res).name}/blog/new`);
   const r=run('INSERT INTO posts(user_id,title,body,category,mood,weather,pass,topic) VALUES(?,?,?,?,?,?,?,?)',U(res).id,title.trim().slice(0,100),body.slice(0,50000),(category||'未分類').trim().slice(0,20)||'未分類',MOODS.includes(mood)?mood:'',WEATHERS.includes(weather)?weather:'',(req.body.pass||'').slice(0,20),isBlogTopic(req.body.topic)?req.body.topic:'');
+  act(U(res).id,'blog',title.trim().slice(0,100),`/${U(res).name}/blog/${r.lastInsertRowid}`);
   res.redirect(`/${U(res).name}/blog/${r.lastInsertRowid}`); });
 const postOf=(req,res,next)=>{ const p=one('SELECT * FROM posts WHERE id=? AND user_id=?',req.params.id,U(res).id); if(!p) return next('route'); res.locals.post=p; next(); };
 // 文章密碼（當年網誌可以上鎖，很多人拿來寫悄悄話）
@@ -357,7 +362,10 @@ site.post('/blog/:id/unlock',postOf,(req,res)=>{
 site.get('/blog/:id',postOf,(req,res)=>{ const p=res.locals.post;
   if(!postUnlocked(req,res)) return res.render('post_lock',{nav:'blog',post:p,...blogSide(res),err:null});
   if(!res.locals.isOwner) run('UPDATE posts SET views=views+1 WHERE id=?',p.id);
-  res.render('post',{nav:'blog',post:p,...blogSide(res),comments:all('SELECT * FROM comments WHERE post_id=? ORDER BY id',p.id),
+  res.render('post',{nav:'blog',post:p,...blogSide(res),
+    faved: res.locals.me?!!one('SELECT 1 FROM favs WHERE user_id=? AND post_id=?',res.locals.me.id,p.id):false,
+    favN: one('SELECT count(*) c FROM favs WHERE post_id=?',p.id).c,
+    comments:all('SELECT * FROM comments WHERE post_id=? ORDER BY id',p.id),
     trackbacks:all('SELECT t.*,p.title,p.id pid,u.name uname FROM trackbacks t JOIN posts p ON p.id=t.from_post JOIN users u ON u.id=p.user_id WHERE t.post_id=?',p.id),
     prev:one('SELECT id,title FROM posts WHERE user_id=? AND id<? ORDER BY id DESC',U(res).id,p.id),next:one('SELECT id,title FROM posts WHERE user_id=? AND id>? ORDER BY id',U(res).id,p.id)}); });
 site.get('/blog/:id/edit',requireLogin,requireOwner,postOf,(req,res)=>res.render('post_edit',{nav:'blog',post:res.locals.post,...blogSide(res)}));
@@ -387,6 +395,22 @@ site.post('/blog/:id/comment/:cid/reply',requireLogin,requireOwner,postOf,(req,r
   res.redirect(`/${U(res).name}/blog/${res.locals.post.id}#comments`); });
 site.post('/blog/:id/comment/:cid/del',requireLogin,requireOwner,postOf,(req,res)=>{ run('DELETE FROM comments WHERE id=? AND post_id=?',req.params.cid,res.locals.post.id); res.redirect(`/${U(res).name}/blog/${res.locals.post.id}#comments`); });
 site.post('/blog/:id/like',postOf,needUnlocked,(req,res)=>{ req.session.liked??=[]; if(!req.session.liked.includes(res.locals.post.id)){ req.session.liked.push(res.locals.post.id); run('UPDATE posts SET likes=likes+1 WHERE id=?',res.locals.post.id);} res.redirect(`/${U(res).name}/blog/${res.locals.post.id}`); });
+// 收藏（無名文章下方的「收藏」）
+site.post('/blog/:id/fav',requireLogin,postOf,needUnlocked,(req,res)=>{
+  const me=res.locals.me.id, pid=res.locals.post.id;
+  if(one('SELECT 1 FROM favs WHERE user_id=? AND post_id=?',me,pid)) run('DELETE FROM favs WHERE user_id=? AND post_id=?',me,pid);
+  else run('INSERT OR IGNORE INTO favs(user_id,post_id) VALUES(?,?)',me,pid);
+  res.redirect(`/${U(res).name}/blog/${pid}`); });
+// 我的收藏
+site.get('/favs',(req,res)=>res.render('favs',{nav:'user',
+  favs:all('SELECT p.id,p.title,p.created,u.name uname,u.nick FROM favs f JOIN posts p ON p.id=f.post_id JOIN users u ON u.id=p.user_id WHERE f.user_id=? ORDER BY f.created DESC LIMIT 100',U(res).id),
+  visitors:all('SELECT * FROM visitors WHERE user_id=? ORDER BY id DESC LIMIT 8',U(res).id),
+  friends:all('SELECT u.name,u.nick FROM friends f JOIN users u ON u.id=f.friend_id WHERE f.user_id=? LIMIT 12',U(res).id)}));
+// 好友動態
+site.get('/feed',requireLogin,requireOwner,(req,res)=>res.render('feed',{nav:'user',
+  acts:all('SELECT a.*,u.name uname,u.nick,u.avatar FROM acts a JOIN users u ON u.id=a.user_id WHERE a.user_id IN (SELECT friend_id FROM friends WHERE user_id=?) ORDER BY a.id DESC LIMIT 50',U(res).id),
+  visitors:all('SELECT * FROM visitors WHERE user_id=? ORDER BY id DESC LIMIT 8',U(res).id),
+  friends:all('SELECT u.name,u.nick FROM friends f JOIN users u ON u.id=f.friend_id WHERE f.user_id=? LIMIT 12',U(res).id)}));
 // 引用：在自己的網誌建立一篇引用文，並在原文登記
 site.post('/blog/:id/trackback',requireLogin,postOf,needUnlocked,(req,res)=>{
   const p=res.locals.post, me=res.locals.me; if(me.id===U(res).id) return res.redirect(`/${U(res).name}/blog/${p.id}`);

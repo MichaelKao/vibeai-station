@@ -1,0 +1,14 @@
+<%- include('partials/head',{title:'好友動態'}) %>
+<table id="main"><tr><td>
+<div class="box"><h3>好友動態</h3><div class="in">
+<% if(!acts.length){ %><span class="gray">好友還沒有新動態。先去加幾個好友吧！</span><% } %>
+<% acts.forEach(a=>{ %><div class="msg feeditem">
+<img src="<%= a.avatar %>" width="48" height="48" alt="">
+<div class="ft"><a href="/<%= a.uname %>"><b><%= a.nick %></b></a>
+<%= a.kind==='blog' ? '發表了新文章' : (a.kind==='album' ? '上傳了新照片' : '有新動態') %>：
+<a href="<%= a.url %>"><%= a.title %></a>
+<div class="gray"><%= a.created.slice(0,16) %></div></div>
+<div class="clear"></div></div><% }) %>
+</div></div>
+</td><%- include('partials/side',{visitors,friends}) %></tr></table>
+<%- include('partials/foot') %>

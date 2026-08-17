@@ -213,3 +213,7 @@ body.t-blog .tabs a{ background:#326EC8; color:#D9E7FA; border-color:#fff; }
 body.t-blog .tabs a.on{ background:#8AB9F4; color:#222233; }
 .gbhead{ margin-bottom:6px; }
 .gbitem div{ padding:1px 0; }
+
+/* 好友動態 */
+.feeditem img{ float:left; margin-right:8px; }
+.feeditem .ft{ overflow:hidden; }
