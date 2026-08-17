@@ -21,6 +21,10 @@ try { db.exec("ALTER TABLE posts ADD COLUMN mood TEXT DEFAULT ''"); } catch {}
 try { db.exec("ALTER TABLE posts ADD COLUMN weather TEXT DEFAULT ''"); } catch {}
 try { db.exec("ALTER TABLE posts ADD COLUMN pass TEXT DEFAULT ''"); } catch {}
 try { db.exec("ALTER TABLE friends ADD COLUMN grp TEXT DEFAULT '好友'"); } catch {}
+// 無名有「今日人氣」與「累積人氣」兩個計數器
+try { db.exec('ALTER TABLE users ADD COLUMN today_hits INTEGER DEFAULT 0'); } catch {}
+try { db.exec("ALTER TABLE users ADD COLUMN hits_date TEXT DEFAULT ''"); } catch {}
+try { db.exec("ALTER TABLE albums ADD COLUMN topic TEXT DEFAULT ''"); } catch {}
 
 export const q = (sql)=>db.prepare(sql);
 export const one=(sql,...a)=>db.prepare(sql).get(...a);

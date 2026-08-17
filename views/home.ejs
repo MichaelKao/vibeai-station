@@ -2,7 +2,7 @@
 <table id="main"><tr>
 <td>
 <div class="box"><h3>最新相簿 <span><a href="/<%= u.name %>/album">全部相簿 &raquo;</a></span></h3><div class="in">
-<% if(!albums.length){ %><span class="gray">還沒有相簿</span><% } albums.forEach(a=>{ %><div class="thumb"><a href="/<%= u.name %>/album/<%= a.id %>"><img src="<%= a.cover||'/img/empty.png' %>" alt=""></a><br><a href="/<%= u.name %>/album/<%= a.id %>"><%= a.pass?'[鎖] ':'' %><%= a.title %></a><br><span class="gray"><%= a.n %> 張 ・ <%= a.views %> 人次</span></div><% }) %>
+<% if(!albums.length){ %><span class="gray">還沒有相簿</span><% } albums.forEach(a=>{ %><div class="thumb"><a href="/<%= u.name %>/album/<%= a.id %>"><img src="<%= a.cover||'/img/empty.png' %>" alt=""></a><br><a href="/<%= u.name %>/album/<%= a.id %>"><%= a.pass?'[鎖] ':'' %><%= a.title %></a><br><span class="gray"><%= a.n %>張照片 ・ <%= a.views %> 人次</span></div><% }) %>
 <div class="clear"></div></div></div>
 <div class="box"><h3>最新網誌 <span><a href="/<%= u.name %>/blog">全部文章 &raquo;</a></span></h3><div class="in"><ul class="list">
 <% if(!posts.length){ %><li class="gray">還沒有文章</li><% } posts.forEach(p=>{ %><li><a href="/<%= u.name %>/blog/<%= p.id %>"><%= p.title %></a> <span class="gray"><%= p.created.slice(0,10) %> ・ <%= p.views %> 人次</span></li><% }) %></ul></div></div>

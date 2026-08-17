@@ -147,9 +147,17 @@ app.use('/:name',(req,res,next)=>{
 });
 const U=res=>res.locals.u;
 
+// 今日人氣／累積人氣：跨日自動歸零今日計數（無名兩個數字都顯示）
+const today=()=>new Date().toLocaleDateString('sv-SE');
+function bumpHits(u){
+  const d=today();
+  if(u.hits_date!==d){ run('UPDATE users SET today_hits=1,hits_date=?,visits=visits+1 WHERE id=?',d,u.id); u.today_hits=1; u.hits_date=d; }
+  else { run('UPDATE users SET today_hits=today_hits+1,visits=visits+1 WHERE id=?',u.id); u.today_hits=(u.today_hits||0)+1; }
+}
+
 site.get('/',(req,res)=>{
   const u=U(res);
-  if(!res.locals.isOwner){ run('UPDATE users SET visits=visits+1 WHERE id=?',u.id);
+  if(!res.locals.isOwner){ bumpHits(u); u.visits++;
     if(res.locals.me && !one("SELECT 1 FROM visitors WHERE user_id=? AND who=? AND created>datetime('now','localtime','-1 hour')",u.id,res.locals.me.name)) run('INSERT INTO visitors(user_id,who) VALUES(?,?)',u.id,res.locals.me.name); }
   res.render('home',{nav:'user',
     albums:all(`SELECT a.*,(SELECT count(*) FROM photos WHERE album_id=a.id) n FROM albums a WHERE user_id=? ORDER BY id DESC LIMIT 6`,u.id),

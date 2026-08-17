@@ -7,8 +7,8 @@
 <form method="post" action="/<%= u.name %>/photo/<%= p.id %>/cover" style="display:inline"><button class="btn">設為封面</button></form>
 <form method="post" action="/<%= u.name %>/photo/<%= p.id %>/del" style="display:inline" onsubmit="return confirm('刪除這張照片？')"><button class="btn red">刪除</button></form></div><% } %>
 </div>
-<div class="box"><h3>照片回應 <span><%= comments.length %> 則</span></h3><div class="in">
+<div class="box"><h3>照片迴響 <span><%= comments.length %> 則</span></h3><div class="in">
 <% comments.forEach(c=>{ %><div class="msg"><span class="who"><%= c.author %></span> <span class="gray"><%= c.created.slice(0,16) %></span><br><%= c.body %></div><% }) %>
-<form method="post" action="/<%= u.name %>/photo/<%= p.id %>/comment" class="gb" style="margin-top:6px"><% if(!me){ %><input name="author" placeholder="暱稱" maxlength="20"> <% } %><input name="body" size="40" placeholder="說點什麼…" maxlength="300" required> <input type="submit" class="btn" value="回應"></form></div></div>
+<form method="post" action="/<%= u.name %>/photo/<%= p.id %>/comment" class="gb" style="margin-top:6px"><% if(!me){ %><input name="author" placeholder="暱稱" maxlength="20"> <% } %><input name="body" size="40" placeholder="說點什麼…" maxlength="300" required> <input type="submit" class="btn" value="送出"></form></div></div>
 </td><%- include('partials/side') %></tr></table>
 <%- include('partials/foot') %>

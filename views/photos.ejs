@@ -1,6 +1,6 @@
 <%- include('partials/head',{title:album.title}) %>
 <table id="main"><tr><td>
-<div class="box"><h3><a href="/<%= u.name %>/album">相簿</a> &raquo; <%= album.pass?'[鎖] ':'' %><%= album.title %> <span><%= photos.length %> 張 ・ <%= album.views %> 人次</span></h3><div class="in">
+<div class="box"><h3><a href="/<%= u.name %>/album">相簿</a> &raquo; <%= album.pass?'[鎖] ':'' %><%= album.title %> <span><%= photos.length %>張照片 ・ <%= album.views %> 人次</span></h3><div class="in">
 <% if(album.descr){ %><div class="gray" style="margin-bottom:6px"><%= album.descr %></div><% } %>
 <% if(!photos.length){ %><span class="gray">這本相簿還沒有照片</span><% } photos.forEach(p=>{ %><div class="thumb"><a href="/<%= u.name %>/photo/<%= p.id %>"><img src="<%= p.thumb||p.url %>" alt=""></a><br><%= p.caption %></div><% }) %>
 <div class="clear"></div></div></div>

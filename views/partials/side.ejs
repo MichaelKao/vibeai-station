@@ -2,7 +2,8 @@
 <div class="box"><h3>個人資料</h3><div class="in" style="text-align:center">
 <a href="/<%= u.name %>"><img class="avatar" src="<%= u.avatar %>" alt=""></a><br><b><%= u.nick %></b><br><span class="gray">(<%= u.name %>)</span>
 <p style="text-align:left;margin:6px 0;white-space:pre-wrap"><%= u.intro %></p>
-<div class="gray">人氣：<span class="counter"><%= String(u.visits).padStart(6,'0') %></span></div>
+<div class="hits">今日人氣：<b><%= u.hits_date===new Date().toLocaleDateString('sv-SE')?(u.today_hits||0):0 %></b></div>
+<div class="hits">累積人氣：<span class="counter"><%= String(u.visits).padStart(6,'0') %></span></div>
 <div class="gray">加入日期：<%= u.created.slice(0,10) %></div>
 <% if (me && !isOwner) { %><form method="post" action="/<%= u.name %>/friend"><button class="btn"><%= isFriend?'取消好友':'加為好友' %></button></form><% } %>
 <% if (isOwner) { %><a href="/<%= u.name %>/settings">修改資料</a><% } %></div></div>

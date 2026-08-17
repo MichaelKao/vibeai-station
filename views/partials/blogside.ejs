@@ -1,8 +1,8 @@
 <td class="side">
-<div class="box"><h3>個人資料</h3><div class="in" style="text-align:center"><a href="/<%= u.name %>"><img class="avatar" src="<%= u.avatar %>" alt=""></a><br><b><%= u.nick %></b><br><span class="gray">人氣 <%= u.visits %></span></div></div>
-<% if (isOwner) { %><div class="box"><h3>管理</h3><div class="in"><a href="/<%= u.name %>/blog/new"><b>» 發表新文章</b></a></div></div><% } %>
+<div class="box"><h3><%= u.nick %> 的小站</h3><div class="in" style="text-align:center"><a href="/<%= u.name %>"><img class="avatar" src="<%= u.avatar %>" alt=""></a><br><b><%= u.nick %></b><br><div class="hits">今日人氣：<b><%= u.hits_date===new Date().toLocaleDateString("sv-SE")?(u.today_hits||0):0 %></b></div><div class="hits">累積人氣：<b><%= u.visits %></b></div></div></div>
+<% if (isOwner) { %><div class="box"><h3>網誌管理</h3><div class="in"><a href="/<%= u.name %>/blog/new"><b>» 發表新文章</b></a></div></div><% } %>
 <div class="box"><h3>文章分類</h3><div class="in"><ul class="list"><li><a href="/<%= u.name %>/blog">全部</a></li><% cats.forEach(c=>{ %><li><a href="/<%= u.name %>/blog?cat=<%= encodeURIComponent(c.category) %>"><%= c.category %></a> (<%= c.n %>)</li><% }) %></ul></div></div>
 <div class="box"><h3>最新文章</h3><div class="in"><ul class="list"><% recent.forEach(r=>{ %><li><a href="/<%= u.name %>/blog/<%= r.id %>"><%= r.title %></a></li><% }) %></ul></div></div>
-<div class="box"><h3>文章彙整</h3><div class="in"><ul class="list"><% if(!months.length){ %><li class="gray">尚無文章</li><% } months.forEach(m=>{ %><li><a href="/<%= u.name %>/blog?ym=<%= m.ym %>"><%= m.ym.slice(0,4) %> 年 <%= +m.ym.slice(5,7) %> 月</a> (<%= m.n %>)</li><% }) %></ul></div></div>
-<div class="box"><h3>最新回應</h3><div class="in"><ul class="list"><% if(!recentC.length){ %><li class="gray">尚無回應</li><% } recentC.forEach(c=>{ %><li><%= c.author %> → <a href="/<%= u.name %>/blog/<%= c.post_id %>#comments"><%= c.title %></a></li><% }) %></ul></div></div>
+<div class="box"><h3>月份彙整</h3><div class="in"><ul class="list"><% if(!months.length){ %><li class="gray">尚無文章</li><% } months.forEach(m=>{ %><li><a href="/<%= u.name %>/blog?ym=<%= m.ym %>"><%= m.ym.slice(0,4) %> 年 <%= +m.ym.slice(5,7) %> 月</a> (<%= m.n %>)</li><% }) %></ul></div></div>
+<div class="box"><h3>最新迴響</h3><div class="in"><ul class="list"><% if(!recentC.length){ %><li class="gray">尚無迴響</li><% } recentC.forEach(c=>{ %><li><%= c.author %> → <a href="/<%= u.name %>/blog/<%= c.post_id %>#comments"><%= c.title %></a></li><% }) %></ul></div></div>
 </td>
