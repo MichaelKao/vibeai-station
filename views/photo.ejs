@@ -1,14 +1,41 @@
 <%- include('partials/head',{title:p.caption||p.atitle}) %>
 <table id="main"><tr><td>
-<div class="box"><h3><a href="/<%= u.name %>/album">相簿</a> &raquo; <a href="/<%= u.name %>/album/<%= p.aid %>"><%= p.atitle %></a> &raquo; 第 <%= idx %> / <%= total %> 張 <span><%= p.views %> 人次</span></h3>
-<div class="in" style="text-align:center"><% if(prev){ %><a href="/<%= u.name %>/photo/<%= prev %>">« 上一張</a><% } else { %><span class="gray">« 上一張</span><% } %>　｜　<% if(next){ %><a href="/<%= u.name %>/photo/<%= next %>">下一張 »</a><% } else { %><span class="gray">下一張 »</span><% } %></div>
-<div class="bigphoto"><a href="<%= next?'/'+u.name+'/photo/'+next:p.url %>"><img src="<%= p.url %>" alt=""></a><div style="margin-top:4px"><%= p.caption %></div></div>
+<div class="box"><h3><%= u.nick %>'s Album &raquo; <a href="/<%= u.name %>/album/<%= p.aid %>"><%= p.atitle %></a> <span><%= idx %> / <%= total %></span></h3>
+
+<%# 無名照片頁的導覽列：第一張 | 上一張 | 下一張 | 最後一張 | 回頂端 %>
+<div class="in photonav">
+<% if(prev){ %><a href="/<%= u.name %>/photo/<%= first %>">第一張</a> | <a href="/<%= u.name %>/photo/<%= prev %>">上一張</a><% } else { %><span class="gray">第一張 | 上一張</span><% } %>
+| <% if(next){ %><a href="/<%= u.name %>/photo/<%= next %>">下一張</a> | <a href="/<%= u.name %>/photo/<%= last %>">最後一張</a><% } else { %><span class="gray">下一張 | 最後一張</span><% } %>
+| <a href="#top">回頂端</a>
+| <a href="/<%= u.name %>/album/<%= p.aid %>/slide?i=<%= idx %>">幻燈片</a>
+| <a href="/<%= u.name %>/album/<%= p.aid %>?all=1">一頁瀏覽</a>
+</div>
+
+<div class="bigphoto"><a href="<%= next?'/'+u.name+'/photo/'+next:p.url %>" title="按 C 看下一張"><img id="DisplayImage" src="<%= p.url %>" alt=""></a>
+<div style="margin-top:4px"><%= p.caption %></div>
+<div class="gray" style="font-size:11px">人氣：<%= p.views %></div></div>
+
 <% if (isOwner) { %><div class="in gray"><form method="post" action="/<%= u.name %>/photo/<%= p.id %>/caption" style="display:inline"><input name="caption" value="<%= p.caption %>" maxlength="100"> <input type="submit" class="btn" value="改說明"></form>
 <form method="post" action="/<%= u.name %>/photo/<%= p.id %>/cover" style="display:inline"><button class="btn">設為封面</button></form>
 <form method="post" action="/<%= u.name %>/photo/<%= p.id %>/del" style="display:inline" onsubmit="return confirm('刪除這張照片？')"><button class="btn red">刪除</button></form></div><% } %>
 </div>
+
+<%# 下方其他照片縮圖列 %>
+<div class="box"><h3>這本相簿的其他照片</h3><div class="in strip">
+<% strip.forEach(s=>{ %><a href="/<%= u.name %>/photo/<%= s.id %>" class="<%= s.id===p.id?'cur':'' %>"><img src="<%= s.thumb||s.url %>" alt="" title="<%= s.caption %>"></a><% }) %>
+<div class="clear"></div></div></div>
+
 <div class="box"><h3>照片迴響 <span><%= comments.length %> 則</span></h3><div class="in">
-<% comments.forEach(c=>{ %><div class="msg"><span class="who"><%= c.author %></span> <span class="gray"><%= c.created.slice(0,16) %></span><br><%= c.body %></div><% }) %>
+<% comments.forEach((c,i)=>{ %><div class="msg"><span class="floor"><%= i+1 %>樓</span> <span class="who"><%= c.author %></span> <span class="gray"><%= c.created.slice(0,16) %></span><br><%= c.body %></div><% }) %>
 <form method="post" action="/<%= u.name %>/photo/<%= p.id %>/comment" class="gb" style="margin-top:6px"><% if(!me){ %><input name="author" placeholder="暱稱" maxlength="20"> <% } %><input name="body" size="40" placeholder="說點什麼…" maxlength="300" required> <input type="submit" class="btn" value="送出"></form></div></div>
 </td><%- include('partials/side') %></tr></table>
+<script>
+// 無名的快捷鍵：按 C 看下一張
+document.addEventListener('keydown',function(e){
+  if(e.target.tagName==='INPUT'||e.target.tagName==='TEXTAREA') return;
+  if(e.key==='c'||e.key==='C'){ <% if(next){ %>location.href='/<%= u.name %>/photo/<%= next %>';<% } %> }
+  if(e.key==='ArrowRight'){ <% if(next){ %>location.href='/<%= u.name %>/photo/<%= next %>';<% } %> }
+  if(e.key==='ArrowLeft'){ <% if(prev){ %>location.href='/<%= u.name %>/photo/<%= prev %>';<% } %> }
+});
+</script>
 <%- include('partials/foot') %>

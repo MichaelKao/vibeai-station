@@ -237,7 +237,17 @@ const albumUnlocked=(req,res)=>!res.locals.album.pass||res.locals.isOwner||(req.
 site.get('/album/:id',albumOf,(req,res)=>{
   const a=res.locals.album; if(!albumUnlocked(req,res)) return res.render('album_lock',{nav:'album',album:a,err:null});
   if(!res.locals.isOwner) run('UPDATE albums SET views=views+1 WHERE id=?',a.id);
-  res.render('photos',{nav:'album',album:a,topics:ALBUM_TOPICS,places:PLACES,photos:all('SELECT * FROM photos WHERE album_id=? ORDER BY id',a.id)});
+  res.render('photos',{nav:'album',album:a,topics:ALBUM_TOPICS,places:PLACES,
+    viewAll: req.query.all==='1',                    // 「一頁瀏覽」：整本大圖一次看完
+    photos:all('SELECT * FROM photos WHERE album_id=? ORDER BY id',a.id)});
+});
+// 幻燈片（無名相簿的「幻燈片」）
+site.get('/album/:id/slide',albumOf,(req,res)=>{
+  const a=res.locals.album;
+  if(!albumUnlocked(req,res)) return res.redirect(`/${U(res).name}/album/${a.id}`);
+  const photos=all('SELECT id,url,thumb,caption FROM photos WHERE album_id=? ORDER BY id',a.id);
+  if(!photos.length) return res.redirect(`/${U(res).name}/album/${a.id}`);
+  res.render('slide',{nav:'album',album:a,photos,start:Math.max(1,Math.min(photos.length,+req.query.i||1))});
 });
 site.post('/album/:id/unlock',albumOf,(req,res)=>{ const a=res.locals.album; if(req.body.pass===a.pass){ req.session.unlocked=[...(req.session.unlocked||[]),a.id]; return res.redirect(`/${U(res).name}/album/${a.id}`);} res.render('album_lock',{nav:'album',album:a,err:'密碼錯誤'}); });
 site.post('/album/:id/edit',requireLogin,requireOwner,albumOf,(req,res)=>{ run('UPDATE albums SET title=?,descr=?,pass=?,topic=?,place=? WHERE id=?',(req.body.title||res.locals.album.title).trim().slice(0,40),(req.body.descr||'').slice(0,200),(req.body.pass||'').slice(0,20),isAlbumTopic(req.body.topic)?req.body.topic:'',isPlace(req.body.place)?req.body.place:'',res.locals.album.id); res.redirect(`/${U(res).name}/album/${res.locals.album.id}`); });
@@ -257,7 +267,10 @@ site.get('/photo/:pid',(req,res,next)=>{
   res.locals.album={id:p.aid,pass:p.pass}; if(!albumUnlocked(req,res)) return res.redirect(`/${U(res).name}/album/${p.aid}`);
   if(!res.locals.isOwner) run('UPDATE photos SET views=views+1 WHERE id=?',p.id);
   const ids=all('SELECT id FROM photos WHERE album_id=? ORDER BY id',p.aid).map(x=>x.id), i=ids.indexOf(p.id);
-  res.render('photo',{nav:'album',p,prev:ids[i-1],next:ids[i+1],idx:i+1,total:ids.length,comments:all('SELECT * FROM photo_comments WHERE photo_id=? ORDER BY id',p.id)});
+  res.render('photo',{nav:'album',p,
+    first:ids[0],last:ids[ids.length-1],prev:ids[i-1],next:ids[i+1],idx:i+1,total:ids.length,
+    strip:all('SELECT id,thumb,url,caption FROM photos WHERE album_id=? ORDER BY id',p.aid),
+    comments:all('SELECT * FROM photo_comments WHERE photo_id=? ORDER BY id',p.id)});
 });
 site.post('/photo/:pid/comment',(req,res)=>{ const p=one('SELECT p.id,p.album_id,a.pass FROM photos p JOIN albums a ON a.id=p.album_id WHERE p.id=? AND a.user_id=?',req.params.pid,U(res).id); if(!p) return res.redirect('/'+U(res).name+'/album'); res.locals.album={id:p.album_id,pass:p.pass}; if(!albumUnlocked(req,res)) return res.status(403).render('msg',{title:'沒有權限',msg:'相簿已上鎖',back:'/'+U(res).name+'/album'}); if(req.body.body?.trim()) run('INSERT INTO photo_comments(photo_id,author,body) VALUES(?,?,?)',p.id,(res.locals.me?.nick||req.body.author||'訪客').slice(0,20),req.body.body.trim().slice(0,300)); res.redirect(`/${U(res).name}/photo/${req.params.pid}`); });
 site.post('/photo/:pid/caption',requireLogin,requireOwner,(req,res)=>{ run('UPDATE photos SET caption=? WHERE id=? AND album_id IN (SELECT id FROM albums WHERE user_id=?)',(req.body.caption||'').slice(0,100),req.params.pid,U(res).id); res.redirect(`/${U(res).name}/photo/${req.params.pid}`); });
@@ -265,19 +278,41 @@ site.post('/photo/:pid/cover',requireLogin,requireOwner,(req,res)=>{ const p=one
 site.post('/photo/:pid/del',requireLogin,requireOwner,async(req,res)=>{ const p=one('SELECT p.* FROM photos p JOIN albums a ON a.id=p.album_id WHERE p.id=? AND a.user_id=?',req.params.pid,U(res).id); if(p){ await remove(p.url); if(p.thumb&&p.thumb!==p.url) await remove(p.thumb); run('DELETE FROM photos WHERE id=?',p.id); run("UPDATE albums SET cover=COALESCE((SELECT url FROM photos WHERE album_id=? LIMIT 1),'') WHERE id=? AND cover=?",p.album_id,p.album_id,p.url); return res.redirect(`/${U(res).name}/album/${p.album_id}`);} res.redirect(`/${U(res).name}/album`); });
 
 // 網誌
+// 文章日曆：回傳該月的格子，有發文的日期給連結（無名側欄的「文章日曆」）
+function calendar(uid, ym){
+  const now=new Date();
+  const y = ym ? +ym.slice(0,4) : now.getFullYear();
+  const m = ym ? +ym.slice(5,7) : now.getMonth()+1;
+  const first=new Date(y, m-1, 1), days=new Date(y, m, 0).getDate();
+  const key=`${y}-${String(m).padStart(2,'0')}`;
+  const posted=new Set(all("SELECT substr(created,9,2) d FROM posts WHERE user_id=? AND substr(created,1,7)=?",uid,key).map(r=>+r.d));
+  const cells=[]; for(let i=0;i<first.getDay();i++) cells.push(null);
+  for(let d=1;d<=days;d++) cells.push({d, has:posted.has(d)});
+  const prev=new Date(y, m-2, 1), next=new Date(y, m, 1);
+  return { y, m, key, cells,
+    prevYm:`${prev.getFullYear()}-${String(prev.getMonth()+1).padStart(2,'0')}`,
+    nextYm:`${next.getFullYear()}-${String(next.getMonth()+1).padStart(2,'0')}`,
+    isFuture: next > now };
+}
+
 // 當年網誌側欄常見模組：分類、最新文章、最新迴響、月份彙整
 const blogSide=res=>({
   cats:all('SELECT category,count(*) n FROM posts WHERE user_id=? GROUP BY category',U(res).id),
   recent:all('SELECT id,title FROM posts WHERE user_id=? ORDER BY id DESC LIMIT 8',U(res).id),
   recentC:all('SELECT c.author,c.post_id,p.title FROM comments c JOIN posts p ON p.id=c.post_id WHERE p.user_id=? ORDER BY c.id DESC LIMIT 5',U(res).id),
   months:all("SELECT substr(created,1,7) ym, count(*) n FROM posts WHERE user_id=? GROUP BY ym ORDER BY ym DESC LIMIT 24",U(res).id),
+  cal:calendar(U(res).id, res.calYm),
   moods:MOODS, weathers:WEATHERS, blogTopics:BLOG_TOPICS});
 site.get('/blog',(req,res)=>{ const cat=req.query.cat, ym=/^\d{4}-\d{2}$/.test(req.query.ym||'')?req.query.ym:null, page=Math.max(1,+req.query.p||1), per=10;
+  const day=/^\d{4}-\d{2}-\d{2}$/.test(req.query.d||'')?req.query.d:null;
+  // 日曆顯示的月份：?cal= 優先，其次跟著目前篩選的月份／日期
+  res.calYm=/^\d{4}-\d{2}$/.test(req.query.cal||'')?req.query.cal:(ym||(day?day.slice(0,7):null));
   let where='user_id=?'; const args=[U(res).id];
   if(cat){ where+=' AND category=?'; args.push(cat); }
   if(ym){ where+=' AND substr(created,1,7)=?'; args.push(ym); }
+  if(day){ where+=' AND substr(created,1,10)=?'; args.push(day); }
   const total=one(`SELECT count(*) c FROM posts WHERE ${where}`,...args).c;
-  res.render('blog',{nav:'blog',cat,ym,page,pages:Math.ceil(total/per),...blogSide(res),posts:all(`SELECT p.*,(SELECT count(*) FROM comments WHERE post_id=p.id) nc FROM posts p WHERE ${where} ORDER BY id DESC LIMIT ? OFFSET ?`,...args,per,(page-1)*per)}); });
+  res.render('blog',{nav:'blog',cat,ym,day,page,pages:Math.ceil(total/per),...blogSide(res),posts:all(`SELECT p.*,(SELECT count(*) FROM comments WHERE post_id=p.id) nc FROM posts p WHERE ${where} ORDER BY id DESC LIMIT ? OFFSET ?`,...args,per,(page-1)*per)}); });
 site.get('/blog/new',requireLogin,requireOwner,(req,res)=>res.render('post_edit',{nav:'blog',post:null,...blogSide(res)}));
 site.post('/blog/new',requireLogin,requireOwner,(req,res)=>{ const {title,body,category,mood,weather}=req.body;
   if(!title?.trim()||!body?.trim()) return res.redirect(`/${U(res).name}/blog/new`);

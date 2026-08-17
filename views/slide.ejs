@@ -1,0 +1,41 @@
+<%- include('partials/head',{title:album.title+' - 幻燈片'}) %>
+<div class="box" style="margin-top:8px"><h3><a href="/<%= u.name %>/album/<%= album.id %>"><%= album.title %></a> &raquo; 幻燈片</h3>
+<div class="in" style="text-align:center">
+<div id="slidewrap"><img id="slideimg" src="" alt=""></div>
+<div id="slidecap" style="padding:6px"></div>
+<div style="padding:4px">
+<button class="btn" id="sprev">上一張</button>
+<button class="btn" id="splay">暫停</button>
+<button class="btn" id="snext">下一張</button>
+　<span id="slidenum" class="gray"></span>
+　速度 <select id="sspeed"><option value="2000">2 秒</option><option value="4000" selected>4 秒</option><option value="7000">7 秒</option></select>
+　<a href="/<%= u.name %>/album/<%= album.id %>">回相簿</a>
+</div>
+<div id="slidedata" data-photos="<%= JSON.stringify(photos.map(p=>({u:p.url,c:p.caption||''}))) %>" data-start="<%= start %>"></div>
+</div></div>
+<script>
+(function(){
+  var el=document.getElementById('slidedata');
+  var ph=[]; try{ ph=JSON.parse(el.getAttribute('data-photos'))||[]; }catch(e){ return; }
+  if(!ph.length) return;
+  var i=Math.max(0,Math.min(ph.length-1,(+el.getAttribute('data-start')||1)-1));
+  var img=document.getElementById('slideimg'), cap=document.getElementById('slidecap'),
+      num=document.getElementById('slidenum'), playBtn=document.getElementById('splay'),
+      speed=document.getElementById('sspeed'), timer=null, playing=true;
+  function show(n){ i=(n+ph.length)%ph.length; img.src=ph[i].u; cap.textContent=ph[i].c; num.textContent=(i+1)+' / '+ph.length; }
+  function tick(){ show(i+1); }
+  function start(){ stop(); timer=setInterval(tick,+speed.value); playing=true; playBtn.textContent='暫停'; }
+  function stop(){ if(timer) clearInterval(timer); timer=null; playing=false; playBtn.textContent='播放'; }
+  document.getElementById('sprev').onclick=function(){ show(i-1); if(playing) start(); };
+  document.getElementById('snext').onclick=function(){ show(i+1); if(playing) start(); };
+  playBtn.onclick=function(){ playing?stop():start(); };
+  speed.onchange=function(){ if(playing) start(); };
+  document.addEventListener('keydown',function(e){
+    if(e.key==='ArrowRight'){ show(i+1); if(playing) start(); }
+    if(e.key==='ArrowLeft'){ show(i-1); if(playing) start(); }
+    if(e.key===' '){ e.preventDefault(); playing?stop():start(); }
+  });
+  show(i); start();
+})();
+</script>
+<%- include('partials/foot') %>

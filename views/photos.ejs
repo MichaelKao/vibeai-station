@@ -2,7 +2,13 @@
 <table id="main"><tr><td>
 <div class="box"><h3><a href="/<%= u.name %>/album">相簿</a> &raquo; <%= album.pass?'[鎖] ':'' %><%= album.title %> <span><%= photos.length %>張照片 ・ <%= album.views %> 人次</span></h3><div class="in">
 <% if(album.descr){ %><div class="gray" style="margin-bottom:6px"><%= album.descr %></div><% } %>
-<% if(!photos.length){ %><span class="gray">這本相簿還沒有照片</span><% } photos.forEach(p=>{ %><div class="thumb"><a href="/<%= u.name %>/photo/<%= p.id %>"><img src="<%= p.thumb||p.url %>" alt=""></a><br><%= p.caption %></div><% }) %>
+<% if(photos.length){ %><div class="albumtools"><a href="/<%= u.name %>/album/<%= album.id %>/slide">幻燈片</a> | <% if(viewAll){ %><a href="/<%= u.name %>/album/<%= album.id %>">縮圖瀏覽</a><% } else { %><a href="/<%= u.name %>/album/<%= album.id %>?all=1">一頁瀏覽</a><% } %></div><% } %>
+<% if(!photos.length){ %><span class="gray">這本相簿還沒有照片</span><% } %>
+<% if(viewAll){ %>
+  <% photos.forEach((p,i)=>{ %><div class="onepage"><img src="<%= p.url %>" alt=""><div><%= i+1 %> / <%= photos.length %>　<%= p.caption %></div></div><% }) %>
+<% } else { %>
+  <% photos.forEach(p=>{ %><div class="thumb"><a href="/<%= u.name %>/photo/<%= p.id %>"><img src="<%= p.thumb||p.url %>" alt=""></a><div class="cap"><%= p.caption %></div></div><% }) %>
+<% } %>
 <div class="clear"></div></div></div>
 <% if (isOwner) { %>
 <div class="box"><h3>上傳照片</h3><div class="in"><form method="post" enctype="multipart/form-data" action="/<%= u.name %>/album/<%= album.id %>/upload"><input type="file" name="photos" accept="image/*" multiple required> <input name="caption" placeholder="說明（選填）" maxlength="100"> <input type="submit" class="btn" value="上傳"><br><span class="gray">一次最多 20 張，每張 8MB 內（jpg/png/gif/webp）</span></form></div></div>

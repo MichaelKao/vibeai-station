@@ -173,3 +173,24 @@ body.t-blog .bigphoto img,body.t-blog .thumb img{ padding:3px; background:#fff; 
 .topics a{ display:inline-block; padding:1px 6px; margin:1px 2px; border:1px solid #ccc; background:#fff; font-size:12px; }
 .topics a:hover{ background:#69a707; color:#fff; border-color:#69a707; text-decoration:none; }
 .topics a.on{ background:#e36511; color:#fff; border-color:#e36511; font-weight:bold; }
+
+/* 文章日曆（網誌側欄） */
+table.cal{ width:100%; border-collapse:collapse; font-size:11px; text-align:center; }
+table.cal td,table.cal th{ padding:1px; }
+table.cal tr:first-child td{ font-weight:bold; padding:2px; }
+table.cal .wk th{ color:#999; font-weight:normal; }
+table.cal a{ font-weight:bold; }
+body.t-blog table.cal .wk th{ color:#D9E7FA; }
+body.t-blog table.cal a b{ color:#092D5E; }
+
+/* 照片頁導覽、縮圖列、一頁瀏覽 */
+.photonav{ text-align:center; }
+.albumtools{ text-align:right; font-size:11px; padding-bottom:4px; }
+.strip a{ display:inline-block; margin:2px; }
+.strip img{ width:60px; height:60px; border:2px solid transparent; }
+.strip a.cur img{ border-color:#e36511; }
+.strip a:hover img{ border-color:#CC3399; }
+.onepage{ text-align:center; padding:10px 0; border-bottom:1px dashed #ccc; }
+.onepage img{ max-width:640px; padding:3px; background:#fff; }
+#slidewrap{ min-height:400px; display:flex; align-items:center; justify-content:center; background:#000; }
+#slideimg{ max-width:100%; max-height:70vh; }

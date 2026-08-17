@@ -3,6 +3,17 @@
 <% if (isOwner) { %><div class="box"><h3>網誌管理</h3><div class="in"><a href="/<%= u.name %>/blog/new"><b>» 發表新文章</b></a></div></div><% } %>
 <div class="box"><h3>文章分類</h3><div class="in"><ul class="list"><li><a href="/<%= u.name %>/blog">全部</a></li><% cats.forEach(c=>{ %><li><a href="/<%= u.name %>/blog?cat=<%= encodeURIComponent(c.category) %>"><%= c.category %></a> (<%= c.n %>)</li><% }) %></ul></div></div>
 <div class="box"><h3>最新文章</h3><div class="in"><ul class="list"><% recent.forEach(r=>{ %><li><a href="/<%= u.name %>/blog/<%= r.id %>"><%= r.title %></a></li><% }) %></ul></div></div>
+<div class="box"><h3>文章日曆</h3><div class="in">
+<table class="cal"><tr>
+<td colspan="2"><a href="/<%= u.name %>/blog?cal=<%= cal.prevYm %>">&laquo;</a></td>
+<td colspan="3"><%= cal.y %> / <%= cal.m %></td>
+<td colspan="2"><% if(!cal.isFuture){ %><a href="/<%= u.name %>/blog?cal=<%= cal.nextYm %>">&raquo;</a><% } %></td></tr>
+<tr class="wk"><th>日</th><th>一</th><th>二</th><th>三</th><th>四</th><th>五</th><th>六</th></tr>
+<% for(let i=0;i<cal.cells.length;i+=7){ %><tr>
+<% for(let j=i;j<i+7;j++){ const c=cal.cells[j]; %>
+<td><% if(!c){ %>&nbsp;<% } else if(c.has){ %><a href="/<%= u.name %>/blog?d=<%= cal.key %>-<%= String(c.d).padStart(2,'0') %>"><b><%= c.d %></b></a><% } else { %><%= c.d %><% } %></td>
+<% } %></tr><% } %>
+</table></div></div>
 <div class="box"><h3>月份彙整</h3><div class="in"><ul class="list"><% if(!months.length){ %><li class="gray">尚無文章</li><% } months.forEach(m=>{ %><li><a href="/<%= u.name %>/blog?ym=<%= m.ym %>"><%= m.ym.slice(0,4) %> 年 <%= +m.ym.slice(5,7) %> 月</a> (<%= m.n %>)</li><% }) %></ul></div></div>
 <div class="box"><h3>最新迴響</h3><div class="in"><ul class="list"><% if(!recentC.length){ %><li class="gray">尚無迴響</li><% } recentC.forEach(c=>{ %><li><%= c.author %> → <a href="/<%= u.name %>/blog/<%= c.post_id %>#comments"><%= c.title %></a></li><% }) %></ul></div></div>
 </td>
