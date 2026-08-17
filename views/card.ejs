@@ -1,0 +1,41 @@
+<%- include('partials/head',{title:u.nick+'的名片'}) %>
+<table id="main"><tr><td>
+<div class="box"><h3>個人資料（名片）</h3><div class="in">
+<table class="card">
+<tr><td class="k">暱稱</td><td><b><%= u.nick %></b> <span class="gray">(<%= u.name %>)</span></td></tr>
+<% if(u.realname){ %><tr><td class="k">姓名</td><td><%= u.realname %></td></tr><% } %>
+<% if(u.sex){ %><tr><td class="k">性別</td><td><%= u.sex %></td></tr><% } %>
+<% if(u.birthday){ %><tr><td class="k">生日</td><td><%= u.birthday %></td></tr><% } %>
+<% if(u.zodiac){ %><tr><td class="k">星座</td><td><%= u.zodiac %></td></tr><% } %>
+<% if(u.blood){ %><tr><td class="k">血型</td><td><%= u.blood %> 型</td></tr><% } %>
+<% if(u.city){ %><tr><td class="k">居住地</td><td><%= u.city %></td></tr><% } %>
+<% if(u.job){ %><tr><td class="k">職業</td><td><%= u.job %></td></tr><% } %>
+<% if(u.school){ %><tr><td class="k">學校</td><td><%= u.school %></td></tr><% } %>
+<% if(u.hobby){ %><tr><td class="k">興趣</td><td><%= u.hobby %></td></tr><% } %>
+<% if(u.motto){ %><tr><td class="k">座右銘</td><td><%= u.motto %></td></tr><% } %>
+<% if(u.msn){ %><tr><td class="k">MSN</td><td><%= u.msn %></td></tr><% } %>
+<% if(u.homepage){ %><tr><td class="k">個人網頁</td><td><a href="<%= u.homepage %>" rel="nofollow noopener" target="_blank"><%= u.homepage %></a></td></tr><% } %>
+<tr><td class="k">自我介紹</td><td style="white-space:pre-wrap"><%= u.intro || '這個人很懶，什麼都沒有留下。' %></td></tr>
+<tr><td class="k">加入日期</td><td><%= u.created.slice(0,10) %></td></tr>
+</table>
+</div></div>
+
+<% if (isOwner) { %>
+<div class="box"><h3>編輯我的名片</h3><div class="in"><form method="post" class="gb"><table class="pf">
+<tr><td width="70">姓名</td><td><input name="realname" value="<%= u.realname %>" maxlength="20"></td></tr>
+<tr><td>性別</td><td><select name="sex"><option value="">（不公開）</option><% sexes.forEach(s=>{ %><option <%= u.sex===s?'selected':'' %>><%= s %></option><% }) %></select></td></tr>
+<tr><td>生日</td><td><input name="birthday" type="date" value="<%= u.birthday %>"></td></tr>
+<tr><td>星座</td><td><select name="zodiac"><option value="">（不設定）</option><% zodiacs.forEach(z=>{ %><option <%= u.zodiac===z?'selected':'' %>><%= z %></option><% }) %></select>
+　血型 <select name="blood"><option value="">（不設定）</option><% bloods.forEach(b=>{ %><option <%= u.blood===b?'selected':'' %>><%= b %></option><% }) %></select></td></tr>
+<tr><td>居住地</td><td><select name="city"><option value="">（不設定）</option><% cities.forEach(c=>{ %><option <%= u.city===c?'selected':'' %>><%= c %></option><% }) %></select></td></tr>
+<tr><td>職業</td><td><input name="job" value="<%= u.job %>" maxlength="20"></td></tr>
+<tr><td>學校</td><td><input name="school" value="<%= u.school %>" size="30" maxlength="30"></td></tr>
+<tr><td>興趣</td><td><input name="hobby" value="<%= u.hobby %>" size="40" maxlength="100"></td></tr>
+<tr><td>座右銘</td><td><input name="motto" value="<%= u.motto %>" size="40" maxlength="100"></td></tr>
+<tr><td>MSN</td><td><input name="msn" value="<%= u.msn %>" size="30" maxlength="50"></td></tr>
+<tr><td>個人網頁</td><td><input name="homepage" value="<%= u.homepage %>" size="40" maxlength="200" placeholder="http://"></td></tr>
+<tr><td></td><td><input type="submit" class="btn" value="儲存名片"> <span class="gray">自我介紹在「個人設定」修改</span></td></tr>
+</table></form></div></div>
+<% } %>
+</td><%- include('partials/side',{visitors,friends}) %></tr></table>
+<%- include('partials/foot') %>

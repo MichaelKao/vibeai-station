@@ -194,3 +194,10 @@ body.t-blog table.cal a b{ color:#092D5E; }
 .onepage img{ max-width:640px; padding:3px; background:#fff; }
 #slidewrap{ min-height:400px; display:flex; align-items:center; justify-content:center; background:#000; }
 #slideimg{ max-width:100%; max-height:70vh; }
+
+/* 名片頁 */
+table.card{ width:100%; border-collapse:collapse; }
+table.card td{ padding:3px 6px; border-bottom:1px dotted #ccc; }
+table.card td.k{ width:80px; color:#999; }
+body.t-album table.card td.k{ color:#A96B1A; }
+.formtitle{ font-weight:bold; margin:8px 0 4px; }

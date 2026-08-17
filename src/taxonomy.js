@@ -21,6 +21,14 @@ export const PLACES = ['台灣','香港與澳門','中國','世界各地'];
 export const MOODS = ['開心','難過','生氣','無聊','想睡','戀愛','忙碌','放空','感動','驚訝'];
 export const WEATHERS = ['晴','多雲','陰','雨','雷雨','颱風','下雪','熱','冷'];
 
+/** 名片欄位選項 */
+export const ZODIACS = ['牡羊座','金牛座','雙子座','巨蟹座','獅子座','處女座',
+  '天秤座','天蠍座','射手座','摩羯座','水瓶座','雙魚座'];
+export const BLOODS = ['A','B','O','AB'];
+export const SEXES = ['男生','女生'];
+export const CITIES = ['基隆','台北','新北','桃園','新竹','苗栗','台中','彰化','南投',
+  '雲林','嘉義','台南','高雄','屏東','宜蘭','花蓮','台東','澎湖','金門','馬祖','海外'];
+
 export const isAlbumTopic = t => ALBUM_TOPICS.includes(t);
 export const isBlogTopic  = t => BLOG_TOPICS.includes(t);
 export const isPlace      = p => PLACES.includes(p);

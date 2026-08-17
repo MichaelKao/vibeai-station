@@ -6,7 +6,7 @@ import { one, all, run } from './db.js';
 import { hash, salt, check, requireLogin, requireOwner } from './auth.js';
 import { save, remove, hasR2, diskFree } from './storage.js';
 import { UPLOAD_DIR } from './paths.js';
-import { ALBUM_TOPICS, BLOG_TOPICS, PLACES, MOODS, WEATHERS, isAlbumTopic, isBlogTopic, isPlace } from './taxonomy.js';
+import { ALBUM_TOPICS, BLOG_TOPICS, PLACES, MOODS, WEATHERS, ZODIACS, BLOODS, SEXES, CITIES, isAlbumTopic, isBlogTopic, isPlace } from './taxonomy.js';
 
 const app = express();
 app.set('view engine','ejs'); app.set('views', path.resolve('views'));
@@ -21,6 +21,7 @@ const upload = multer({storage:multer.memoryStorage(),limits:{fileSize:8*1024*10
 app.use((req,res,next)=>{
   res.locals.me = req.session.uid ? one('SELECT id,name,nick,avatar,admin FROM users WHERE id=?',req.session.uid) : null;
   res.locals.u = null; res.locals.nav=''; res.locals.flash = req.session.flash; delete req.session.flash;
+  res.locals.guest = req.session.guest || null;   // 訪客「記住我的資料」
   next();
 });
 const flash=(req,m)=>{req.session.flash=m};
@@ -151,7 +152,7 @@ app.post('/admin/user/:id/del',requireAdmin,async(req,res)=>{
 // ===== 無名小站風格網址 =====
 // 當年的格式是 /album/帳號、/blog/帳號、/guestbook/帳號、/friend/帳號、/mypage/帳號。
 // 這裡把它們轉到本站的 /帳號/... 結構，兩種網址都能用。
-const SECTION={album:'album',blog:'blog',guestbook:'guestbook',friend:'friends',mypage:''};
+const SECTION={album:'album',blog:'blog',guestbook:'guestbook',friend:'friends',mypage:'',user:'card'};
 for(const [seg,dest] of Object.entries(SECTION)){
   app.get(`/${seg}/:name`,(req,res,next)=>{
     if(!one('SELECT 1 FROM users WHERE name=?',req.params.name)) return next();
@@ -223,6 +224,20 @@ site.post('/friend',requireLogin,(req,res)=>{ const me=res.locals.me.id,u=U(res)
 site.post('/friends/:fid/group',requireLogin,requireOwner,(req,res)=>{
   run('UPDATE friends SET grp=? WHERE user_id=? AND friend_id=?',(req.body.grp||'好友').trim().slice(0,10)||'好友',U(res).id,req.params.fid);
   res.redirect(`/${U(res).name}/friends`); });
+site.get('/card',(req,res)=>res.render('card',{nav:'card',
+  zodiacs:ZODIACS,bloods:BLOODS,sexes:SEXES,cities:CITIES,
+  visitors:all('SELECT * FROM visitors WHERE user_id=? ORDER BY id DESC LIMIT 8',U(res).id),
+  friends:all('SELECT u.name,u.nick FROM friends f JOIN users u ON u.id=f.friend_id WHERE f.user_id=? LIMIT 12',U(res).id)}));
+site.post('/card',requireLogin,requireOwner,(req,res)=>{
+  const b=req.body, cut=(v,n)=>String(v||'').trim().slice(0,n);
+  run('UPDATE users SET realname=?,sex=?,birthday=?,zodiac=?,blood=?,city=?,job=?,school=?,hobby=?,motto=?,msn=?,homepage=? WHERE id=?',
+    cut(b.realname,20), SEXES.includes(b.sex)?b.sex:'', /^\d{4}-\d{2}-\d{2}$/.test(b.birthday||'')?b.birthday:'',
+    ZODIACS.includes(b.zodiac)?b.zodiac:'', BLOODS.includes(b.blood)?b.blood:'', CITIES.includes(b.city)?b.city:'',
+    cut(b.job,20), cut(b.school,30), cut(b.hobby,100), cut(b.motto,100), cut(b.msn,50),
+    (()=>{ try{ const x=String(b.homepage||'').trim(); if(!x) return ''; return ['http:','https:'].includes(new URL(x).protocol)?x.slice(0,200):''; }catch{ return ''; } })(),
+    U(res).id);
+  flash(req,'名片已儲存'); res.redirect(`/${U(res).name}/card`);
+});
 site.get('/friends',(req,res)=>res.render('friends',{nav:'user',
   friends:all("SELECT u.id,u.name,u.nick,u.avatar,u.intro,COALESCE(NULLIF(f.grp,''),'好友') grp FROM friends f JOIN users u ON u.id=f.friend_id WHERE f.user_id=? ORDER BY grp, f.created DESC",U(res).id),
   fans:all('SELECT u.name,u.nick,u.avatar FROM friends f JOIN users u ON u.id=f.user_id WHERE f.friend_id=? ORDER BY f.created DESC',U(res).id)}));
@@ -339,7 +354,24 @@ site.post('/blog/:id/edit',requireLogin,requireOwner,postOf,(req,res)=>{ const {
 site.post('/blog/:id/del',requireLogin,requireOwner,postOf,(req,res)=>{ run('DELETE FROM posts WHERE id=?',res.locals.post.id); res.redirect(`/${U(res).name}/blog`); });
 // 上鎖文章：沒解鎖就不能回應、推薦、引用（引用會複製內文，等於繞過密碼）
 const needUnlocked=(req,res,next)=>postUnlocked(req,res)?next():res.redirect(`/${U(res).name}/blog/${res.locals.post.id}`);
-site.post('/blog/:id/comment',postOf,needUnlocked,(req,res)=>{ if(req.body.body?.trim()) run('INSERT INTO comments(post_id,author,body) VALUES(?,?,?)',res.locals.post.id,(res.locals.me?.nick||req.body.author||'訪客').trim().slice(0,20),req.body.body.trim().slice(0,1000)); res.redirect(`/${U(res).name}/blog/${res.locals.post.id}#comments`); });
+// 迴響（無名的表單欄位：暱稱／E-mail／個人網頁／記住我的資料／內容最多1000字）
+site.post('/blog/:id/comment',postOf,needUnlocked,(req,res)=>{
+  const b=req.body;
+  if(b.body?.trim()){
+    const site1=(()=>{ try{ const x=String(b.homepage||'').trim(); if(!x) return '';
+      return ['http:','https:'].includes(new URL(x).protocol)?x.slice(0,200):''; }catch{ return ''; } })();
+    const email=/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test((b.email||'').trim())?b.email.trim().slice(0,60):'';
+    run('INSERT INTO comments(post_id,author,body,email,homepage) VALUES(?,?,?,?,?)',
+      res.locals.post.id,(res.locals.me?.nick||b.author||'訪客').trim().slice(0,20),
+      b.body.trim().slice(0,1000), email, site1);
+    if(b.remember) req.session.guest={author:(b.author||'').slice(0,20),email,homepage:site1};   // 記住我的資料
+    else delete req.session.guest;
+  }
+  res.redirect(`/${U(res).name}/blog/${res.locals.post.id}#comments`); });
+// 板主回覆迴響
+site.post('/blog/:id/comment/:cid/reply',requireLogin,requireOwner,postOf,(req,res)=>{
+  run('UPDATE comments SET reply=? WHERE id=? AND post_id=?',(req.body.reply||'').trim().slice(0,500),req.params.cid,res.locals.post.id);
+  res.redirect(`/${U(res).name}/blog/${res.locals.post.id}#comments`); });
 site.post('/blog/:id/comment/:cid/del',requireLogin,requireOwner,postOf,(req,res)=>{ run('DELETE FROM comments WHERE id=? AND post_id=?',req.params.cid,res.locals.post.id); res.redirect(`/${U(res).name}/blog/${res.locals.post.id}#comments`); });
 site.post('/blog/:id/like',postOf,needUnlocked,(req,res)=>{ req.session.liked??=[]; if(!req.session.liked.includes(res.locals.post.id)){ req.session.liked.push(res.locals.post.id); run('UPDATE posts SET likes=likes+1 WHERE id=?',res.locals.post.id);} res.redirect(`/${U(res).name}/blog/${res.locals.post.id}`); });
 // 引用：在自己的網誌建立一篇引用文，並在原文登記

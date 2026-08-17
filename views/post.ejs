@@ -7,7 +7,16 @@
 </div></div>
 <% if(trackbacks.length){ %><div class="box"><h3>引用 <span><%= trackbacks.length %></span></h3><div class="in"><% trackbacks.forEach(t=>{ %><div>↳ <a href="/<%= t.uname %>/blog/<%= t.pid %>"><%= t.title %></a> <span class="gray"><%= t.created.slice(0,10) %></span></div><% }) %></div></div><% } %>
 <div class="box" id="comments"><h3>迴響 <span><%= comments.length %> 則</span></h3><div class="in">
-<% comments.forEach((c,i)=>{ %><div class="msg"><span class="floor"><%= i+1 %>樓</span> <span class="who"><%= c.author %></span> <span class="gray"><%= c.created.slice(0,16) %></span><% if(isOwner){ %> <form method="post" action="/<%= u.name %>/blog/<%= post.id %>/comment/<%= c.id %>/del" style="display:inline"><button class="lnk" style="font-size:10px">刪</button></form><% } %><br><span style="white-space:pre-wrap"><%= c.body %></span></div><% }) %>
-<form method="post" action="/<%= u.name %>/blog/<%= post.id %>/comment" class="gb" style="margin-top:8px"><table class="pf"><% if(!me){ %><tr><td width="50">暱稱</td><td><input name="author" maxlength="20"></td></tr><% } %><tr><td>迴響內容</td><td><textarea name="body" cols="55" rows="4" maxlength="1000" required></textarea></td></tr><tr><td></td><td><input type="submit" class="btn" value="送出"></td></tr></table></form></div></div>
+<% comments.forEach((c,i)=>{ %><div class="msg"><span class="floor"><%= i+1 %>樓</span> <span class="who"><% if(c.homepage){ %><a href="<%= c.homepage %>" rel="nofollow noopener" target="_blank"><%= c.author %></a><% } else { %><%= c.author %><% } %></span> <span class="gray"><%= c.created.slice(0,16) %></span><% if(isOwner){ %> <form method="post" action="/<%= u.name %>/blog/<%= post.id %>/comment/<%= c.id %>/del" style="display:inline"><button class="lnk" style="font-size:10px">刪</button></form><% } %><br><span style="white-space:pre-wrap"><%= c.body %></span>
+<% if(c.reply){ %><div class="reply"><b>板主回覆</b>：<%= c.reply %></div><% } %>
+<% if(isOwner){ %><form method="post" action="/<%= u.name %>/blog/<%= post.id %>/comment/<%= c.id %>/reply" style="margin-left:20px;margin-top:2px"><input name="reply" size="36" value="<%= c.reply %>" placeholder="板主回覆…" maxlength="500"> <button class="btn" style="font-size:10px">回覆</button></form><% } %></div><% }) %>
+<div class="formtitle">發表迴響</div>
+<form method="post" action="/<%= u.name %>/blog/<%= post.id %>/comment" class="gb"><table class="pf">
+<% if(!me){ %><tr><td width="70">暱稱：</td><td><input name="author" maxlength="20" value="<%= (guest&&guest.author)||'' %>"></td></tr>
+<tr><td>E-mail：</td><td><input name="email" size="30" maxlength="60" value="<%= (guest&&guest.email)||'' %>"></td></tr>
+<tr><td>個人網頁：</td><td><input name="homepage" size="30" maxlength="200" placeholder="http://" value="<%= (guest&&guest.homepage)||'' %>"></td></tr>
+<tr><td>記住我的資料</td><td><label><input type="radio" name="remember" value="1" <%= guest?'checked':'' %>> 是</label> <label><input type="radio" name="remember" value="" <%= guest?'':'checked' %>> 否</label></td></tr><% } %>
+<tr><td>迴響內容<br><span class="gray" style="font-size:10px">（最多1000字）</span></td><td><textarea name="body" cols="55" rows="5" maxlength="1000" required></textarea></td></tr>
+<tr><td></td><td><input type="submit" class="btn" value="送出"></td></tr></table></form></div></div>
 </td><%- include('partials/blogside') %></tr></table>
 <%- include('partials/foot') %>

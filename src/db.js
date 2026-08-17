@@ -27,6 +27,23 @@ try { db.exec("ALTER TABLE users ADD COLUMN hits_date TEXT DEFAULT ''"); } catch
 try { db.exec("ALTER TABLE albums ADD COLUMN topic TEXT DEFAULT ''"); } catch {}
 try { db.exec("ALTER TABLE albums ADD COLUMN place TEXT DEFAULT ''"); } catch {}
 try { db.exec("ALTER TABLE posts ADD COLUMN topic TEXT DEFAULT ''"); } catch {}
+// 名片欄位（無名的「個人資料（名片）」）
+try { db.exec("ALTER TABLE users ADD COLUMN realname TEXT DEFAULT ''"); } catch {}
+try { db.exec("ALTER TABLE users ADD COLUMN sex TEXT DEFAULT ''"); } catch {}
+try { db.exec("ALTER TABLE users ADD COLUMN birthday TEXT DEFAULT ''"); } catch {}
+try { db.exec("ALTER TABLE users ADD COLUMN zodiac TEXT DEFAULT ''"); } catch {}
+try { db.exec("ALTER TABLE users ADD COLUMN blood TEXT DEFAULT ''"); } catch {}
+try { db.exec("ALTER TABLE users ADD COLUMN city TEXT DEFAULT ''"); } catch {}
+try { db.exec("ALTER TABLE users ADD COLUMN job TEXT DEFAULT ''"); } catch {}
+try { db.exec("ALTER TABLE users ADD COLUMN school TEXT DEFAULT ''"); } catch {}
+try { db.exec("ALTER TABLE users ADD COLUMN hobby TEXT DEFAULT ''"); } catch {}
+try { db.exec("ALTER TABLE users ADD COLUMN motto TEXT DEFAULT ''"); } catch {}
+try { db.exec("ALTER TABLE users ADD COLUMN msn TEXT DEFAULT ''"); } catch {}
+try { db.exec("ALTER TABLE users ADD COLUMN homepage TEXT DEFAULT ''"); } catch {}
+// 迴響欄位（無名迴響表單有 E-mail 與個人網頁）
+try { db.exec("ALTER TABLE comments ADD COLUMN email TEXT DEFAULT ''"); } catch {}
+try { db.exec("ALTER TABLE comments ADD COLUMN homepage TEXT DEFAULT ''"); } catch {}
+try { db.exec("ALTER TABLE comments ADD COLUMN reply TEXT DEFAULT ''"); } catch {}
 
 export const q = (sql)=>db.prepare(sql);
 export const one=(sql,...a)=>db.prepare(sql).get(...a);
