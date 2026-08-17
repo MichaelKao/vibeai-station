@@ -14,5 +14,5 @@ const existed = fs.existsSync(DB_PATH);
 let size = 'n/a';
 try { const s = fs.statfsSync(DATA_DIR); size = `${Math.round(s.blocks*s.bsize/1e9)}GB total / ${Math.round(s.bavail*s.bsize/1e9)}GB free`; } catch {}
 console.log(`[data] DATA_DIR=${DATA_DIR} db=${DB_PATH} existing=${existed} cwd=${process.cwd()} fs=${size}`);
-try { fs.writeFileSync(path.join(DATA_DIR,'.boot'), new Date().toISOString()+'\n', {flag:'a'});
+);
       console.log(`[data] boot marker lines: ${fs.readFileSync(path.join(DATA_DIR,'.boot'),'utf8').trim().split('\n').length}`); } catch(e){ console.log('[data] marker failed', e.message); }

@@ -39,3 +39,8 @@ R2_PREFIX=station/                       # 可選，預設 station/
 - `USER_QUOTA_MB`（預設 500）：每人相簿空間上限，超過會擋下並提示先刪照片。相簿頁有用量條。
 - `DISK_RESERVE_MB`（預設 1024）：磁碟可用空間低於此值就停止接受上傳，保住資料庫。
 站長後台 `/admin` 可看照片總量、磁碟可用、每人用量。接上 R2 後這兩道自動放行（R2 沒有容量上限）。
+
+## 部署踩過的坑（重要）
+1. **資料一定要走絕對路徑**：程式用 `DATA_DIR`（Railway 設 `/app/data`＝Volume 掛載點）。用相對路徑會寫到 Volume 外面，**每次重新部署資料全消失**。
+2. **Railway API 部署要加 `latestCommit:true`**：`serviceInstanceDeploy` 不加這個參數會重build 舊的 commit。
+3. **Volume 可能變殭屍**：建了之後若刪不掉（API 回 true 但實際還在），該 Volume 會顯示 READY 卻不會真的掛載。判斷方法看啟動日誌的 `fs=` 容量：顯示容器暫存碟（數千 GB）＝沒掛上，顯示 49GB＝正常。遇到就重建 service。
