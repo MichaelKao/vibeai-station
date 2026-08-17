@@ -15,6 +15,9 @@ CREATE TABLE IF NOT EXISTS visitors(id INTEGER PRIMARY KEY, user_id INTEGER REFE
 CREATE TABLE IF NOT EXISTS friends(user_id INTEGER, friend_id INTEGER, created TEXT DEFAULT (datetime('now','localtime')), PRIMARY KEY(user_id,friend_id));
 CREATE TABLE IF NOT EXISTS notices(id INTEGER PRIMARY KEY, body TEXT, created TEXT DEFAULT (datetime('now','localtime')));
 `);
+// 舊資料庫補欄位（照片檔案大小，用於配額計算）
+try { db.exec('ALTER TABLE photos ADD COLUMN bytes INTEGER DEFAULT 0'); } catch {}
+
 export const q = (sql)=>db.prepare(sql);
 export const one=(sql,...a)=>db.prepare(sql).get(...a);
 export const all=(sql,...a)=>db.prepare(sql).all(...a);

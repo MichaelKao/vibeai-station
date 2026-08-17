@@ -4,7 +4,7 @@ import multer from 'multer';
 import path from 'node:path';
 import { one, all, run } from './db.js';
 import { hash, salt, check, requireLogin, requireOwner } from './auth.js';
-import { save, remove } from './storage.js';
+import { save, remove, hasR2, diskFree } from './storage.js';
 
 const app = express();
 app.set('view engine','ejs'); app.set('views', path.resolve('views'));
@@ -22,6 +22,22 @@ app.use((req,res,next)=>{
   next();
 });
 const flash=(req,m)=>{req.session.flash=m};
+
+// ===== 儲存空間保護 =====
+// 沒接 R2 時照片與 SQLite 共用同一顆 Volume，塞爆會連資料庫都寫不進去，
+// 所以（1）每人配額 (2)磁碟保留水位，兩道都擋在寫入之前。
+const USER_QUOTA = (+process.env.USER_QUOTA_MB || 500) * 1024 * 1024;
+const DISK_RESERVE = (+process.env.DISK_RESERVE_MB || 1024) * 1024 * 1024;
+const MB = n => (n/1024/1024).toFixed(1);
+const usedBytes = uid => one('SELECT COALESCE(SUM(bytes),0) b FROM photos WHERE album_id IN (SELECT id FROM albums WHERE user_id=?)',uid).b;
+function quotaError(uid, incoming){
+  const used = usedBytes(uid);
+  if (used + incoming > USER_QUOTA)
+    return `你的相簿空間已用 ${MB(used)} MB / ${MB(USER_QUOTA)} MB，這次上傳 ${MB(incoming)} MB 會超過上限。請先刪掉一些照片，或請站長調高配額。`;
+  if (diskFree() - incoming < DISK_RESERVE)
+    return '伺服器儲存空間不足，暫時無法上傳。已通知站長，請稍後再試。';
+  return null;
+}
 const isFriend=(a,b)=>!!one('SELECT 1 FROM friends WHERE user_id=? AND friend_id=?',a,b);
 
 // ===== 全站 =====
@@ -69,7 +85,12 @@ app.post('/logout',(req,res)=>req.session.destroy(()=>res.redirect('/')));
 
 // ===== 站長後台 =====
 const requireAdmin=(req,res,next)=>res.locals.me?.admin?next():res.status(403).send('forbidden');
-app.get('/admin',requireAdmin,(req,res)=>res.render('admin',{users:all('SELECT id,name,nick,visits,admin,created FROM users ORDER BY id DESC'),notices:all('SELECT * FROM notices ORDER BY id DESC')}));
+app.get('/admin',requireAdmin,(req,res)=>res.render('admin',{
+  users:all(`SELECT u.id,u.name,u.nick,u.visits,u.admin,u.created,
+    (SELECT COALESCE(SUM(p.bytes),0) FROM photos p JOIN albums a ON a.id=p.album_id WHERE a.user_id=u.id) bytes
+    FROM users u ORDER BY u.id DESC`),
+  notices:all('SELECT * FROM notices ORDER BY id DESC'),
+  storage:{ total:one('SELECT COALESCE(SUM(bytes),0) b FROM photos').b, free:diskFree(), r2:hasR2, quota:USER_QUOTA, mb:MB }}));
 app.post('/admin/notice',requireAdmin,(req,res)=>{ if(req.body.body?.trim()) run('INSERT INTO notices(body) VALUES(?)',req.body.body.trim().slice(0,200)); res.redirect('/admin'); });
 app.post('/admin/notice/:id/del',requireAdmin,(req,res)=>{ run('DELETE FROM notices WHERE id=?',req.params.id); res.redirect('/admin'); });
 app.post('/admin/user/:id/del',requireAdmin,(req,res)=>{ if(Number(req.params.id)!==res.locals.me.id) run('DELETE FROM users WHERE id=?',req.params.id); res.redirect('/admin'); });
@@ -111,7 +132,9 @@ site.post('/friend',requireLogin,(req,res)=>{ const me=res.locals.me.id,u=U(res)
 site.get('/friends',(req,res)=>res.render('friends',{nav:'user',friends:all('SELECT u.name,u.nick,u.avatar,u.intro FROM friends f JOIN users u ON u.id=f.friend_id WHERE f.user_id=? ORDER BY f.created DESC',U(res).id),fans:all('SELECT u.name,u.nick,u.avatar FROM friends f JOIN users u ON u.id=f.user_id WHERE f.friend_id=? ORDER BY f.created DESC',U(res).id)}));
 
 // 相簿
-site.get('/album',(req,res)=>res.render('album',{nav:'album',albums:all(`SELECT a.*,(SELECT count(*) FROM photos WHERE album_id=a.id) n FROM albums a WHERE user_id=? ORDER BY id DESC`,U(res).id)}));
+site.get('/album',(req,res)=>res.render('album',{nav:'album',
+  quota:{used:usedBytes(U(res).id),total:USER_QUOTA,mb:MB},
+  albums:all(`SELECT a.*,(SELECT count(*) FROM photos WHERE album_id=a.id) n FROM albums a WHERE user_id=? ORDER BY id DESC`,U(res).id)}));
 site.post('/album',requireLogin,requireOwner,(req,res)=>{ const t=(req.body.title||'').trim().slice(0,40); if(t) run('INSERT INTO albums(user_id,title,descr,pass) VALUES(?,?,?,?)',U(res).id,t,(req.body.descr||'').slice(0,200),(req.body.pass||'').slice(0,20)); res.redirect(`/${U(res).name}/album`); });
 const albumOf=(req,res,next)=>{ const a=one('SELECT * FROM albums WHERE id=? AND user_id=?',req.params.id,U(res).id); if(!a) return next('route'); res.locals.album=a; next(); };
 const albumUnlocked=(req,res)=>!res.locals.album.pass||res.locals.isOwner||(req.session.unlocked||[]).includes(res.locals.album.id);
@@ -125,7 +148,11 @@ site.post('/album/:id/edit',requireLogin,requireOwner,albumOf,(req,res)=>{ run('
 site.post('/album/:id/del',requireLogin,requireOwner,albumOf,async(req,res)=>{ for(const p of all('SELECT url FROM photos WHERE album_id=?',res.locals.album.id)) await remove(p.url); run('DELETE FROM albums WHERE id=?',res.locals.album.id); res.redirect(`/${U(res).name}/album`); });
 site.post('/album/:id/upload',requireLogin,requireOwner,albumOf,upload.array('photos',20),async(req,res)=>{
   const a=res.locals.album; let first=null;
-  for(const f of req.files||[]){ const url=await save(f); if(!first) first=url; run('INSERT INTO photos(album_id,url,caption) VALUES(?,?,?)',a.id,url,(req.body.caption||'').slice(0,100)); }
+  const files=req.files||[];
+  const incoming=files.reduce((n,f)=>n+f.size,0);
+  const err=quotaError(U(res).id,incoming);
+  if(err) return res.status(413).render('msg',{title:'空間不足',msg:err,back:`/${U(res).name}/album/${a.id}`});
+  for(const f of files){ const url=await save(f); if(!first) first=url; run('INSERT INTO photos(album_id,url,caption,bytes) VALUES(?,?,?,?)',a.id,url,(req.body.caption||'').slice(0,100),f.size); }
   if(first && !a.cover) run('UPDATE albums SET cover=? WHERE id=?',first,a.id);
   flash(req,`上傳了 ${req.files?.length||0} 張照片`); res.redirect(`/${U(res).name}/album/${a.id}`);
 });

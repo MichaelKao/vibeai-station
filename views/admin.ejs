@@ -1,7 +1,14 @@
 <%- include('partials/head',{title:'站長後台'}) %>
 <table id="main"><tr><td>
-<div class="box"><h3>站友 (<%= users.length %>)</h3><div class="in"><table class="grid"><tr><th>ID</th><th>帳號</th><th>暱稱</th><th>人氣</th><th>加入</th><th></th></tr><% users.forEach(x=>{ %><tr><td><%= x.id %></td><td><a href="/<%= x.name %>"><%= x.name %></a><%= x.admin?' ★':'' %></td><td><%= x.nick %></td><td><%= x.visits %></td><td><%= x.created.slice(0,10) %></td><td><% if(x.id!==me.id){ %><form method="post" action="/admin/user/<%= x.id %>/del" onsubmit="return confirm('刪除 <%= x.name %> 及其所有內容？')"><button class="btn red">刪除</button></form><% } %></td></tr><% }) %></table></div></div>
+<div class="box"><h3>站友 (<%= users.length %>)</h3><div class="in"><table class="grid"><tr><th>ID</th><th>帳號</th><th>暱稱</th><th>人氣</th><th>照片</th><th>加入</th><th></th></tr><% users.forEach(x=>{ %><tr><td><%= x.id %></td><td><a href="/<%= x.name %>"><%= x.name %></a><%= x.admin?' ★':'' %></td><td><%= x.nick %></td><td><%= x.visits %></td><td><%= (x.bytes/1024/1024).toFixed(1) %>M</td><td><%= x.created.slice(0,10) %></td><td><% if(x.id!==me.id){ %><form method="post" action="/admin/user/<%= x.id %>/del" onsubmit="return confirm('刪除 <%= x.name %> 及其所有內容？')"><button class="btn red">刪除</button></form><% } %></td></tr><% }) %></table></div></div>
 </td><td class="side" style="width:280px">
+<div class="box"><h3>儲存空間</h3><div class="in">
+照片總量：<b><%= storage.mb(storage.total) %> MB</b><br>
+儲存方式：<%= storage.r2?'Cloudflare R2（不佔伺服器硬碟）':'伺服器 Volume' %><br>
+<% if(!storage.r2){ %>磁碟可用：<b style="color:<%= storage.free<2*1024*1024*1024?'#c00':'#360' %>"><%= storage.mb(storage.free) %> MB</b><br>
+<span class="gray">低於保留水位時會自動停止上傳，保護資料庫。</span><br><% } %>
+每人配額：<%= storage.mb(storage.quota) %> MB <span class="gray">(USER_QUOTA_MB)</span>
+</div></div>
 <div class="box"><h3>站內公告</h3><div class="in"><form method="post" action="/admin/notice"><input name="body" size="30" maxlength="200" required> <input type="submit" class="btn" value="發布"></form><% notices.forEach(n=>{ %><div class="msg"><%= n.created.slice(0,10) %> <%= n.body %> <form method="post" action="/admin/notice/<%= n.id %>/del" style="display:inline"><button class="lnk" style="font-size:10px">刪</button></form></div><% }) %></div></div>
 </td></tr></table>
 <%- include('partials/foot') %>

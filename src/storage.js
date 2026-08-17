@@ -8,6 +8,12 @@ const R2 = process.env.R2_BUCKET ? await (async()=>{
   return { PutObjectCommand, DeleteObjectCommand, c };
 })() : null;
 const ext = m => ({'image/jpeg':'.jpg','image/png':'.png','image/gif':'.gif','image/webp':'.webp'}[m]||'');
+export const hasR2 = !!R2;
+// 本地磁碟剩餘可用位元組（存 R2 時不受限）
+export function diskFree(){
+  if (R2) return Infinity;
+  try { const s = fs.statfsSync('data'); return s.bavail * s.bsize; } catch { return Infinity; }
+}
 export async function save(file){
   const key = (process.env.R2_PREFIX||'station/') + crypto.randomUUID() + ext(file.mimetype);
   if (R2){ await R2.c.send(new R2.PutObjectCommand({Bucket:process.env.R2_BUCKET,Key:key,Body:file.buffer,ContentType:file.mimetype})); return process.env.R2_PUBLIC_URL.replace(/\/$/,'')+'/'+key; }
