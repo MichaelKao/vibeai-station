@@ -19,6 +19,12 @@
 <span class="gray">低於保留水位時會自動停止上傳，保護資料庫。</span><br><% } %>
 每人配額：<%= storage.mb(storage.quota) %> MB <span class="gray">(USER_QUOTA_MB)</span>
 </div></div>
+<div class="box"><h3>群發系統訊息</h3><div class="in">
+<form method="post" action="/admin/broadcast">
+<input name="title" size="28" maxlength="60" placeholder="標題" required><br>
+<textarea name="body" cols="30" rows="3" maxlength="1000" placeholder="內容" required></textarea><br>
+<button class="btn">送給所有站友</button></form>
+<span class="gray">會進到每個人的「系統訊息」。</span></div></div>
 <div class="box"><h3>站內公告</h3><div class="in"><form method="post" action="/admin/notice"><input name="body" size="30" maxlength="200" required> <input type="submit" class="btn" value="發布"></form><% notices.forEach(n=>{ %><div class="msg"><%= n.created.slice(0,10) %> <%= n.body %> <form method="post" action="/admin/notice/<%= n.id %>/del" style="display:inline"><button class="lnk" style="font-size:10px">刪</button></form></div><% }) %></div></div>
 </td></tr></table>
 <%- include('partials/foot') %>

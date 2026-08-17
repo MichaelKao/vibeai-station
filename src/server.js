@@ -64,6 +64,10 @@ app.get('/', (req,res)=>{
         (SELECT ph.thumb FROM photos ph JOIN albums al ON al.id=ph.album_id
          WHERE al.user_id=p.user_id AND al.pass='' AND al.friends_only=0 ORDER BY ph.id DESC LIMIT 1) pthumb
       FROM posts p JOIN users u ON u.id=p.user_id WHERE p.pass='' ORDER BY p.views DESC LIMIT 6`),
+    featAlbums: all(`SELECT a.*,u.name uname,u.nick FROM albums a JOIN users u ON u.id=a.user_id
+      WHERE a.featured=1 AND a.pass='' AND a.friends_only=0 AND a.cover!='' ORDER BY a.id DESC LIMIT 4`),
+    featPosts: all(`SELECT p.*,u.name uname,u.nick FROM posts p JOIN users u ON u.id=p.user_id
+      WHERE p.featured=1 AND p.pass='' ORDER BY p.id DESC LIMIT 5`),
     newUsers: all(`SELECT name,nick FROM users ORDER BY id DESC LIMIT 8`),
     rank: all(`SELECT name,nick,visits FROM users ORDER BY visits DESC LIMIT 10`),
     notices: all(`SELECT * FROM notices ORDER BY id DESC LIMIT 5`),
@@ -159,6 +163,19 @@ app.get('/admin',requireAdmin,(req,res)=>res.render('admin',{
   storage:{ total:one('SELECT COALESCE(SUM(bytes),0) b FROM photos').b, free:diskFree(), r2:hasR2, quota:USER_QUOTA, mb:MB }}));
 app.post('/admin/report/:id/done',requireAdmin,(req,res)=>{ run('UPDATE reports SET done=1 WHERE id=?',req.params.id); res.redirect('/admin'); });
 app.post('/admin/report/:id/del',requireAdmin,(req,res)=>{ run('DELETE FROM reports WHERE id=?',req.params.id); res.redirect('/admin'); });
+// 站長精選（首頁「無名精選」）
+app.post('/admin/feature/:kind/:id',requireAdmin,(req,res)=>{
+  const t = req.params.kind==='album' ? 'albums' : (req.params.kind==='post' ? 'posts' : null);
+  if(t) run(`UPDATE ${t} SET featured=1-featured WHERE id=?`, req.params.id);
+  res.redirect(safePath(req.body.back) || '/admin');
+});
+// 群發系統訊息（當年的「無名日報」）
+app.post('/admin/broadcast',requireAdmin,(req,res)=>{
+  const title=(req.body.title||'').trim().slice(0,60), body=(req.body.body||'').trim().slice(0,1000);
+  if(title && body) for(const u of all('SELECT id FROM users'))
+    run('INSERT INTO sysmsg(user_id,title,body) VALUES(?,?,?)',u.id,title,body);
+  flash(req,'已送出給所有站友'); res.redirect('/admin');
+});
 app.post('/admin/notice',requireAdmin,(req,res)=>{ if(req.body.body?.trim()) run('INSERT INTO notices(body) VALUES(?)',req.body.body.trim().slice(0,200)); res.redirect('/admin'); });
 app.post('/admin/notice/:id/del',requireAdmin,(req,res)=>{ run('DELETE FROM notices WHERE id=?',req.params.id); res.redirect('/admin'); });
 app.post('/admin/user/:id/admin',requireAdmin,(req,res)=>{ // 設為／取消站長（不能取消自己，避免把自己鎖在外面）
@@ -268,9 +285,14 @@ site.get('/friends',(req,res)=>res.render('friends',{nav:'user',
   fans:all('SELECT u.name,u.nick,u.avatar FROM friends f JOIN users u ON u.id=f.user_id WHERE f.friend_id=? ORDER BY f.created DESC',U(res).id)}));
 
 // 相簿
-site.get('/album',(req,res)=>res.render('album',{nav:'album',topics:ALBUM_TOPICS,places:PLACES,
-  quota:{used:usedBytes(U(res).id),total:USER_QUOTA,mb:MB},
-  albums:all(`SELECT a.*,(SELECT count(*) FROM photos WHERE album_id=a.id) n FROM albums a WHERE user_id=? ORDER BY id DESC`,U(res).id)}));
+site.get('/album',(req,res)=>{
+  const page=Math.max(1,+req.query.p||1), per=20;    // 無名一頁 20 本（5x4）
+  const total=one('SELECT count(*) c FROM albums WHERE user_id=?',U(res).id).c;
+  res.render('album',{nav:'album',topics:ALBUM_TOPICS,places:PLACES,
+    page,pages:Math.ceil(total/per),total,
+    quota:{used:usedBytes(U(res).id),total:USER_QUOTA,mb:MB},
+    albums:all(`SELECT a.*,(SELECT count(*) FROM photos WHERE album_id=a.id) n FROM albums a WHERE user_id=? ORDER BY id DESC LIMIT ? OFFSET ?`,U(res).id,per,(page-1)*per)});
+});
 site.post('/album',requireLogin,requireOwner,(req,res)=>{ const t=(req.body.title||'').trim().slice(0,40); if(t) run('INSERT INTO albums(user_id,title,descr,pass,topic,place,friends_only) VALUES(?,?,?,?,?,?,?)',U(res).id,t,(req.body.descr||'').slice(0,200),(req.body.pass||'').slice(0,20),isAlbumTopic(req.body.topic)?req.body.topic:'',isPlace(req.body.place)?req.body.place:'',req.body.friends_only?1:0); res.redirect(`/${U(res).name}/album`); });
 const albumOf=(req,res,next)=>{ const a=one('SELECT * FROM albums WHERE id=? AND user_id=?',req.params.id,U(res).id); if(!a) return next('route'); res.locals.album=a; next(); };
 const albumUnlocked=(req,res)=>!res.locals.album.pass||res.locals.isOwner||(req.session.unlocked||[]).includes(res.locals.album.id);

@@ -6,6 +6,18 @@
 <%# 左欄 505px（同 2005 無名首頁） %>
 <td class="main-col">
 
+<% if(featAlbums.length||featPosts.length){ %>
+<div class="box"><h3>vibeai 精選</h3><div class="in">
+<% if(featAlbums.length){ %><table class="grid3"><tr>
+<% featAlbums.forEach((a,i)=>{ %><% if(i>0 && i%3===0){ %></tr><tr><% } %>
+<td><a href="/<%= a.uname %>/album/<%= a.id %>"><img src="<%= a.cover %>" width="120" height="120" alt=""></a>
+<div class="cap3"><a href="/<%= a.uname %>"><%= a.nick %></a><br><a href="/<%= a.uname %>/album/<%= a.id %>"><%= a.title %></a></div></td>
+<% }) %></tr></table><% } %>
+<% if(featPosts.length){ %><ul class="list">
+<% featPosts.forEach(p=>{ %><li><a href="/<%= p.uname %>/blog/<%= p.id %>"><%= p.title %></a> <span class="gray">— <%= p.nick %></span></li><% }) %>
+</ul><% } %>
+</div></div>
+<% } %>
 <div class="box"><h3>熱門相簿 <span><a href="/albums">更多相簿..</a></span></h3><div class="in">
 <% if(!hotAlbums.length){ %><span class="gray">還沒有公開相簿，快來上傳第一張照片！</span><% } %>
 <table class="grid3"><tr>

@@ -2,7 +2,7 @@
 <table id="main"><tr><td>
 <div class="box"><h3><a href="/<%= u.name %>/album">相簿</a> &raquo; <%= album.pass?'[鎖] ':'' %><%= album.title %> <span><%= photos.length %>張照片 ・ <%= album.views %> 人次</span></h3><div class="in">
 <% if(album.descr){ %><div class="gray" style="margin-bottom:6px"><%= album.descr %></div><% } %>
-<% if(photos.length){ %><div class="albumtools"><a href="/<%= u.name %>/album/<%= album.id %>/slide">幻燈片</a> | <% if(viewAll){ %><a href="/<%= u.name %>/album/<%= album.id %>">縮圖瀏覽</a><% } else { %><a href="/<%= u.name %>/album/<%= album.id %>?all=1">一頁瀏覽</a><% } %></div><% } %>
+<% if(photos.length){ %><div class="albumtools"><% if(me&&me.admin){ %><form method="post" action="/admin/feature/album/<%= album.id %>" style="display:inline"><input type="hidden" name="back" value="/<%= u.name %>/album/<%= album.id %>"><button class="lnk"><%= album.featured?"取消精選":"設為精選" %></button></form> | <% } %><a href="/<%= u.name %>/album/<%= album.id %>/slide">幻燈片</a> | <% if(viewAll){ %><a href="/<%= u.name %>/album/<%= album.id %>">縮圖瀏覽</a><% } else { %><a href="/<%= u.name %>/album/<%= album.id %>?all=1">一頁瀏覽</a><% } %></div><% } %>
 <% if(!photos.length){ %><span class="gray">這本相簿還沒有照片</span><% } %>
 <% if(viewAll){ %>
   <% photos.forEach((p,i)=>{ %><div class="onepage"><img src="<%= p.url %>" alt=""><div><%= i+1 %> / <%= photos.length %>　<%= p.caption %></div></div><% }) %>
