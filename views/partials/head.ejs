@@ -1,5 +1,6 @@
 <!DOCTYPE html><html lang="zh-Hant"><head><meta charset="utf-8">
-<title><%= title %> - vibeai 小站</title><link rel="stylesheet" href="/style.css">
+<title><%= title %> - vibeai 小站</title><link rel="icon" href="/favicon.ico">
+<link rel="stylesheet" href="/style.css">
 <% if (u && u.css) { %><style><%- u.css.replace(/<\/style/gi,'') %></style><% } %></head>
 <%# 相簿頁走橘色主題、網誌頁走藍色主題，個人小站頁固定 700px（同無名） %>
 <body class="<%= u?'personal':'' %> <%= (u&&u.theme) ? ('t-x-'+u.theme) : (nav==='album'?'t-album':(nav==='blog'?'t-blog':'')) %>">
