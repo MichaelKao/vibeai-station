@@ -1,0 +1,22 @@
+<%- include('partials/head',{title:'首頁',nav:'home'}) %>
+<div class="marquee">★ <% if(notices.length){ %><%= notices[0].body %><% } else { %>vibeai 小站開站囉！完全免費，歡迎申請帳號～<% } %> 目前共 <%= stats.users %> 位站友、<%= stats.photos %> 張照片、<%= stats.posts %> 篇網誌。</div>
+<table id="main"><tr>
+<td>
+<div class="box"><h3>今日熱門相簿 <span><a href="/rank">更多 &raquo;</a></span></h3><div class="in">
+<% if(!hotAlbums.length){ %><span class="gray">還沒有公開相簿，快來上傳第一張照片！</span><% } hotAlbums.forEach(a=>{ %><div class="thumb"><a href="/<%= a.uname %>/album/<%= a.id %>"><img src="<%= a.cover %>" alt=""></a><br><a href="/<%= a.uname %>/album/<%= a.id %>"><%= a.title %></a><br><span class="gray"><%= a.nick %> ・ <%= a.views %> 人次</span></div><% }) %>
+<div class="clear"></div></div></div>
+<div class="box"><h3>最新照片</h3><div class="in">
+<% if(!newPhotos.length){ %><span class="gray">尚無照片</span><% } newPhotos.forEach(p=>{ %><div class="thumb"><a href="/<%= p.uname %>/photo/<%= p.id %>"><img src="<%= p.url %>" alt=""></a><br><span class="gray"><%= p.atitle %></span></div><% }) %>
+<div class="clear"></div></div></div>
+<div class="box"><h3>網誌精選 <span><a href="/rank">更多 &raquo;</a></span></h3><div class="in"><ul class="list">
+<% if(!hotPosts.length){ %><li class="gray">尚無文章</li><% } hotPosts.forEach(p=>{ %><li><a href="/<%= p.uname %>/blog/<%= p.id %>"><%= p.title %></a> <span class="gray">— <%= p.nick %>（<%= p.category %>）<%= p.views %> 人次</span></li><% }) %>
+</ul></div></div>
+</td>
+<td class="side">
+<% if (!me) { %><div class="box"><h3>會員登入</h3><div class="in"><form method="post" action="/login"><table class="pf"><tr><td>帳號</td><td><input name="name" size="12"></td></tr><tr><td>密碼</td><td><input name="pass" size="12" type="password"></td></tr><tr><td></td><td><input type="submit" value="登入" class="btn"></td></tr></table></form><div style="text-align:center;margin-top:4px"><a href="/register"><b class="orange">» 免費申請帳號 «</b></a></div></div></div>
+<% } else { %><div class="box"><h3>我的小站</h3><div class="in"><ul class="list"><li><a href="/<%= me.name %>">回我的家</a></li><li><a href="/<%= me.name %>/album">管理相簿</a></li><li><a href="/<%= me.name %>/blog/new">發表網誌</a></li><li><a href="/<%= me.name %>/guestbook">看留言板</a></li></ul></div></div><% } %>
+<div class="box"><h3>人氣排行 <span><a href="/rank">完整</a></span></h3><div class="in"><ol class="hot"><% rank.forEach((r,i)=>{ %><li><i><%= i+1 %></i><a href="/<%= r.name %>"><%= r.nick %></a> <span class="gray"><%= r.visits %></span></li><% }) %></ol></div></div>
+<div class="box"><h3>新加入站友</h3><div class="in"><% newUsers.forEach(x=>{ %><a href="/<%= x.name %>"><%= x.nick %></a>　<% }) %></div></div>
+<div class="box"><h3>站內公告</h3><div class="in gray"><% if(!notices.length){ %>（無）<% } notices.forEach(n=>{ %><div><%= n.created.slice(0,10) %> <%= n.body %></div><% }) %></div></div>
+</td></tr></table>
+<%- include('partials/foot') %>

@@ -1,0 +1,1 @@
+<% if (pages>1) { %><div class="pager"><% for(let i=1;i<=pages;i++){ %><% if(i===page){ %><b>[<%= i %>]</b><% } else { %><a href="?p=<%= i %><%= typeof cat!=='undefined'&&cat?'&cat='+encodeURIComponent(cat):'' %>"><%= i %></a><% } %> <% } %></div><% } %>

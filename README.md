@@ -1,0 +1,35 @@
+# vibeai 小站
+
+2005 年台灣 BSP 風格的懷舊社群：相簿・網誌・留言板・誰來我家・人氣計數器・好友・排行榜・自訂 CSS。免費、無廣告。
+版面與功能致敬當年的無名小站；Logo/名稱為 vibeai 自有，未使用任何原站圖檔或樣板。
+
+## 功能
+- 帳號：註冊／登入／登出、改暱稱／頭像／自我介紹／背景音樂／自訂 CSS／密碼；第一個註冊的帳號＝站長
+- 相簿：多本相簿、密碼相簿、上傳（多張、8MB、jpg/png/gif/webp）、封面、說明、逐張瀏覽（上一張／下一張）、照片回應、刪除
+- 網誌：發文／編輯／刪除、分類、分頁、回應（版主可刪）、推薦、引用到自己的網誌（trackback）、上一篇／下一篇
+- 留言板：留言、悄悄話（只有版主看得到）、版主回覆、分頁
+- 社群：好友（加／取消）、好友列表與粉絲、誰來我家（登入訪客足跡）、人氣計數器
+- 全站：首頁（熱門相簿／最新照片／網誌精選／人氣排行／新站友／公告）、排行榜、搜尋、說明
+- 站長後台 `/admin`：發公告、刪帳號
+
+## 開發
+```
+pnpm install
+pnpm dev        # http://localhost:3000   需 Node >= 22.13（用內建 node:sqlite，免 native 編譯）
+```
+
+## 部署 Railway
+- Start command：`pnpm start`；會讀 `PORT`
+- 環境變數：`SESSION_SECRET`（隨機長字串）
+- **掛 Volume 到 `/app/data`**（SQLite 與本地上傳都在這，不掛重啟就沒了）
+
+## 圖片存 Cloudflare R2（可選，不設就存 Volume）
+設定以下環境變數後自動改存 R2：
+```
+R2_ACCOUNT_ID=...
+R2_ACCESS_KEY=...
+R2_SECRET=...
+R2_BUCKET=...
+R2_PUBLIC_URL=https://pub-xxxx.r2.dev   # 或自訂網域
+R2_PREFIX=station/                       # 可選，預設 station/
+```

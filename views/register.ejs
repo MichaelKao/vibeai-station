@@ -1,0 +1,9 @@
+<%- include('partials/head',{title:'免費註冊'}) %>
+<div class="box" style="width:420px;margin:20px auto"><h3>免費申請 vibeai 小站帳號</h3><div class="in"><% if(err){ %><div class="err"><%= err %></div><% } %><form method="post"><table class="pf">
+<tr><td width="80">帳號</td><td><input name="name" value="<%= form.name||'' %>" required pattern="[A-Za-z0-9_]{3,20}"> <span class="gray">你的網址會是 /帳號</span></td></tr>
+<tr><td>暱稱</td><td><input name="nick" value="<%= form.nick||'' %>" required maxlength="20"></td></tr>
+<tr><td>密碼</td><td><input name="pass" type="password" required></td></tr>
+<tr><td>確認密碼</td><td><input name="pass2" type="password" required></td></tr>
+<tr><td></td><td><input type="submit" class="btn" value="送出申請"></td></tr></table></form>
+<div class="gray" style="margin-top:6px">完全免費、不打廣告。請勿上傳侵權或不當內容。</div></div></div>
+<%- include('partials/foot') %>

@@ -1,0 +1,5 @@
+<%- include('partials/head',{title:album.title}) %>
+<table id="main"><tr><td>
+<div class="box"><h3>[鎖] <%= album.title %></h3><div class="in">這是密碼相簿，請輸入密碼：<form method="post" action="/<%= u.name %>/album/<%= album.id %>/unlock"><input name="pass" type="password"> <input type="submit" class="btn" value="進入"><% if(err){ %> <span class="err"><%= err %></span><% } %></form></div></div>
+</td><%- include('partials/side') %></tr></table>
+<%- include('partials/foot') %>

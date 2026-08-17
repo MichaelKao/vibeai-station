@@ -1,0 +1,9 @@
+<%- include('partials/head',{title:post?'編輯文章':'發表新文章'}) %>
+<table id="main"><tr><td>
+<div class="box"><h3><%= post?'編輯文章':'發表新文章' %></h3><div class="in"><form method="post" class="gb"><table class="pf">
+<tr><td width="50">標題</td><td><input name="title" size="60" maxlength="100" value="<%= post?post.title:'' %>" required></td></tr>
+<tr><td>分類</td><td><input name="category" list="cats" maxlength="20" value="<%= post?post.category:'' %>" placeholder="未分類"><datalist id="cats"><% cats.forEach(c=>{ %><option value="<%= c.category %>"><% }) %></datalist></td></tr>
+<tr><td>內容</td><td><textarea name="body" cols="70" rows="18" required><%= post?post.body:'' %></textarea></td></tr>
+<tr><td></td><td><input type="submit" class="btn" value="<%= post?'儲存':'發表' %>"> <a href="/<%= u.name %>/blog">取消</a></td></tr></table></form></div></div>
+</td><%- include('partials/blogside') %></tr></table>
+<%- include('partials/foot') %>

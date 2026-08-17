@@ -1,0 +1,8 @@
+<%- include('partials/head',{title:u.nick+'的網誌'}) %>
+<table id="main"><tr><td>
+<div class="box"><h3><%= u.nick %>的網誌<%= cat?' ・ '+cat:'' %></h3><div class="in">
+<% if(!posts.length){ %><span class="gray">還沒有文章</span><% } posts.forEach(p=>{ %><div class="entry"><h4><a href="/<%= u.name %>/blog/<%= p.id %>"><%= p.title %></a></h4><div class="meta"><%= p.created.slice(0,16) %> ｜ 分類：<a href="/<%= u.name %>/blog?cat=<%= encodeURIComponent(p.category) %>"><%= p.category %></a> ｜ 人氣：<%= p.views %> ｜ 推：<%= p.likes %></div><div class="body"><%= p.body.length>300?p.body.slice(0,300)+'…':p.body %></div><div class="meta"><a href="/<%= u.name %>/blog/<%= p.id %>#comments">回應(<%= p.nc %>)</a><% if(p.body.length>300){ %> ｜ <a href="/<%= u.name %>/blog/<%= p.id %>">閱讀全文 »</a><% } %></div></div><% }) %>
+<%- include('partials/pager') %>
+</div></div>
+</td><%- include('partials/blogside') %></tr></table>
+<%- include('partials/foot') %>

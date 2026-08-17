@@ -1,0 +1,7 @@
+<%- include('partials/head',{title:'排行榜'}) %>
+<table id="main"><tr>
+<td><div class="box"><h3>人氣小站排行</h3><div class="in"><table class="grid"><tr><th>#</th><th>站友</th><th>人氣</th></tr><% users.forEach((x,i)=>{ %><tr><td><span class="rankn"><%= i+1 %></span></td><td><a href="/<%= x.name %>"><img src="<%= x.avatar %>" width="20" height="20" style="vertical-align:middle;margin-right:4px"><%= x.nick %></a></td><td><%= x.visits %></td></tr><% }) %></table></div></div></td>
+<td class="side" style="width:260px"><div class="box"><h3>熱門相簿</h3><div class="in"><ol class="hot"><% albums.forEach((a,i)=>{ %><li><i><%= i+1 %></i><a href="/<%= a.uname %>/album/<%= a.id %>"><%= a.title %></a> <span class="gray"><%= a.views %></span></li><% }) %></ol></div></div>
+<div class="box"><h3>熱門網誌</h3><div class="in"><ol class="hot"><% posts.forEach((p,i)=>{ %><li><i><%= i+1 %></i><a href="/<%= p.uname %>/blog/<%= p.id %>"><%= p.title %></a> <span class="gray"><%= p.views %></span></li><% }) %></ol></div></div></td>
+</tr></table>
+<%- include('partials/foot') %>

@@ -1,0 +1,6 @@
+<%- include('partials/head',{title:u.nick+'的好友'}) %>
+<table id="main"><tr><td>
+<div class="box"><h3><%= u.nick %>的好友 <span><%= friends.length %> 位</span></h3><div class="in"><% if(!friends.length){ %><span class="gray">還沒有好友</span><% } friends.forEach(f=>{ %><div class="thumb"><a href="/<%= f.name %>"><img src="<%= f.avatar %>" alt=""></a><br><a href="/<%= f.name %>"><%= f.nick %></a></div><% }) %><div class="clear"></div></div></div>
+<div class="box"><h3>把 <%= u.nick %> 加為好友的人 <span><%= fans.length %> 位</span></h3><div class="in"><% if(!fans.length){ %><span class="gray">還沒有</span><% } fans.forEach(f=>{ %><div class="thumb"><a href="/<%= f.name %>"><img src="<%= f.avatar %>" alt=""></a><br><a href="/<%= f.name %>"><%= f.nick %></a></div><% }) %><div class="clear"></div></div></div>
+</td><%- include('partials/side') %></tr></table>
+<%- include('partials/foot') %>

@@ -1,0 +1,14 @@
+<%- include('partials/head',{title:p.caption||p.atitle}) %>
+<table id="main"><tr><td>
+<div class="box"><h3><a href="/<%= u.name %>/album">相簿</a> &raquo; <a href="/<%= u.name %>/album/<%= p.aid %>"><%= p.atitle %></a> &raquo; 第 <%= idx %> / <%= total %> 張 <span><%= p.views %> 人次</span></h3>
+<div class="in" style="text-align:center"><% if(prev){ %><a href="/<%= u.name %>/photo/<%= prev %>">« 上一張</a><% } else { %><span class="gray">« 上一張</span><% } %>　｜　<% if(next){ %><a href="/<%= u.name %>/photo/<%= next %>">下一張 »</a><% } else { %><span class="gray">下一張 »</span><% } %></div>
+<div class="bigphoto"><a href="<%= next?'/'+u.name+'/photo/'+next:p.url %>"><img src="<%= p.url %>" alt=""></a><div style="margin-top:4px"><%= p.caption %></div></div>
+<% if (isOwner) { %><div class="in gray"><form method="post" action="/<%= u.name %>/photo/<%= p.id %>/caption" style="display:inline"><input name="caption" value="<%= p.caption %>" maxlength="100"> <input type="submit" class="btn" value="改說明"></form>
+<form method="post" action="/<%= u.name %>/photo/<%= p.id %>/cover" style="display:inline"><button class="btn">設為封面</button></form>
+<form method="post" action="/<%= u.name %>/photo/<%= p.id %>/del" style="display:inline" onsubmit="return confirm('刪除這張照片？')"><button class="btn red">刪除</button></form></div><% } %>
+</div>
+<div class="box"><h3>照片回應 <span><%= comments.length %> 則</span></h3><div class="in">
+<% comments.forEach(c=>{ %><div class="msg"><span class="who"><%= c.author %></span> <span class="gray"><%= c.created.slice(0,16) %></span><br><%= c.body %></div><% }) %>
+<form method="post" action="/<%= u.name %>/photo/<%= p.id %>/comment" class="gb" style="margin-top:6px"><% if(!me){ %><input name="author" placeholder="暱稱" maxlength="20"> <% } %><input name="body" size="40" placeholder="說點什麼…" maxlength="300" required> <input type="submit" class="btn" value="回應"></form></div></div>
+</td><%- include('partials/side') %></tr></table>
+<%- include('partials/foot') %>

@@ -1,0 +1,15 @@
+<%- include('partials/head',{title:u.nick+'的留言板'}) %>
+<table id="main"><tr><td>
+<div class="box"><h3>我要留言</h3><div class="in"><form class="gb" method="post"><table class="pf">
+<% if(!me){ %><tr><td width="60">暱稱</td><td><input name="author" maxlength="20" required></td></tr><% } %>
+<tr><td width="60">內容</td><td><textarea name="body" cols="50" rows="4" maxlength="500" required></textarea></td></tr>
+<tr><td></td><td><label><input type="checkbox" name="secret"> 悄悄話（只有版主看得到）</label> <input type="submit" class="btn" value="送出留言"></td></tr></table></form></div></div>
+<div class="box"><h3>留言板</h3><div class="in">
+<% if(!msgs.length){ %><span class="gray">還沒有留言</span><% } msgs.forEach(m=>{ %><div class="msg"><span class="who"><%= m.author %></span> <span class="gray"><%= m.created.slice(0,16) %></span><% if(isOwner){ %> <form method="post" action="/<%= u.name %>/guestbook/<%= m.id %>/del" style="display:inline"><button class="lnk" style="font-size:10px">刪</button></form><% } %><br>
+<% if(m.secret && !isOwner){ %><span class="gray">＊ 這是一則悄悄話 ＊</span><% } else { %><span style="white-space:pre-wrap"><%= m.secret?'（悄悄話）':'' %><%= m.body %></span><% } %>
+<% if(m.reply){ %><div class="reply"><b><%= u.nick %></b>：<%= m.reply %></div><% } %>
+<% if(isOwner){ %><form method="post" action="/<%= u.name %>/guestbook/<%= m.id %>/reply" style="margin-left:20px"><input name="reply" size="40" value="<%= m.reply %>" placeholder="版主回覆…" maxlength="500"> <input type="submit" class="btn" value="回覆"></form><% } %></div><% }) %>
+<%- include('partials/pager') %>
+</div></div>
+</td><%- include('partials/side') %></tr></table>
+<%- include('partials/foot') %>

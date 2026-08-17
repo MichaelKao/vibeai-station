@@ -1,0 +1,8 @@
+<%- include('partials/head',{title:'搜尋'}) %>
+<div class="box"><h3>搜尋<%= k?'：'+k:'' %></h3><div class="in"><form action="/search"><input name="q" value="<%= k %>" size="40"> <input type="submit" class="btn" value="搜尋"></form></div></div>
+<% if(k){ %>
+<div class="box"><h3>站友 (<%= users.length %>)</h3><div class="in"><% users.forEach(x=>{ %><div class="thumb"><a href="/<%= x.name %>"><img src="<%= x.avatar %>" alt=""></a><br><a href="/<%= x.name %>"><%= x.nick %></a></div><% }) %><div class="clear"></div><% if(!users.length){ %><span class="gray">無</span><% } %></div></div>
+<div class="box"><h3>相簿 (<%= albums.length %>)</h3><div class="in"><ul class="list"><% albums.forEach(a=>{ %><li><a href="/<%= a.uname %>/album/<%= a.id %>"><%= a.title %></a> <span class="gray"><%= a.uname %></span></li><% }) %></ul><% if(!albums.length){ %><span class="gray">無</span><% } %></div></div>
+<div class="box"><h3>網誌 (<%= posts.length %>)</h3><div class="in"><ul class="list"><% posts.forEach(p=>{ %><li><a href="/<%= p.uname %>/blog/<%= p.id %>"><%= p.title %></a> <span class="gray"><%= p.uname %></span></li><% }) %></ul><% if(!posts.length){ %><span class="gray">無</span><% } %></div></div>
+<% } %>
+<%- include('partials/foot') %>
