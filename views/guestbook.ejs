@@ -1,15 +1,68 @@
 <%- include('partials/head',{title:u.nick+'的留言板'}) %>
 <table id="main"><tr><td>
-<div class="box"><h3>我要留言</h3><div class="in"><form class="gb" method="post"><table class="pf">
-<% if(!me){ %><tr><td width="60">暱稱</td><td><input name="author" maxlength="20" required></td></tr><% } %>
-<tr><td width="60">內容</td><td><textarea name="body" cols="50" rows="4" maxlength="500" required></textarea></td></tr>
-<tr><td></td><td><label><input type="checkbox" name="secret"> 悄悄話（只有板主看得到）</label> <input type="submit" class="btn" value="送出留言"></td></tr></table></form></div></div>
-<div class="box"><h3>留言板</h3><div class="in">
-<% if(!msgs.length){ %><span class="gray">還沒有留言</span><% } msgs.forEach(m=>{ %><div class="msg"><span class="who"><%= m.author %></span> <span class="gray"><%= m.created.slice(0,16) %></span><% if(isOwner){ %> <form method="post" action="/<%= u.name %>/guestbook/<%= m.id %>/del" style="display:inline"><button class="lnk" style="font-size:10px">刪</button></form><% } %><br>
-<% if(m.secret && !isOwner){ %><span class="gray">悄悄話</span><% } else { %><span style="white-space:pre-wrap"><%= m.secret?'（悄悄話）':'' %><%= m.body %></span><% } %>
-<% if(m.reply){ %><div class="reply"><b>板主回覆</b>：<%= m.reply %></div><% } %>
-<% if(isOwner){ %><form method="post" action="/<%= u.name %>/guestbook/<%= m.id %>/reply" style="margin-left:20px"><input name="reply" size="40" value="<%= m.reply %>" placeholder="板主回覆…" maxlength="500"> <input type="submit" class="btn" value="回覆"></form><% } %></div><% }) %>
+
+<%# 無名留言板的三個頁籤：留言板 / 系統訊息 / 我要留言 %>
+<div class="tabs">
+<a href="/<%= u.name %>/guestbook" class="<%= tab==='list'?'on':'' %>">留言板</a>
+<% if(isOwner){ %><a href="/<%= u.name %>/guestbook?tab=sys" class="<%= tab==='sys'?'on':'' %>">系統訊息<% if(unread){ %> (<%= unread %>)<% } %></a><% } %>
+<a href="/<%= u.name %>/guestbook?tab=new" class="<%= tab==='new'?'on':'' %>">我要留言</a>
+</div>
+
+<% if (tab==='sys') { %>
+<div class="box"><h3>系統訊息</h3><div class="in">
+<% if(!sys.length){ %><span class="gray">沒有系統訊息</span><% } %>
+<% sys.forEach(m=>{ %><div class="msg"><b><%= m.title %></b> <span class="gray"><%= m.created.slice(0,16) %></span><br><span style="white-space:pre-wrap"><%= m.body %></span></div><% }) %>
 <%- include('partials/pager') %>
 </div></div>
+
+<% } else { %>
+
+<div class="box"><h3>我要留言</h3><div class="in"><form class="gb" method="post" action="/<%= u.name %>/guestbook"><table class="pf">
+<% if(!me){ %><tr><td width="60">暱稱：</td><td><input name="author" maxlength="20" required></td></tr><% } %>
+<tr><td width="60">主題：</td><td><input name="subject" size="36" maxlength="40" placeholder="無標題"></td></tr>
+<tr><td>內容：</td><td><textarea name="body" cols="50" rows="4" maxlength="500" required></textarea></td></tr>
+<tr><td></td><td><label><input type="checkbox" name="secret"> 悄悄話（只有板主看得到）</label> <input type="submit" class="btn" value="送出留言"></td></tr></table></form></div></div>
+
+<div class="box"><h3>留言板 <span>共 <%= msgs.length %> 則</span></h3><div class="in">
+<table class="grid gbhead"><tr><th width="28%">標題</th><th width="18%">來自</th><th>內容</th><th width="14%">回覆</th></tr></table>
+<% if(!msgs.length){ %><span class="gray">還沒有留言</span><% } %>
+<% msgs.forEach(m=>{ %>
+<div class="msg gbitem">
+<div>暱稱：<span class="who"><%= m.secret && !isOwner ? '悄悄話' : m.author %></span>
+  <span style="float:right">
+    <% if(isOwner){ %><form method="post" action="/<%= u.name %>/guestbook/<%= m.id %>/del" style="display:inline" onsubmit="return confirm('刪除這則留言？')"><button class="lnk" style="font-size:10px">刪除</button></form><% } %>
+    <a href="#" class="reportlink" data-kind="guestbook" data-id="<%= m.id %>" style="font-size:10px">檢舉</a>
+  </span></div>
+<div>主題：<%= m.secret && !isOwner ? '悄悄話' : (m.subject || '無標題') %></div>
+<div>時間：<%= m.created %></div>
+<div>內容：<% if(m.secret && !isOwner){ %><span class="gray">悄悄話</span><% } else { %><span style="white-space:pre-wrap"><%= m.body %></span><% } %></div>
+<% if(m.reply){ %><div class="reply"><b>板主回覆</b>：<%= m.reply %></div><% } %>
+<% if(isOwner){ %><form method="post" action="/<%= u.name %>/guestbook/<%= m.id %>/reply" style="margin-top:3px"><input name="reply" size="40" value="<%= m.reply %>" placeholder="板主回覆…" maxlength="500"> <input type="submit" class="btn" value="回覆"></form><% } %>
+</div><% }) %>
+<%- include('partials/pager') %>
+</div></div>
+<% } %>
+
 </td><%- include('partials/side') %></tr></table>
+
+<%# 檢舉表單（點「檢舉」才展開） %>
+<div id="reportbox" style="display:none">
+<div class="box" style="width:420px;margin:10px auto"><h3>檢舉</h3><div class="in">
+<form method="post" action="/report">
+<input type="hidden" name="kind" id="rkind"><input type="hidden" name="target" id="rtarget">
+<input type="hidden" name="url" value="/<%= u.name %>/guestbook">
+請說明檢舉原因：<br><textarea name="reason" cols="45" rows="3" maxlength="500" required></textarea><br>
+<button class="btn">送出檢舉</button> <button type="button" class="btn" id="rcancel">取消</button>
+</form></div></div></div>
+<script>
+document.addEventListener('click',function(e){
+  var a=e.target.closest('.reportlink');
+  if(a){ e.preventDefault();
+    document.getElementById('rkind').value=a.getAttribute('data-kind');
+    document.getElementById('rtarget').value=a.getAttribute('data-id');
+    var box=document.getElementById('reportbox');
+    box.style.display='block'; box.scrollIntoView({behavior:'smooth'}); }
+  if(e.target.id==='rcancel'){ document.getElementById('reportbox').style.display='none'; }
+});
+</script>
 <%- include('partials/foot') %>

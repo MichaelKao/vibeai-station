@@ -201,3 +201,15 @@ table.card td{ padding:3px 6px; border-bottom:1px dotted #ccc; }
 table.card td.k{ width:80px; color:#999; }
 body.t-album table.card td.k{ color:#A96B1A; }
 .formtitle{ font-weight:bold; margin:8px 0 4px; }
+
+/* 留言板頁籤與條列 */
+.tabs{ padding:6px 0 0; }
+.tabs a{ display:inline-block; padding:3px 14px; border:1px solid #ccc; border-bottom:0;
+  background:#eee; margin-right:2px; font-size:12px; }
+.tabs a.on{ background:#fff; font-weight:bold; }
+body.t-album .tabs a{ background:#DE750B; color:#fff; border-color:#fff; }
+body.t-album .tabs a.on{ background:#FFD196; color:#894500; }
+body.t-blog .tabs a{ background:#326EC8; color:#D9E7FA; border-color:#fff; }
+body.t-blog .tabs a.on{ background:#8AB9F4; color:#222233; }
+.gbhead{ margin-bottom:6px; }
+.gbitem div{ padding:1px 0; }

@@ -12,6 +12,8 @@ CREATE TABLE IF NOT EXISTS trackbacks(id INTEGER PRIMARY KEY, post_id INTEGER RE
 CREATE TABLE IF NOT EXISTS guestbook(id INTEGER PRIMARY KEY, user_id INTEGER REFERENCES users(id) ON DELETE CASCADE, author TEXT, body TEXT, secret INTEGER DEFAULT 0, reply TEXT DEFAULT '', created TEXT DEFAULT (datetime('now','localtime')));
 CREATE TABLE IF NOT EXISTS visitors(id INTEGER PRIMARY KEY, user_id INTEGER REFERENCES users(id) ON DELETE CASCADE, who TEXT, created TEXT DEFAULT (datetime('now','localtime')));
 CREATE TABLE IF NOT EXISTS friends(user_id INTEGER, friend_id INTEGER, created TEXT DEFAULT (datetime('now','localtime')), PRIMARY KEY(user_id,friend_id));
+CREATE TABLE IF NOT EXISTS sysmsg(id INTEGER PRIMARY KEY, user_id INTEGER REFERENCES users(id) ON DELETE CASCADE, title TEXT, body TEXT, seen INTEGER DEFAULT 0, created TEXT DEFAULT (datetime('now','localtime')));
+CREATE TABLE IF NOT EXISTS reports(id INTEGER PRIMARY KEY, kind TEXT, target_id INTEGER, url TEXT, reason TEXT, reporter TEXT, done INTEGER DEFAULT 0, created TEXT DEFAULT (datetime('now','localtime')));
 CREATE TABLE IF NOT EXISTS notices(id INTEGER PRIMARY KEY, body TEXT, created TEXT DEFAULT (datetime('now','localtime')));
 `);
 // 舊資料庫補欄位（照片檔案大小，用於配額計算）
@@ -44,6 +46,8 @@ try { db.exec("ALTER TABLE users ADD COLUMN homepage TEXT DEFAULT ''"); } catch 
 try { db.exec("ALTER TABLE comments ADD COLUMN email TEXT DEFAULT ''"); } catch {}
 try { db.exec("ALTER TABLE comments ADD COLUMN homepage TEXT DEFAULT ''"); } catch {}
 try { db.exec("ALTER TABLE comments ADD COLUMN reply TEXT DEFAULT ''"); } catch {}
+// 留言板：主題欄位；系統訊息與檢舉
+try { db.exec("ALTER TABLE guestbook ADD COLUMN subject TEXT DEFAULT ''"); } catch {}
 
 export const q = (sql)=>db.prepare(sql);
 export const one=(sql,...a)=>db.prepare(sql).get(...a);

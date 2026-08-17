@@ -73,6 +73,16 @@ app.get('/search',(req,res)=>{
 });
 app.get('/help',(req,res)=>res.render('help'));
 
+// 檢舉（無名各處都有「檢舉」連結，送到站長後台處理）
+app.post('/report',(req,res)=>{
+  const {kind,target,url,reason}=req.body;
+  if(reason?.trim())
+    run('INSERT INTO reports(kind,target_id,url,reason,reporter) VALUES(?,?,?,?,?)',
+      String(kind||'').slice(0,20), +target||0, String(url||'').slice(0,300),
+      reason.trim().slice(0,500), res.locals.me?.name||'訪客');
+  res.render('msg',{title:'已送出檢舉',msg:'謝謝你的回報，站長會盡快處理。',back:(String(url||'').startsWith('/')?url:'/')});
+});
+
 // ===== 相簿總站：依站內分類瀏覽（無名的 /album/） =====
 app.get('/albums',(req,res)=>{
   const topic=isAlbumTopic(req.query.topic)?req.query.topic:null;
@@ -133,7 +143,10 @@ app.get('/admin',requireAdmin,(req,res)=>res.render('admin',{
     (SELECT COALESCE(SUM(p.bytes),0) FROM photos p JOIN albums a ON a.id=p.album_id WHERE a.user_id=u.id) bytes
     FROM users u ORDER BY u.id DESC`),
   notices:all('SELECT * FROM notices ORDER BY id DESC'),
+  reports:all('SELECT * FROM reports ORDER BY done, id DESC LIMIT 50'),
   storage:{ total:one('SELECT COALESCE(SUM(bytes),0) b FROM photos').b, free:diskFree(), r2:hasR2, quota:USER_QUOTA, mb:MB }}));
+app.post('/admin/report/:id/done',requireAdmin,(req,res)=>{ run('UPDATE reports SET done=1 WHERE id=?',req.params.id); res.redirect('/admin'); });
+app.post('/admin/report/:id/del',requireAdmin,(req,res)=>{ run('DELETE FROM reports WHERE id=?',req.params.id); res.redirect('/admin'); });
 app.post('/admin/notice',requireAdmin,(req,res)=>{ if(req.body.body?.trim()) run('INSERT INTO notices(body) VALUES(?)',req.body.body.trim().slice(0,200)); res.redirect('/admin'); });
 app.post('/admin/notice/:id/del',requireAdmin,(req,res)=>{ run('DELETE FROM notices WHERE id=?',req.params.id); res.redirect('/admin'); });
 app.post('/admin/user/:id/admin',requireAdmin,(req,res)=>{ // 設為／取消站長（不能取消自己，避免把自己鎖在外面）
@@ -381,9 +394,29 @@ site.post('/blog/:id/trackback',requireLogin,postOf,needUnlocked,(req,res)=>{
   run('INSERT INTO trackbacks(post_id,from_post) VALUES(?,?)',p.id,r.lastInsertRowid); res.redirect(`/${me.name}/blog/${r.lastInsertRowid}/edit`); });
 
 // 留言板
-site.get('/guestbook',(req,res)=>{ const page=Math.max(1,+req.query.p||1),per=15,total=one('SELECT count(*) c FROM guestbook WHERE user_id=?',U(res).id).c;
-  res.render('guestbook',{nav:'gb',page,pages:Math.ceil(total/per),msgs:all('SELECT * FROM guestbook WHERE user_id=? ORDER BY id DESC LIMIT ? OFFSET ?',U(res).id,per,(page-1)*per)}); });
-site.post('/guestbook',(req,res)=>{ const {author,body,secret}=req.body; const who=res.locals.me?.nick||author; if(who?.trim()&&body?.trim()) run('INSERT INTO guestbook(user_id,author,body,secret) VALUES(?,?,?,?)',U(res).id,who.trim().slice(0,20),body.trim().slice(0,500),secret?1:0); res.redirect(`/${U(res).name}/guestbook`); });
+// 留言板：頁籤 留言板 / 系統訊息 / 我要留言（同無名）
+site.get('/guestbook',(req,res)=>{
+  const tab = req.query.tab==='sys' ? 'sys' : (req.query.tab==='new' ? 'new' : 'list');
+  const page=Math.max(1,+req.query.p||1),per=15;
+  if(tab==='sys'){
+    if(!res.locals.isOwner) return res.status(403).render('msg',{title:'沒有權限',msg:'系統訊息只有本人看得到',back:`/${U(res).name}/guestbook`});
+    const total=one('SELECT count(*) c FROM sysmsg WHERE user_id=?',U(res).id).c;
+    run('UPDATE sysmsg SET seen=1 WHERE user_id=?',U(res).id);
+    return res.render('guestbook',{nav:'gb',tab,page,pages:Math.ceil(total/per),msgs:[],
+      sys:all('SELECT * FROM sysmsg WHERE user_id=? ORDER BY id DESC LIMIT ? OFFSET ?',U(res).id,per,(page-1)*per),unread:0});
+  }
+  const total=one('SELECT count(*) c FROM guestbook WHERE user_id=?',U(res).id).c;
+  res.render('guestbook',{nav:'gb',tab,page,pages:Math.ceil(total/per),sys:[],
+    unread: res.locals.isOwner ? one('SELECT count(*) c FROM sysmsg WHERE user_id=? AND seen=0',U(res).id).c : 0,
+    msgs:all('SELECT * FROM guestbook WHERE user_id=? ORDER BY id DESC LIMIT ? OFFSET ?',U(res).id,per,(page-1)*per)}); });
+site.post('/guestbook',(req,res)=>{ const {author,subject,body,secret}=req.body; const who=res.locals.me?.nick||author;
+  if(who?.trim()&&body?.trim()){
+    run('INSERT INTO guestbook(user_id,author,subject,body,secret) VALUES(?,?,?,?,?)',U(res).id,who.trim().slice(0,20),(subject||'').trim().slice(0,40),body.trim().slice(0,500),secret?1:0);
+    // 通知板主有新留言
+    if(res.locals.me?.id!==U(res).id)
+      run('INSERT INTO sysmsg(user_id,title,body) VALUES(?,?,?)',U(res).id,'你有新的留言',`${who.trim().slice(0,20)} 在你的留言板留言了。`);
+  }
+  res.redirect(`/${U(res).name}/guestbook`); });
 site.post('/guestbook/:id/reply',requireLogin,requireOwner,(req,res)=>{ run('UPDATE guestbook SET reply=? WHERE id=? AND user_id=?',(req.body.reply||'').trim().slice(0,500),req.params.id,U(res).id); res.redirect(`/${U(res).name}/guestbook`); });
 site.post('/guestbook/:id/del',requireLogin,requireOwner,(req,res)=>{ run('DELETE FROM guestbook WHERE id=? AND user_id=?',req.params.id,U(res).id); res.redirect(`/${U(res).name}/guestbook`); });
 
