@@ -65,13 +65,17 @@ app.get('/search',(req,res)=>{
 app.get('/help',(req,res)=>res.render('help'));
 
 // ===== 帳號 =====
+// ADMIN_USERS=vibeai,someone 名單內的帳號註冊或登入時自動取得站長權限，
+// 避免「第一個註冊的人就是站長」被誤佔（例如測試帳號）。
+const ADMIN_USERS = new Set((process.env.ADMIN_USERS||'').split(',').map(s=>s.trim().toLowerCase()).filter(Boolean));
 app.get('/register',(req,res)=>res.render('register',{err:null,form:{}}));
 app.post('/register',(req,res)=>{
   const {name='',nick='',pass='',pass2=''}=req.body;
   const err = !/^[a-z0-9_]{3,20}$/i.test(name)?'帳號限 3~20 位英數字或底線':!nick.trim()?'請填暱稱':pass.length<4?'密碼至少 4 碼':pass!==pass2?'兩次密碼不一致':one('SELECT 1 FROM users WHERE name=?',name)?'這個帳號已經有人用了':null;
   if(err) return res.render('register',{err,form:req.body});
-  const s=salt(), first=!one('SELECT 1 FROM users');
-  const r=run('INSERT INTO users(name,pass,salt,nick,admin) VALUES(?,?,?,?,?)',name.toLowerCase(),hash(pass,s),s,nick.trim().slice(0,20),first?1:0);
+  const s=salt(), low=name.toLowerCase();
+  const first=!one('SELECT 1 FROM users');
+  const r=run('INSERT INTO users(name,pass,salt,nick,admin) VALUES(?,?,?,?,?)',low,hash(pass,s),s,nick.trim().slice(0,20),(first||ADMIN_USERS.has(low))?1:0);
   run('INSERT INTO albums(user_id,title) VALUES(?,?)',r.lastInsertRowid,'我的相簿');
   req.session.uid=Number(r.lastInsertRowid); flash(req,'歡迎加入 vibeai 小站！'); res.redirect('/'+name.toLowerCase());
 });
@@ -79,6 +83,7 @@ app.get('/login',(req,res)=>res.render('login',{err:null,next:req.query.next||''
 app.post('/login',(req,res)=>{
   const u=one('SELECT * FROM users WHERE name=?',req.body.name||'');
   if(!check(u,req.body.pass||'')) return res.render('login',{err:'帳號或密碼錯誤',next:req.body.next||''});
+  if(ADMIN_USERS.has(u.name) && !u.admin) run('UPDATE users SET admin=1 WHERE id=?',u.id); // ADMIN_USERS 名單登入即補站長權限
   const nxt=req.body.next; const safe=typeof nxt==='string'&&nxt.startsWith('/')&&!nxt.startsWith('//')&&!nxt.startsWith('/\\'); req.session.uid=u.id; res.redirect(safe?nxt:'/'+u.name);
 });
 app.post('/logout',(req,res)=>req.session.destroy(()=>res.redirect('/')));
@@ -93,7 +98,18 @@ app.get('/admin',requireAdmin,(req,res)=>res.render('admin',{
   storage:{ total:one('SELECT COALESCE(SUM(bytes),0) b FROM photos').b, free:diskFree(), r2:hasR2, quota:USER_QUOTA, mb:MB }}));
 app.post('/admin/notice',requireAdmin,(req,res)=>{ if(req.body.body?.trim()) run('INSERT INTO notices(body) VALUES(?)',req.body.body.trim().slice(0,200)); res.redirect('/admin'); });
 app.post('/admin/notice/:id/del',requireAdmin,(req,res)=>{ run('DELETE FROM notices WHERE id=?',req.params.id); res.redirect('/admin'); });
-app.post('/admin/user/:id/del',requireAdmin,(req,res)=>{ if(Number(req.params.id)!==res.locals.me.id) run('DELETE FROM users WHERE id=?',req.params.id); res.redirect('/admin'); });
+app.post('/admin/user/:id/admin',requireAdmin,(req,res)=>{ // 設為／取消站長（不能取消自己，避免把自己鎖在外面）
+  const id=Number(req.params.id);
+  if(id!==res.locals.me.id) run('UPDATE users SET admin=1-admin WHERE id=?',id);
+  res.redirect('/admin'); });
+app.post('/admin/user/:id/del',requireAdmin,async(req,res)=>{
+  const id=Number(req.params.id);
+  if(id!==res.locals.me.id){
+    for(const p of all('SELECT p.url FROM photos p JOIN albums a ON a.id=p.album_id WHERE a.user_id=?',id)) await remove(p.url);
+    const av=one('SELECT avatar FROM users WHERE id=?',id); if(av?.avatar?.startsWith('/uploads/')||av?.avatar?.startsWith('http')) await remove(av.avatar);
+    run('DELETE FROM users WHERE id=?',id);
+  }
+  res.redirect('/admin'); });
 
 // ===== 個人小站 =====
 const RESERVED=new Set(['login','register','logout','rank','search','help','admin','uploads','img','style.css','favicon.ico']);
