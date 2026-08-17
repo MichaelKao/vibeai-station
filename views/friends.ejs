@@ -1,6 +1,20 @@
 <%- include('partials/head',{title:u.nick+'的好友'}) %>
 <table id="main"><tr><td>
-<div class="box"><h3><%= u.nick %>的好友 <span><%= friends.length %> 位</span></h3><div class="in"><% if(!friends.length){ %><span class="gray">還沒有好友</span><% } friends.forEach(f=>{ %><div class="thumb"><a href="/<%= f.name %>"><img src="<%= f.avatar %>" alt=""></a><br><a href="/<%= f.name %>"><%= f.nick %></a></div><% }) %><div class="clear"></div></div></div>
+<%
+  const groups = {};
+  friends.forEach(f => { (groups[f.grp] = groups[f.grp] || []).push(f); });
+  const names = Object.keys(groups);
+%>
+<div class="box"><h3><%= u.nick %>的好友 <span>共 <%= friends.length %> 位<%= names.length>1?'／'+names.length+' 個分類':'' %></span></h3><div class="in">
+<% if(!friends.length){ %><span class="gray">還沒有好友</span><% } %>
+<% names.forEach(g=>{ %>
+  <div style="margin-bottom:6px"><b class="orange">■ <%= g %></b> <span class="gray">(<%= groups[g].length %>)</span></div>
+  <% groups[g].forEach(f=>{ %><div class="thumb"><a href="/<%= f.name %>"><img src="<%= f.avatar %>" alt=""></a><br><a href="/<%= f.name %>"><%= f.nick %></a>
+  <% if(isOwner){ %><br><form method="post" action="/<%= u.name %>/friends/<%= f.id %>/group" style="margin-top:2px"><input name="grp" value="<%= f.grp %>" size="5" maxlength="10" style="font-size:10px"> <button class="btn" style="font-size:10px">改</button></form><% } %>
+  </div><% }) %>
+  <div class="clear" style="margin-bottom:8px"></div>
+<% }) %>
+</div></div>
 <div class="box"><h3>把 <%= u.nick %> 加為好友的人 <span><%= fans.length %> 位</span></h3><div class="in"><% if(!fans.length){ %><span class="gray">還沒有</span><% } fans.forEach(f=>{ %><div class="thumb"><a href="/<%= f.name %>"><img src="<%= f.avatar %>" alt=""></a><br><a href="/<%= f.name %>"><%= f.nick %></a></div><% }) %><div class="clear"></div></div></div>
 </td><%- include('partials/side') %></tr></table>
 <%- include('partials/foot') %>

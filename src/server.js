@@ -41,6 +41,11 @@ function quotaError(uid, incoming){
 }
 const isFriend=(a,b)=>!!one('SELECT 1 FROM friends WHERE user_id=? AND friend_id=?',a,b);
 
+// 音樂盒網址：一行一個，只收 http(s)，避免 javascript: 之類的東西被存進來
+const cleanMusic = s => (s||'').split('\n').map(x=>x.trim())
+  .filter(x=>{ try { return ['http:','https:'].includes(new URL(x).protocol); } catch { return false; } })
+  .slice(0,30).join('\n').slice(0,2000);
+
 // ===== 全站 =====
 app.get('/', (req,res)=>{
   res.render('index',{
@@ -61,7 +66,8 @@ app.get('/search',(req,res)=>{
   res.render('search',{k,
     users:k?all('SELECT name,nick,avatar FROM users WHERE name LIKE ? OR nick LIKE ? LIMIT 30',like,like):[],
     albums:k?all(`SELECT a.*,u.name uname FROM albums a JOIN users u ON u.id=a.user_id WHERE a.pass='' AND a.title LIKE ? LIMIT 30`,like):[],
-    posts:k?all(`SELECT p.*,u.name uname FROM posts p JOIN users u ON u.id=p.user_id WHERE p.title LIKE ? OR p.body LIKE ? LIMIT 30`,like,like):[]});
+    // 上鎖文章不讓內文被搜出來，只比對標題
+    posts:k?all(`SELECT p.*,u.name uname FROM posts p JOIN users u ON u.id=p.user_id WHERE p.title LIKE ? OR (p.pass='' AND p.body LIKE ?) LIMIT 30`,like,like):[]});
 });
 app.get('/help',(req,res)=>res.render('help'));
 
@@ -157,7 +163,7 @@ site.get('/settings',requireLogin,requireOwner,(req,res)=>res.render('settings',
 site.post('/settings',requireLogin,requireOwner,upload.single('avatar'),async(req,res)=>{
   const {nick,intro,music,css,pass,pass2}=req.body, u=U(res);
   let avatar=u.avatar; if(req.file){ const s=await save(req.file); avatar=s.thumb; await remove(u.avatar); }
-  run('UPDATE users SET nick=?,intro=?,music=?,css=?,avatar=? WHERE id=?',(nick||u.nick).trim().slice(0,20),(intro||'').slice(0,500),(music||'').slice(0,2000),(css||'').slice(0,20000),avatar,u.id);
+  run('UPDATE users SET nick=?,intro=?,music=?,css=?,avatar=? WHERE id=?',(nick||u.nick).trim().slice(0,20),(intro||'').slice(0,500),cleanMusic(music),(css||'').slice(0,20000),avatar,u.id);
   if(pass){ if(pass!==pass2) {flash(req,'兩次密碼不一致，其他設定已儲存');return res.redirect(`/${u.name}/settings`);} const s=salt(); run('UPDATE users SET pass=?,salt=? WHERE id=?',hash(pass,s),s,u.id); }
   flash(req,'設定已儲存'); res.redirect(`/${u.name}/settings`);
 });
@@ -171,8 +177,17 @@ site.post('/settings/delete',requireLogin,requireOwner,async(req,res)=>{
   req.session.destroy(()=>res.redirect('/'));
 });
 // 好友
-site.post('/friend',requireLogin,(req,res)=>{ const me=res.locals.me.id,u=U(res).id; if(me!==u){ if(isFriend(me,u)) run('DELETE FROM friends WHERE user_id=? AND friend_id=?',me,u); else run("INSERT OR IGNORE INTO friends(user_id,friend_id) VALUES(?,?)",me,u);} res.redirect('/'+U(res).name); });
-site.get('/friends',(req,res)=>res.render('friends',{nav:'user',friends:all('SELECT u.name,u.nick,u.avatar,u.intro FROM friends f JOIN users u ON u.id=f.friend_id WHERE f.user_id=? ORDER BY f.created DESC',U(res).id),fans:all('SELECT u.name,u.nick,u.avatar FROM friends f JOIN users u ON u.id=f.user_id WHERE f.friend_id=? ORDER BY f.created DESC',U(res).id)}));
+site.post('/friend',requireLogin,(req,res)=>{ const me=res.locals.me.id,u=U(res).id;
+  if(me!==u){ if(isFriend(me,u)) run('DELETE FROM friends WHERE user_id=? AND friend_id=?',me,u);
+              else run("INSERT OR IGNORE INTO friends(user_id,friend_id,grp) VALUES(?,?,?)",me,u,(req.body.grp||'好友').trim().slice(0,10)||'好友'); }
+  res.redirect('/'+U(res).name); });
+// 好友分類（當年好友名單可以分組）
+site.post('/friends/:fid/group',requireLogin,requireOwner,(req,res)=>{
+  run('UPDATE friends SET grp=? WHERE user_id=? AND friend_id=?',(req.body.grp||'好友').trim().slice(0,10)||'好友',U(res).id,req.params.fid);
+  res.redirect(`/${U(res).name}/friends`); });
+site.get('/friends',(req,res)=>res.render('friends',{nav:'user',
+  friends:all("SELECT u.id,u.name,u.nick,u.avatar,u.intro,COALESCE(NULLIF(f.grp,''),'好友') grp FROM friends f JOIN users u ON u.id=f.friend_id WHERE f.user_id=? ORDER BY grp, f.created DESC",U(res).id),
+  fans:all('SELECT u.name,u.nick,u.avatar FROM friends f JOIN users u ON u.id=f.user_id WHERE f.friend_id=? ORDER BY f.created DESC',U(res).id)}));
 
 // 相簿
 site.get('/album',(req,res)=>res.render('album',{nav:'album',
@@ -230,16 +245,25 @@ site.get('/blog',(req,res)=>{ const cat=req.query.cat, ym=/^\d{4}-\d{2}$/.test(r
 site.get('/blog/new',requireLogin,requireOwner,(req,res)=>res.render('post_edit',{nav:'blog',post:null,...blogSide(res)}));
 site.post('/blog/new',requireLogin,requireOwner,(req,res)=>{ const {title,body,category,mood,weather}=req.body;
   if(!title?.trim()||!body?.trim()) return res.redirect(`/${U(res).name}/blog/new`);
-  const r=run('INSERT INTO posts(user_id,title,body,category,mood,weather) VALUES(?,?,?,?,?,?)',U(res).id,title.trim().slice(0,100),body.slice(0,50000),(category||'未分類').trim().slice(0,20)||'未分類',MOODS.includes(mood)?mood:'',WEATHERS.includes(weather)?weather:'');
+  const r=run('INSERT INTO posts(user_id,title,body,category,mood,weather,pass) VALUES(?,?,?,?,?,?,?)',U(res).id,title.trim().slice(0,100),body.slice(0,50000),(category||'未分類').trim().slice(0,20)||'未分類',MOODS.includes(mood)?mood:'',WEATHERS.includes(weather)?weather:'',(req.body.pass||'').slice(0,20));
   res.redirect(`/${U(res).name}/blog/${r.lastInsertRowid}`); });
 const postOf=(req,res,next)=>{ const p=one('SELECT * FROM posts WHERE id=? AND user_id=?',req.params.id,U(res).id); if(!p) return next('route'); res.locals.post=p; next(); };
-site.get('/blog/:id',postOf,(req,res)=>{ const p=res.locals.post; if(!res.locals.isOwner) run('UPDATE posts SET views=views+1 WHERE id=?',p.id);
+// 文章密碼（當年網誌可以上鎖，很多人拿來寫悄悄話）
+const postUnlocked=(req,res)=>!res.locals.post.pass||res.locals.isOwner||(req.session.unlockedPosts||[]).includes(res.locals.post.id);
+site.post('/blog/:id/unlock',postOf,(req,res)=>{
+  const p=res.locals.post;
+  if(req.body.pass===p.pass){ req.session.unlockedPosts=[...(req.session.unlockedPosts||[]),p.id]; return res.redirect(`/${U(res).name}/blog/${p.id}`); }
+  res.render('post_lock',{nav:'blog',post:p,...blogSide(res),err:'密碼錯誤'});
+});
+site.get('/blog/:id',postOf,(req,res)=>{ const p=res.locals.post;
+  if(!postUnlocked(req,res)) return res.render('post_lock',{nav:'blog',post:p,...blogSide(res),err:null});
+  if(!res.locals.isOwner) run('UPDATE posts SET views=views+1 WHERE id=?',p.id);
   res.render('post',{nav:'blog',post:p,...blogSide(res),comments:all('SELECT * FROM comments WHERE post_id=? ORDER BY id',p.id),
     trackbacks:all('SELECT t.*,p.title,p.id pid,u.name uname FROM trackbacks t JOIN posts p ON p.id=t.from_post JOIN users u ON u.id=p.user_id WHERE t.post_id=?',p.id),
     prev:one('SELECT id,title FROM posts WHERE user_id=? AND id<? ORDER BY id DESC',U(res).id,p.id),next:one('SELECT id,title FROM posts WHERE user_id=? AND id>? ORDER BY id',U(res).id,p.id)}); });
 site.get('/blog/:id/edit',requireLogin,requireOwner,postOf,(req,res)=>res.render('post_edit',{nav:'blog',post:res.locals.post,...blogSide(res)}));
 site.post('/blog/:id/edit',requireLogin,requireOwner,postOf,(req,res)=>{ const {title,body,category,mood,weather}=req.body;
-  run('UPDATE posts SET title=?,body=?,category=?,mood=?,weather=? WHERE id=?',(title||res.locals.post.title).trim().slice(0,100),(body||'').slice(0,50000),(category||'未分類').trim().slice(0,20)||'未分類',MOODS.includes(mood)?mood:'',WEATHERS.includes(weather)?weather:'',res.locals.post.id);
+  run('UPDATE posts SET title=?,body=?,category=?,mood=?,weather=?,pass=? WHERE id=?',(title||res.locals.post.title).trim().slice(0,100),(body||'').slice(0,50000),(category||'未分類').trim().slice(0,20)||'未分類',MOODS.includes(mood)?mood:'',WEATHERS.includes(weather)?weather:'',(req.body.pass||'').slice(0,20),res.locals.post.id);
   res.redirect(`/${U(res).name}/blog/${res.locals.post.id}`); });
 site.post('/blog/:id/del',requireLogin,requireOwner,postOf,(req,res)=>{ run('DELETE FROM posts WHERE id=?',res.locals.post.id); res.redirect(`/${U(res).name}/blog`); });
 site.post('/blog/:id/comment',postOf,(req,res)=>{ if(req.body.body?.trim()) run('INSERT INTO comments(post_id,author,body) VALUES(?,?,?)',res.locals.post.id,(res.locals.me?.nick||req.body.author||'訪客').trim().slice(0,20),req.body.body.trim().slice(0,1000)); res.redirect(`/${U(res).name}/blog/${res.locals.post.id}#comments`); });

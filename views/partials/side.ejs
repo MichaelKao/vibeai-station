@@ -11,14 +11,19 @@
 <div class="box"><h3>音樂盒</h3><div class="in gray">
 <% const tracks=(u.music||'').split('\n').map(s=>s.trim()).filter(Boolean); if (tracks.length) { %>
 <audio id="mbox" controls loop style="width:100%;height:26px"></audio>
-<div id="mboxlist" style="max-height:80px;overflow:auto;margin-top:3px;font-size:11px"></div>
+<%# 曲目清單放在 data 屬性，交給 EJS 的 HTML escape 處理，避免使用者網址跳出 script 區塊 %>
+<div id="mboxlist" data-tracks="<%= JSON.stringify(tracks) %>" style="max-height:80px;overflow:auto;margin-top:3px;font-size:11px"></div>
 <script>
 (function(){
-  var t=<%- JSON.stringify(tracks) %>, i=0, a=document.getElementById('mbox'), L=document.getElementById('mboxlist');
-  function name(u){ try{ return decodeURIComponent(u.split('/').pop().split('?')[0])||('曲目 '+(i+1)); }catch(e){ return '曲目'; } }
-  function draw(){ L.innerHTML=t.map(function(u,n){ return '<div><a href="#" data-i="'+n+'">'+(n===i?'▶ ':'　')+name(u)+'</a></div>'; }).join(''); }
+  var L=document.getElementById('mboxlist'), a=document.getElementById('mbox');
+  var t=[]; try{ t=JSON.parse(L.getAttribute('data-tracks'))||[]; }catch(e){ return; }
+  if(!t.length) return;
+  var i=0;
+  function esc(s){ return String(s).replace(/[&<>"']/g,function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
+  function name(u,n){ try{ return decodeURIComponent(u.split('/').pop().split('?')[0])||('曲目 '+(n+1)); }catch(e){ return '曲目 '+(n+1); } }
+  function draw(){ L.innerHTML=t.map(function(u,n){ return '<div><a href="#" data-i="'+n+'">'+(n===i?'▶ ':'　')+esc(name(u,n))+'</a></div>'; }).join(''); }
   function play(n){ i=(n+t.length)%t.length; a.src=t[i]; draw(); a.play().catch(function(){}); }
-  L.addEventListener('click',function(e){ var el=e.target.closest('a'); if(el){ e.preventDefault(); play(+el.dataset.i); } });
+  L.addEventListener('click',function(e){ var el=e.target.closest('a'); if(el){ e.preventDefault(); play(+el.getAttribute('data-i')); } });
   a.addEventListener('ended',function(){ if(t.length>1) play(i+1); });
   a.src=t[0]; draw();
 })();

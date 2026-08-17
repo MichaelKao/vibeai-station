@@ -1,0 +1,9 @@
+<%- include('partials/head',{title:post.title}) %>
+<table id="main"><tr><td>
+<div class="box"><h3><a href="/<%= u.name %>/blog">網誌</a> &raquo; [鎖] <%= post.title %></h3><div class="in">
+<div class="meta"><%= post.created.slice(0,16) %> ｜ 分類：<%= post.category %></div>
+<p>這篇文章有上鎖，請輸入密碼觀看：</p>
+<form method="post" action="/<%= u.name %>/blog/<%= post.id %>/unlock"><input name="pass" type="password" autofocus> <input type="submit" class="btn" value="觀看"><% if(err){ %> <span class="err"><%= err %></span><% } %></form>
+</div></div>
+</td><%- include('partials/blogside') %></tr></table>
+<%- include('partials/foot') %>
