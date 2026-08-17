@@ -57,12 +57,12 @@ const cleanMusic = s => (s||'').split('\n').map(x=>x.trim())
 // ===== 全站 =====
 app.get('/', (req,res)=>{
   res.render('index',{
-    hotAlbums: all(`SELECT a.*,u.name uname,u.nick FROM albums a JOIN users u ON u.id=a.user_id WHERE a.pass='' AND a.cover!='' ORDER BY a.views DESC LIMIT 8`),
-    newPhotos: all(`SELECT p.*,a.title atitle,a.id aid,u.name uname FROM photos p JOIN albums a ON a.id=p.album_id JOIN users u ON u.id=a.user_id WHERE a.pass='' ORDER BY p.id DESC LIMIT 8`),
+    hotAlbums: all(`SELECT a.*,u.name uname,u.nick FROM albums a JOIN users u ON u.id=a.user_id WHERE a.pass='' AND a.friends_only=0 AND a.cover!='' ORDER BY a.views DESC LIMIT 8`),
+    newPhotos: all(`SELECT p.*,a.title atitle,a.id aid,u.name uname FROM photos p JOIN albums a ON a.id=p.album_id JOIN users u ON u.id=a.user_id WHERE a.pass='' AND a.friends_only=0 ORDER BY p.id DESC LIMIT 8`),
     // 熱門網誌：左縮圖右文字，取作者最新一張照片當縮圖（同 2005 首頁）
     hotPosts: all(`SELECT p.*,u.name uname,u.nick,
         (SELECT ph.thumb FROM photos ph JOIN albums al ON al.id=ph.album_id
-         WHERE al.user_id=p.user_id AND al.pass='' ORDER BY ph.id DESC LIMIT 1) pthumb
+         WHERE al.user_id=p.user_id AND al.pass='' AND al.friends_only=0 ORDER BY ph.id DESC LIMIT 1) pthumb
       FROM posts p JOIN users u ON u.id=p.user_id WHERE p.pass='' ORDER BY p.views DESC LIMIT 6`),
     newUsers: all(`SELECT name,nick FROM users ORDER BY id DESC LIMIT 8`),
     rank: all(`SELECT name,nick,visits FROM users ORDER BY visits DESC LIMIT 10`),
@@ -71,13 +71,13 @@ app.get('/', (req,res)=>{
 });
 app.get('/rank',(req,res)=>res.render('rank',{
   users: all('SELECT name,nick,visits,avatar FROM users ORDER BY visits DESC LIMIT 50'),
-  albums: all(`SELECT a.*,u.name uname,u.nick FROM albums a JOIN users u ON u.id=a.user_id WHERE a.pass='' ORDER BY a.views DESC LIMIT 30`),
+  albums: all(`SELECT a.*,u.name uname,u.nick FROM albums a JOIN users u ON u.id=a.user_id WHERE a.pass='' AND a.friends_only=0 ORDER BY a.views DESC LIMIT 30`),
   posts: all(`SELECT p.*,u.name uname,u.nick FROM posts p JOIN users u ON u.id=p.user_id ORDER BY p.views DESC LIMIT 30`)}));
 app.get('/search',(req,res)=>{
   const k=(req.query.q||'').trim(), like=`%${k}%`;
   res.render('search',{k,
     users:k?all('SELECT name,nick,avatar FROM users WHERE name LIKE ? OR nick LIKE ? LIMIT 30',like,like):[],
-    albums:k?all(`SELECT a.*,u.name uname FROM albums a JOIN users u ON u.id=a.user_id WHERE a.pass='' AND a.title LIKE ? LIMIT 30`,like):[],
+    albums:k?all(`SELECT a.*,u.name uname FROM albums a JOIN users u ON u.id=a.user_id WHERE a.pass='' AND a.friends_only=0 AND a.title LIKE ? LIMIT 30`,like):[],
     // 上鎖文章不讓內文被搜出來，只比對標題
     posts:k?all(`SELECT p.*,u.name uname FROM posts p JOIN users u ON u.id=p.user_id WHERE p.title LIKE ? OR (p.pass='' AND p.body LIKE ?) LIMIT 30`,like,like):[]});
 });
@@ -100,13 +100,13 @@ app.get('/albums',(req,res)=>{
   const topic=isAlbumTopic(req.query.topic)?req.query.topic:null;
   const place=isPlace(req.query.place)?req.query.place:null;
   const page=Math.max(1,+req.query.p||1), per=20;      // 無名一頁 20 本（5×4）
-  let where="a.pass='' AND a.cover!=''"; const args=[];
+  let where="a.pass='' AND a.friends_only=0 AND a.cover!=''"; const args=[];
   if(topic){ where+=' AND a.topic=?'; args.push(topic); }
   if(place){ where+=' AND a.place=?'; args.push(place); }
   const total=one(`SELECT count(*) c FROM albums a WHERE ${where}`,...args).c;
   res.render('albums',{ topic, place, page, pages:Math.ceil(total/per), total,
     topics:ALBUM_TOPICS, places:PLACES,
-    counts:Object.fromEntries(all("SELECT topic,count(*) n FROM albums WHERE pass='' AND cover!='' AND topic!='' GROUP BY topic").map(r=>[r.topic,r.n])),
+    counts:Object.fromEntries(all("SELECT topic,count(*) n FROM albums WHERE pass='' AND friends_only=0 AND cover!='' AND topic!='' GROUP BY topic").map(r=>[r.topic,r.n])),
     albums:all(`SELECT a.*,u.name uname,u.nick,(SELECT count(*) FROM photos WHERE album_id=a.id) n
       FROM albums a JOIN users u ON u.id=a.user_id WHERE ${where} ORDER BY a.views DESC, a.id DESC LIMIT ? OFFSET ?`,...args,per,(page-1)*per) });
 });
@@ -271,11 +271,19 @@ site.get('/friends',(req,res)=>res.render('friends',{nav:'user',
 site.get('/album',(req,res)=>res.render('album',{nav:'album',topics:ALBUM_TOPICS,places:PLACES,
   quota:{used:usedBytes(U(res).id),total:USER_QUOTA,mb:MB},
   albums:all(`SELECT a.*,(SELECT count(*) FROM photos WHERE album_id=a.id) n FROM albums a WHERE user_id=? ORDER BY id DESC`,U(res).id)}));
-site.post('/album',requireLogin,requireOwner,(req,res)=>{ const t=(req.body.title||'').trim().slice(0,40); if(t) run('INSERT INTO albums(user_id,title,descr,pass,topic,place) VALUES(?,?,?,?,?,?)',U(res).id,t,(req.body.descr||'').slice(0,200),(req.body.pass||'').slice(0,20),isAlbumTopic(req.body.topic)?req.body.topic:'',isPlace(req.body.place)?req.body.place:''); res.redirect(`/${U(res).name}/album`); });
+site.post('/album',requireLogin,requireOwner,(req,res)=>{ const t=(req.body.title||'').trim().slice(0,40); if(t) run('INSERT INTO albums(user_id,title,descr,pass,topic,place,friends_only) VALUES(?,?,?,?,?,?,?)',U(res).id,t,(req.body.descr||'').slice(0,200),(req.body.pass||'').slice(0,20),isAlbumTopic(req.body.topic)?req.body.topic:'',isPlace(req.body.place)?req.body.place:'',req.body.friends_only?1:0); res.redirect(`/${U(res).name}/album`); });
 const albumOf=(req,res,next)=>{ const a=one('SELECT * FROM albums WHERE id=? AND user_id=?',req.params.id,U(res).id); if(!a) return next('route'); res.locals.album=a; next(); };
 const albumUnlocked=(req,res)=>!res.locals.album.pass||res.locals.isOwner||(req.session.unlocked||[]).includes(res.locals.album.id);
+// 好友限定（無名的「好友保護」）：只有站主本人與被站主加為好友的人看得到
+const albumAllowed=(req,res)=>{
+  const a=res.locals.album;
+  if(!a.friends_only || res.locals.isOwner) return true;
+  return !!(res.locals.me && isFriend(U(res).id, res.locals.me.id));
+};
 site.get('/album/:id',albumOf,(req,res)=>{
-  const a=res.locals.album; if(!albumUnlocked(req,res)) return res.render('album_lock',{nav:'album',album:a,err:null});
+  const a=res.locals.album;
+  if(!albumAllowed(req,res)) return res.status(403).render('msg',{title:'好友限定',msg:'這本相簿是好友限定，只有 '+U(res).nick+' 的好友才看得到。',back:'/'+U(res).name+'/album'});
+  if(!albumUnlocked(req,res)) return res.render('album_lock',{nav:'album',album:a,err:null});
   if(!res.locals.isOwner) run('UPDATE albums SET views=views+1 WHERE id=?',a.id);
   res.render('photos',{nav:'album',album:a,topics:ALBUM_TOPICS,places:PLACES,
     viewAll: req.query.all==='1',                    // 「一頁瀏覽」：整本大圖一次看完
@@ -284,13 +292,13 @@ site.get('/album/:id',albumOf,(req,res)=>{
 // 幻燈片（無名相簿的「幻燈片」）
 site.get('/album/:id/slide',albumOf,(req,res)=>{
   const a=res.locals.album;
-  if(!albumUnlocked(req,res)) return res.redirect(`/${U(res).name}/album/${a.id}`);
+  if(!albumAllowed(req,res)||!albumUnlocked(req,res)) return res.redirect(`/${U(res).name}/album/${a.id}`);
   const photos=all('SELECT id,url,thumb,caption FROM photos WHERE album_id=? ORDER BY id',a.id);
   if(!photos.length) return res.redirect(`/${U(res).name}/album/${a.id}`);
   res.render('slide',{nav:'album',album:a,photos,start:Math.max(1,Math.min(photos.length,+req.query.i||1))});
 });
 site.post('/album/:id/unlock',albumOf,(req,res)=>{ const a=res.locals.album; if(req.body.pass===a.pass){ req.session.unlocked=[...(req.session.unlocked||[]),a.id]; return res.redirect(`/${U(res).name}/album/${a.id}`);} res.render('album_lock',{nav:'album',album:a,err:'密碼錯誤'}); });
-site.post('/album/:id/edit',requireLogin,requireOwner,albumOf,(req,res)=>{ run('UPDATE albums SET title=?,descr=?,pass=?,topic=?,place=? WHERE id=?',(req.body.title||res.locals.album.title).trim().slice(0,40),(req.body.descr||'').slice(0,200),(req.body.pass||'').slice(0,20),isAlbumTopic(req.body.topic)?req.body.topic:'',isPlace(req.body.place)?req.body.place:'',res.locals.album.id); res.redirect(`/${U(res).name}/album/${res.locals.album.id}`); });
+site.post('/album/:id/edit',requireLogin,requireOwner,albumOf,(req,res)=>{ run('UPDATE albums SET title=?,descr=?,pass=?,topic=?,place=?,friends_only=? WHERE id=?',(req.body.title||res.locals.album.title).trim().slice(0,40),(req.body.descr||'').slice(0,200),(req.body.pass||'').slice(0,20),isAlbumTopic(req.body.topic)?req.body.topic:'',isPlace(req.body.place)?req.body.place:'',req.body.friends_only?1:0,res.locals.album.id); res.redirect(`/${U(res).name}/album/${res.locals.album.id}`); });
 site.post('/album/:id/del',requireLogin,requireOwner,albumOf,async(req,res)=>{ for(const p of all('SELECT url,thumb FROM photos WHERE album_id=?',res.locals.album.id)){ await remove(p.url); if(p.thumb&&p.thumb!==p.url) await remove(p.thumb); } run('DELETE FROM albums WHERE id=?',res.locals.album.id); res.redirect(`/${U(res).name}/album`); });
 site.post('/album/:id/upload',requireLogin,requireOwner,albumOf,upload.array('photos',20),async(req,res)=>{
   const a=res.locals.album; let first=null;
@@ -304,8 +312,9 @@ site.post('/album/:id/upload',requireLogin,requireOwner,albumOf,upload.array('ph
   flash(req,`上傳了 ${req.files?.length||0} 張照片`); res.redirect(`/${U(res).name}/album/${a.id}`);
 });
 site.get('/photo/:pid',(req,res,next)=>{
-  const p=one('SELECT p.*,a.pass,a.title atitle,a.id aid FROM photos p JOIN albums a ON a.id=p.album_id WHERE p.id=? AND a.user_id=?',req.params.pid,U(res).id); if(!p) return next();
-  res.locals.album={id:p.aid,pass:p.pass}; if(!albumUnlocked(req,res)) return res.redirect(`/${U(res).name}/album/${p.aid}`);
+  const p=one('SELECT p.*,a.pass,a.friends_only,a.title atitle,a.id aid FROM photos p JOIN albums a ON a.id=p.album_id WHERE p.id=? AND a.user_id=?',req.params.pid,U(res).id); if(!p) return next();
+  res.locals.album={id:p.aid,pass:p.pass,friends_only:p.friends_only};
+  if(!albumAllowed(req,res)||!albumUnlocked(req,res)) return res.redirect(`/${U(res).name}/album/${p.aid}`);
   if(!res.locals.isOwner) run('UPDATE photos SET views=views+1 WHERE id=?',p.id);
   const ids=all('SELECT id FROM photos WHERE album_id=? ORDER BY id',p.aid).map(x=>x.id), i=ids.indexOf(p.id);
   res.render('photo',{nav:'album',p,

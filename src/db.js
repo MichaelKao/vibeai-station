@@ -52,6 +52,10 @@ try { db.exec("ALTER TABLE comments ADD COLUMN reply TEXT DEFAULT ''"); } catch 
 try { db.exec("ALTER TABLE guestbook ADD COLUMN subject TEXT DEFAULT ''"); } catch {}
 // 版面樣式（無名的「網誌樣式」）
 try { db.exec("ALTER TABLE users ADD COLUMN theme TEXT DEFAULT ''"); } catch {}
+// 好友限定（無名的「好友保護」）與站長精選
+try { db.exec('ALTER TABLE albums ADD COLUMN friends_only INTEGER DEFAULT 0'); } catch {}
+try { db.exec('ALTER TABLE albums ADD COLUMN featured INTEGER DEFAULT 0'); } catch {}
+try { db.exec('ALTER TABLE posts ADD COLUMN featured INTEGER DEFAULT 0'); } catch {}
 
 export const q = (sql)=>db.prepare(sql);
 export const one=(sql,...a)=>db.prepare(sql).get(...a);
