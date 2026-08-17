@@ -1,57 +1,119 @@
-/* 2005 台灣 BSP 質感：新細明體 12px、table 版面、綠橘配色 */
-body{margin:0;background:#fff url(/img/bg.png) repeat-x;font:12px/1.6 "新細明體",PMingLiU,Tahoma,Arial,sans-serif;color:#333}
-a{color:#06c;text-decoration:none}a:hover{text-decoration:underline;color:#f60}
-img{border:0}
-#wrap{width:760px;margin:0 auto}
-#topbar{height:22px;background:#e8f2d8;border-bottom:1px solid #b6d38a;font-size:11px;line-height:22px;padding:0 6px}
-#topbar a{margin-right:10px}
-#header{height:70px;position:relative}
-#logo{position:absolute;left:0;top:14px;font:bold 26px/40px Arial,sans-serif;color:#690}
-#logo b{color:#f60}
-#logo small{font:11px 新細明體;color:#999;margin-left:6px}
-#nav{background:#690;height:26px}
-#nav a{display:inline-block;color:#fff;font-weight:bold;padding:0 16px;line-height:26px;border-right:1px solid #8b3}
-#nav a:hover,#nav a.on{background:#f60;text-decoration:none}
-#search{float:right;padding:3px 6px}
-#search input{font-size:11px;height:16px;border:1px solid #9c6}
-#main{width:100%;border-collapse:collapse;margin-top:8px}
-#main td{vertical-align:top}
-.box{border:1px solid #cde0a8;margin-bottom:8px;background:#fff}
-.box h3{margin:0;background:#eef6dc url(/img/hd.png) repeat-x;border-bottom:1px solid #cde0a8;color:#360;font-size:12px;padding:3px 8px}
-.box h3 span{float:right;font-weight:normal}
-.box .in{padding:6px 8px}
-.side{width:180px}
-.side .box{border-color:#e6cfa8}
-.side .box h3{background:#fdf3e2;border-color:#e6cfa8;color:#963}
-.thumb{float:left;width:100px;margin:4px;text-align:center;font-size:11px}
-.thumb img{width:90px;height:90px;border:1px solid #ccc;padding:2px;background:#fff}
-.thumb img:hover{border-color:#f60}
-.clear{clear:both}
-ul.list{margin:0;padding:0 0 0 14px}ul.list li{margin:2px 0}
-.gray{color:#999}.orange{color:#f60}.red{color:#c00}
-.avatar{width:90px;height:90px;border:1px solid #ccc;padding:2px}
-.entry{border-bottom:1px dashed #ddd;padding:6px 0}
-.entry h4{margin:0;font-size:14px}
-.entry .meta{font-size:11px;color:#999}
-.entry .body{padding:6px 0;white-space:pre-wrap}
-.msg{border-bottom:1px solid #eee;padding:6px 0}
-.msg .who{font-weight:bold;color:#690}
-.counter{font-family:Arial;background:#000;color:#0f0;padding:0 4px;letter-spacing:2px}
-form.gb input,form.gb textarea{font-size:12px;border:1px solid #9c6}
-.btn{font-size:11px;background:#eef6dc;border:1px solid #9c6;padding:1px 8px;cursor:pointer}
-#footer{margin:16px 0;text-align:center;font-size:11px;color:#999;border-top:1px solid #ddd;padding-top:8px}
-.marquee{color:#c00;font-size:11px}
-.pf{width:100%}.pf td{padding:2px 4px}
-.hot li{list-style:none;margin:0 0 3px -14px}.hot li i{font-style:normal;color:#fff;background:#f60;padding:0 4px;margin-right:4px;font-size:10px}
-button.lnk{background:none;border:0;color:#06c;font:inherit;cursor:pointer;padding:0;margin-right:10px}button.lnk:hover{text-decoration:underline;color:#f60}
-.flash{background:#ffc;border:1px solid #fc6;padding:4px 8px;margin-top:8px;color:#960}
-.pager{text-align:center;padding:6px;font-size:11px}.pager a,.pager b{margin:0 3px}
-.err{color:#c00;font-weight:bold}
-table.grid{border-collapse:collapse;width:100%;font-size:12px}table.grid th{background:#eef6dc;border:1px solid #cde0a8;padding:3px}table.grid td{border:1px solid #e5e5e5;padding:3px 6px}
-.bigphoto{text-align:center;padding:8px}.bigphoto img{max-width:540px;max-height:600px;border:1px solid #ccc;padding:3px;background:#fff}
-.tabs a{display:inline-block;padding:2px 12px;border:1px solid #cde0a8;border-bottom:0;background:#f4f9ea;margin-right:2px}.tabs a.on{background:#fff;font-weight:bold}
-textarea{font:12px 新細明體}
-.reply{background:#f4f9ea;border-left:3px solid #9c6;padding:3px 6px;margin:3px 0 0 20px}
-.rankn{color:#fff;background:#f60;padding:0 5px;font-size:10px;margin-right:4px}
-#logo{text-decoration:none}
-.btn.red{color:#c00;border-color:#c99;background:#fee}
+/* vibeai 小站 — 版面配色與尺寸取自無名小站存檔的原始 CSS
+   （頁寬 960、左右欄 197/315、連結 #1675C3、hover #CC3399、
+     頻道色：相簿 #0b73ae / 網誌 #e36511 / 影音 #ae196d） */
+
+body{
+  margin:0; background:#fff; color:#666;
+  font:12px/1.6 "新細明體",PMingLiU,Verdana,Arial,Helvetica,sans-serif;
+}
+a{ color:#1675C3; text-decoration:none; }
+a:hover{ color:#CC3399; text-decoration:underline; }
+img{ border:0; }
+
+#wrap{ width:960px; margin:0 auto; }
+
+/* 頂部工具列 */
+#topbar{
+  height:20px; line-height:20px; font-size:11px;
+  background:#525252; color:#bede91; padding:0 8px;
+}
+#topbar a{ color:#bede91; margin-right:10px; }
+#topbar a:hover{ color:#fff; }
+button.lnk{ background:none; border:0; color:#1675C3; font:inherit; cursor:pointer; padding:0; margin-right:10px; }
+button.lnk:hover{ text-decoration:underline; color:#CC3399; }
+#topbar button.lnk{ color:#bede91; }
+#topbar button.lnk:hover{ color:#fff; }
+
+/* 頁首 */
+#header{ height:80px; position:relative; background:#fff; }
+#logo{ position:absolute; left:0; top:16px; font:bold 30px/48px Verdana,Arial,sans-serif; color:#69a707; text-decoration:none; }
+#logo b{ color:#e36511; }
+#logo small{ font:11px "新細明體"; color:#999; margin-left:8px; letter-spacing:.05em; }
+#logo:hover{ text-decoration:none; }
+
+/* 導覽列 */
+#nav{ background:#69a707; height:26px; }
+#nav a{
+  display:inline-block; color:#fff; font-weight:bold; font-size:13px;
+  padding:0 18px; line-height:26px; letter-spacing:.1em; border-right:1px solid #8cc32a;
+}
+#nav a:hover,#nav a.on{ background:#e36511; color:#fff; text-decoration:none; }
+#search{ float:right; padding:3px 6px; }
+#search input{ font-size:11px; height:16px; border:1px solid #aaa; }
+
+/* 主要版面 */
+#main{ width:100%; border-collapse:collapse; margin-top:8px; }
+#main td{ vertical-align:top; }
+.side{ width:315px; padding-left:8px; }
+.side-left{ width:197px; padding-right:8px; }
+
+/* 區塊 */
+.box{ border:1px solid #ccc; margin-bottom:8px; background:#fff; }
+.box h3{
+  margin:0; background:#eee; border-bottom:1px solid #ccc;
+  color:#525252; font-size:12px; padding:4px 8px; letter-spacing:.1em;
+}
+.box h3 span{ float:right; font-weight:normal; letter-spacing:0; }
+.box .in{ padding:6px 8px; }
+.side .box h3{ background:#525252; color:#fff; border-color:#aaa; }
+.side .box h3 a{ color:#bede91; }
+.side .box h3 a:hover{ color:#fff; }
+.side .box{ border-color:#aaa; }
+.side .box .in{ background:#fafafa; }
+
+/* 縮圖 */
+.thumb{ float:left; width:104px; margin:4px; text-align:center; font-size:11px; }
+.thumb img{ width:90px; height:90px; border:1px solid #ccc; padding:2px; background:#fff; }
+.thumb img:hover{ border-color:#CC3399; }
+.clear{ clear:both; }
+
+ul.list{ margin:0; padding:0 0 0 14px; }
+ul.list li{ margin:2px 0; }
+.gray{ color:#999; }
+.orange{ color:#e36511; }
+.red{ color:#C11361; }
+.avatar{ width:90px; height:90px; border:1px solid #ccc; padding:2px; }
+
+/* 網誌 */
+.entry{ border-bottom:1px dashed #ddd; padding:8px 0; }
+.entry h4{ margin:0; font-size:14px; color:#7A3636; }
+.entry h4 a{ color:#7A3636; }
+.entry .meta{ font-size:11px; color:#999; }
+.entry .body{ padding:6px 0; white-space:pre-wrap; color:#666; }
+
+.msg{ border-bottom:1px solid #eee; padding:6px 0; }
+.msg .who{ font-weight:bold; color:#69a707; }
+.reply{ background:#f4f9ea; border-left:3px solid #69a707; padding:3px 6px; margin:3px 0 0 20px; }
+
+/* 人氣計數器 */
+.counter{ font-family:Verdana,Arial; background:#000; color:#0f0; padding:0 4px; letter-spacing:2px; }
+
+form.gb input,form.gb textarea{ font-size:12px; border:1px solid #aaa; }
+textarea{ font:12px "新細明體",PMingLiU,sans-serif; }
+.btn{ font-size:11px; background:#eee; border:1px solid #aaa; padding:1px 8px; cursor:pointer; color:#525252; }
+.btn:hover{ background:#69a707; color:#fff; border-color:#69a707; }
+.btn.red{ color:#C11361; border-color:#d9a; background:#fee; }
+.btn.red:hover{ background:#C11361; color:#fff; border-color:#C11361; }
+
+#footer{ margin:16px 0; text-align:center; font-size:11px; color:#999; border-top:1px solid #ddd; padding-top:8px; }
+.marquee{ color:#DD7700; font-size:11px; padding:4px 0; }
+.pf{ width:100%; }
+.pf td{ padding:2px 4px; }
+.hot li{ list-style:none; margin:0 0 3px -14px; }
+.hot li i{ font-style:normal; color:#fff; background:#e36511; padding:0 4px; margin-right:4px; font-size:10px; }
+
+.flash{ background:#ffc; border:1px solid #DD7700; padding:4px 8px; margin-top:8px; color:#DD7700; }
+.pager{ text-align:center; padding:6px; font-size:11px; }
+.pager a,.pager b{ margin:0 3px; }
+.err{ color:#C11361; font-weight:bold; }
+table.grid{ border-collapse:collapse; width:100%; font-size:12px; }
+table.grid th{ background:#eee; border:1px solid #ccc; padding:3px; color:#525252; }
+table.grid td{ border:1px solid #e5e5e5; padding:3px 6px; }
+.bigphoto{ text-align:center; padding:8px; }
+.bigphoto img{ max-width:600px; max-height:640px; border:1px solid #ccc; padding:3px; background:#fff; }
+.rankn{ color:#fff; background:#e36511; padding:0 5px; font-size:10px; margin-right:4px; }
+
+/* 頻道色（無名的相簿藍／網誌橘／影音桃紅） */
+.ch-album{ color:#0b73ae; }
+.ch-blog{ color:#e36511; }
+.ch-video{ color:#ae196d; }
