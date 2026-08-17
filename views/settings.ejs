@@ -5,7 +5,7 @@
 <tr><td>暱稱</td><td><input name="nick" value="<%= u.nick %>" maxlength="20" required></td></tr>
 <tr><td>頭像</td><td><img src="<%= u.avatar %>" class="avatar" style="width:45px;height:45px"> <input type="file" name="avatar" accept="image/*"> <span class="gray">建議 90×90</span></td></tr>
 <tr><td>自我介紹</td><td><textarea name="intro" cols="50" rows="4" maxlength="500"><%= u.intro %></textarea></td></tr>
-<tr><td>背景音樂</td><td><input name="music" size="50" value="<%= u.music %>" placeholder="mp3 網址" maxlength="300"></td></tr>
+<tr><td>音樂盒</td><td><textarea name="music" cols="50" rows="4" maxlength="2000" placeholder="一行一個 mp3 網址，可放多首組成播放清單"><%= u.music %></textarea><br><span class="gray">一行一首。放在小站側欄，訪客可切換曲目。</span></td></tr>
 <tr><td>自訂樣式</td><td><textarea name="css" cols="60" rows="8" maxlength="20000" placeholder="/* 你的小站專屬 CSS，例如 */&#10;body{background:#000 url(...)}&#10;.box h3{background:#f9c}"><%= u.css %></textarea><br><span class="gray">會套在你的每一頁上。玩壞了清空即可復原。</span></td></tr>
 <tr><td>新密碼</td><td><input name="pass" type="password" size="12"> 再輸入一次 <input name="pass2" type="password" size="12"> <span class="gray">不改請留空</span></td></tr>
 <tr><td></td><td><input type="submit" class="btn" value="儲存設定"></td></tr></table></form></div></div>

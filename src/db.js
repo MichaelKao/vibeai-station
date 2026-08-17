@@ -17,6 +17,8 @@ CREATE TABLE IF NOT EXISTS notices(id INTEGER PRIMARY KEY, body TEXT, created TE
 // 舊資料庫補欄位（照片檔案大小，用於配額計算）
 try { db.exec('ALTER TABLE photos ADD COLUMN bytes INTEGER DEFAULT 0'); } catch {}
 try { db.exec("ALTER TABLE photos ADD COLUMN thumb TEXT DEFAULT ''"); } catch {}
+try { db.exec("ALTER TABLE posts ADD COLUMN mood TEXT DEFAULT ''"); } catch {}
+try { db.exec("ALTER TABLE posts ADD COLUMN weather TEXT DEFAULT ''"); } catch {}
 
 export const q = (sql)=>db.prepare(sql);
 export const one=(sql,...a)=>db.prepare(sql).get(...a);

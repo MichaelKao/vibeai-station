@@ -3,5 +3,6 @@
 <% if (isOwner) { %><div class="box"><h3>管理</h3><div class="in"><a href="/<%= u.name %>/blog/new"><b>» 發表新文章</b></a></div></div><% } %>
 <div class="box"><h3>文章分類</h3><div class="in"><ul class="list"><li><a href="/<%= u.name %>/blog">全部</a></li><% cats.forEach(c=>{ %><li><a href="/<%= u.name %>/blog?cat=<%= encodeURIComponent(c.category) %>"><%= c.category %></a> (<%= c.n %>)</li><% }) %></ul></div></div>
 <div class="box"><h3>最新文章</h3><div class="in"><ul class="list"><% recent.forEach(r=>{ %><li><a href="/<%= u.name %>/blog/<%= r.id %>"><%= r.title %></a></li><% }) %></ul></div></div>
+<div class="box"><h3>文章彙整</h3><div class="in"><ul class="list"><% if(!months.length){ %><li class="gray">尚無文章</li><% } months.forEach(m=>{ %><li><a href="/<%= u.name %>/blog?ym=<%= m.ym %>"><%= m.ym.slice(0,4) %> 年 <%= +m.ym.slice(5,7) %> 月</a> (<%= m.n %>)</li><% }) %></ul></div></div>
 <div class="box"><h3>最新回應</h3><div class="in"><ul class="list"><% if(!recentC.length){ %><li class="gray">尚無回應</li><% } recentC.forEach(c=>{ %><li><%= c.author %> → <a href="/<%= u.name %>/blog/<%= c.post_id %>#comments"><%= c.title %></a></li><% }) %></ul></div></div>
 </td>
