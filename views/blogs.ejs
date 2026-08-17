@@ -1,0 +1,19 @@
+<%- include('partials/head',{title:'網誌總站'}) %>
+<table id="main"><tr><td>
+<div class="box"><h3>網誌站內分類 <span>共 <%= total %> 篇文章</span></h3><div class="in">
+<div class="topics">
+<a href="/blogs" class="<%= topic?'':'on' %>">所有分類</a>
+<% topics.forEach(t=>{ %><a href="/blogs?topic=<%= encodeURIComponent(t) %>" class="<%= topic===t?'on':'' %>"><%= t %><% if(counts[t]){ %>(<%= counts[t] %>)<% } %></a><% }) %>
+</div>
+</div></div>
+
+<div class="box"><h3><%= topic||'全部文章' %></h3><div class="in">
+<% if(!posts.length){ %><span class="gray">這個分類還沒有文章</span><% } %>
+<% posts.forEach(p=>{ %><div class="entry"><h4><a href="/<%= p.uname %>/blog/<%= p.id %>"><%= p.title %></a></h4>
+<div class="meta"><a href="/<%= p.uname %>"><%= p.nick %></a> ｜ <%= p.created.slice(0,16) %> ｜ 人氣：<%= p.views %> ｜ 推：<%= p.likes %><% if(p.topic){ %> ｜ <%= p.topic %><% } %></div>
+<div class="body"><%= p.body.length>200?p.body.slice(0,200)+'…':p.body %></div>
+<div class="meta"><a href="/<%= p.uname %>/blog/<%= p.id %>#comments">迴響(<%= p.nc %>)</a> ｜ <a href="/<%= p.uname %>/blog/<%= p.id %>">(繼續閱讀)</a></div></div><% }) %>
+<%- include('partials/pager') %>
+</div></div>
+</td></tr></table>
+<%- include('partials/foot') %>

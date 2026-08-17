@@ -1,0 +1,22 @@
+<%- include('partials/head',{title:'相簿總站'}) %>
+<table id="main"><tr><td>
+<div class="box"><h3>相簿站內分類 <span>共 <%= total %> 本相簿</span></h3><div class="in">
+<div class="topics">
+<a href="/albums" class="<%= topic?'':'on' %>">所有分類</a>
+<% topics.forEach(t=>{ %><a href="/albums?topic=<%= encodeURIComponent(t) %>" class="<%= topic===t?'on':'' %>"><%= t %><% if(counts[t]){ %>(<%= counts[t] %>)<% } %></a><% }) %>
+</div>
+<div class="topics" style="margin-top:4px">各地相簿：
+<a href="/albums<%= topic?'?topic='+encodeURIComponent(topic):'' %>" class="<%= place?'':'on' %>">全部</a>
+<% places.forEach(pl=>{ %><a href="/albums?<%= topic?'topic='+encodeURIComponent(topic)+'&':'' %>place=<%= encodeURIComponent(pl) %>" class="<%= place===pl?'on':'' %>"><%= pl %></a><% }) %>
+</div>
+</div></div>
+
+<div class="box"><h3><%= topic||'全部相簿' %><%= place?' ・ '+place:'' %></h3><div class="in">
+<% if(!albums.length){ %><span class="gray">這個分類還沒有相簿</span><% } %>
+<% albums.forEach(a=>{ %><div class="thumb"><a href="/<%= a.uname %>/album/<%= a.id %>"><img src="<%= a.cover %>" alt=""></a>
+<div class="cap"><a href="/<%= a.uname %>/album/<%= a.id %>"><%= a.title %></a><br><span class="gray"><%= a.nick %><br><%= a.n %>張照片</span></div></div><% }) %>
+<div class="clear"></div>
+<%- include('partials/pager') %>
+</div></div>
+</td></tr></table>
+<%- include('partials/foot') %>

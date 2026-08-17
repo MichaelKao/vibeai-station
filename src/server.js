@@ -6,6 +6,7 @@ import { one, all, run } from './db.js';
 import { hash, salt, check, requireLogin, requireOwner } from './auth.js';
 import { save, remove, hasR2, diskFree } from './storage.js';
 import { UPLOAD_DIR } from './paths.js';
+import { ALBUM_TOPICS, BLOG_TOPICS, PLACES, MOODS, WEATHERS, isAlbumTopic, isBlogTopic, isPlace } from './taxonomy.js';
 
 const app = express();
 app.set('view engine','ejs'); app.set('views', path.resolve('views'));
@@ -70,6 +71,35 @@ app.get('/search',(req,res)=>{
     posts:k?all(`SELECT p.*,u.name uname FROM posts p JOIN users u ON u.id=p.user_id WHERE p.title LIKE ? OR (p.pass='' AND p.body LIKE ?) LIMIT 30`,like,like):[]});
 });
 app.get('/help',(req,res)=>res.render('help'));
+
+// ===== 相簿總站：依站內分類瀏覽（無名的 /album/） =====
+app.get('/albums',(req,res)=>{
+  const topic=isAlbumTopic(req.query.topic)?req.query.topic:null;
+  const place=isPlace(req.query.place)?req.query.place:null;
+  const page=Math.max(1,+req.query.p||1), per=20;      // 無名一頁 20 本（5×4）
+  let where="a.pass='' AND a.cover!=''"; const args=[];
+  if(topic){ where+=' AND a.topic=?'; args.push(topic); }
+  if(place){ where+=' AND a.place=?'; args.push(place); }
+  const total=one(`SELECT count(*) c FROM albums a WHERE ${where}`,...args).c;
+  res.render('albums',{ topic, place, page, pages:Math.ceil(total/per), total,
+    topics:ALBUM_TOPICS, places:PLACES,
+    counts:Object.fromEntries(all("SELECT topic,count(*) n FROM albums WHERE pass='' AND cover!='' AND topic!='' GROUP BY topic").map(r=>[r.topic,r.n])),
+    albums:all(`SELECT a.*,u.name uname,u.nick,(SELECT count(*) FROM photos WHERE album_id=a.id) n
+      FROM albums a JOIN users u ON u.id=a.user_id WHERE ${where} ORDER BY a.views DESC, a.id DESC LIMIT ? OFFSET ?`,...args,per,(page-1)*per) });
+});
+
+// ===== 網誌總站：依站內分類瀏覽 =====
+app.get('/blogs',(req,res)=>{
+  const topic=isBlogTopic(req.query.topic)?req.query.topic:null;
+  const page=Math.max(1,+req.query.p||1), per=20;
+  let where="p.pass=''"; const args=[];
+  if(topic){ where+=' AND p.topic=?'; args.push(topic); }
+  const total=one(`SELECT count(*) c FROM posts p WHERE ${where}`,...args).c;
+  res.render('blogs',{ topic, page, pages:Math.ceil(total/per), total, topics:BLOG_TOPICS,
+    counts:Object.fromEntries(all("SELECT topic,count(*) n FROM posts WHERE pass='' AND topic!='' GROUP BY topic").map(r=>[r.topic,r.n])),
+    posts:all(`SELECT p.*,u.name uname,u.nick,(SELECT count(*) FROM comments WHERE post_id=p.id) nc
+      FROM posts p JOIN users u ON u.id=p.user_id WHERE ${where} ORDER BY p.views DESC, p.id DESC LIMIT ? OFFSET ?`,...args,per,(page-1)*per) });
+});
 
 // ===== 帳號 =====
 // ADMIN_USERS=vibeai,someone 名單內的帳號註冊或登入時自動取得站長權限，
@@ -198,19 +228,19 @@ site.get('/friends',(req,res)=>res.render('friends',{nav:'user',
   fans:all('SELECT u.name,u.nick,u.avatar FROM friends f JOIN users u ON u.id=f.user_id WHERE f.friend_id=? ORDER BY f.created DESC',U(res).id)}));
 
 // 相簿
-site.get('/album',(req,res)=>res.render('album',{nav:'album',
+site.get('/album',(req,res)=>res.render('album',{nav:'album',topics:ALBUM_TOPICS,places:PLACES,
   quota:{used:usedBytes(U(res).id),total:USER_QUOTA,mb:MB},
   albums:all(`SELECT a.*,(SELECT count(*) FROM photos WHERE album_id=a.id) n FROM albums a WHERE user_id=? ORDER BY id DESC`,U(res).id)}));
-site.post('/album',requireLogin,requireOwner,(req,res)=>{ const t=(req.body.title||'').trim().slice(0,40); if(t) run('INSERT INTO albums(user_id,title,descr,pass) VALUES(?,?,?,?)',U(res).id,t,(req.body.descr||'').slice(0,200),(req.body.pass||'').slice(0,20)); res.redirect(`/${U(res).name}/album`); });
+site.post('/album',requireLogin,requireOwner,(req,res)=>{ const t=(req.body.title||'').trim().slice(0,40); if(t) run('INSERT INTO albums(user_id,title,descr,pass,topic,place) VALUES(?,?,?,?,?,?)',U(res).id,t,(req.body.descr||'').slice(0,200),(req.body.pass||'').slice(0,20),isAlbumTopic(req.body.topic)?req.body.topic:'',isPlace(req.body.place)?req.body.place:''); res.redirect(`/${U(res).name}/album`); });
 const albumOf=(req,res,next)=>{ const a=one('SELECT * FROM albums WHERE id=? AND user_id=?',req.params.id,U(res).id); if(!a) return next('route'); res.locals.album=a; next(); };
 const albumUnlocked=(req,res)=>!res.locals.album.pass||res.locals.isOwner||(req.session.unlocked||[]).includes(res.locals.album.id);
 site.get('/album/:id',albumOf,(req,res)=>{
   const a=res.locals.album; if(!albumUnlocked(req,res)) return res.render('album_lock',{nav:'album',album:a,err:null});
   if(!res.locals.isOwner) run('UPDATE albums SET views=views+1 WHERE id=?',a.id);
-  res.render('photos',{nav:'album',album:a,photos:all('SELECT * FROM photos WHERE album_id=? ORDER BY id',a.id)});
+  res.render('photos',{nav:'album',album:a,topics:ALBUM_TOPICS,places:PLACES,photos:all('SELECT * FROM photos WHERE album_id=? ORDER BY id',a.id)});
 });
 site.post('/album/:id/unlock',albumOf,(req,res)=>{ const a=res.locals.album; if(req.body.pass===a.pass){ req.session.unlocked=[...(req.session.unlocked||[]),a.id]; return res.redirect(`/${U(res).name}/album/${a.id}`);} res.render('album_lock',{nav:'album',album:a,err:'密碼錯誤'}); });
-site.post('/album/:id/edit',requireLogin,requireOwner,albumOf,(req,res)=>{ run('UPDATE albums SET title=?,descr=?,pass=? WHERE id=?',(req.body.title||res.locals.album.title).trim().slice(0,40),(req.body.descr||'').slice(0,200),(req.body.pass||'').slice(0,20),res.locals.album.id); res.redirect(`/${U(res).name}/album/${res.locals.album.id}`); });
+site.post('/album/:id/edit',requireLogin,requireOwner,albumOf,(req,res)=>{ run('UPDATE albums SET title=?,descr=?,pass=?,topic=?,place=? WHERE id=?',(req.body.title||res.locals.album.title).trim().slice(0,40),(req.body.descr||'').slice(0,200),(req.body.pass||'').slice(0,20),isAlbumTopic(req.body.topic)?req.body.topic:'',isPlace(req.body.place)?req.body.place:'',res.locals.album.id); res.redirect(`/${U(res).name}/album/${res.locals.album.id}`); });
 site.post('/album/:id/del',requireLogin,requireOwner,albumOf,async(req,res)=>{ for(const p of all('SELECT url,thumb FROM photos WHERE album_id=?',res.locals.album.id)){ await remove(p.url); if(p.thumb&&p.thumb!==p.url) await remove(p.thumb); } run('DELETE FROM albums WHERE id=?',res.locals.album.id); res.redirect(`/${U(res).name}/album`); });
 site.post('/album/:id/upload',requireLogin,requireOwner,albumOf,upload.array('photos',20),async(req,res)=>{
   const a=res.locals.album; let first=null;
@@ -236,14 +266,12 @@ site.post('/photo/:pid/del',requireLogin,requireOwner,async(req,res)=>{ const p=
 
 // 網誌
 // 當年網誌側欄常見模組：分類、最新文章、最新迴響、月份彙整
-export const MOODS=['開心','難過','生氣','無聊','想睡','戀愛','忙碌','放空','感動','驚訝'];
-export const WEATHERS=['晴','多雲','陰','雨','雷雨','颱風','下雪','熱','冷'];
 const blogSide=res=>({
   cats:all('SELECT category,count(*) n FROM posts WHERE user_id=? GROUP BY category',U(res).id),
   recent:all('SELECT id,title FROM posts WHERE user_id=? ORDER BY id DESC LIMIT 8',U(res).id),
   recentC:all('SELECT c.author,c.post_id,p.title FROM comments c JOIN posts p ON p.id=c.post_id WHERE p.user_id=? ORDER BY c.id DESC LIMIT 5',U(res).id),
   months:all("SELECT substr(created,1,7) ym, count(*) n FROM posts WHERE user_id=? GROUP BY ym ORDER BY ym DESC LIMIT 24",U(res).id),
-  moods:MOODS, weathers:WEATHERS});
+  moods:MOODS, weathers:WEATHERS, blogTopics:BLOG_TOPICS});
 site.get('/blog',(req,res)=>{ const cat=req.query.cat, ym=/^\d{4}-\d{2}$/.test(req.query.ym||'')?req.query.ym:null, page=Math.max(1,+req.query.p||1), per=10;
   let where='user_id=?'; const args=[U(res).id];
   if(cat){ where+=' AND category=?'; args.push(cat); }
@@ -253,7 +281,7 @@ site.get('/blog',(req,res)=>{ const cat=req.query.cat, ym=/^\d{4}-\d{2}$/.test(r
 site.get('/blog/new',requireLogin,requireOwner,(req,res)=>res.render('post_edit',{nav:'blog',post:null,...blogSide(res)}));
 site.post('/blog/new',requireLogin,requireOwner,(req,res)=>{ const {title,body,category,mood,weather}=req.body;
   if(!title?.trim()||!body?.trim()) return res.redirect(`/${U(res).name}/blog/new`);
-  const r=run('INSERT INTO posts(user_id,title,body,category,mood,weather,pass) VALUES(?,?,?,?,?,?,?)',U(res).id,title.trim().slice(0,100),body.slice(0,50000),(category||'未分類').trim().slice(0,20)||'未分類',MOODS.includes(mood)?mood:'',WEATHERS.includes(weather)?weather:'',(req.body.pass||'').slice(0,20));
+  const r=run('INSERT INTO posts(user_id,title,body,category,mood,weather,pass,topic) VALUES(?,?,?,?,?,?,?,?)',U(res).id,title.trim().slice(0,100),body.slice(0,50000),(category||'未分類').trim().slice(0,20)||'未分類',MOODS.includes(mood)?mood:'',WEATHERS.includes(weather)?weather:'',(req.body.pass||'').slice(0,20),isBlogTopic(req.body.topic)?req.body.topic:'');
   res.redirect(`/${U(res).name}/blog/${r.lastInsertRowid}`); });
 const postOf=(req,res,next)=>{ const p=one('SELECT * FROM posts WHERE id=? AND user_id=?',req.params.id,U(res).id); if(!p) return next('route'); res.locals.post=p; next(); };
 // 文章密碼（當年網誌可以上鎖，很多人拿來寫悄悄話）
@@ -271,7 +299,7 @@ site.get('/blog/:id',postOf,(req,res)=>{ const p=res.locals.post;
     prev:one('SELECT id,title FROM posts WHERE user_id=? AND id<? ORDER BY id DESC',U(res).id,p.id),next:one('SELECT id,title FROM posts WHERE user_id=? AND id>? ORDER BY id',U(res).id,p.id)}); });
 site.get('/blog/:id/edit',requireLogin,requireOwner,postOf,(req,res)=>res.render('post_edit',{nav:'blog',post:res.locals.post,...blogSide(res)}));
 site.post('/blog/:id/edit',requireLogin,requireOwner,postOf,(req,res)=>{ const {title,body,category,mood,weather}=req.body;
-  run('UPDATE posts SET title=?,body=?,category=?,mood=?,weather=?,pass=? WHERE id=?',(title||res.locals.post.title).trim().slice(0,100),(body||'').slice(0,50000),(category||'未分類').trim().slice(0,20)||'未分類',MOODS.includes(mood)?mood:'',WEATHERS.includes(weather)?weather:'',(req.body.pass||'').slice(0,20),res.locals.post.id);
+  run('UPDATE posts SET title=?,body=?,category=?,mood=?,weather=?,pass=?,topic=? WHERE id=?',(title||res.locals.post.title).trim().slice(0,100),(body||'').slice(0,50000),(category||'未分類').trim().slice(0,20)||'未分類',MOODS.includes(mood)?mood:'',WEATHERS.includes(weather)?weather:'',(req.body.pass||'').slice(0,20),isBlogTopic(req.body.topic)?req.body.topic:'',res.locals.post.id);
   res.redirect(`/${U(res).name}/blog/${res.locals.post.id}`); });
 site.post('/blog/:id/del',requireLogin,requireOwner,postOf,(req,res)=>{ run('DELETE FROM posts WHERE id=?',res.locals.post.id); res.redirect(`/${U(res).name}/blog`); });
 // 上鎖文章：沒解鎖就不能回應、推薦、引用（引用會複製內文，等於繞過密碼）

@@ -167,3 +167,9 @@ body.t-blog .bigphoto img,body.t-blog .thumb img{ padding:3px; background:#fff; 
 
 /* 頻道色 */
 .ch-album{ color:#0b73ae; } .ch-blog{ color:#e36511; } .ch-video{ color:#ae196d; }
+
+/* 站內分類列（相簿／網誌總站） */
+.topics{ line-height:180%; }
+.topics a{ display:inline-block; padding:1px 6px; margin:1px 2px; border:1px solid #ccc; background:#fff; font-size:12px; }
+.topics a:hover{ background:#69a707; color:#fff; border-color:#69a707; text-decoration:none; }
+.topics a.on{ background:#e36511; color:#fff; border-color:#e36511; font-weight:bold; }

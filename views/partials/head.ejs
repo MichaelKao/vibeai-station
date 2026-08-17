@@ -3,11 +3,11 @@
 <% if (u && u.css) { %><style><%- u.css.replace(/<\/style/gi,'') %></style><% } %></head>
 <%# 相簿頁走橘色主題、網誌頁走藍色主題，個人小站頁固定 700px（同無名） %>
 <body class="<%= u?'personal':'' %> <%= nav==='album'?'t-album':(nav==='blog'?'t-blog':'') %>">
-<div id="topbar"><a href="/">vibeai 小站</a><a href="/rank">排行榜</a><a href="/search">搜尋</a><a href="/help">服務說明</a>
+<div id="topbar"><a href="/">vibeai 小站</a><a href="/albums">相簿</a><a href="/blogs">網誌</a><a href="/rank">排行榜</a><a href="/search">搜尋</a><a href="/help">服務說明</a>
 <span style="float:right"><% if (me) { %>您好，<a href="/<%= me.name %>"><b><%= me.nick %></b></a>！<a href="/<%= me.name %>/settings">個人設定</a><% if (me.admin) { %><a href="/admin">後台</a><% } %><form method="post" action="/logout" style="display:inline"><button class="lnk">登出</button></form><% } else { %>您還沒登入喔　<a href="/login">會員登入</a><a href="/register"><b class="orange">免費註冊</b></a><% } %></span></div>
 <div id="wrap">
 <div id="header"><a id="logo" href="/"><img src="/img/logo.png" alt="vibeai" style="height:40px;vertical-align:middle;margin-right:6px">vibeai <b>小站</b><small>相簿・網誌・留言板</small></a></div>
-<div id="nav"><a href="/" class="<%= nav==='home'?'on':'' %>">首頁</a><% if (u) { %><a href="/<%= u.name %>" class="<%= nav==='user'?'on':'' %>">MyPage</a><a href="/<%= u.name %>/album" class="<%= nav==='album'?'on':'' %>">相簿</a><a href="/<%= u.name %>/blog" class="<%= nav==='blog'?'on':'' %>">網誌</a><a href="/<%= u.name %>/guestbook" class="<%= nav==='gb'?'on':'' %>">留言板</a><a href="/<%= u.name %>/friends" class="<%= nav==='friend'?'on':'' %>">好友</a><% } else { %><a href="/rank">熱門排行</a><a href="/register">加入小站</a><% } %>
+<div id="nav"><a href="/" class="<%= nav==='home'?'on':'' %>">首頁</a><% if (u) { %><a href="/<%= u.name %>" class="<%= nav==='user'?'on':'' %>">MyPage</a><a href="/<%= u.name %>/album" class="<%= nav==='album'?'on':'' %>">相簿</a><a href="/<%= u.name %>/blog" class="<%= nav==='blog'?'on':'' %>">網誌</a><a href="/<%= u.name %>/guestbook" class="<%= nav==='gb'?'on':'' %>">留言板</a><a href="/<%= u.name %>/friends" class="<%= nav==='friend'?'on':'' %>">好友</a><% } else { %><a href="/albums">相簿</a><a href="/blogs">網誌</a><a href="/rank">熱門排行</a><a href="/register">加入小站</a><% } %>
 <form id="search" action="/search"><input name="q" placeholder="找相簿 / 找文章 / 找朋友"> <input type="submit" value="搜尋" class="btn"></form></div>
 <% if (u) { %><div id="sitenav">[ <b><%= u.nick %></b> 的 <a href="/<%= u.name %>">MyPage</a> | <a href="/<%= u.name %>/album">相簿</a> | <a href="/<%= u.name %>/blog">網誌</a> | <a href="/<%= u.name %>/guestbook">留言板</a> | <a href="/<%= u.name %>/friends">好友</a> ]</div><% } %>
 <% if (flash) { %><div class="flash"><%= flash %></div><% } %>
