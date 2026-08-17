@@ -5,12 +5,13 @@ import path from 'node:path';
 import { one, all, run } from './db.js';
 import { hash, salt, check, requireLogin, requireOwner } from './auth.js';
 import { save, remove, hasR2, diskFree } from './storage.js';
+import { UPLOAD_DIR } from './paths.js';
 
 const app = express();
 app.set('view engine','ejs'); app.set('views', path.resolve('views'));
 app.set('trust proxy',1);
 app.use(express.static(path.resolve('public')));
-app.use('/uploads', express.static(path.resolve('data/uploads')));
+app.use('/uploads', express.static(UPLOAD_DIR));
 app.use(express.urlencoded({extended:false}));
 app.use(session({secret:process.env.SESSION_SECRET||'vibeai-dev-secret',resave:false,saveUninitialized:false,cookie:{maxAge:30*864e5,httpOnly:true}}));
 const upload = multer({storage:multer.memoryStorage(),limits:{fileSize:8*1024*1024,files:20},fileFilter:(r,f,cb)=>cb(null,/^image\/(jpeg|png|gif|webp)$/.test(f.mimetype))});

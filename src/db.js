@@ -1,7 +1,6 @@
 import { DatabaseSync as Database } from 'node:sqlite';
-import fs from 'node:fs';
-fs.mkdirSync('data/uploads',{recursive:true});
-export const db = new Database('data/station.db');
+import { DB_PATH } from './paths.js';
+export const db = new Database(DB_PATH);
 db.exec(`PRAGMA journal_mode=WAL; PRAGMA foreign_keys=ON;
 CREATE TABLE IF NOT EXISTS users(id INTEGER PRIMARY KEY, name TEXT UNIQUE COLLATE NOCASE, pass TEXT, salt TEXT, nick TEXT, intro TEXT DEFAULT '', avatar TEXT DEFAULT '/img/avatar.png', css TEXT DEFAULT '', music TEXT DEFAULT '', visits INTEGER DEFAULT 0, admin INTEGER DEFAULT 0, created TEXT DEFAULT (datetime('now','localtime')));
 CREATE TABLE IF NOT EXISTS albums(id INTEGER PRIMARY KEY, user_id INTEGER REFERENCES users(id) ON DELETE CASCADE, title TEXT, descr TEXT DEFAULT '', cover TEXT DEFAULT '', pass TEXT DEFAULT '', views INTEGER DEFAULT 0, created TEXT DEFAULT (datetime('now','localtime')));
