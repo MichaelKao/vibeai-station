@@ -217,3 +217,15 @@ body.t-blog .tabs a.on{ background:#8AB9F4; color:#222233; }
 /* 好友動態 */
 .feeditem img{ float:left; margin-right:8px; }
 .feeditem .ft{ overflow:hidden; }
+
+/* 2005 首頁：左欄 505 + 右欄 160（總寬 760） */
+.main-col{ width:505px; }
+table.grid3{ border-collapse:separate; border-spacing:10px 6px; }
+table.grid3 td{ width:120px; vertical-align:top; text-align:center; }
+.cap3{ height:56px; overflow:hidden; font-size:12px; padding-top:3px; line-height:1.35; }
+.hotblog{ border-bottom:1px dashed #ddd; padding:8px 0; }
+.hotblog img{ float:left; margin-right:8px; }
+.hotblog .hb-text{ overflow:hidden; }
+.hotblog .hb-title{ font-size:14px; font-weight:bold; }
+.hotblog .hb-sum{ padding:3px 0; color:#666; }
+.hotblog .hb-pt{ text-align:right; font-size:11px; color:#C11361; }

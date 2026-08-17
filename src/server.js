@@ -59,7 +59,11 @@ app.get('/', (req,res)=>{
   res.render('index',{
     hotAlbums: all(`SELECT a.*,u.name uname,u.nick FROM albums a JOIN users u ON u.id=a.user_id WHERE a.pass='' AND a.cover!='' ORDER BY a.views DESC LIMIT 8`),
     newPhotos: all(`SELECT p.*,a.title atitle,a.id aid,u.name uname FROM photos p JOIN albums a ON a.id=p.album_id JOIN users u ON u.id=a.user_id WHERE a.pass='' ORDER BY p.id DESC LIMIT 8`),
-    hotPosts: all(`SELECT p.*,u.name uname,u.nick FROM posts p JOIN users u ON u.id=p.user_id ORDER BY p.views DESC LIMIT 10`),
+    // 熱門網誌：左縮圖右文字，取作者最新一張照片當縮圖（同 2005 首頁）
+    hotPosts: all(`SELECT p.*,u.name uname,u.nick,
+        (SELECT ph.thumb FROM photos ph JOIN albums al ON al.id=ph.album_id
+         WHERE al.user_id=p.user_id AND al.pass='' ORDER BY ph.id DESC LIMIT 1) pthumb
+      FROM posts p JOIN users u ON u.id=p.user_id WHERE p.pass='' ORDER BY p.views DESC LIMIT 6`),
     newUsers: all(`SELECT name,nick FROM users ORDER BY id DESC LIMIT 8`),
     rank: all(`SELECT name,nick,visits FROM users ORDER BY visits DESC LIMIT 10`),
     notices: all(`SELECT * FROM notices ORDER BY id DESC LIMIT 5`),
