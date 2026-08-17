@@ -7,7 +7,8 @@
 <% if(!reports.length){ %><span class="gray">目前沒有檢舉</span><% } %>
 <% reports.forEach(r=>{ %><div class="msg" style="<%= r.done?'opacity:.5':'' %>">
 <b><%= r.kind %>#<%= r.target_id %></b> <span class="gray"><%= r.created.slice(5,16) %> by <%= r.reporter %></span><br>
-<%= r.reason %><br><% if(r.url){ %><a href="<%= r.url %>">前往查看</a> <% } %>
+<%= r.reason %><br><%# 只渲染站內相對路徑，舊資料若含 javascript: 一律不變成連結 %>
+<% if(r.url && r.url.startsWith('/') && !r.url.startsWith('//')){ %><a href="<%= r.url %>">前往查看</a> <% } else if(r.url){ %><span class="gray"><%= r.url %></span> <% } %>
 <% if(!r.done){ %><form method="post" action="/admin/report/<%= r.id %>/done" style="display:inline"><button class="lnk" style="font-size:10px">標記已處理</button></form><% } %>
 <form method="post" action="/admin/report/<%= r.id %>/del" style="display:inline"><button class="lnk" style="font-size:10px">刪除</button></form>
 </div><% }) %></div></div>

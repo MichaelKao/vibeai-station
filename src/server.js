@@ -14,7 +14,7 @@ app.set('trust proxy',1);
 app.use(express.static(path.resolve('public')));
 app.use('/uploads', express.static(UPLOAD_DIR));
 app.use(express.urlencoded({extended:false}));
-app.use(session({secret:process.env.SESSION_SECRET||'vibeai-dev-secret',resave:false,saveUninitialized:false,cookie:{maxAge:30*864e5,httpOnly:true}}));
+app.use(session({secret:process.env.SESSION_SECRET||'vibeai-dev-secret',resave:false,saveUninitialized:false,cookie:{maxAge:30*864e5,httpOnly:true,sameSite:'lax'}}));
 const upload = multer({storage:multer.memoryStorage(),limits:{fileSize:8*1024*1024,files:20},fileFilter:(r,f,cb)=>cb(null,/^image\/(jpeg|png|gif|webp)$/.test(f.mimetype))});
 
 // locals
@@ -41,6 +41,9 @@ function quotaError(uid, incoming){
     return '伺服器儲存空間不足，暫時無法上傳。已通知站長，請稍後再試。';
   return null;
 }
+// 只允許站內相對路徑（擋 javascript:、//evil.com、/\evil.com）
+const safePath = v => { const x=String(v||'').trim();
+  return (x.startsWith('/') && !x.startsWith('//') && !x.startsWith('/\\')) ? x.slice(0,300) : ''; };
 const isFriend=(a,b)=>!!one('SELECT 1 FROM friends WHERE user_id=? AND friend_id=?',a,b);
 
 // 動態：記一筆使用者活動，供「好友動態」讀取
@@ -79,11 +82,13 @@ app.get('/help',(req,res)=>res.render('help'));
 // 檢舉（無名各處都有「檢舉」連結，送到站長後台處理）
 app.post('/report',(req,res)=>{
   const {kind,target,url,reason}=req.body;
+  // 只收站內相對路徑；擋掉 javascript: 與 //host（否則會變成後台的 XSS／開放轉址）
+  const safeUrl = safePath(url);
   if(reason?.trim())
     run('INSERT INTO reports(kind,target_id,url,reason,reporter) VALUES(?,?,?,?,?)',
-      String(kind||'').slice(0,20), +target||0, String(url||'').slice(0,300),
+      String(kind||'').slice(0,20), +target||0, safeUrl,
       reason.trim().slice(0,500), res.locals.me?.name||'訪客');
-  res.render('msg',{title:'已送出檢舉',msg:'謝謝你的回報，站長會盡快處理。',back:(String(url||'').startsWith('/')?url:'/')});
+  res.render('msg',{title:'已送出檢舉',msg:'謝謝你的回報，站長會盡快處理。',back:safeUrl||'/'});
 });
 
 // ===== 相簿總站：依站內分類瀏覽（無名的 /album/） =====
@@ -135,7 +140,7 @@ app.post('/login',(req,res)=>{
   const u=one('SELECT * FROM users WHERE name=?',req.body.name||'');
   if(!check(u,req.body.pass||'')) return res.render('login',{err:'帳號或密碼錯誤',next:req.body.next||''});
   if(ADMIN_USERS.has(u.name) && !u.admin) run('UPDATE users SET admin=1 WHERE id=?',u.id); // ADMIN_USERS 名單登入即補站長權限
-  const nxt=req.body.next; const safe=typeof nxt==='string'&&nxt.startsWith('/')&&!nxt.startsWith('//')&&!nxt.startsWith('/\\'); req.session.uid=u.id; res.redirect(safe?nxt:'/'+u.name);
+  req.session.uid=u.id; res.redirect(safePath(req.body.next) || '/'+u.name);
 });
 app.post('/logout',(req,res)=>req.session.destroy(()=>res.redirect('/')));
 
@@ -436,9 +441,10 @@ site.get('/guestbook',(req,res)=>{
 site.post('/guestbook',(req,res)=>{ const {author,subject,body,secret}=req.body; const who=res.locals.me?.nick||author;
   if(who?.trim()&&body?.trim()){
     run('INSERT INTO guestbook(user_id,author,subject,body,secret) VALUES(?,?,?,?,?)',U(res).id,who.trim().slice(0,20),(subject||'').trim().slice(0,40),body.trim().slice(0,500),secret?1:0);
-    // 通知板主有新留言
-    if(res.locals.me?.id!==U(res).id)
-      run('INSERT INTO sysmsg(user_id,title,body) VALUES(?,?,?)',U(res).id,'你有新的留言',`${who.trim().slice(0,20)} 在你的留言板留言了。`);
+    // 通知板主有新留言：只有登入者會觸發，且 10 分鐘內只發一則，避免被灌爆
+    if(res.locals.me && res.locals.me.id!==U(res).id &&
+       !one("SELECT 1 FROM sysmsg WHERE user_id=? AND created>datetime('now','localtime','-10 minutes')",U(res).id))
+      run('INSERT INTO sysmsg(user_id,title,body) VALUES(?,?,?)',U(res).id,'你有新的留言',`${res.locals.me.nick} 在你的留言板留言了。`);
   }
   res.redirect(`/${U(res).name}/guestbook`); });
 site.post('/guestbook/:id/reply',requireLogin,requireOwner,(req,res)=>{ run('UPDATE guestbook SET reply=? WHERE id=? AND user_id=?',(req.body.reply||'').trim().slice(0,500),req.params.id,U(res).id); res.redirect(`/${U(res).name}/guestbook`); });
