@@ -63,7 +63,7 @@ app.get('/login',(req,res)=>res.render('login',{err:null,next:req.query.next||''
 app.post('/login',(req,res)=>{
   const u=one('SELECT * FROM users WHERE name=?',req.body.name||'');
   if(!check(u,req.body.pass||'')) return res.render('login',{err:'帳號或密碼錯誤',next:req.body.next||''});
-  req.session.uid=u.id; res.redirect(req.body.next && req.body.next.startsWith('/')?req.body.next:'/'+u.name);
+  const nxt=req.body.next; const safe=typeof nxt==='string'&&nxt.startsWith('/')&&!nxt.startsWith('//')&&!nxt.startsWith('/\\'); req.session.uid=u.id; res.redirect(safe?nxt:'/'+u.name);
 });
 app.post('/logout',(req,res)=>req.session.destroy(()=>res.redirect('/')));
 
@@ -136,7 +136,7 @@ site.get('/photo/:pid',(req,res,next)=>{
   const ids=all('SELECT id FROM photos WHERE album_id=? ORDER BY id',p.aid).map(x=>x.id), i=ids.indexOf(p.id);
   res.render('photo',{nav:'album',p,prev:ids[i-1],next:ids[i+1],idx:i+1,total:ids.length,comments:all('SELECT * FROM photo_comments WHERE photo_id=? ORDER BY id',p.id)});
 });
-site.post('/photo/:pid/comment',(req,res)=>{ const p=one('SELECT p.id FROM photos p JOIN albums a ON a.id=p.album_id WHERE p.id=? AND a.user_id=?',req.params.pid,U(res).id); if(p&&req.body.body?.trim()) run('INSERT INTO photo_comments(photo_id,author,body) VALUES(?,?,?)',p.id,(res.locals.me?.nick||req.body.author||'訪客').slice(0,20),req.body.body.trim().slice(0,300)); res.redirect(`/${U(res).name}/photo/${req.params.pid}`); });
+site.post('/photo/:pid/comment',(req,res)=>{ const p=one('SELECT p.id,p.album_id,a.pass FROM photos p JOIN albums a ON a.id=p.album_id WHERE p.id=? AND a.user_id=?',req.params.pid,U(res).id); if(!p) return res.redirect('/'+U(res).name+'/album'); res.locals.album={id:p.album_id,pass:p.pass}; if(!albumUnlocked(req,res)) return res.status(403).render('msg',{title:'沒有權限',msg:'相簿已上鎖',back:'/'+U(res).name+'/album'}); if(req.body.body?.trim()) run('INSERT INTO photo_comments(photo_id,author,body) VALUES(?,?,?)',p.id,(res.locals.me?.nick||req.body.author||'訪客').slice(0,20),req.body.body.trim().slice(0,300)); res.redirect(`/${U(res).name}/photo/${req.params.pid}`); });
 site.post('/photo/:pid/caption',requireLogin,requireOwner,(req,res)=>{ run('UPDATE photos SET caption=? WHERE id=? AND album_id IN (SELECT id FROM albums WHERE user_id=?)',(req.body.caption||'').slice(0,100),req.params.pid,U(res).id); res.redirect(`/${U(res).name}/photo/${req.params.pid}`); });
 site.post('/photo/:pid/cover',requireLogin,requireOwner,(req,res)=>{ const p=one('SELECT * FROM photos WHERE id=?',req.params.pid); if(p) run('UPDATE albums SET cover=? WHERE id=? AND user_id=?',p.url,p.album_id,U(res).id); res.redirect(`/${U(res).name}/photo/${req.params.pid}`); });
 site.post('/photo/:pid/del',requireLogin,requireOwner,async(req,res)=>{ const p=one('SELECT p.* FROM photos p JOIN albums a ON a.id=p.album_id WHERE p.id=? AND a.user_id=?',req.params.pid,U(res).id); if(p){ await remove(p.url); run('DELETE FROM photos WHERE id=?',p.id); run("UPDATE albums SET cover=COALESCE((SELECT url FROM photos WHERE album_id=? LIMIT 1),'') WHERE id=? AND cover=?",p.album_id,p.album_id,p.url); return res.redirect(`/${U(res).name}/album/${p.album_id}`);} res.redirect(`/${U(res).name}/album`); });
