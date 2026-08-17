@@ -106,7 +106,7 @@ app.post('/admin/user/:id/admin',requireAdmin,(req,res)=>{ // 設為／取消站
 app.post('/admin/user/:id/del',requireAdmin,async(req,res)=>{
   const id=Number(req.params.id);
   if(id!==res.locals.me.id){
-    for(const p of all('SELECT p.url FROM photos p JOIN albums a ON a.id=p.album_id WHERE a.user_id=?',id)) await remove(p.url);
+    for(const p of all('SELECT p.url,p.thumb FROM photos p JOIN albums a ON a.id=p.album_id WHERE a.user_id=?',id)){ await remove(p.url); if(p.thumb&&p.thumb!==p.url) await remove(p.thumb); }
     const av=one('SELECT avatar FROM users WHERE id=?',id); if(av?.avatar?.startsWith('/uploads/')||av?.avatar?.startsWith('http')) await remove(av.avatar);
     run('DELETE FROM users WHERE id=?',id);
   }
@@ -139,7 +139,7 @@ site.get('/',(req,res)=>{
 site.get('/settings',requireLogin,requireOwner,(req,res)=>res.render('settings',{nav:'user'}));
 site.post('/settings',requireLogin,requireOwner,upload.single('avatar'),async(req,res)=>{
   const {nick,intro,music,css,pass,pass2}=req.body, u=U(res);
-  let avatar=u.avatar; if(req.file){ avatar=await save(req.file); await remove(u.avatar); }
+  let avatar=u.avatar; if(req.file){ const s=await save(req.file); avatar=s.thumb; await remove(u.avatar); }
   run('UPDATE users SET nick=?,intro=?,music=?,css=?,avatar=? WHERE id=?',(nick||u.nick).trim().slice(0,20),(intro||'').slice(0,500),(music||'').slice(0,300),(css||'').slice(0,20000),avatar,u.id);
   if(pass){ if(pass!==pass2) {flash(req,'兩次密碼不一致，其他設定已儲存');return res.redirect(`/${u.name}/settings`);} const s=salt(); run('UPDATE users SET pass=?,salt=? WHERE id=?',hash(pass,s),s,u.id); }
   flash(req,'設定已儲存'); res.redirect(`/${u.name}/settings`);
@@ -148,7 +148,7 @@ site.post('/settings',requireLogin,requireOwner,upload.single('avatar'),async(re
 site.post('/settings/delete',requireLogin,requireOwner,async(req,res)=>{
   const u=one('SELECT * FROM users WHERE id=?',U(res).id);
   if(!check(u,req.body.pass||'')){ flash(req,'密碼錯誤，帳號未刪除'); return res.redirect(`/${u.name}/settings`); }
-  for(const p of all('SELECT p.url FROM photos p JOIN albums a ON a.id=p.album_id WHERE a.user_id=?',u.id)) await remove(p.url);
+  for(const p of all('SELECT p.url,p.thumb FROM photos p JOIN albums a ON a.id=p.album_id WHERE a.user_id=?',u.id)){ await remove(p.url); if(p.thumb&&p.thumb!==p.url) await remove(p.thumb); }
   if(u.avatar && u.avatar!=='/img/avatar.png') await remove(u.avatar);
   run('DELETE FROM users WHERE id=?',u.id);
   req.session.destroy(()=>res.redirect('/'));
@@ -171,14 +171,14 @@ site.get('/album/:id',albumOf,(req,res)=>{
 });
 site.post('/album/:id/unlock',albumOf,(req,res)=>{ const a=res.locals.album; if(req.body.pass===a.pass){ req.session.unlocked=[...(req.session.unlocked||[]),a.id]; return res.redirect(`/${U(res).name}/album/${a.id}`);} res.render('album_lock',{nav:'album',album:a,err:'密碼錯誤'}); });
 site.post('/album/:id/edit',requireLogin,requireOwner,albumOf,(req,res)=>{ run('UPDATE albums SET title=?,descr=?,pass=? WHERE id=?',(req.body.title||res.locals.album.title).trim().slice(0,40),(req.body.descr||'').slice(0,200),(req.body.pass||'').slice(0,20),res.locals.album.id); res.redirect(`/${U(res).name}/album/${res.locals.album.id}`); });
-site.post('/album/:id/del',requireLogin,requireOwner,albumOf,async(req,res)=>{ for(const p of all('SELECT url FROM photos WHERE album_id=?',res.locals.album.id)) await remove(p.url); run('DELETE FROM albums WHERE id=?',res.locals.album.id); res.redirect(`/${U(res).name}/album`); });
+site.post('/album/:id/del',requireLogin,requireOwner,albumOf,async(req,res)=>{ for(const p of all('SELECT url,thumb FROM photos WHERE album_id=?',res.locals.album.id)){ await remove(p.url); if(p.thumb&&p.thumb!==p.url) await remove(p.thumb); } run('DELETE FROM albums WHERE id=?',res.locals.album.id); res.redirect(`/${U(res).name}/album`); });
 site.post('/album/:id/upload',requireLogin,requireOwner,albumOf,upload.array('photos',20),async(req,res)=>{
   const a=res.locals.album; let first=null;
   const files=req.files||[];
   const incoming=files.reduce((n,f)=>n+f.size,0);
   const err=quotaError(U(res).id,incoming);
   if(err) return res.status(413).render('msg',{title:'空間不足',msg:err,back:`/${U(res).name}/album/${a.id}`});
-  for(const f of files){ const url=await save(f); if(!first) first=url; run('INSERT INTO photos(album_id,url,caption,bytes) VALUES(?,?,?,?)',a.id,url,(req.body.caption||'').slice(0,100),f.size); }
+  for(const f of files){ const s=await save(f); if(!first) first=s.thumb; run('INSERT INTO photos(album_id,url,thumb,caption,bytes) VALUES(?,?,?,?,?)',a.id,s.url,s.thumb,(req.body.caption||'').slice(0,100),s.bytes); }
   if(first && !a.cover) run('UPDATE albums SET cover=? WHERE id=?',first,a.id);
   flash(req,`上傳了 ${req.files?.length||0} 張照片`); res.redirect(`/${U(res).name}/album/${a.id}`);
 });
@@ -192,7 +192,7 @@ site.get('/photo/:pid',(req,res,next)=>{
 site.post('/photo/:pid/comment',(req,res)=>{ const p=one('SELECT p.id,p.album_id,a.pass FROM photos p JOIN albums a ON a.id=p.album_id WHERE p.id=? AND a.user_id=?',req.params.pid,U(res).id); if(!p) return res.redirect('/'+U(res).name+'/album'); res.locals.album={id:p.album_id,pass:p.pass}; if(!albumUnlocked(req,res)) return res.status(403).render('msg',{title:'沒有權限',msg:'相簿已上鎖',back:'/'+U(res).name+'/album'}); if(req.body.body?.trim()) run('INSERT INTO photo_comments(photo_id,author,body) VALUES(?,?,?)',p.id,(res.locals.me?.nick||req.body.author||'訪客').slice(0,20),req.body.body.trim().slice(0,300)); res.redirect(`/${U(res).name}/photo/${req.params.pid}`); });
 site.post('/photo/:pid/caption',requireLogin,requireOwner,(req,res)=>{ run('UPDATE photos SET caption=? WHERE id=? AND album_id IN (SELECT id FROM albums WHERE user_id=?)',(req.body.caption||'').slice(0,100),req.params.pid,U(res).id); res.redirect(`/${U(res).name}/photo/${req.params.pid}`); });
 site.post('/photo/:pid/cover',requireLogin,requireOwner,(req,res)=>{ const p=one('SELECT * FROM photos WHERE id=?',req.params.pid); if(p) run('UPDATE albums SET cover=? WHERE id=? AND user_id=?',p.url,p.album_id,U(res).id); res.redirect(`/${U(res).name}/photo/${req.params.pid}`); });
-site.post('/photo/:pid/del',requireLogin,requireOwner,async(req,res)=>{ const p=one('SELECT p.* FROM photos p JOIN albums a ON a.id=p.album_id WHERE p.id=? AND a.user_id=?',req.params.pid,U(res).id); if(p){ await remove(p.url); run('DELETE FROM photos WHERE id=?',p.id); run("UPDATE albums SET cover=COALESCE((SELECT url FROM photos WHERE album_id=? LIMIT 1),'') WHERE id=? AND cover=?",p.album_id,p.album_id,p.url); return res.redirect(`/${U(res).name}/album/${p.album_id}`);} res.redirect(`/${U(res).name}/album`); });
+site.post('/photo/:pid/del',requireLogin,requireOwner,async(req,res)=>{ const p=one('SELECT p.* FROM photos p JOIN albums a ON a.id=p.album_id WHERE p.id=? AND a.user_id=?',req.params.pid,U(res).id); if(p){ await remove(p.url); if(p.thumb&&p.thumb!==p.url) await remove(p.thumb); run('DELETE FROM photos WHERE id=?',p.id); run("UPDATE albums SET cover=COALESCE((SELECT url FROM photos WHERE album_id=? LIMIT 1),'') WHERE id=? AND cover=?",p.album_id,p.album_id,p.url); return res.redirect(`/${U(res).name}/album/${p.album_id}`);} res.redirect(`/${U(res).name}/album`); });
 
 // 網誌
 const blogSide=res=>({cats:all('SELECT category,count(*) n FROM posts WHERE user_id=? GROUP BY category',U(res).id),recent:all('SELECT id,title FROM posts WHERE user_id=? ORDER BY id DESC LIMIT 8',U(res).id),recentC:all('SELECT c.author,c.post_id,p.title FROM comments c JOIN posts p ON p.id=c.post_id WHERE p.user_id=? ORDER BY c.id DESC LIMIT 5',U(res).id)});
