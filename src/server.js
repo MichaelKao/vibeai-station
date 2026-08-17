@@ -266,11 +266,13 @@ site.post('/blog/:id/edit',requireLogin,requireOwner,postOf,(req,res)=>{ const {
   run('UPDATE posts SET title=?,body=?,category=?,mood=?,weather=?,pass=? WHERE id=?',(title||res.locals.post.title).trim().slice(0,100),(body||'').slice(0,50000),(category||'未分類').trim().slice(0,20)||'未分類',MOODS.includes(mood)?mood:'',WEATHERS.includes(weather)?weather:'',(req.body.pass||'').slice(0,20),res.locals.post.id);
   res.redirect(`/${U(res).name}/blog/${res.locals.post.id}`); });
 site.post('/blog/:id/del',requireLogin,requireOwner,postOf,(req,res)=>{ run('DELETE FROM posts WHERE id=?',res.locals.post.id); res.redirect(`/${U(res).name}/blog`); });
-site.post('/blog/:id/comment',postOf,(req,res)=>{ if(req.body.body?.trim()) run('INSERT INTO comments(post_id,author,body) VALUES(?,?,?)',res.locals.post.id,(res.locals.me?.nick||req.body.author||'訪客').trim().slice(0,20),req.body.body.trim().slice(0,1000)); res.redirect(`/${U(res).name}/blog/${res.locals.post.id}#comments`); });
+// 上鎖文章：沒解鎖就不能回應、推薦、引用（引用會複製內文，等於繞過密碼）
+const needUnlocked=(req,res,next)=>postUnlocked(req,res)?next():res.redirect(`/${U(res).name}/blog/${res.locals.post.id}`);
+site.post('/blog/:id/comment',postOf,needUnlocked,(req,res)=>{ if(req.body.body?.trim()) run('INSERT INTO comments(post_id,author,body) VALUES(?,?,?)',res.locals.post.id,(res.locals.me?.nick||req.body.author||'訪客').trim().slice(0,20),req.body.body.trim().slice(0,1000)); res.redirect(`/${U(res).name}/blog/${res.locals.post.id}#comments`); });
 site.post('/blog/:id/comment/:cid/del',requireLogin,requireOwner,postOf,(req,res)=>{ run('DELETE FROM comments WHERE id=? AND post_id=?',req.params.cid,res.locals.post.id); res.redirect(`/${U(res).name}/blog/${res.locals.post.id}#comments`); });
-site.post('/blog/:id/like',postOf,(req,res)=>{ req.session.liked??=[]; if(!req.session.liked.includes(res.locals.post.id)){ req.session.liked.push(res.locals.post.id); run('UPDATE posts SET likes=likes+1 WHERE id=?',res.locals.post.id);} res.redirect(`/${U(res).name}/blog/${res.locals.post.id}`); });
+site.post('/blog/:id/like',postOf,needUnlocked,(req,res)=>{ req.session.liked??=[]; if(!req.session.liked.includes(res.locals.post.id)){ req.session.liked.push(res.locals.post.id); run('UPDATE posts SET likes=likes+1 WHERE id=?',res.locals.post.id);} res.redirect(`/${U(res).name}/blog/${res.locals.post.id}`); });
 // 引用：在自己的網誌建立一篇引用文，並在原文登記
-site.post('/blog/:id/trackback',requireLogin,postOf,(req,res)=>{
+site.post('/blog/:id/trackback',requireLogin,postOf,needUnlocked,(req,res)=>{
   const p=res.locals.post, me=res.locals.me; if(me.id===U(res).id) return res.redirect(`/${U(res).name}/blog/${p.id}`);
   const r=run('INSERT INTO posts(user_id,title,body,category) VALUES(?,?,?,?)',me.id,'引用：'+p.title,`引用自 ${U(res).nick} 的文章《${p.title}》\n\n`+p.body.slice(0,300)+'…\n\n（原文：/'+U(res).name+'/blog/'+p.id+'）','引用');
   run('INSERT INTO trackbacks(post_id,from_post) VALUES(?,?)',p.id,r.lastInsertRowid); res.redirect(`/${me.name}/blog/${r.lastInsertRowid}/edit`); });
