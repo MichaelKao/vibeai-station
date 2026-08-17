@@ -1,0 +1,12 @@
+<%- include('partials/head',{title:'誰來我家'}) %>
+<table id="main"><tr><td>
+<div class="box"><h3>誰來我家 <span>共 <%= total %> 筆足跡</span></h3><div class="in">
+<% if(!rows.length){ %><span class="gray">還沒有人來過…</span><% } %>
+<% rows.forEach(v=>{ %><div class="msg">
+<a href="/<%= v.who %>"><img src="<%= v.avatar || '/img/avatar.png' %>" width="24" height="24" style="vertical-align:middle;margin-right:5px" alt=""><b><%= v.nick || v.who %></b></a>
+<span class="gray" style="float:right"><%= v.created %></span>
+</div><% }) %>
+<%- include('partials/pager') %>
+</div></div>
+</td><%- include('partials/side',{visitors,friends}) %></tr></table>
+<%- include('partials/foot') %>

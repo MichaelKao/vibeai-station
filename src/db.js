@@ -18,6 +18,24 @@ CREATE TABLE IF NOT EXISTS sysmsg(id INTEGER PRIMARY KEY, user_id INTEGER REFERE
 CREATE TABLE IF NOT EXISTS reports(id INTEGER PRIMARY KEY, kind TEXT, target_id INTEGER, url TEXT, reason TEXT, reporter TEXT, done INTEGER DEFAULT 0, created TEXT DEFAULT (datetime('now','localtime')));
 CREATE TABLE IF NOT EXISTS notices(id INTEGER PRIMARY KEY, body TEXT, created TEXT DEFAULT (datetime('now','localtime')));
 `);
+
+// 索引：站上每一頁幾乎都是「某人的東西，依 id 倒序」，沒有索引在資料變多後會全表掃描
+db.exec(`
+CREATE INDEX IF NOT EXISTS idx_albums_user   ON albums(user_id, id DESC);
+CREATE INDEX IF NOT EXISTS idx_photos_album  ON photos(album_id, id);
+CREATE INDEX IF NOT EXISTS idx_pcom_photo    ON photo_comments(photo_id, id);
+CREATE INDEX IF NOT EXISTS idx_posts_user    ON posts(user_id, id DESC);
+CREATE INDEX IF NOT EXISTS idx_posts_views   ON posts(views DESC);
+CREATE INDEX IF NOT EXISTS idx_comments_post ON comments(post_id, id);
+CREATE INDEX IF NOT EXISTS idx_tb_post       ON trackbacks(post_id);
+CREATE INDEX IF NOT EXISTS idx_gb_user       ON guestbook(user_id, id DESC);
+CREATE INDEX IF NOT EXISTS idx_visitors_user ON visitors(user_id, id DESC);
+CREATE INDEX IF NOT EXISTS idx_friends_rev   ON friends(friend_id);
+CREATE INDEX IF NOT EXISTS idx_favs_user     ON favs(user_id, created DESC);
+CREATE INDEX IF NOT EXISTS idx_acts_user     ON acts(user_id, id DESC);
+CREATE INDEX IF NOT EXISTS idx_sysmsg_user   ON sysmsg(user_id, id DESC);
+CREATE INDEX IF NOT EXISTS idx_albums_views  ON albums(views DESC);
+`);
 // 舊資料庫補欄位（照片檔案大小，用於配額計算）
 try { db.exec('ALTER TABLE photos ADD COLUMN bytes INTEGER DEFAULT 0'); } catch {}
 try { db.exec("ALTER TABLE photos ADD COLUMN thumb TEXT DEFAULT ''"); } catch {}

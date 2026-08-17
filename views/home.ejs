@@ -1,7 +1,7 @@
 <%- include('partials/head',{title:u.nick+'的家'}) %>
 <table id="main"><tr>
 <td>
-<div class="box"><h3>最新相簿 <span><a href="/<%= u.name %>/album">全部相簿 &raquo;</a></span></h3><div class="in">
+<div class="box"><h3><%= u.nick %> 的小站</h3><div class="in mystat">相簿 <b><%= counts.albums %></b> 本 ・ 照片 <b><%= counts.photos %></b> 張 ・ 網誌 <b><%= counts.posts %></b> 篇 ・ 留言 <b><%= counts.gb %></b> 則 ・ 好友 <b><%= counts.friends %></b> 位<% if(u.motto){ %><div class="motto">「<%= u.motto %>」</div><% } %><div style="margin-top:4px"><a href="/<%= u.name %>/card">看名片</a> ｜ <a href="/<%= u.name %>/album">相簿</a> ｜ <a href="/<%= u.name %>/blog">網誌</a> ｜ <a href="/<%= u.name %>/guestbook">留言板</a> ｜ <a href="/<%= u.name %>/favs">收藏</a></div></div></div><div class="box"><h3>最新相簿 <span><a href="/<%= u.name %>/album">全部相簿 &raquo;</a></span></h3><div class="in">
 <% if(!albums.length){ %><span class="gray">還沒有相簿</span><% } albums.forEach(a=>{ %><div class="thumb"><a href="/<%= u.name %>/album/<%= a.id %>"><img src="<%= a.cover||'/img/empty.png' %>" alt=""></a><br><a href="/<%= u.name %>/album/<%= a.id %>"><%= a.pass?'[鎖] ':'' %><%= a.title %></a><br><span class="gray"><%= a.n %>張照片 ・ <%= a.views %> 人次</span></div><% }) %>
 <div class="clear"></div></div></div>
 <div class="box"><h3>最新網誌 <span><a href="/<%= u.name %>/blog">全部文章 &raquo;</a></span></h3><div class="in"><ul class="list">

@@ -239,7 +239,24 @@ site.get('/',(req,res)=>{
     posts:all('SELECT * FROM posts WHERE user_id=? ORDER BY id DESC LIMIT 5',u.id),
     visitors:all('SELECT * FROM visitors WHERE user_id=? ORDER BY id DESC LIMIT 8',u.id),
     friends:all('SELECT u.name,u.nick FROM friends f JOIN users u ON u.id=f.friend_id WHERE f.user_id=? LIMIT 12',u.id),
-    gb:all("SELECT * FROM guestbook WHERE user_id=? AND secret=0 ORDER BY id DESC LIMIT 3",u.id)});
+    gb:all("SELECT * FROM guestbook WHERE user_id=? AND secret=0 ORDER BY id DESC LIMIT 3",u.id),
+    // 統計數字（MyPage 上的「相簿 N 本・照片 N 張・網誌 N 篇」）
+    counts:{
+      albums: one('SELECT count(*) c FROM albums WHERE user_id=?',u.id).c,
+      photos: one('SELECT count(*) c FROM photos WHERE album_id IN (SELECT id FROM albums WHERE user_id=?)',u.id).c,
+      posts:  one('SELECT count(*) c FROM posts WHERE user_id=?',u.id).c,
+      gb:     one('SELECT count(*) c FROM guestbook WHERE user_id=?',u.id).c,
+      friends:one('SELECT count(*) c FROM friends WHERE user_id=?',u.id).c,
+    }});
+});
+// 誰來我家（完整名單）
+site.get('/visitors',(req,res)=>{
+  const page=Math.max(1,+req.query.p||1), per=50;
+  const total=one('SELECT count(*) c FROM visitors WHERE user_id=?',U(res).id).c;
+  res.render('visitors',{nav:'user',page,pages:Math.ceil(total/per),total,
+    rows:all('SELECT v.*,u.nick,u.avatar FROM visitors v LEFT JOIN users u ON u.name=v.who WHERE v.user_id=? ORDER BY v.id DESC LIMIT ? OFFSET ?',U(res).id,per,(page-1)*per),
+    visitors:all('SELECT * FROM visitors WHERE user_id=? ORDER BY id DESC LIMIT 8',U(res).id),
+    friends:all('SELECT u.name,u.nick FROM friends f JOIN users u ON u.id=f.friend_id WHERE f.user_id=? LIMIT 12',U(res).id)});
 });
 // 個人設定
 site.get('/settings',requireLogin,requireOwner,(req,res)=>res.render('settings',{nav:'user',themes:THEMES}));
