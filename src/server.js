@@ -6,6 +6,7 @@ import { one, all, run } from './db.js';
 import { hash, salt, check, requireLogin, requireOwner } from './auth.js';
 import { save, remove, hasR2, diskFree } from './storage.js';
 import { UPLOAD_DIR } from './paths.js';
+import { render, EMOTES } from './format.js';
 import { ALBUM_TOPICS, BLOG_TOPICS, PLACES, MOODS, WEATHERS, ZODIACS, BLOODS, SEXES, CITIES, THEMES, isAlbumTopic, isBlogTopic, isPlace, isTheme } from './taxonomy.js';
 
 const app = express();
@@ -22,6 +23,7 @@ app.use((req,res,next)=>{
   res.locals.me = req.session.uid ? one('SELECT id,name,nick,avatar,admin FROM users WHERE id=?',req.session.uid) : null;
   res.locals.u = null; res.locals.nav=''; res.locals.flash = req.session.flash; delete req.session.flash;
   res.locals.guest = req.session.guest || null;   // 訪客「記住我的資料」
+  res.locals.render = render;   // 文章內文的安全格式化
   next();
 });
 const flash=(req,m)=>{req.session.flash=m};
@@ -409,7 +411,9 @@ site.get('/blog/rss',(req,res)=>{
     `<title>${esc(u.nick)}的網誌</title><link>${origin}/${u.name}/blog</link>`+
     `<description>${esc(u.intro||'')}</description><language>zh-TW</language>${items}</channel></rss>`);
 });
-site.get('/blog/new',requireLogin,requireOwner,(req,res)=>res.render('post_edit',{nav:'blog',post:null,...blogSide(res)}));
+const myPhotos = res => all(`SELECT p.id,p.thumb,p.url FROM photos p JOIN albums a ON a.id=p.album_id
+  WHERE a.user_id=? ORDER BY p.id DESC LIMIT 40`, U(res).id);
+site.get('/blog/new',requireLogin,requireOwner,(req,res)=>res.render('post_edit',{nav:'blog',post:null,photos:myPhotos(res),emotes:EMOTES,...blogSide(res)}));
 site.post('/blog/new',requireLogin,requireOwner,(req,res)=>{ const {title,body,category,mood,weather}=req.body;
   if(!title?.trim()||!body?.trim()) return res.redirect(`/${U(res).name}/blog/new`);
   const r=run('INSERT INTO posts(user_id,title,body,category,mood,weather,pass,topic) VALUES(?,?,?,?,?,?,?,?)',U(res).id,title.trim().slice(0,100),body.slice(0,50000),(category||'未分類').trim().slice(0,20)||'未分類',MOODS.includes(mood)?mood:'',WEATHERS.includes(weather)?weather:'',(req.body.pass||'').slice(0,20),isBlogTopic(req.body.topic)?req.body.topic:'');
@@ -432,7 +436,7 @@ site.get('/blog/:id',postOf,(req,res)=>{ const p=res.locals.post;
     comments:all('SELECT * FROM comments WHERE post_id=? ORDER BY id',p.id),
     trackbacks:all('SELECT t.*,p.title,p.id pid,u.name uname FROM trackbacks t JOIN posts p ON p.id=t.from_post JOIN users u ON u.id=p.user_id WHERE t.post_id=?',p.id),
     prev:one('SELECT id,title FROM posts WHERE user_id=? AND id<? ORDER BY id DESC',U(res).id,p.id),next:one('SELECT id,title FROM posts WHERE user_id=? AND id>? ORDER BY id',U(res).id,p.id)}); });
-site.get('/blog/:id/edit',requireLogin,requireOwner,postOf,(req,res)=>res.render('post_edit',{nav:'blog',post:res.locals.post,...blogSide(res)}));
+site.get('/blog/:id/edit',requireLogin,requireOwner,postOf,(req,res)=>res.render('post_edit',{nav:'blog',post:res.locals.post,photos:myPhotos(res),emotes:EMOTES,...blogSide(res)}));
 site.post('/blog/:id/edit',requireLogin,requireOwner,postOf,(req,res)=>{ const {title,body,category,mood,weather}=req.body;
   run('UPDATE posts SET title=?,body=?,category=?,mood=?,weather=?,pass=?,topic=? WHERE id=?',(title||res.locals.post.title).trim().slice(0,100),(body||'').slice(0,50000),(category||'未分類').trim().slice(0,20)||'未分類',MOODS.includes(mood)?mood:'',WEATHERS.includes(weather)?weather:'',(req.body.pass||'').slice(0,20),isBlogTopic(req.body.topic)?req.body.topic:'',res.locals.post.id);
   res.redirect(`/${U(res).name}/blog/${res.locals.post.id}`); });

@@ -305,3 +305,14 @@ body[class*="t-x-"] .tabs a{ border-color:#fff; }
 .themepick a.on{ border-color:#e36511; }
 .themepick .sw{ height:26px; border:1px solid #999; }
 .themepick .sw i{ display:block; height:13px; }
+
+/* 文章編輯器工具列與插圖 */
+.edtools{ margin:2px 0; }
+.edtools .btn{ margin-right:3px; }
+.emo{ font-size:15px; background:#fff; border:1px solid #ccc; cursor:pointer; margin:1px; padding:0 3px; }
+.emo:hover{ border-color:#e36511; }
+.photopick{ max-height:120px; overflow:auto; }
+.photopick a{ display:inline-block; margin:2px; }
+.photopick img{ width:48px; height:48px; border:1px solid #ccc; }
+.photopick a:hover img{ border-color:#e36511; }
+img.inpost{ max-width:100%; margin:4px 0; }

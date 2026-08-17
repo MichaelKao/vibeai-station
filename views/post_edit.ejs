@@ -7,7 +7,49 @@
 <tr><td>密碼</td><td><input name="pass" size="14" maxlength="20" value="<%= post?post.pass:'' %>"> <span class="gray">留空＝公開；設了密碼別人要輸入才看得到</span></td></tr>
 <tr><td>心情</td><td><select name="mood"><option value="">（不設定）</option><% moods.forEach(m=>{ %><option <%= post&&post.mood===m?'selected':'' %>><%= m %></option><% }) %></select>
 　天氣 <select name="weather"><option value="">（不設定）</option><% weathers.forEach(w=>{ %><option <%= post&&post.weather===w?'selected':'' %>><%= w %></option><% }) %></select></td></tr>
-<tr><td>內容</td><td><textarea name="body" cols="70" rows="18" required><%= post?post.body:'' %></textarea></td></tr>
-<tr><td></td><td><input type="submit" class="btn" value="<%= post?'儲存':'發表' %>"> <a href="/<%= u.name %>/blog">取消</a></td></tr></table></form></div></div>
+
+<tr><td>工具</td><td>
+  <div class="edtools">
+    <button type="button" class="btn" data-wrap="[b]|[/b]">粗體</button>
+    <button type="button" class="btn" data-wrap="[i]|[/i]">斜體</button>
+    <button type="button" class="btn" data-wrap="[u]|[/u]">底線</button>
+    <button type="button" class="btn" data-wrap="[color=#cc3399]|[/color]">顏色</button>
+  </div>
+  <div class="edtools">顏文字：<% emotes.forEach(e=>{ %><button type="button" class="emo" data-ins="<%= e[0] %>" title="<%= e[0] %>"><%= e[1] %></button><% }) %></div>
+</td></tr>
+
+<tr><td>內容</td><td><textarea id="body" name="body" cols="70" rows="18" required><%= post?post.body:'' %></textarea>
+<div class="gray" style="font-size:11px">可用 [b]粗體[/b]、[i]斜體[/i]、[u]底線[/u]、[color=#f60]顏色[/color]、[img]圖片網址[/img]，網址會自動變連結。</div></td></tr>
+
+<% if(photos.length){ %>
+<tr><td>插入照片</td><td>
+  <div class="photopick">
+  <% photos.forEach(p=>{ %><a href="#" data-img="<%= p.url %>" title="點一下插入文章"><img src="<%= p.thumb||p.url %>" alt=""></a><% }) %>
+  </div>
+  <span class="gray" style="font-size:11px">點縮圖就會把該張照片插入游標位置。</span>
+</td></tr>
+<% } %>
+
+<tr><td></td><td><input type="submit" class="btn" value="<%= post?'儲存':'發表' %>"> <a href="/<%= u.name %>/blog">取消</a></td></tr>
+</table></form></div></div>
 </td><%- include('partials/blogside') %></tr></table>
+<script>
+(function(){
+  var ta=document.getElementById('body');
+  function insert(before,after){
+    after=after||'';
+    var s=ta.selectionStart, e=ta.selectionEnd, v=ta.value;
+    ta.value=v.slice(0,s)+before+v.slice(s,e)+after+v.slice(e);
+    ta.focus(); ta.selectionStart=s+before.length; ta.selectionEnd=e+before.length;
+  }
+  document.addEventListener('click',function(ev){
+    var w=ev.target.closest('[data-wrap]');
+    if(w){ ev.preventDefault(); var parts=w.getAttribute('data-wrap').split('|'); insert(parts[0],parts[1]); return; }
+    var m=ev.target.closest('[data-ins]');
+    if(m){ ev.preventDefault(); insert(m.getAttribute('data-ins')); return; }
+    var p=ev.target.closest('[data-img]');
+    if(p){ ev.preventDefault(); insert('\n[img]'+p.getAttribute('data-img')+'[/img]\n'); return; }
+  });
+})();
+</script>
 <%- include('partials/foot') %>
