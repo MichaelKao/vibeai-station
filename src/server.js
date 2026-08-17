@@ -354,6 +354,30 @@ site.get('/blog',(req,res)=>{ const cat=req.query.cat, ym=/^\d{4}-\d{2}$/.test(r
   if(day){ where+=' AND substr(created,1,10)=?'; args.push(day); }
   const total=one(`SELECT count(*) c FROM posts WHERE ${where}`,...args).c;
   res.render('blog',{nav:'blog',cat,ym,day,page,pages:Math.ceil(total/per),...blogSide(res),posts:all(`SELECT p.*,(SELECT count(*) FROM comments WHERE post_id=p.id) nc FROM posts p WHERE ${where} ORDER BY id DESC LIMIT ? OFFSET ?`,...args,per,(page-1)*per)}); });
+// 搜尋這個網誌（側欄模組：☑標題 ☐內容）
+site.get('/blog/search',(req,res)=>{
+  const k=(req.query.q||'').trim(), inBody=req.query.body==='1';
+  const like=`%${k}%`;
+  const rows = k ? all(
+    inBody ? "SELECT * FROM posts WHERE user_id=? AND pass='' AND (title LIKE ? OR body LIKE ?) ORDER BY id DESC LIMIT 50"
+           : "SELECT * FROM posts WHERE user_id=? AND (title LIKE ?) ORDER BY id DESC LIMIT 50",
+    ...(inBody ? [U(res).id,like,like] : [U(res).id,like])) : [];
+  res.render('blog_search',{nav:'blog',k,inBody,rows,...blogSide(res)});
+});
+// RSS
+site.get('/blog/rss',(req,res)=>{
+  const u=U(res), origin=`${req.protocol}://${req.get('host')}`;
+  const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&apos;'}[c]));
+  const items=all("SELECT * FROM posts WHERE user_id=? AND pass='' ORDER BY id DESC LIMIT 20",u.id).map(p=>
+    `<item><title>${esc(p.title)}</title><link>${origin}/${u.name}/blog/${p.id}</link>`+
+    `<guid isPermaLink="true">${origin}/${u.name}/blog/${p.id}</guid>`+
+    `<pubDate>${new Date(p.created.replace(' ','T')).toUTCString()}</pubDate>`+
+    `<description>${esc(p.body.slice(0,300))}</description></item>`).join('');
+  res.type('application/rss+xml').send(
+    `<?xml version="1.0" encoding="UTF-8"?><rss version="2.0"><channel>`+
+    `<title>${esc(u.nick)}的網誌</title><link>${origin}/${u.name}/blog</link>`+
+    `<description>${esc(u.intro||'')}</description><language>zh-TW</language>${items}</channel></rss>`);
+});
 site.get('/blog/new',requireLogin,requireOwner,(req,res)=>res.render('post_edit',{nav:'blog',post:null,...blogSide(res)}));
 site.post('/blog/new',requireLogin,requireOwner,(req,res)=>{ const {title,body,category,mood,weather}=req.body;
   if(!title?.trim()||!body?.trim()) return res.redirect(`/${U(res).name}/blog/new`);

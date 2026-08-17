@@ -1,0 +1,19 @@
+<%- include('partials/head',{title:'搜尋這個網誌'}) %>
+<table id="main"><tr><td>
+<div class="box"><h3>搜尋這個網誌<%= k?'：'+k:'' %></h3><div class="in">
+<form action="/<%= u.name %>/blog/search">
+<input name="q" value="<%= k %>" size="20" maxlength="30"> <input type="submit" class="btn" value="搜尋">
+<label><input type="radio" name="body" value="" <%= inBody?'':'checked' %>> 標題</label>
+<label><input type="radio" name="body" value="1" <%= inBody?'checked':'' %>> 內容</label>
+</form>
+<% if(k){ %>
+<div style="margin-top:8px">找到 <b><%= rows.length %></b> 篇</div>
+<ul class="list">
+<% rows.forEach(p=>{ %><li><a href="/<%= u.name %>/blog/<%= p.id %>"><%= p.pass?'[鎖] ':'' %><%= p.title %></a>
+  <span class="gray"><%= p.created.slice(0,10) %></span></li><% }) %>
+</ul>
+<% if(!rows.length){ %><span class="gray">找不到符合的文章</span><% } %>
+<% } %>
+</div></div>
+</td><%- include('partials/blogside') %></tr></table>
+<%- include('partials/foot') %>

@@ -229,3 +229,7 @@ table.grid3 td{ width:120px; vertical-align:top; text-align:center; }
 .hotblog .hb-title{ font-size:14px; font-weight:bold; }
 .hotblog .hb-sum{ padding:3px 0; color:#666; }
 .hotblog .hb-pt{ text-align:right; font-size:11px; color:#C11361; }
+
+/* 網誌日期分隔（無名的 .datediv） */
+.datediv{ font-weight:bold; padding:6px 0 2px; border-bottom:1px solid #ccc; margin-top:6px; }
+body.t-blog .datediv{ color:#D9E7FA; border-color:#326EC8; }
