@@ -9,10 +9,12 @@ export const DB_PATH = path.join(DATA_DIR, 'station.db');
 
 fs.mkdirSync(UPLOAD_DIR, { recursive: true });
 
-// 啟動時把實際路徑印出來，方便從部署日誌確認有沒有落在 Volume 上。
+// 啟動時把實際路徑與磁碟容量印出來，方便從部署日誌確認有沒有真的落在 Volume 上。
+// fs 顯示容器暫存碟容量（數千 GB）＝Volume 沒掛上；顯示約 49GB＝正常。
 const existed = fs.existsSync(DB_PATH);
 let size = 'n/a';
-try { const s = fs.statfsSync(DATA_DIR); size = `${Math.round(s.blocks*s.bsize/1e9)}GB total / ${Math.round(s.bavail*s.bsize/1e9)}GB free`; } catch {}
+try {
+  const s = fs.statfsSync(DATA_DIR);
+  size = `${Math.round(s.blocks*s.bsize/1e9)}GB total / ${Math.round(s.bavail*s.bsize/1e9)}GB free`;
+} catch {}
 console.log(`[data] DATA_DIR=${DATA_DIR} db=${DB_PATH} existing=${existed} cwd=${process.cwd()} fs=${size}`);
-);
-      console.log(`[data] boot marker lines: ${fs.readFileSync(path.join(DATA_DIR,'.boot'),'utf8').trim().split('\n').length}`); } catch(e){ console.log('[data] marker failed', e.message); }
