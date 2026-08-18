@@ -1,185 +1,317 @@
-<%- include('partials/head',{title: post.title, layout:'blog'}) %>
-<%# 網誌單篇 ＋ 迴響區（WRETCH_DOM.md 第 5 節）
-    文章本體的 DOM 與列表頁完全相同（.blog > .date + .blogbody > .blogbody2），
-    只是不截斷、不出 .extended。
-    下方依序：工具列（推薦／收藏／引用／檢舉）、上一篇下一篇、迴響區。
-    表單 action／method／欄位 name 一律沿用原本的：
-      推薦   POST /:name/blog/:id/like
-      收藏   POST /:name/blog/:id/fav
-      引用   POST /:name/blog/:id/trackback
-      迴響   POST /:name/blog/:id/comment      author / email / homepage / remember / body
-      板主回覆 POST /:name/blog/:id/comment/:cid/reply   reply
-      刪迴響 POST /:name/blog/:id/comment/:cid/del
-      檢舉   POST /report                      kind / target / url / reason %>
 <%
-  const MON = ['January','February','March','April','May','June',
-               'July','August','September','October','November','December'];
-  const wDate = s => MON[+String(s).slice(5,7) - 1] + ' ' + (+String(s).slice(8,10)) + ', ' + String(s).slice(0,4);
+  /* 網誌單篇文章 ＋ 迴響／引用區（無名小站 2012 最後版）
+     ─────────────────────────────────────────────────────────────
+     DOM 照抄 assets_src2/html/blog_2012_article_boogier_16702046.html 與
+     blog_2013_article_comments_page2.html，規格見 spec/blog.md 第 8-3、8-3-2 節：
+
+       #content > .blog > .blogbody > .blogbody2
+         ├ .articletext
+         │   a[name] + h3.title + .social-wrapper + .innertext(含 #push 與第二條分享列)
+         │   + #article_counter + .extended
+         ├ .posted
+         └ .total-comments-div
+             .trackback-url / .trackbacks-head / #HiddenTrackback
+             .comments-head + .comments-body × N
+             .comments-bottom + 發表回應表單
+
+     迴響區只有 300px 寬、左邊再縮 30px（.total-comments-div{width:300px;margin-left:30px}），
+     夾在 530px 的 #content 裡看起來偏窄偏左——這是原站行為，不是 bug（spec 第 10 節第 1 點）。
+
+     表單 action／method／欄位 name 一律沿用原本的（對得上 src/server.js）：
+       推薦   POST /:name/blog/:id/like
+       收藏   POST /:name/blog/:id/fav
+       引用   POST /:name/blog/:id/trackback         ← 就是分享列上那顆「發文」
+       迴響   POST /:name/blog/:id/comment           author / email / homepage / remember / body
+       板主回覆 POST /:name/blog/:id/comment/:cid/reply   reply
+       刪迴響 POST /:name/blog/:id/comment/:cid/del
+       檢舉   POST /report                           kind / target / url / reason
+
+     EJS 用 with(locals)，不能宣告和 local 同名的 const。 */
+  const wDate = s => String(s).slice(0,4) + ' 年 ' + (+String(s).slice(5,7)) + ' 月 ' + (+String(s).slice(8,10)) + ' 日';
   const wTime = s => { let h = +String(s).slice(11,13); const ap = h < 12 ? 'AM' : 'PM';
                        h = h % 12 || 12;
                        return String(h).padStart(2,'0') + ':' + String(s).slice(14,16) + ' ' + ap; };
-  const here = '/' + u.name + '/blog/' + post.id;
+  /* 迴響時間：原站是 December 9, 2011 07:13 PM */
+  const wStamp = s => wDate(s) + ' ' + wTime(s);
+  const here  = '/' + u.name + '/blog/' + post.id;
+  const IMG   = '/img/wretch2012/blog';
+  /* 樓層別名：只有前三樓有，第 4 樓以後就是 N樓（spec 第 6-B 節逐字） */
+  const floorAlias = ['1樓搶頭香','2樓頸推','3樓坐沙發'];
+  const todayHits2 = u.hits_date === new Date().toLocaleDateString('sv-SE') ? (u.today_hits || 0) : 0;
 %>
-<div id="container1"><div id="container2">
+<%- include('partials/blog2012_head', { title: post.title + ' - ' + u.nick + ' - 無名小站',
+                                        artTitle: post.title, medium: 'blog' }) %>
 
-  <div id="banner">
-    <a href="/"><img id="sitelogo" src="<%= SITE_LOGO %>" alt="<%= SITE_NAME %>"></a>
-    <div id="pageheader">
-      <h1><a href="/<%= u.name %>/blog"><%= u.nick %> 的小站</a></h1>
-      <span class="description"><%= u.intro ? u.intro.split('\n')[0].slice(0,60) : SITE_DESC %></span>
-      <div id="description2"><span class="description"></span></div>
-    </div>
-  </div>
+<div id="content">
+<input type="hidden" name="check_url" value="on">
+<div class="blog" >
 
-  <div id="main2">
+      <div class="date">
+        <div class="datediv">
+          <%= wDate(post.created) %>        </div>
+      </div>
 
-    <div id="content">
-
-      <div class="blog">
-        <div class="date">
-          <div class="datediv"><%= wDate(post.created) %></div>
-        </div>
-
-        <div class="blogbody">
-          <div class="blogbody2">
+      <div class="blogbody">
+        <div class="blogbody2">
             <div class="articletext">
-              <a name="<%= post.id %>"></a>
-              <h3 class="title"><% if (post.pass) { %><img src="<%= CDN %>/icon/key.gif" width="16" height="16" alt="[鎖]"> <% } %><%= post.title %></h3>
-              <div class="innertext"><%- render(post.body) %></div>
-              <br clear="all" />
+            <a name="<%= post.id %>"></a>
+            <h3 class="title"><% if (post.pass) { %><img src="<%= IMG %>/lock.gif" width="21" height="16" border="0" align="absmiddle" alt="[鎖]"><% } %><%= post.title %><% if (post.featured) { %><a href="/blogs" target="_blank"><img src="<%= IMG %>/hot.png" border="0" alt=""></a><% } %></h3>
+            <%- include('partials/blogshare', { shPost: post, shOwner: u.name, shTb: trackbacks.length, shCan: !!(me && !isOwner) }) %>
+
+            <div class="innertext">
+              <%- render(post.body) %>
+
+              <div class="clearfix">
+                <div id="push">
+                  <span id="recommendcount"><%= post.likes %></span>推薦此文章
+                  <form method="post" action="<%= here %>/like"><button id="pushbtn" class="push" title="推薦此文章">推</button></form>
+                  <% if (me) { %>
+                  <form method="post" action="<%= here %>/fav"><button id="collectbtn" class="pull" title="<%= faved ? '取消收藏' : '收藏這篇文章' %>">收</button></form>
+                  <% } else { %>
+                  <a href="/login?next=<%= encodeURIComponent(here) %>" id="collectbtn" class="pull" title="收藏這篇文章">收</a>
+                  <% } %>
+                </div>
+                <%- include('partials/blogshare', { shPost: post, shOwner: u.name, shTb: trackbacks.length, shCan: !!(me && !isOwner) }) %>
+              </div>
             </div>
 
-            <div class="posted">
-              <%= u.name %> at <a href="/blogs"><%= SITE_NAME %></a> at <%= wTime(post.created) %> post
-              | <a href="#comments">迴響(<%= comments.length %>)</a>
-              | <a href="#boxNewTrackback">引用(<%= trackbacks.length %>)</a>
-              | <% if (me) { %><form method="post" action="<%= here %>/fav" style="display:inline"><button class="lnk"><%= faved ? '取消收藏' : '收藏' %>(<%= favN %>)</button></form><% } else { %><a href="/login?next=<%= encodeURIComponent(here) %>">收藏(<%= favN %>)</a><% } %>
-              | <a href="#" class="reportlink" data-kind="post" data-id="<%= post.id %>">檢舉</a>
-              | 分類：<a href="/<%= u.name %>/blog?cat=<%= encodeURIComponent(post.category) %>"><%= post.category %></a>
-              <% if (post.mood) { %>| 心情：<%= post.mood %> <% } %><% if (post.weather) { %>| 天氣：<%= post.weather %><% } %>
+            <div id="article_counter" align="right">
+              今日人氣: <%= todayHits2 %>            累積人氣: <%= u.visits %>            </div>
+
+            <div class="extended">
+              個人分類：<a href="/<%= u.name %>/blog?cat=<%= encodeURIComponent(post.category) %>"><%= post.category %></a>
+              <% if (post.topic) { %><span>站內分類：<a href="/blogs?topic=<%= encodeURIComponent(post.topic) %>" target="_blank"><%= post.topic %></a></span><% } %>
+              <% if (post.mood) { %><span>心情：<%= post.mood %></span><% } %><% if (post.weather) { %><span>天氣：<%= post.weather %></span><% } %>
+              <br />
+              <% if (prev) { %>上一篇：<a href="/<%= u.name %>/blog/<%= prev.id %>"><%= prev.title %></a> &nbsp;<% } %>
+              <% if (next) { %>下一篇：<a href="/<%= u.name %>/blog/<%= next.id %>"><%= next.title %></a><% } %>
             </div>
 
-            <div class="blogtools">
-              [ <form method="post" action="<%= here %>/like" style="display:inline"><button class="lnk">推薦</button></form> (推:<%= post.likes %>) ]
-              <% if (me && !isOwner) { %>
-              [ <form method="post" action="<%= here %>/trackback" style="display:inline"><button class="lnk">引用到我的網誌</button></form> ]
-              <% } %>
+            <%# 站長／站方的操作鈕。原站的存檔都是訪客視角（spec 第 11 節「查無」），
+                所以這一塊是本站自己加的，樣式在 wretch2012-blog-site.css %>
+            <% if (isOwner || (me && me.admin)) { %>
+            <div class="w2b-owner">
               <% if (isOwner) { %>
               [ <a href="<%= here %>/edit">編輯</a> ]
-              [ <form method="post" action="<%= here %>/del" style="display:inline" onsubmit="return confirm('刪除這篇文章？')"><button class="lnk">刪除</button></form> ]
+              [ <form method="post" action="<%= here %>/del" onsubmit="return confirm('刪除這篇文章？')"><button>刪除</button></form> ]
               <% } %>
               <% if (me && me.admin) { %>
-              [ <form method="post" action="/admin/feature/post/<%= post.id %>" style="display:inline"><input type="hidden" name="back" value="<%= here %>"><button class="lnk"><%= post.featured ? '取消精選' : '設為精選' %></button></form> ]
+              [ <form method="post" action="/admin/feature/post/<%= post.id %>"><input type="hidden" name="back" value="<%= here %>"><button><%= post.featured ? '取消精選' : '設為精選' %></button></form> ]
               <% } %>
             </div>
+            <% } %>
 
-          </div><!-- /.blogbody2 -->
-        </div><!-- /.blogbody -->
-      </div><!-- /.blog -->
+            </div> <!-- end of articletext -->
 
-      <%# 上一篇下一篇＋迴響區：包在第二組 .blogbody 裡（#content 是置中的，
-          .blogbody 才有 text-align:left 與左右 15px 內距，同 post_edit.ejs 的作法）。 %>
-      <div class="blog">
-      <div class="blogbody"><div class="blogbody2"><div class="articletext">
+            <div class="posted">
+            <a href="/<%= u.name %>/blog"><%= u.name %></a> at <a href="/blogs">無名小站</a> at <%= wTime(post.created) %> post            | <a href="<%= here %>#postComments">回應(<%= comments.length %>)</a>
+            | <a href="<%= here %>#trackbacks">引用(<%= trackbacks.length %>)</a>
+            | <% if (me) { %><form method="post" action="<%= here %>/fav"><button id="showCollector"><%= faved ? '取消收藏' : '收藏' %>(<%= favN %>)</button></form><% } else { %><a href="/login?next=<%= encodeURIComponent(here) %>" id="showCollector">收藏(<%= favN %>)</a><% } %>
+            | <a href="#" class="reportlink" data-kind="post" data-id="<%= post.id %>">檢舉</a>
+                      </div>
 
-      <div class="side">
-        <% if (prev) { %>&laquo; 上一篇：<a href="/<%= u.name %>/blog/<%= prev.id %>"><%= prev.title %></a><br /><% } %>
-        <% if (next) { %>下一篇：<a href="/<%= u.name %>/blog/<%= next.id %>"><%= next.title %></a> &raquo;<% } %>
+            <div class="total-comments-div">
+
+    <%# ── (a) 引用網址 ─────────────────────────────────────── %>
+    <div class="trackback-url">
+      [引用網址]
+      <input type="text" id="trackback_url" data-path="<%= here %>" value="<%= here %>">
+      <input type="button" id="trackback_copy" value="複製引用網址">
+    </div>
+
+    <%# ── (b) 引用列表（預設收合，#HiddenTrackback.hide-list{display:none}） ── %>
+    <div class="trackbacks-head">
+      <div class="comments-head">
+        <a name="trackbacks"><span>引用(<%= trackbacks.length %>)</span><span id="trackback-switch"></span></a>
       </div>
-
-      <%# ── 迴響區 ─────────────────────────────────────────────── %>
-      <a name="comments"></a>
-      <div class="sidetitle">迴響(<%= comments.length %>)</div>
-
-      <% comments.forEach((c,i)=>{ %>
-      <div class="side">
-        <b><%= i+1 %>樓</b>
-        <% if (c.homepage) { %><a href="<%= c.homepage %>" rel="nofollow noopener" target="_blank"><%= c.author %></a><% } else { %><%= c.author %><% } %>
-        <span class="font_desc"><%= c.created.slice(0,16) %></span>
-        <% if (isOwner) { %>
-        <form method="post" action="<%= here %>/comment/<%= c.id %>/del" style="display:inline"><button class="lnk">刪除</button></form>
-        <% } %>
-        <br />
-        <span class="innertext" style="white-space:pre-wrap"><%= c.body %></span>
-      </div>
-      <% if (c.reply) { %>
-      <div class="side"><b>板主回覆</b>：<%= c.reply %></div>
-      <% } %>
-      <% if (isOwner) { %>
-      <div class="side">
-        <form method="post" action="<%= here %>/comment/<%= c.id %>/reply">
-          <input name="reply" size="36" maxlength="500" value="<%= c.reply %>">
-          <input type="submit" class="btn" value="板主回覆">
-        </form>
-      </div>
-      <% } %>
-      <% }) %>
-      <% if (!comments.length) { %><div class="side">還沒有人留下迴響</div><% } %>
-
-      <div class="sidetitle">發表迴響</div>
-      <div class="side">
-        <form method="post" action="<%= here %>/comment" class="gb"><table class="pf">
-          <% if (!me) { %>
-          <tr><td width="110">暱稱：</td>
-            <td><input name="author" maxlength="20" value="<%= (guest && guest.author) || '' %>"></td></tr>
-          <tr><td>E-mail：</td>
-            <td><input name="email" size="30" maxlength="60" value="<%= (guest && guest.email) || '' %>"></td></tr>
-          <tr><td>個人網頁：</td>
-            <td><input name="homepage" size="30" maxlength="200" placeholder="http://" value="<%= (guest && guest.homepage) || '' %>"></td></tr>
-          <tr><td>記住我的資料</td>
-            <td><label><input type="radio" name="remember" value="1" <%= guest ? 'checked' : '' %>> 是</label>
-                <label><input type="radio" name="remember" value="" <%= guest ? '' : 'checked' %>> 否</label></td></tr>
-          <% } %>
-          <tr><td valign="top">迴響內容（最多1000字）：</td>
-            <td><textarea name="body" cols="55" rows="5" maxlength="1000" required></textarea></td></tr>
-          <tr><td></td>
-            <td><input type="submit" class="btn" value="送出"></td></tr>
-        </table></form>
-      </div>
-
-      <%# 檢舉表單：平常收起來，按 .posted 的「檢舉」才展開 %>
-      <div id="reportbox" style="display:none">
-        <div class="sidetitle">檢舉</div>
-        <div class="side">
-          <form method="post" action="/report">
-            <input type="hidden" name="kind" id="rkind">
-            <input type="hidden" name="target" id="rtarget">
-            <input type="hidden" name="url" value="<%= here %>">
-            請說明檢舉原因：<br />
-            <textarea name="reason" cols="45" rows="3" maxlength="500" required></textarea><br />
-            <input type="submit" class="btn" value="送出檢舉">
-            <input type="button" class="btn" id="rcancel" value="取消">
-          </form>
+    </div>
+    <div id="HiddenTrackback" class="hide-list">
+      <% trackbacks.forEach(t => { %>
+      <div class="trackbacks-body">
+        <div class="comments-body">
+          <a name="trackback<%= t.id %>"></a>
+          <ul class="comments-user">
+            <li></li>
+            <li><p>本篇文章引用自此</p></li>
+            <li class="trackbacks-post">
+              <div class="comments-post">
+                <a target="_blank" href="/<%= t.uname %>/blog/<%= t.pid %>"><%= t.title %></a>
+                at <%= t.created ? wStamp(t.created) : '' %> Trackback
+              </div>
+            </li>
+          </ul>
         </div>
       </div>
+      <% }) %>
+      <% if (!trackbacks.length) { %>
+      <div class="trackbacks-body">
+        <div class="comments-body">
+          <ul class="comments-user">
+            <li><p>還沒有人引用這篇文章</p></li>
+          </ul>
+        </div>
+      </div>
+      <% } %>
+    </div>
 
-      </div></div></div><!-- /.articletext /.blogbody2 /.blogbody -->
-      </div><!-- /.blog -->
+    <br />
 
-    </div><!-- /#content -->
+    <%# ── (c) 迴響列表 ─────────────────────────────────────── %>
+    <div class="comments-head">
+      <a name="comments"></a>回應                </div>
 
-    <div id="links"><div id="links2">
-      <%- include('partials/blogside') %>
-    </div></div>
+    <% comments.forEach((c, i) => { %>
+    <div class="comments-body">
+      <a name="comment<%= c.id %>"></a>
+      <ul class="comments-user">
+        <span><a target="_blank" href="<%= c.homepage || ('/' + u.name + '/blog') %>" class="bighead"><img src="<%= IMG %>/No_Login_90.gif" width="90" height="90" alt="<%= c.author %>"><cite></cite></a></span>
+        <li class="comments-word">
+          <p id="floor_<%= i+1 %>" class="cmt_floor"><%= i+1 %>樓</p>
+          <p id="fhide_<%= i+1 %>" class="cmt_floor_hide"><%= floorAlias[i] || ((i+1) + '樓') %></p>
+          <p><%= c.body %></p>
+        </li>
+        <li class="comments-post">
+          <% if (c.homepage) { %><a class='postuser' target='_blank' href='<%= c.homepage %>'><%= c.author %></a><% } else { %><a class='postuser'><%= c.author %></a><% } %><% if (c.email) { %><a class='postemail' href='mailto:<%= c.email %>'><img src='<%= IMG %>/email.gif' width="25" height="25" border="0" align='absmiddle' alt="email"></a><% } %> at <%= wStamp(c.created) %> comment
+          | <a href="#" class="reportlink" data-kind="comment" data-id="<%= c.id %>">檢舉</a>
+          <% if (isOwner) { %>| <form method="post" action="<%= here %>/comment/<%= c.id %>/del"><button>刪除</button></form><% } %>
+        </li>
+      </ul>
 
-  </div><!-- /#main2 -->
+      <% if (c.reply) { %>
+      <div class="comments-reply" id="comments-reply-<%= c.id %>">
+        <ul class="comments-author">
+          <li><p><%= c.reply %></p></li>
+          <li class="comments-post">
+            板主回覆 at <%= wStamp(c.created) %> Reply                                            </li>
+        </ul>
+      </div>
+      <% } %>
 
-  <div id="extraDiv1"><span></span></div>
-  <div id="extraDiv2"><span></span></div>
-  <div id="extraDiv3"><span></span></div>
-  <div id="extraDiv4"><span></span></div>
-  <div id="extraDiv5"><span></span></div>
-  <div id="extraDiv6"><span></span></div>
+      <% if (isOwner) { %>
+      <div class="comments-reply">
+        <ul class="comments-author">
+          <li>
+            <form method="post" action="<%= here %>/comment/<%= c.id %>/reply">
+              <input name="reply" size="24" maxlength="500" value="<%= c.reply %>">
+              <input type="submit" value="板主回覆">
+            </form>
+          </li>
+        </ul>
+      </div>
+      <% } %>
+    </div>
+    <% }) %>
 
-</div></div><!-- /#container2 /#container1 -->
+    <% if (!comments.length) { %>
+    <%# 零迴響時原站的空狀態 HTML 查無（spec 第 11 節），這句是本站自己補的 %>
+    <div class="comments-body">
+      <ul class="comments-user">
+        <li class="comments-word"><p>還沒有人留下回應</p></li>
+      </ul>
+    </div>
+    <% } %>
+
+    <%# ── (d) 發表迴響 ─────────────────────────────────────── %>
+    <div class="comments-bottom">
+      <div class="comments-head">
+        <a name="postComments"></a>發表回應                    </div>
+    </div>
+
+    <div class="comments-body">
+      <form method="post" name='form' action="<%= here %>/comment"
+            onSubmit="return check_new_comment_input('請輸入內容', '回應最多 1000 字…');">
+        <% if (!me) { %>
+        <label for="name_id">暱稱：</label><br />
+        <input type='text' id='name_id' name='author' maxlength='20' value='<%= (guest && guest.author) || "" %>' />
+        <br /><br />
+        <label for="email">E-mail：</label><br />
+        <input type='text' id="email" name='email' maxlength='60' value='<%= (guest && guest.email) || "" %>' />
+        <br /><br />
+        <label for="url">個人網頁：</label><br />
+        <input type='text' id="url" name='homepage' maxlength='200' value='<%= (guest && guest.homepage) || "" %>' />
+        <br /><br />
+        <label for="rem">記住我的資料</label>
+        <input type="radio" id="rem" name="remember" value="1" <%= guest ? 'checked' : '' %> />是
+        <input type="radio" name="remember" value="" <%= guest ? '' : 'checked' %> />否
+        <br /><br />
+        <% } %>
+        <label for="text">回應內容（最多 1000 字）：</label>
+        <br /><textarea style="width: 90%" id="text" name='body' rows="10" cols="64" wrap="hard" maxlength="1000" required></textarea>
+        <br />
+        <input type="submit" name="confirm" value="送出" />
+        <input type="reset" name="go_prev" value="取消" />
+      </form>
+    </div>
+
+    <%# 檢舉：平常收起來，按 .posted 或迴響列的「檢舉」才展開 %>
+    <div class="comments-body" id="reportbox" style="display:none">
+      <div class="comments-head">檢舉</div>
+      <form method="post" action="/report">
+        <input type="hidden" name="kind" id="rkind">
+        <input type="hidden" name="target" id="rtarget">
+        <input type="hidden" name="url" value="<%= here %>">
+        <label for="rreason">請說明檢舉原因：</label><br />
+        <textarea style="width: 90%" id="rreason" name="reason" rows="3" cols="64" maxlength="500" required></textarea><br />
+        <input type="submit" value="送出檢舉">
+        <input type="button" id="rcancel" value="取消">
+      </form>
+    </div>
+
+            </div> <!--  end of total-comments-div -->
+
+        </div> <!-- end of blogbody2 -->
+      </div> <!-- end of blogbody -->
+</div> <!-- end of class=blog -->
+</div> <!-- end of content -->
+
+<div id="links">
+
+  <div id="links2">
+  <%- include('partials/blogside') %>
+  </div> <!-- end of links2 -->
+
+</div> <!-- end of links -->
+
 <script>
-document.addEventListener('click',function(e){
-  var a=e.target.closest('.reportlink');
-  if(a){ e.preventDefault();
-    document.getElementById('rkind').value=a.getAttribute('data-kind');
-    document.getElementById('rtarget').value=a.getAttribute('data-id');
-    var b=document.getElementById('reportbox'); b.style.display='block'; b.scrollIntoView({behavior:'smooth'}); }
-  if(e.target.id==='rcancel'){ document.getElementById('reportbox').style.display='none'; }
-});
+/* 原站這些行為在 l.yimg.com/e/serv/blog/js/func_blog.js 與 trackback.js 裡
+   （assets_src2/css/blog_func_blog.js 有原始碼）。這裡只重做用得到的四件事，
+   class / id 與原站一致，所以 blog_trackback.css 的規則直接生效。 */
+function check_new_comment_input(msgEmpty, msgLong){
+  var t = document.getElementById('text');
+  if (!t.value.replace(/\s/g,'')) { alert(msgEmpty); return false; }
+  if (t.value.length > 1000)      { alert(msgLong);  return false; }
+  return true;
+}
+(function(){
+  /* 引用網址：樣板端拿不到 host，在瀏覽器補成絕對網址 */
+  var tu = document.getElementById('trackback_url');
+  if (tu) tu.value = location.protocol + '//' + location.host + tu.getAttribute('data-path');
+  var tc = document.getElementById('trackback_copy');
+  if (tc) tc.addEventListener('click', function(){
+    tu.select();
+    if (navigator.clipboard) navigator.clipboard.writeText(tu.value);
+    else document.execCommand('copy');
+    alert('已複製到剪貼簿');
+  });
+
+  /* 引用區展開／收合：#HiddenTrackback.hide-list{display:none}、#trackback-switch.hide 換圖 */
+  var sw = document.getElementById('trackback-switch');
+  if (sw) sw.addEventListener('click', function(){
+    var box = document.getElementById('HiddenTrackback');
+    var hidden = box.classList.toggle('hide-list');
+    sw.classList.toggle('hide', !hidden);
+  });
+
+  /* 檢舉表單 */
+  document.addEventListener('click', function(e){
+    var a = e.target.closest('.reportlink');
+    if (a) { e.preventDefault();
+      document.getElementById('rkind').value   = a.getAttribute('data-kind');
+      document.getElementById('rtarget').value = a.getAttribute('data-id');
+      var b = document.getElementById('reportbox');
+      b.style.display = 'block'; b.scrollIntoView({behavior:'smooth'}); }
+    if (e.target.id === 'rcancel') document.getElementById('reportbox').style.display = 'none';
+  });
+})();
 </script>
-<%- include('partials/foot') %>
+<%- include('partials/blog2012_foot') %>

@@ -1,0 +1,62 @@
+/*
+無名小站預設相簿樣式, 使用者可以亂改
+*/
+
+body {
+	margin: 0px;
+	background: #eee;
+	font: .8em Arial
+}
+td {
+	font: .8em Arial;
+}
+a {
+	color: #A13636;
+	text-decoration: none;
+}
+a:hover {
+	color: #ff0000;
+	text-decoration: underline;
+}
+body#body_show {
+	background: #fff;
+}
+table {
+	background: #fff;
+}
+#body_show table {
+	background: transparent;
+}
+
+.side {
+	background: url('http://l.yimg.com/e/style/1/189/side_a.gif') no-repeat top left;
+}
+
+#banner {
+	margin: 10px 10px 0px 10px;
+	padding: 20px 10px 5px 10px;
+	background: url('http://l.yimg.com/e/style/1/189/banner_a.gif') #FFE8E8 no-repeat top left;
+}
+.sidetitle {
+	width: 660px;
+	padding: 0px 20px 6px 20px;
+	background: url('http://l.yimg.com/e/style/1/189/sidetitle_a.gif') no-repeat bottom left;
+}
+#body_show table {
+}
+#body_show #DisplayTitle {
+	font-size: .8em;
+	color: #65cc00;
+}
+#body_show #DisplayDesc {
+	font-size: .8em;
+	color: #4550a0;
+}
+#body_show table td font.small-e {
+	color: #999;
+	font-weight: normal;
+}
+hr {
+	border: 1px solid #ccc;
+	width: 700px;
+}

@@ -1,0 +1,121 @@
+<%
+  /* 2012 內頁底部工具列 #kukubar-lower ＋ #footer-switch
+     ─────────────────────────────────────────────────────────────
+     DOM 逐節點照抄 assets_src2/html/blog_2012_default_skin_afuuu.html，
+     規格見 assets_src2/spec/chrome.md 第 5.2 / 6.2 節。
+
+     原站這一條是固定在視窗底部的 position:fixed 列（kukubar.css 給 25px 高），
+     兩個下拉（分類好文 #scrb-panel、服務選單 ul.dropdown）都是 visibility:hidden，
+     由 JS 加 .expanded / .expanded-btn 打開——本檔尾端那段 JS 就是做這件事。
+
+     原站的資料來源是 AJAX（/ajax/common/…），本站沒有那些端點，
+     所以：
+       · #scrb-panel（分類好文）直接把站內分類印出來當清單，點了就去 /blogs?topic=
+       · #text-carousel（首頁好文）原站是編輯部挑的全站好文，內頁 route 沒有這份 local，
+         用手邊的 recent（這個網誌的最新文章）湊，前綴保留原站的「首頁好文：」。
+     兩處都列在回報的「湊資料」清單裡。
+
+     EJS 用 with(locals)：非必定存在的 local 一律走 locals.xxx。 */
+  const kkMe     = locals.me || null;
+  const kkTopics = locals.blogTopics || locals.topics || [];
+  const kkHot    = (locals.recent && locals.recent.length) ? locals.recent.slice(0, 9) : [];
+  const kkBase   = locals.u ? '/' + u.name : '';
+%>
+<div id="kukubar-lower" class="kukubar-bar  ">
+    <% if (!kkMe) { %>
+    <div class="login-request dropdown">
+        <div class="login-btn">
+            <a class="footer-ok-btn" href="/login">登入</a>
+        </div>
+        <div class="login-msg login-msg-subscription">
+            登入無名小站瀏覽分類好文
+        </div>
+    </div>
+    <% } %>
+        <div class="left-side">
+        <div id="footer-feedback" class="bar-block">
+            <a class="" href="/help" target="_blank">我有建議</a>
+        </div>
+        <div id="footer-subscription" class="bar-block bar-block-click">
+            <a class="footer-subscription-btn" href="#">分類好文<span class="bar-block-btn">展開</span></a>
+                <div id="scrb-panel" class="dropdown ">
+                <div class="hd panel-block">
+                    <div class="heading"><h5>請選擇你有興趣的分類</h5></div>
+                    <ul>
+                        <% kkTopics.forEach(t => { %><li><a href="/blogs?topic=<%= encodeURIComponent(t) %>"><%= t %></a></li>
+                        <% }) %>
+                    </ul>
+                </div>
+                <div class="bd panel-block">
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="right-side">
+                <div id="text-carousel">
+            <ul>
+                <% kkHot.forEach(h => { %><li><a href="<%= kkBase %>/blog/<%= h.id %>">首頁好文：<%= h.title %></a></li>
+                <% }) %><% if (!kkHot.length) { %><li><a href="/blogs">首頁好文：逛逛大家的網誌</a></li><% } %>
+            </ul>
+        </div>
+                <ul id="footer-ugc-compose">
+            <li class="bar-block bar-block-click blog-service"><em>網誌</em>
+                <ul class="dropdown">
+                    <li><a class="bar-link" href="<%= kkMe ? '/' + kkMe.name + '/blog/new' : '/login' %>">Post Article</a></li>
+                    <li><a class="bar-link" href="<%= kkMe ? '/' + kkMe.name + '/settings' : '/login' %>">Blog Style</a></li>
+                    <li class="last"><a class="bar-link" href="<%= kkMe ? '/' + kkMe.name + '/settings' : '/login' %>">Blog Setting</a></li>
+                </ul>
+            </li>
+            <li class="bar-block bar-block-click album-service"><em>相簿</em>
+                <ul class="dropdown">
+                    <li><a class="bar-link" href="<%= kkMe ? '/' + kkMe.name + '/album' : '/login' %>">Upload Photo</a></li>
+                    <li><a class="bar-link" href="<%= kkMe ? '/' + kkMe.name + '/settings' : '/login' %>">Album Style</a></li>
+                    <li class="last"><a class="bar-link" href="<%= kkMe ? '/' + kkMe.name + '/album' : '/login' %>">Album Setting</a></li>
+                </ul>
+            </li>
+            <li class="bar-block bar-block-click video-service"><em>影音</em>
+                <ul class="dropdown">
+                    <li><a class="bar-link" href="/help">Upload Video</a></li>
+                    <li><a class="bar-link" href="/help">Video Style</a></li>
+                    <li class="last"><a class="bar-link" href="/help">Video Setting</a></li>
+                </ul>
+            </li>
+        </ul>
+    </div>
+</div>
+<div id="footer-switch" class=" ">
+<button>關閉工具列</button>
+</div>
+<script>
+/* kukubar 的互動：原站是 YUI3 寫的 kukubar.js（assets_src2/css/chrome_kukubar.js），
+   這裡只重做「展開／收合」與「關閉工具列」兩件事，class 名稱與原站一致，
+   所以 chrome_kukubar.css 的 .expanded / .expanded-btn / .hidden-footer 規則直接生效。 */
+(function(){
+  function panelOf(block){ return block.querySelector('ul.dropdown, div.dropdown'); }
+  function close(block){
+    block.classList.remove('expanded-btn');
+    var p = panelOf(block); if (p) p.classList.remove('expanded');
+  }
+  function allBlocks(){
+    return document.querySelectorAll('#kukubar-upper .bar-block-click, #kukubar-lower .bar-block-click');
+  }
+  document.addEventListener('click', function(e){
+    var block = e.target.closest('#kukubar-upper .bar-block-click, #kukubar-lower .bar-block-click');
+    /* 點在下拉選單「裡面」的連結不切換，讓它正常跳頁 */
+    if (block && e.target.closest('.dropdown') && e.target.closest('a,button')) return;
+    allBlocks().forEach(function(b){ if (b !== block) close(b); });
+    if (!block) return;
+    var p = panelOf(block); if (!p) return;
+    if (e.target.closest('a') && !e.target.closest('.bar-block-btn, .bar-block-btn-login, .footer-subscription-btn')) return;
+    e.preventDefault();
+    var on = block.classList.toggle('expanded-btn');
+    p.classList.toggle('expanded', on);
+  });
+  var sw = document.getElementById('footer-switch');
+  if (sw) sw.addEventListener('click', function(){
+    var bar = document.getElementById('kukubar-lower');
+    var off = bar.classList.toggle('hidden-footer');
+    sw.classList.toggle('off', off);
+  });
+})();
+</script>

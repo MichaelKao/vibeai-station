@@ -1,29 +1,30 @@
-<%- include('partials/head',{title:u.nick+'的收藏'}) %>
-<%- include('partials/sitetop') %>
-<table width="700" border="0" cellpadding="0" cellspacing="0" align="center"><tr>
-  <td class="side1"></td>
-  <td id="content1">
+<%# 我的收藏 — 收藏的網誌文章
+    無名的「收藏」在 2012 是網誌文章下的一顆按鈕，沒有獨立版型，
+    這一頁沿用留言板骨架與原廠版型 skin 1/1911（同 views/home.ejs 的取捨）。 %>
+<%- include('partials/head2012in', {
+      title: u.nick + '的收藏 - 無名小站',
+      page: 'w2-gb',
+      skin: ['/wretch2012-skin-guestbook.css'] }) %>
 
-    <div class="title"><%= u.nick %> 的收藏</div>
-    <div class="side" align="center">共 <b><%= favs.length %></b> 篇</div>
+<%- include('partials/gbtop', { here: 'favs', head: u.nick + ' 的收藏' }) %>
 
-    <% if (!favs.length) { %>
-    <div class="side" align="center">目前沒有收藏的文章。看到喜歡的文章可以按「收藏」。</div>
-    <% } else { %>
-    <div class="side">
-      <% favs.forEach(f => { %>
-      <div>
-        <a href="/<%= f.uname %>/blog/<%= f.id %>" class="font_title"><%= f.title %></a>
-        <span class="font_desc">by <a href="/<%= f.uname %>"><%= f.nick %></a> ・ <%= f.created.slice(0,10) %></span>
-      </div>
-      <% }) %>
-    </div>
-    <% } %>
+<div id="search">共 <b><%= favs.length %></b> 篇</div>
 
-    <%- include('partials/side',{visitors,friends}) %>
+<div class="msg_body">
+  <% if (!favs.length) { %>
+  <div class="w2-empty">目前沒有收藏的文章。<br>看到喜歡的文章可以按「收藏」。</div>
+  <% } else { %>
+  <table class="w2-rows">
+    <% favs.forEach(f => { %>
+    <tr>
+      <td><a href="/<%= f.uname %>/blog/<%= f.id %>"><%= f.title %></a>
+        <span class="w2-sub">by <a href="/<%= f.uname %>"><%= f.nick %></a></span></td>
+      <td class="w2-when"><%= f.created.slice(0,10) %></td>
+    </tr>
+    <% }) %>
+  </table>
+  <% } %>
+</div>
 
-  </td>
-  <td class="side2"></td>
-</tr></table>
-<%- include('partials/sitefoot') %>
-<%- include('partials/foot') %>
+<%- include('partials/gbfoot') %>
+<%- include('partials/foot2012in') %>

@@ -23,7 +23,53 @@ html body #bg-wrapper #wfp-footer #wfp-lang { top: 24px; }   /* 跟著上移，�
 #nav-corner-ad, #featured-corner-ad, #today-corner-ad,
 #celebrity-corner-ad, #blog-entry-corner-ad { display: none !important; }
 
-/* --- 2. flash 訊息 -------------------------------------------------------
+/* --- 2. 登入／註冊頁 -----------------------------------------------------
+ * 2012 年的無名沒有自己的登入與註冊頁：工具列上的 Login / Register
+ * 都指向 www.wretch.cc/IDintegration/，302 轉去 Yahoo!奇摩帳號系統
+ * （assets_src2/spec/chrome.md 第 7 節）。本站有自己的會員系統，
+ * 一定要有這兩頁，所以整頁本質上就是刻意偏離。
+ *
+ * 原則：不自創新的視覺語言。卡片框沿用 .mod、標題沿用 .hd h2、
+ * 按鈕沿用 #wfp-my .my-promotion li a 的漸層與圓角（照抄那組數值）。
+ */
+.w2-auth      { margin-top: 10px; }
+.w2-auth .bd,
+.w2-auth-side .bd { padding: 15px 20px 20px; text-align: left; }
+.w2-auth .hd h2,
+.w2-auth-side .hd h2 { padding: 15px 22px 16px; font-weight: bold; color: #000; float: left; }
+.w2-auth .hd,
+.w2-auth-side .hd { overflow: hidden; border-bottom: 1px solid #F0F0F0; }
+
+.w2-auth-form            { border-collapse: collapse; }
+.w2-auth-form th         { text-align: right; padding: 6px 10px 6px 0; width: 70px;
+                           font-weight: normal; color: #666; vertical-align: top; line-height: 24px; }
+.w2-auth-form td         { padding: 6px 0; }
+.w2-auth-form input[type=text],
+.w2-auth-form input[type=password] {
+  height: 22px; line-height: 22px; padding: 0 6px;
+  border: 1px solid #CECBCE; background: #FFF; font-size: 108%;
+  border-radius: 3px;
+}
+.w2-auth-hint  { display: block; color: #999; font-size: 93%; margin-top: 3px; }
+.w2-auth-err   { margin: 0 0 12px; padding: 8px 10px; color: #A94442;
+                 background: #FFF3F3; border: 1px solid #E8C4C4; border-radius: 3px; }
+.w2-auth-alt   { margin-left: 12px; color: #43883F; }
+.w2-auth-alt:hover { text-decoration: underline; }
+.w2-auth-cta   { margin-top: 12px; }
+.w2-auth-side ul       { margin: 0; padding: 0; list-style: none; line-height: 2; }
+.w2-auth-side ul li    { border-bottom: 1px dotted #E5E5E5; }
+.w2-auth-side ul li:last-child { border-bottom: 0; }
+
+/* 按鈕：數值照抄 #wfp-my .my-promotion li a（原站的按鈕就是這組） */
+.w2-btn {
+  display: inline-block; height: 36px; padding: 0 22px;
+  font-size: 123.1%; font-weight: bold; color: #333; line-height: 34px;
+  border: 1px solid #CECBCE; border-radius: 3px; cursor: pointer;
+  background: linear-gradient(#FFF, #E7E7E7);
+}
+.w2-btn:hover { color: #43883F; background: linear-gradient(#FFF, #D6D7D6); }
+
+/* --- 3. flash 訊息 -------------------------------------------------------
  * 原站沒有這個東西（它用整頁跳轉的提示頁）。本站沿用既有的 flash 機制，
  * 樣式做成貼近 2012 的淡黃提示條，放在導覽列下方。
  */
@@ -32,3 +78,35 @@ html body #bg-wrapper #wfp-footer #wfp-lang { top: 24px; }   /* 跟著上移，�
   background: #FFFBE6; border: 1px solid #F0DFA0; color: #6B5A18;
   font-size: 93%; line-height: 1.8;
 }
+
+/* --- 4. 網誌總站 /blogs ---------------------------------------------------
+ * 原站的 /blog/ 是 2008 年那一版（l.yimg.com/e/serv/index/blog/css/…），
+ * 它引用的 27 張圖還沒抓、也還沒有對應的 bundle，所以這一頁先用站台既有的
+ * .mod / .main / .side 元件語言組出來（做法與登入頁相同，見上面第 2 段）。
+ * 這裡只補「文章清單」與「分頁」兩塊，數值沿用 wfp-css 既有的字級與間距。
+ */
+.w2-blog-count      { margin: 0 0 12px; color: #666; }
+.w2-blog-count b    { color: #000; }
+
+.w2-bloglist        { margin: 0; padding: 0; list-style: none; }
+.w2-bloglist li     { overflow: hidden; padding: 12px 0; border-top: 1px solid #F0F0F0; }
+.w2-bloglist li:first-child { border-top: 0; padding-top: 0; }
+.w2-bloglist .thumbnail { float: left; width: 85px; height: 85px; margin-right: 12px; }
+.w2-bloglist .thumbnail img { display: block; }
+.w2-bloglist .content   { margin-left: 97px; }
+.w2-bloglist h3         { margin: 2px 0 4px; font-size: 116%; font-weight: bold; }
+.w2-bloglist .meta      { margin: 0; color: #999; font-size: 93%; }
+.w2-bloglist .meta .uname { color: #43883F; }
+.w2-bloglist .meta .topic { margin-left: 8px; color: #999; }
+.w2-bloglist .description { margin: 0 0 4px; color: #666; line-height: 1.6; }
+.w2-bloglist .stat      { margin: 0; color: #999; font-size: 93%; }
+.w2-bloglist .stat span { margin-left: 10px; }
+
+.w2-pager           { margin-top: 14px; text-align: center; }
+.w2-pager a,
+.w2-pager b         { display: inline-block; min-width: 14px; margin: 0 2px; padding: 2px 6px;
+                      border: 1px solid #CECBCE; border-radius: 3px; }
+.w2-pager b         { border-color: #43883F; color: #43883F; }
+.w2-pager a:hover   { background: #F4F4F4; }
+
+.w2-blog-n          { color: #999; font-size: 93%; }

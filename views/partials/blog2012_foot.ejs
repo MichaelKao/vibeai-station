@@ -1,0 +1,58 @@
+<%# 無名小站 2012 最後版 — 網誌內頁外框（下半段）
+    收掉 partials/blog2012_head.ejs 開的 #main2 / #container2 / #container1 /
+    #bigcontainer / #hugewrapper，順序與空節點逐一照抄
+    assets_src2/html/blog_2012_default_skin_afuuu.html（見 spec/blog.md 第 8-1 節）：
+
+      </#main2>
+      #extraDiv1 #extraDiv2
+      </#container2>
+      #footer（原站就是空的）
+      #extraDiv3 #extraDiv4
+      </#container1>
+      <br clear="all" />
+      #extraDiv5 #extraDiv6
+      </#bigcontainer>
+      </#hugewrapper>
+      #kukubar-lower + #footer-switch
+
+    #extraDiv1…6 是給使用者 CSS 塞裝飾用的空 hook，一律 <div id="extraDivN"><span></span></div>。 %>
+</div> <!-- end of main2 -->
+
+<div id="extraDiv1"><span></span></div>
+<div id="extraDiv2"><span></span></div>
+
+
+</div> <!-- end of container2 -->
+
+<div id="footer"></div>
+
+<div id="extraDiv3"><span></span></div>
+<div id="extraDiv4"><span></span></div>
+
+</div> <!-- end of container1 -->
+
+<br clear="all" />
+
+<div id="extraDiv5"><span></span></div>
+<div id="extraDiv6"><span></span></div>
+
+</div>
+</div><!-- nv hugewrepper -->
+<%- include('kukubar2012_lower') %>
+<script>
+/* 社群分享列的分享網址要絕對網址，樣板端拿不到 host，在這裡補。
+   （partials/blogshare.ejs 只寫了 data-share / data-path / data-title） */
+(function(){
+  var base = location.protocol + '//' + location.host;
+  document.querySelectorAll('a[data-share]').forEach(function(a){
+    var url = encodeURIComponent(base + a.getAttribute('data-path'));
+    var t   = encodeURIComponent(a.getAttribute('data-title') || '');
+    var k   = a.getAttribute('data-share');
+    if (k === 'fb')    a.href = 'https://www.facebook.com/sharer.php?u=' + url + '&t=' + t;
+    if (k === 'plurk') a.href = 'https://www.plurk.com/?qualifier=shares&status=' + url + '+(' + t + ')';
+    if (k === 'yim')   a.href = 'ymsgr:customstatus?' + t + '+' + url;
+  });
+})();
+</script>
+</body>
+</html>

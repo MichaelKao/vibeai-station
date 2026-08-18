@@ -1,74 +1,147 @@
-<%- include('partials/head',{title:u.nick+'的名片'}) %>
-<%- include('partials/sitetop') %>
-<table width="700" border="0" cellpadding="0" cellspacing="0" align="center"><tr>
-  <td class="side1"></td>
-  <td id="content1">
+<%# 名片 /:name/card — 無名的 www.wretch.cc/user/<帳號>
+    ─────────────────────────────────────────────────────────────
+    骨架逐字照 assets_src2/html/gb_user_a014042_20120326.html：
 
-    <div class="title">個人資料</div>
-    <div class="side">
-      <table class="card" width="100%" border="0" cellpadding="3" cellspacing="0">
-        <tr><td width="90" valign="top" class="font_desc">暱稱</td>
-            <td valign="top"><span class="font_title"><%= u.nick %></span> (<%= u.name %>)</td></tr>
-        <tr><td valign="top" class="font_desc">姓名</td><td valign="top"><%= u.realname %></td></tr>
-        <tr><td valign="top" class="font_desc">性別</td><td valign="top"><%= u.sex %></td></tr>
-        <tr><td valign="top" class="font_desc">生日</td><td valign="top"><%= u.birthday %></td></tr>
-        <tr><td valign="top" class="font_desc">星座</td><td valign="top"><%= u.zodiac %></td></tr>
-        <tr><td valign="top" class="font_desc">血型</td><td valign="top"><%= u.blood ? u.blood + ' 型' : '' %></td></tr>
-        <tr><td valign="top" class="font_desc">居住地</td><td valign="top"><%= u.city %></td></tr>
-        <tr><td valign="top" class="font_desc">職業</td><td valign="top"><%= u.job %></td></tr>
-        <tr><td valign="top" class="font_desc">學校</td><td valign="top"><%= u.school %></td></tr>
-        <tr><td valign="top" class="font_desc">興趣</td><td valign="top"><%= u.hobby %></td></tr>
-        <tr><td valign="top" class="font_desc">座右銘</td><td valign="top"><%= u.motto %></td></tr>
-        <tr><td valign="top" class="font_desc">MSN</td><td valign="top"><%= u.msn %></td></tr>
-        <tr><td valign="top" class="font_desc">個人網頁</td>
-            <td valign="top"><% if (u.homepage) { %><a href="<%= u.homepage %>" rel="nofollow noopener" target="_blank"><%= u.homepage %></a><% } %></td></tr>
-        <tr><td valign="top" class="font_desc">自我介紹</td>
-            <td valign="top" style="white-space:pre-wrap"><%= u.intro %></td></tr>
-        <tr><td valign="top" class="font_desc">加入日期</td><td valign="top"><%= u.created.slice(0,10) %></td></tr>
-      </table>
-    </div>
+      #container[align=center]
+        table[width=600]  → tr td #banner（a#id_title + br + span.description）
+                          → tr td [ 服務連結 ] + 好友下拉 + span.boxAddFriendLink
+        table[width=600][cellspacing=1]
+                          → tr td.sidetitle[colspan=2]#sidetitle_img  大頭照
+                          → tr td.sidetitle[align=right]「暱稱：」+ td.side[width=450] 值
 
-    <% if (isOwner) { %>
-    <div class="title">編輯我的名片</div>
-    <div class="side">
-      <form method="post">
-      <table class="card" width="100%" border="0" cellpadding="3" cellspacing="0">
-        <tr><td width="90" class="font_desc">姓名</td>
-            <td><input name="realname" value="<%= u.realname %>" maxlength="20"></td></tr>
-        <tr><td class="font_desc">性別</td>
-            <td><select name="sex"><option value="">（不公開）</option><% sexes.forEach(s=>{ %><option <%= u.sex===s?'selected':'' %>><%= s %></option><% }) %></select></td></tr>
-        <tr><td class="font_desc">生日</td>
-            <td><input name="birthday" type="date" value="<%= u.birthday %>"></td></tr>
-        <tr><td class="font_desc">星座</td>
-            <td><select name="zodiac"><option value="">（不設定）</option><% zodiacs.forEach(z=>{ %><option <%= u.zodiac===z?'selected':'' %>><%= z %></option><% }) %></select></td></tr>
-        <tr><td class="font_desc">血型</td>
-            <td><select name="blood"><option value="">（不設定）</option><% bloods.forEach(b=>{ %><option <%= u.blood===b?'selected':'' %>><%= b %></option><% }) %></select></td></tr>
-        <tr><td class="font_desc">居住地</td>
-            <td><select name="city"><option value="">（不設定）</option><% cities.forEach(c=>{ %><option <%= u.city===c?'selected':'' %>><%= c %></option><% }) %></select></td></tr>
-        <tr><td class="font_desc">職業</td>
-            <td><input name="job" value="<%= u.job %>" maxlength="20"></td></tr>
-        <tr><td class="font_desc">學校</td>
-            <td><input name="school" value="<%= u.school %>" size="30" maxlength="30"></td></tr>
-        <tr><td class="font_desc">興趣</td>
-            <td><input name="hobby" value="<%= u.hobby %>" size="40" maxlength="100"></td></tr>
-        <tr><td class="font_desc">座右銘</td>
-            <td><input name="motto" value="<%= u.motto %>" size="40" maxlength="100"></td></tr>
-        <tr><td class="font_desc">MSN</td>
-            <td><input name="msn" value="<%= u.msn %>" size="30" maxlength="50"></td></tr>
-        <tr><td class="font_desc">個人網頁</td>
-            <td><input name="homepage" value="<%= u.homepage %>" size="40" maxlength="200" placeholder="http://"></td></tr>
-        <tr><td></td>
-            <td><input type="submit" value="儲存名片">
-              <span class="font_desc">自我介紹在「個人設定」修改</span></td></tr>
-      </table>
-      </form>
-    </div>
-    <% } %>
+    這一頁**沒有官方版面 CSS**（skin.md 第 3 節：名片只載 版型 → user/font → kukubar），
+    寬度完全由 HTML 的 <table width="600"> 決定，內層值欄 width="450"。
+    版型（原廠預設，無素材）只給配色：#banner #CC9933 x-large、
+    .sidetitle #999 + 1px dotted #666 底線、.side #CCC。淺到看不清楚是原檔就這樣。
 
-    <%- include('partials/side',{visitors,friends}) %>
+    表單 action 與欄位 name 對應 src/server.js 的 POST /:name/card。 %>
+<%- include('partials/head2012in', {
+      title: u.nick + '的名片 - 無名小站',
+      page: 'w2-user',
+      skin: ['/wretch2012-skin-user.css'] }) %>
 
-  </td>
-  <td class="side2"></td>
-</tr></table>
-<%- include('partials/sitefoot') %>
-<%- include('partials/foot') %>
+<div id="container" align="center">
+
+<table width="600" border="0" cellpadding="0" cellspacing="0">
+  <tr>
+    <td>
+      <div id="banner">
+        <a href="/<%= u.name %>" id="id_title"><%= u.nick %> 的名片</a>
+        <br>
+        <span class="description" id="id_desc"><%= u.intro ? u.intro.split('\n')[0].slice(0,60) : '' %></span>
+      </div>
+    </td>
+  </tr>
+  <tr>
+    <td>
+      <font class="small-c">
+        [ <%= u.name %> 的
+        <a id="linkMypage" href="/<%= u.name %>">MyPage</a><span>&nbsp;&nbsp;|&nbsp;</span>
+        <a id="linkAlbum" href="/<%= u.name %>/album">相簿</a><span>&nbsp;&nbsp;|&nbsp;</span>
+        <a id="linkBlog" href="/<%= u.name %>/blog">網誌</a><span>&nbsp;&nbsp;|&nbsp;</span>
+        <a id="linkGbook" href="/<%= u.name %>/guestbook">留言板</a><span>&nbsp;&nbsp;|&nbsp;</span>
+        <a id="linkUser" href="/<%= u.name %>/card">名片</a><span>&nbsp;&nbsp;|&nbsp;</span>
+        <a id="linkFriend" href="/<%= u.name %>/friends">好友</a>
+        ]
+      </font>
+      <% if (friends.length) { %>
+      <span class="small-c">
+        <select name="friendlist" onchange="if(this.value)location.href='/'+encodeURIComponent(this.value)+'/card'">
+          <option value="">－ 好友的名片 －</option>
+          <% friends.forEach(f => { %><option value="<%= f.name %>"><%= f.name %>(<%= f.nick %>)</option><% }) %>
+        </select>
+      </span>
+      <% } %>
+      <br>
+      <% if (me && !isOwner) { %>
+      <span class="boxAddFriendLink">[<form method="post" action="/<%= u.name %>/friend" style="display:inline"><button class="w2-linkbtn small-c" type="submit"><%= isFriend ? '移出好友名單' : '加入好友名單' %></button></form>]</span>
+      <% } %>
+    </td>
+  </tr>
+</table>
+
+<table class="w2-card" width="600" border="0" cellpadding="0" cellspacing="1">
+  <tr>
+    <td class="sidetitle" align="center" colspan="2" id="sidetitle_img">
+      <table border="1"><tr><td>
+        <img src="<%= u.avatar %>" width="90" height="90" alt="<%= u.nick %>">
+      </td></tr></table>
+    </td>
+  </tr>
+  <tr><td class="sidetitle" align="right">暱稱：</td>
+      <td class="side" width="450"><%= u.nick %> (<%= u.name %>) &nbsp;</td></tr>
+  <tr><td class="sidetitle" align="right">姓名：</td>
+      <td class="side" width="450"><%= u.realname %> &nbsp;</td></tr>
+  <tr><td class="sidetitle" align="right">性別：</td>
+      <td class="side" width="450"><%= u.sex %> &nbsp;</td></tr>
+  <tr><td class="sidetitle" align="right">生日：</td>
+      <td class="side" width="450"><%= u.birthday %> &nbsp;</td></tr>
+  <tr><td class="sidetitle" align="right">星座：</td>
+      <td class="side" width="450"><%= u.zodiac %> &nbsp;</td></tr>
+  <tr><td class="sidetitle" align="right">血型：</td>
+      <td class="side" width="450"><%= u.blood ? u.blood + ' 型' : '' %> &nbsp;</td></tr>
+  <tr><td class="sidetitle" align="right">居住地：</td>
+      <td class="side" width="450"><%= u.city %> &nbsp;</td></tr>
+  <tr><td class="sidetitle" align="right">職業：</td>
+      <td class="side" width="450"><%= u.job %> &nbsp;</td></tr>
+  <tr><td class="sidetitle" align="right">學校：</td>
+      <td class="side" width="450"><%= u.school %> &nbsp;</td></tr>
+  <tr><td class="sidetitle" align="right">興趣：</td>
+      <td class="side" width="450"><%= u.hobby %> &nbsp;</td></tr>
+  <tr><td class="sidetitle" align="right">座右銘：</td>
+      <td class="side" width="450"><%= u.motto %> &nbsp;</td></tr>
+  <tr><td class="sidetitle" align="right">MSN：</td>
+      <td class="side" width="450"><%= u.msn %> &nbsp;</td></tr>
+  <tr><td class="sidetitle" align="right">個人網頁：</td>
+      <td class="side" width="450"><% if (u.homepage) { %><a href="<%= u.homepage %>" rel="nofollow noopener" target="_blank"><%= u.homepage %></a><% } %> &nbsp;</td></tr>
+  <tr><td class="sidetitle" align="right">自我介紹：</td>
+      <td class="side" width="450" style="white-space:pre-wrap"><%= u.intro %> &nbsp;</td></tr>
+  <tr><td class="sidetitle" align="right">加入日期：</td>
+      <td class="side" width="450"><%= u.created.slice(0,10) %> &nbsp;</td></tr>
+</table>
+
+<% if (isOwner) { %>
+<%# <form> 要包在 <table> 外面：放進 table 裡瀏覽器會把它挪到表格前面，欄位就送不出去了 %>
+<form method="post">
+<table class="w2-card" width="600" border="0" cellpadding="0" cellspacing="1">
+  <tr><td class="sidetitle" align="center" colspan="2">編輯我的名片</td></tr>
+  <tr><td class="sidetitle" align="right">姓名：</td>
+      <td class="side" width="450"><input type="text" name="realname" value="<%= u.realname %>" maxlength="20"></td></tr>
+  <tr><td class="sidetitle" align="right">性別：</td>
+      <td class="side" width="450"><select name="sex"><option value="">（不公開）</option><% sexes.forEach(s=>{ %><option <%= u.sex===s?'selected':'' %>><%= s %></option><% }) %></select></td></tr>
+  <tr><td class="sidetitle" align="right">生日：</td>
+      <td class="side" width="450"><input type="date" name="birthday" value="<%= u.birthday %>"></td></tr>
+  <tr><td class="sidetitle" align="right">星座：</td>
+      <td class="side" width="450"><select name="zodiac"><option value="">（不設定）</option><% zodiacs.forEach(z=>{ %><option <%= u.zodiac===z?'selected':'' %>><%= z %></option><% }) %></select></td></tr>
+  <tr><td class="sidetitle" align="right">血型：</td>
+      <td class="side" width="450"><select name="blood"><option value="">（不設定）</option><% bloods.forEach(b=>{ %><option <%= u.blood===b?'selected':'' %>><%= b %></option><% }) %></select></td></tr>
+  <tr><td class="sidetitle" align="right">居住地：</td>
+      <td class="side" width="450"><select name="city"><option value="">（不設定）</option><% cities.forEach(c=>{ %><option <%= u.city===c?'selected':'' %>><%= c %></option><% }) %></select></td></tr>
+  <tr><td class="sidetitle" align="right">職業：</td>
+      <td class="side" width="450"><input type="text" name="job" value="<%= u.job %>" maxlength="20"></td></tr>
+  <tr><td class="sidetitle" align="right">學校：</td>
+      <td class="side" width="450"><input type="text" name="school" value="<%= u.school %>" size="30" maxlength="30"></td></tr>
+  <tr><td class="sidetitle" align="right">興趣：</td>
+      <td class="side" width="450"><input type="text" name="hobby" value="<%= u.hobby %>" size="40" maxlength="100"></td></tr>
+  <tr><td class="sidetitle" align="right">座右銘：</td>
+      <td class="side" width="450"><input type="text" name="motto" value="<%= u.motto %>" size="40" maxlength="100"></td></tr>
+  <tr><td class="sidetitle" align="right">MSN：</td>
+      <td class="side" width="450"><input type="text" name="msn" value="<%= u.msn %>" size="30" maxlength="50"></td></tr>
+  <tr><td class="sidetitle" align="right">個人網頁：</td>
+      <td class="side" width="450"><input type="text" name="homepage" value="<%= u.homepage %>" size="40" maxlength="200" placeholder="http://"></td></tr>
+  <tr><td class="sidetitle" align="right">&nbsp;</td>
+      <td class="side" width="450"><input type="submit" value="儲存名片">
+        <span class="w2-note">自我介紹在「個人設定」修改</span></td></tr>
+</table>
+</form>
+<% } %>
+
+<table width="600" border="0" cellpadding="0" cellspacing="0">
+  <tr><td>
+    <div class="powered">POWERED BY <a href="/">無名小站</a></div>
+  </td></tr>
+</table>
+
+</div><!-- /#container -->
+
+<%- include('partials/foot2012in') %>

@@ -1,40 +1,50 @@
-<%- include('partials/head',{title:'誰來我家'}) %>
-<%- include('partials/sitetop') %>
-<table width="700" border="0" cellpadding="0" cellspacing="0" align="center"><tr>
-  <td class="side1"></td>
-  <td id="content1">
+<%# 誰來我家 — 完整足跡名單
+    無名的足跡在留言板側欄與 MyPage 上都有，但沒有獨立的「完整名單」頁，
+    所以這一頁沿用留言板骨架與原廠版型 skin 1/1911（同 views/home.ejs 的取捨）。 %>
+<%- include('partials/head2012in', {
+      title: '誰來我家 - ' + u.nick + '的小站',
+      page: 'w2-gb',
+      skin: ['/wretch2012-skin-guestbook.css'] }) %>
 
-    <div class="title">誰來我家</div>
-    <div class="side" align="center">共 <b><%= total %></b> 筆足跡</div>
-    <div class="side" align="center"><%- include('partials/pager') %></div>
+<%- include('partials/gbtop', { here: 'visitors', head: u.nick + ' 的小站' }) %>
 
-    <% if (!rows.length) { %>
-    <div class="side" align="center">目前還沒有人來過</div>
-    <% } else { %>
-    <table width="100%" border="0" cellpadding="0" cellspacing="0">
-      <% rows.forEach(v => { %>
-      <tr>
-        <td class="side" width="60" align="center" valign="middle">
-          <a href="/<%= v.who %>"><img src="<%= v.avatar || '/img/avatar.png' %>" width="48" height="48" alt="<%= v.nick || v.who %>"></a>
-        </td>
-        <td class="side" valign="middle">
-          <a href="/<%= v.who %>" class="font_title"><%= v.nick || v.who %></a>
-          <span class="font_desc">(<%= v.who %>)</span>
-        </td>
-        <td class="side" width="140" align="right" valign="middle">
-          <span class="font_desc"><%= v.created %></span>
-        </td>
-      </tr>
-      <% }) %>
-    </table>
-    <% } %>
+<div id="search">共 <b><%= total %></b> 筆足跡</div>
 
-    <div class="side" align="center"><%- include('partials/pager') %></div>
+<% if (pages > 1) { %>
+<ul class="page_control">
+  <% if (page > 1) { %><a id="prev" href="?p=<%= page-1 %>">上一頁</a><% } %>
+  <% for (let i = 1; i <= pages; i++) { %><% if (i === page) { %><%= i %><% } else { %><a href="?p=<%= i %>"><%= i %></a><% } %><% } %>
+  <% if (page < pages) { %><a id="next" href="?p=<%= page+1 %>">下一頁</a><% } %>
+</ul>
+<% } %>
 
-    <%- include('partials/side',{visitors:null,friends}) %>
+<div class="msg_body">
+  <% if (!rows.length) { %><div class="w2-empty">目前還沒有人來過</div><% } else { %>
+  <table class="w2-rows">
+    <% rows.forEach(v => { %>
+    <tr>
+      <td width="60" align="center">
+        <a href="/<%= v.who %>"><img src="<%= v.avatar || '/img/avatar.png' %>" width="48" height="48" alt="<%= v.nick || v.who %>"></a>
+      </td>
+      <td>
+        <a href="/<%= v.who %>" class="w2-who"><%= v.nick || v.who %></a>
+        <span class="w2-sub">(<%= v.who %>)</span>
+      </td>
+      <td class="w2-when"><%= v.created %></td>
+    </tr>
+    <% }) %>
+  </table>
+  <% } %>
+</div>
 
-  </td>
-  <td class="side2"></td>
-</tr></table>
-<%- include('partials/sitefoot') %>
-<%- include('partials/foot') %>
+<% if (pages > 1) { %>
+<ul class="page_control">
+  <% if (page > 1) { %><a id="prev" href="?p=<%= page-1 %>">上一頁</a><% } %>
+  <% for (let i = 1; i <= pages; i++) { %><% if (i === page) { %><%= i %><% } else { %><a href="?p=<%= i %>"><%= i %></a><% } %><% } %>
+  <% if (page < pages) { %><a id="next" href="?p=<%= page+1 %>">下一頁</a><% } %>
+</ul>
+<% } %>
+
+<%# 這一頁本身就是完整的足跡名單，側欄不用再列一次 %>
+<%- include('partials/gbfoot', { visitors: null }) %>
+<%- include('partials/foot2012in') %>

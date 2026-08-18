@@ -1,0 +1,81 @@
+<%
+  /* 無名小站 2012 最後版 — 網誌內頁外框（上半段）
+     ─────────────────────────────────────────────────────────────
+     骨架逐節點照抄 assets_src2/html/blog_2012_default_skin_afuuu.html
+     （＝套用官方預設版型 skin 1/117 的網誌首頁），規格見
+     assets_src2/spec/blog.md 第 8-0 / 8-1 節與 assets_src2/spec/skin.md 第三節。
+
+       body#blog_main.yui-skin-sam
+       └ #hugewrapper
+         ├ #wretch-crumb / #static-path（hidden）
+         ├ #kukubar-upper                       ← partials/kukubar2012.ejs
+         └ #bigcontainer
+           └ #container1 (750px)
+             └ #container2
+               ├ #banner > #pageheader > h1 + #description2
+               └ #main2                         ← 由呼叫端塞 #content 與 #links
+     收尾在 partials/blog2012_foot.ejs。
+
+     樣式：public/wretch2012-blog.css（原站原始 CSS，只改素材路徑；
+     串接順序 top.css → 版型 skin117 → sharing → font → trackback → kukubar，
+     見 tools/build-css2012.mjs）。本站刻意偏離的部分另外兩支：
+       wretch2012-chrome-site.css（工具列的表單化按鈕）
+       wretch2012-blog-site.css  （原站沒有存檔的頁面：發文、檢舉、站長工具…）
+     使用者自訂 CSS 一定放最後才蓋得過版型——這就是無名的「換造型」。
+
+     可傳入的 include 參數：
+       title    完整的 <title>（呼叫端自己組好）
+       artTitle h1 裡 span.description 的字（文章頁放文章標題，列表頁留空）
+       medium   <meta name="medium">：文章頁 "blog"，其餘空字串
+
+     EJS 用 with(locals)，不能宣告和 local 同名的 const；
+     非必定存在的 local 一律走 locals.xxx。 */
+  const bhIntro = (u && u.intro) ? u.intro.split('\n')[0].slice(0, 200) : '';
+%><!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+<meta http-equiv="imagetoolbar" content="no"/>
+<meta name="description" content="<%= bhIntro %>" />
+<meta name="medium" content="<%= locals.medium || '' %>" />
+<title><%= locals.title %></title>
+<link rel="shortcut icon" type="image/x-icon" href="/favicon.ico" />
+<meta property="og:type" content="<%= locals.medium === 'blog' ? 'article' : 'blog' %>" />
+<meta property="og:title" content="<%= locals.title %>" />
+<meta property="og:site_name" content="無名小站網誌" />
+<link rel="alternate" type="application/rss+xml" title="RSS" href="/<%= u.name %>/blog/rss" />
+<link rel="stylesheet" href="/wretch2012-blog.css" type="text/css" />
+<link rel="stylesheet" href="/wretch2012-chrome-site.css" type="text/css" />
+<link rel="stylesheet" href="/wretch2012-blog-site.css" type="text/css" />
+<%# 使用者自訂 CSS 一定放最後，才蓋得過版型——這是無名的靈魂功能 %>
+<% if (u && u.css) { %><style><%- safeCss(u.css) %></style><% } %>
+</head>
+<%# body 上那三個 return false 是原站防右鍵／防拖曳／防選取的設定，照抄 %>
+<body id="blog_main" onDragStart="return false" onContextmenu="return false" onSelectStart="return false" class="yui-skin-sam">
+<!-- nv hugewrepper --><div id="hugewrapper"><input id="wretch-crumb" type="hidden" value="">
+<input id="static-path" type="hidden" value="/img/wretch2012/blog/">
+<%- include('kukubar2012', { kkService: 'blog' }) %>
+<div id="bigcontainer" style="position: relative !important; zoom:1 !important;" >
+<div id="container1">
+<div id="container2">
+
+  <div id="banner">
+  <div id="pageheader">
+    <h1>
+      <a href="/<%= u.name %>/blog"><%= u.nick %></a>
+      <span class="description">
+        <%= locals.artTitle || '' %>      </span>
+    </h1>
+
+    <div id="description2">
+      <span class="description">
+        <%= locals.medium === 'blog' ? '' : bhIntro %>      </span>
+    </div>
+  </div>
+</div>
+
+<%# 原站沒有 flash 這種東西（它用整頁跳轉的提示頁），本站沿用既有機制，
+    版面上放在 banner 與 #main2 之間，樣式在 wretch2012-blog-site.css %>
+<% if (flash) { %><div class="w2b-flash"><%= flash %></div><% } %>
+
+<div id="main2">

@@ -1,0 +1,138 @@
+/* 本站對 2012 內頁樣式的「刻意偏離」層 — 留言板／名片／好友／個人頁
+ * ---------------------------------------------------------------------------
+ * 載入順序：
+ *   wretch2012-gb.css（官方原檔）→ wretch2012-skin-*.css（原廠預設版型）
+ *   → 本檔 → 使用者自訂 CSS
+ *
+ * 這裡的每一條都是**明知與原站不同、而且是故意的**，並附上理由。
+ * 純粹的還原缺陷不要寫在這裡，那要回去修 DOM 或補素材。
+ * 配色一律從 skin 1/1911 既有的色盤挑：
+ *   #eff8ff 底 / #e7f2fb 主區 / #5e89aa 連結 / #84aece 內文 / #c4a96f 標籤
+ *   / #b8d7f0 表單框線 / #dfecf5 名片底
+ */
+
+/* --- 1. 一支 bundle 供三個頁面用，規則會互相污染 -------------------------
+ * 原站是一頁載一組：
+ *   留言板 layout + namecard +〔版型〕+ overwrite
+ *   好友　 fix +〔版型〕+ select
+ *   名片　〔版型〕+ user/font
+ * 本站把官方那幾層併成一支 wretch2012-gb.css（見 skin.md §8），
+ * 於是「別頁的骨架」會跟著載進來。這裡按 <body> 的頁別把不該生效的還原，
+ * 只做減法，不新增任何視覺語言。
+ */
+/* 好友頁與名片頁原本沒有 guestbook/layout.css */
+body.w2-friend #container,
+body.w2-user   #container { width: auto; }
+body.w2-friend #content,
+body.w2-user   #content   { width: auto; float: none; }
+body.w2-friend            { text-align: left; }
+/* 留言板家族原本沒有 friend/fix.css（它把字級改成 .8em、給 #content 加了內距） */
+body.w2-gb { font: 13px/1.231 arial, helvetica, clean, sans-serif; }
+body.w2-gb #content { padding: 0; }
+
+/* --- 2. flash 訊息 -------------------------------------------------------
+ * 原站沒有這個東西（它用整頁跳轉的提示頁）。本站沿用既有的 flash 機制，
+ * 做成貼近版型的淡黃提示條，放在 #bigcontainer 最上面。
+ */
+.w2-flash {
+  margin: 8px 0 0; padding: 6px 10px; text-align: left;
+  background: #FFFBE6; border: 1px solid #F0DFA0; color: #6B5A18;
+  font-size: 12px; line-height: 1.8;
+}
+
+/* --- 3. 頁籤帶 -----------------------------------------------------------
+ * 版型把 #main_tab 設成 position:absolute，靠它旁邊的 a.message（高 55px）
+ * 撐出頁籤那條帶子。本站有些頁沒有「我要留言」按鈕，就用一條同高的空帶子。
+ */
+.w2-tabband { display: block; height: 55px; }
+
+/* 送出鈕做成連結外觀：本站有幾個「動作」是 POST（登出、加好友、刪留言），
+ * 原站那幾處都是 <a>。用 button 才安全，外觀沿用同一組連結色。 */
+.lnk, .w2-linkbtn {
+  background: none; border: 0; padding: 0; margin: 0;
+  font: inherit; color: #5e89aa; cursor: pointer;
+}
+.lnk:hover, .w2-linkbtn:hover { text-decoration: underline; }
+
+/* --- 4. 原站沒有的頁：MyPage／誰來我家／我的收藏／好友動態／個人設定 ----
+ * 這五頁在無名是別的服務（mypage、admin），沒有留言板版型可以照抄。
+ * 一律套用留言板的白色面板 .msg_body，內容只用下面這幾個排版類別。
+ */
+.w2-rows        { width: 100%; }
+.w2-rows td     { padding: 6px 4px; border-bottom: 1px dotted #a9a9a9; vertical-align: middle; }
+.w2-rows tr:last-child td { border-bottom: 0; }
+.w2-rows .w2-when { text-align: right; color: #9cb6cb; white-space: nowrap; }
+.w2-who         { color: #5e89aa; font-weight: bold; }
+.w2-sub         { color: #c4a96f; }
+.w2-empty       { padding: 30px 0; text-align: center; color: #9cb6cb; }
+.w2-more        { text-align: right; padding-top: 6px; }
+.w2-h3          { color: #5e89aa; font-weight: bold; font-size: 14px;
+                  border-bottom: 1px dotted #a9a9a9; padding-bottom: 4px; margin-bottom: 8px; }
+
+/* 相簿／好友縮圖格：沿用無名一格 120px 的尺寸（skin.md §4 相簿段） */
+.w2-grid        { overflow: hidden; }
+.w2-grid li     { float: left; width: 120px; margin: 0 8px 12px 0; text-align: center; }
+.w2-grid li img { display: block; margin: 0 auto 4px; }
+.w2-grid li .w2-cap { display: block; height: 2.6em; overflow: hidden; line-height: 1.3; }
+
+/* MyPage 的統計列 */
+.w2-stats       { padding: 6px 0; color: #c4a96f; }
+.w2-stats b     { color: #5e89aa; font-size: 15px; padding: 0 2px; }
+
+/* --- 5. 表情圖（原站的 Smileys）-----------------------------------------
+ * 圖檔是原站的 guestbook/img/Smileys/*.gif（20 張，18×18），
+ * 但「點一下插進內容」的實作是本站自己寫的（原站是 emoticon() 這支 JS）。
+ * 存進資料庫的是 [img]名稱[/img] 這種 token，顯示時才換回圖，
+ * 使用者輸入永遠先經過 format.js 的 render() 逃脫，不會變成任意 HTML。
+ */
+.w2-emo         { line-height: 0; }
+.w2-emo a       { display: inline-block; padding: 2px; }
+.w2-emo a:hover { background: #dfecf5; }
+img.smiley      { vertical-align: middle; }
+
+/* --- 6. 檢舉框 -----------------------------------------------------------
+ * 原站的「檢舉」是跳到 cc.wretch.cc/help/prosecute.php 另一頁；
+ * 本站是同頁展開的表單（POST /report），所以要自己給一個框。
+ */
+.w2-report      { margin: 10px 0; padding: 10px; background: #FFF;
+                  border: 1px dotted #a9a9a9; text-align: left; }
+.w2-report textarea { width: 96%; }
+
+/* --- 7. 版面樣式挑色盤（個人設定）--------------------------------------
+ * 無名的「樣式編輯精靈」是一整套版型市集，本站簡化成九組配色。
+ */
+.w2-themepick a  { display: inline-block; margin: 0 6px 6px 0; padding: 4px 6px;
+                   border: 1px solid #b8d7f0; color: #5e89aa; text-decoration: none; }
+.w2-themepick a.on { border-color: #5e89aa; background: #dfecf5; }
+.w2-themepick .sw  { display: inline-block; vertical-align: middle; margin-right: 4px; }
+.w2-themepick .sw i { display: inline-block; width: 10px; height: 10px; }
+
+/* --- 8. 板主的回覆／刪除表單 -------------------------------------------
+ * 原站板主看到的留言板本站沒有存檔（爬蟲永遠是登出狀態），
+ * 只知道版型備好了 .reply_content textarea{width:100%}，所以就放在那裡面。
+ */
+.reply_content .w2-del { text-align: right; margin-top: 5px; }
+.reply_content form    { margin: 0; }
+
+/* --- 9. 名片頁的編輯表單 -------------------------------------------------
+ * 名片版型只定義了 .sidetitle / .side 兩個格子，沒有輸入框的樣式。
+ * 表單沿用同一張 600px 表格，輸入框給最低限度的框線。
+ */
+body.w2-user input[type=text],
+body.w2-user input[type=date],
+body.w2-user select,
+body.w2-user textarea { font-size: 12px; border: 1px solid #CCC; padding: 1px 3px; }
+body.w2-user .w2-note { color: #999; font-size: x-small; }
+/* 名片頁的欄位表格靠 cellspacing="1" 拉出格線，但併進來的 guestbook/layout.css
+ * 有一條 table{border-collapse:collapse} 會把它吃掉（原站名片頁沒載那支）。 */
+body.w2-user table.w2-card { border-collapse: separate; border-spacing: 1px; }
+
+/* --- 10. 好友頁 ---------------------------------------------------------
+ * 版型的好友卡是 110×155、只放帳號與頭像；本站多顯示暱稱與分類，
+ * 所以卡片內文用 .font_id2 / .font_cate（版型本來就有這兩個 class）。
+ */
+body.w2-friend #friendListDiv ol li a { text-decoration: none; }
+body.w2-friend .w2-panel { background: #fff; border: 1px solid #999; padding: 10px; margin-top: 10px; }
+body.w2-friend .w2-nick { display: block; font-size: 12px; text-align: center;
+                          height: 1.3em; overflow: hidden; }
+body.w2-friend .w2-grp  { color: #999; }

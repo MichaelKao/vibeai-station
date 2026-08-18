@@ -1,70 +1,168 @@
-<%- include('partials/head',{title:album.title+' - 幻燈片'}) %>
+<%
+  /* 幻燈片 /:name/album/:id/slide ── 無名 2012 的 album/slider.php
+     ═══════════════════════════════════════════════════════════════════════
+     DOM 逐節點照抄 assets_src2/html/album_slider.html：
 
-<%# 幻燈片（無名的 /album/display.php）：整頁黑底、置中大圖、自動播放
-    版面只在這一頁用得到，樣式就近放這裡，不進全站 style.css。 %>
-<style>
-#slidepage{ position:fixed; left:0; top:20px; right:0; bottom:0; background:#000; color:#fff;
-  text-align:center; font-size:12px; z-index:5; }
-#slidewrap{ position:absolute; left:0; top:0; right:0; bottom:76px;
-  display:flex; align-items:center; justify-content:center; }
-#slideimg{ max-width:96%; max-height:100%; padding:3px; background:#fff; }
-#slidecap{ position:absolute; left:0; right:0; bottom:52px; height:20px; overflow:hidden;
-  line-height:20px; color:#fff; }
-#slidenav{ position:absolute; left:0; right:0; bottom:0; height:44px; line-height:44px; color:#ccc; }
-#slidenav a{ color:#fff; }
-#slidenav .btn{ background:#000; border:1px solid #fff; color:#fff; font-size:12px; padding:1px 8px; cursor:pointer; }
-#slidenav .btn:hover{ background:#fff; color:#000; }
-#slidenav select{ font-size:12px; }
-#slidenum{ color:#ccc; }
-</style>
+       body
+       ├ h2#booktitle                       （wretch_ch.gif 底圖，text-indent:140px）
+       ├ div#paused        「Paused」
+       ├ div#loading       「Loading (0%)」
+       ├ div#slideinfo                      （fixed 在視窗底部，opacity:0，滑鼠移動才顯示）
+       │  ├ h2#title
+       │  ├ p#desc
+       │  └ p#operation
+       │     ├ span#intervalControl > img#decInterval + span#interval + img#incInterval
+       │     ├ span#pauseBtn 「Pause」
+       │     └ span#resumeBtn「Play」
+       ├ input#prev[value=«][title="Previous(Hotkey:x)"]
+       ├ input#next[value=»][title="Next(Hotkey:c)"]
+       └ div#slidewrap                      （JS 塞 div.slideElement，背景圖交叉淡入）
 
-<div id="slidepage">
-  <div id="slidewrap"><img id="slideimg" src="<%= photos[start-1].url %>" alt="<%= photos[start-1].caption || '' %>"></div>
-  <div id="slidecap"><%= photos[start-1].caption || '' %></div>
-  <div id="slidenav">
-    <input type="button" class="btn" id="sprev" value="上一張">
-    <input type="button" class="btn" id="splay" value="暫停">
-    <input type="button" class="btn" id="snext" value="下一張">
-    　<span id="slidenum"><%= start %> / <%= photos.length %></span>
-    　速度 <select id="sspeed">
-      <option value="2000">2 秒</option>
-      <option value="4000" selected>4 秒</option>
-      <option value="7000">7 秒</option>
-    </select>
-    　<%= album.title %>
-    　<a href="/<%= u.name %>/album/<%= album.id %>">回相簿</a>
-  </div>
-  <noscript><div style="padding:20px">很抱歉! 您沒辦法看到這個網頁的 Flash! 請啟用 javascript</div></noscript>
-  <div id="slidedata" data-photos="<%= JSON.stringify(photos.map(x=>({u:x.url,c:x.caption||''}))) %>" data-start="<%= start %>"></div>
-</div>
+     這一頁**沒有 kukubar**（存檔裡整份搜不到 kukubar 三個字），
+     也沒有 #hugewrapper / #bigcontainer，所以不走 head2012_site.ejs，
+     自己起一份 <head>，只載 public/wretch2012-slider.css
+     （＝原站 album/user/css/slider.css，含它自帶的 YUI reset）。
 
-<script>
+     原站的行為在 album/user/js/slider.js（YUI 2.5 animation），本站沒有那支檔，
+     下面那段 vanilla JS 重做同樣的事：預載進度、自動播放、上下張、暫停／播放、
+     秒數加減、滑鼠移動才顯示控制列。全域變數名 prepare / jslang 與原站一致。
+
+     熱鍵照抄原站：x 上一張 / c 下一張。
+
+     照片資料不直接寫進 script 標籤（標題可能含結束標籤），
+     改用 data-prepare 屬性、走一般的逃脫輸出，再 JSON.parse。 */
+
+  const slData = {
+    xname: String(album.id),
+    bookTitle: album.title,
+    img: photos.map(p => ({ src: p.url, url: '/' + u.name + '/photo/' + p.id,
+                            title: p.caption || '', desc: '' })),
+  };
+%><!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<meta http-equiv="imagetoolbar" content="no">
+<title><%= album.title %> - <%= u.name %>'s Album - <%= SITE_NAME %></title>
+<link rel="shortcut icon" type="image/x-icon" href="/favicon.ico">
+<link href="/wretch2012-slider.css" rel="stylesheet" type="text/css">
+</head>
+<body>
+  <h2 id="booktitle">&nbsp;</h2>
+    <div id="paused">Paused</div>
+    <div id="loading">Loading (0%)</div>
+    <div id="slideinfo">
+        <h2 id="title">&nbsp;</h2>
+        <p id="desc">&nbsp;</p>
+        <p id="operation">
+            <span id="intervalControl">
+                <img  id="decInterval" src="/img/wretch2012/album/slideshowminus_on.gif">
+                <span id="interval">&nbsp;</span>
+                <img id="incInterval" src="/img/wretch2012/album/slideshowplus_on.gif">
+            </span>
+            <span id="pauseBtn">Pause</span>
+            <span id="resumeBtn">Play</span>
+        </p>
+    </div>
+    <input type="button" title="Previous(Hotkey:x)" value="&laquo;" id="prev"></input>
+  <input type="button" title="Next(Hotkey:c)" value="&raquo;" id="next"></input>
+  <div id="slidewrap" data-prepare="<%= JSON.stringify(slData) %>" data-start="<%= start %>" data-back="/<%= u.name %>/album/<%= album.id %>"></div>
+<script type="text/javascript">
+/* 原站 slider.js 的兩個全域變數，字串逐字照抄 */
+var jslang = {
+  'second': 'second',
+  'nophoto': 'No pictures in album'
+};
+var prepare = JSON.parse(document.getElementById('slidewrap').getAttribute('data-prepare'));
 (function(){
-  var el=document.getElementById('slidedata');
-  var ph=[]; try{ ph=JSON.parse(el.getAttribute('data-photos'))||[]; }catch(e){ return; }
-  if(!ph.length) return;
-  var i=Math.max(0,Math.min(ph.length-1,(+el.getAttribute('data-start')||1)-1));
-  var img=document.getElementById('slideimg'), cap=document.getElementById('slidecap'),
-      num=document.getElementById('slidenum'), playBtn=document.getElementById('splay'),
-      speed=document.getElementById('sspeed'), timer=null, playing=true;
-  function show(n){ i=(n+ph.length)%ph.length; img.src=ph[i].u; cap.textContent=ph[i].c;
-                    num.textContent=(i+1)+' / '+ph.length; }
-  function tick(){ show(i+1); }
-  function start(){ stop(); timer=setInterval(tick,+speed.value); playing=true; playBtn.value='暫停'; }
-  function stop(){ if(timer) clearInterval(timer); timer=null; playing=false; playBtn.value='播放'; }
-  document.getElementById('sprev').onclick=function(){ show(i-1); if(playing) start(); };
-  document.getElementById('snext').onclick=function(){ show(i+1); if(playing) start(); };
-  playBtn.onclick=function(){ playing?stop():start(); };
-  speed.onchange=function(){ if(playing) start(); };
-  document.addEventListener('keydown',function(e){
-    var t=e.target, n=t.tagName;
-    if(n==='INPUT'||n==='TEXTAREA'||n==='SELECT'||t.isContentEditable) return;
-    if(e.key==='ArrowRight'||e.key==='c'||e.key==='C'){ show(i+1); if(playing) start(); }
-    if(e.key==='ArrowLeft'){ show(i-1); if(playing) start(); }
-    if(e.key===' '){ e.preventDefault(); playing?stop():start(); }
-    if(e.key==='Escape'){ location.href='/<%= u.name %>/album/<%= album.id %>'; }
+  var wrap  = document.getElementById('slidewrap');
+  var imgs  = prepare.img || [];
+  var back  = wrap.getAttribute('data-back');
+  var $     = function(id){ return document.getElementById(id); };
+
+  $('booktitle').textContent = prepare.bookTitle;
+  if (!imgs.length) { $('loading').textContent = jslang.nophoto; return; }
+
+  /* 原站 #slidewrap 在寬螢幕會被 inline script 撐成 1024px，這裡照做 */
+  if (screen.width >= 1280) wrap.style.width = '1024px';
+
+  var i        = Math.max(0, Math.min(imgs.length - 1, (+wrap.getAttribute('data-start') || 1) - 1));
+  var interval = 4;                 /* 秒；原站的 +/- 也是以秒為單位 */
+  var timer    = null;
+  var playing  = true;
+  var loaded   = 0;
+  var cur      = null;
+
+  /* 預載：原站的「Loading (n%)」就是這個計數 */
+  imgs.forEach(function(o){
+    var im = new Image();
+    im.onload = im.onerror = function(){
+      loaded++;
+      $('loading').textContent = 'Loading (' + Math.round(loaded / imgs.length * 100) + '%)';
+      if (loaded === imgs.length) $('loading').style.display = 'none';
+    };
+    im.src = o.src;
   });
-  show(i); start();
+
+  function show(n){
+    i = (n + imgs.length) % imgs.length;
+    var o = imgs[i];
+    var el = document.createElement('div');
+    el.className = 'slideElement';
+    el.style.backgroundImage = 'url("' + o.src.replace(/"/g, '%22') + '")';
+    el.style.opacity = 0;
+    wrap.appendChild(el);
+    /* 交叉淡入（原站是 YUI Anim，效果一樣） */
+    requestAnimationFrame(function(){
+      el.style.transition = 'opacity .5s';
+      el.style.opacity = 1;
+    });
+    var old = cur; cur = el;
+    if (old) setTimeout(function(){ if (old.parentNode) old.parentNode.removeChild(old); }, 600);
+    $('title').textContent = o.title || '';
+    $('desc').textContent  = o.desc  || '';
+  }
+  function paint(){
+    $('interval').textContent = interval + ' ' + jslang.second;
+    $('paused').style.visibility    = playing ? 'hidden' : 'visible';
+    $('pauseBtn').style.visibility  = playing ? 'visible' : 'hidden';
+    $('resumeBtn').style.visibility = playing ? 'hidden' : 'visible';
+  }
+  function play(){ stop(); playing = true;  timer = setInterval(function(){ show(i + 1); }, interval * 1000); paint(); }
+  function stop(){ if (timer) clearInterval(timer); timer = null; playing = false; paint(); }
+
+  $('prev').onclick = function(){ show(i - 1); if (playing) play(); };
+  $('next').onclick = function(){ show(i + 1); if (playing) play(); };
+  $('pauseBtn').onclick  = stop;
+  $('resumeBtn').onclick = play;
+  $('decInterval').onclick = function(){ interval = Math.max(1,  interval - 1); if (playing) play(); else paint(); };
+  $('incInterval').onclick = function(){ interval = Math.min(30, interval + 1); if (playing) play(); else paint(); };
+
+  /* 滑鼠不動就把控制列與左右鈕藏起來（原站的行為） */
+  var hideT = null;
+  function wake(){
+    $('slideinfo').style.opacity = 1;
+    $('prev').style.visibility = $('next').style.visibility = 'visible';
+    clearTimeout(hideT);
+    hideT = setTimeout(function(){
+      $('slideinfo').style.opacity = 0;
+      $('prev').style.visibility = $('next').style.visibility = 'hidden';
+    }, 2000);
+  }
+  document.addEventListener('mousemove', wake);
+
+  document.addEventListener('keydown', function(e){
+    var k = (e.key || '').toLowerCase();
+    if (k === 'arrowleft')  k = 'x';
+    if (k === 'arrowright') k = 'c';
+    if (k === 'x') { show(i - 1); if (playing) play(); }
+    if (k === 'c') { show(i + 1); if (playing) play(); }
+    if (k === ' ') { e.preventDefault(); playing ? stop() : play(); }
+    if (k === 'escape') location.href = back;
+  });
+
+  show(i); play(); wake();
 })();
 </script>
-<%- include('partials/foot') %>
+</body>
+</html>

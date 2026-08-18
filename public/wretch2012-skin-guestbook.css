@@ -1,0 +1,430 @@
+/* 無名小站 2012 最後版樣式 — 留言板預設版型 skin 1/1911
+ *
+ * 這個檔是 tools/build-css2012.mjs 產生的，**請不要手改**——
+ * 改了下次重建就會被蓋掉。要調整請改 assets_src2/css/ 底下的來源，或改建置腳本。
+ *
+ * 內容是無名當年的原始 CSS，只把 url(…) 改指到 /img/wretch2012/。
+ * 單獨出檔，套在 wretch2012-gb.css 的 layout/namecard 之後、overwrite 之前。
+ */
+/* ===== 留言板預設版型 skin 1/1911  <css/gb_default_skin1911_guestbook.css> ===== */
+body{
+	color:#84aece;
+	background: #eff8ff;
+}
+
+a{
+	color:#5e89aa;
+	text-decoration:none;
+}
+a:hover {
+	text-decoration:underline;
+}
+
+
+#bigcontainer ,
+#container
+{
+	margin: auto;
+	width: 958px;
+}
+
+/*header*/
+#header {
+	background: url(/img/wretch2012/skin1911/header.gif) no-repeat left 10px;
+	position: relative;
+	height:auto!important;
+	height:80px;
+	min-height:80px;
+}
+
+#header h1 {
+	position: relative;
+	top: 12px;
+	left: 300px;
+	font-size:19px;
+	font-weight:bold;
+	width: 658px;
+	border-bottom: 1px dotted #9fb9cc;
+	margin-bottom: 5px;
+	padding-bottom: 5px;
+}
+#header h1 a {
+	color: #78a5c6;
+}
+#description {
+	position: relative;
+	top: 12px;
+	color:#9cb6cb;
+	padding: 0px 0px 25px 300px;
+}
+
+
+
+
+#content {
+	position:relative;
+	width: 612px;
+}
+
+/*main_tab*/
+#main {
+	background: #e7f2fb url(/img/wretch2012/skin1911/main.gif) no-repeat center top;
+	padding: 0px 8px;
+}
+
+#main_tab {
+	position: absolute;
+	left: 30px;
+	padding-top: 14px;
+}
+#main_tab img {
+	margin-right: 5px;
+}
+
+#main_tab li {
+	float:left;
+	margin-right: 5px;
+	background:url(/img/wretch2012/skin1911/tab2_l.gif) no-repeat left top;
+}
+
+#main_tab li a {
+	display:block;
+	float:left;
+	color: #fff;
+	height:39px;
+	position:relative;
+	padding: 12px 10px 0px;
+	overflow: hidden;
+	background:url(/img/wretch2012/skin1911/tab2_r.gif) no-repeat right top;
+}
+#main_tab li.hover a {
+	color: #5e89aa;
+	background:url(/img/wretch2012/skin1911/tab_r.gif) no-repeat right top;
+}
+#main_tab li.hover {
+	background:url(/img/wretch2012/skin1911/tab_l.gif) no-repeat left top;
+}
+
+a.message {
+	background:url(/img/wretch2012/skin1911/message.gif) no-repeat left top;
+	color:#9a875f;
+	display:block;
+	position: relative;
+	line-height: 39px;
+	overflow: hidden;
+	height: 55px;
+	left: 470px;
+	padding-left: 40px;
+	width: 120px;
+	top: 14px;
+}
+
+/*mainsection*/
+#mainSection {
+	position: relative;
+	width: 604px;
+}
+
+#search {
+	text-align:right;
+	background: #FFFFFF;
+	margin-top: 10px;
+	overflow: hidden;
+	padding-right: 20px;
+}
+
+ul.page_control {
+	color:#d2ba86;
+	text-align:center;
+	padding: 10px 0px;
+	background: #FFFFFF;
+}
+
+ul.page_control a {
+	color:#5e89aa;
+}
+
+
+
+/*msg list*/
+#msg_list {
+	float:left;
+	width: 604px;
+}
+
+.msg_body {
+	padding: 10px 10px 20px;
+	background: #FFFFFF;
+}
+
+.msg_word strong {
+	zoom:1;
+	color: #84aece;
+}
+
+.msg_content {
+	position: relative;
+	margin-bottom: 10px;
+}
+
+.reply_content li span {
+	line-height:1.5;
+	zoom:1;
+}
+.msg_content li.msg_word span {
+	text-align:left;
+	display: block;
+	font-weight: bold;
+	color:#5e89aa;
+	padding-bottom: 5px;
+	border-bottom: 1px dotted #a9a9a9;
+	margin-bottom: 5px;
+}
+
+.reply_content li.reply_word span {
+	text-align:left;
+	display:block;
+	font-weight: bold;
+	color:#808080;
+	padding: 0 0 5px;
+}
+.reply_word strong {
+	display:block;
+	zoom:1;
+	color: #abaaaa;
+}
+
+
+.msg_img {
+	position: absolute;
+	left: 20px;
+	top: 12px;
+}
+.msg_man {
+	position: absolute;
+	left: 120px;
+	top: 15px;
+	color: #c4a96f;
+}
+.msg_man a {
+	color: #ffa4b9;
+	font-weight: bold;
+}
+
+.msg_title {
+	position: absolute;
+	left: 120px;
+	top: 45px;
+	color: #c4a96f;
+}
+.msg_date {
+	position: absolute;
+	left: 120px;
+	top: 75px;
+	color: #c4a96f;
+}
+
+.msg_word{
+	padding: 110px 0 0;
+}
+
+
+
+.msg_info{
+	border-bottom: 1px dotted #a9a9a9;
+	padding: 5px 0px;
+}
+.msg_info span {
+	color: #A1124E;
+}
+.msg_ip{float:right;color:#999;}
+
+*html .msg_word span,
+*html .msg_info span,
+*html .msg_ip span,
+*html .reply_word span,
+*html .reply_date span
+{
+line-height:1.5;
+zoom:1;
+}/*ie only*/
+
+.reply_content {
+	clear:both;
+	zoom:1;
+	padding: 10px;
+	background: #f7f7f7;
+}
+
+.reply_none {
+	width:100%;
+	text-align:left;
+	display:block;
+	border-bottom:1px dotted #7AD1C6;
+	color: #CCCCCC;
+	padding-right: 20px;
+	padding-left: 20px;
+	padding-bottom: 5px;
+}
+
+
+
+.reply_date{
+	text-align:right;
+	color:#abaaaa;
+	padding: 5px 0 0;
+}
+.reply_content textarea{width:100%}
+.msg_control{margin-top:10px;}
+*html .msg_control{margin-top:0px;}/*ie only*/
+
+.msg_control li a {
+	padding:3px 5px 3px;
+	background:#C1EAE4;
+	border:1px solid #42AB96;
+	color:#000000;
+}
+.msg_control li a:hover {
+	background:#42AB96;
+	color: #FFFFFF;
+	text-decoration:none;
+}
+
+/*addpost*/
+#msg_added .msg_body {
+	background: #FFFFFF url(/img/wretch2012/skin1911/msg_body.gif) no-repeat center top;
+}
+
+#msg_added h2{
+	color:#5e89aa;
+	font-size: 15px;
+	font-weight: bold;
+	position: absolute;
+	top: 20px;
+	left: 30px;
+}
+#msg_added li{padding:3px 0;}
+#msg_added li span {
+	display:block;
+	width:105px;
+	float:left;
+	text-align:right;
+	margin-right:10px;
+	padding-bottom:2px;
+	border-bottom: 1px solid #b8d7f0;
+}
+
+#msg_added form {
+	position: relative;
+	margin-top: 30px;
+	color: #84aece;
+	background: url(/img/wretch2012/skin1911/msg_added_form.gif) no-repeat center top;
+}
+#msg_added li.add_img{
+	position: relative;
+	padding-left:20px;
+	padding-top:10px;
+	float:left;
+	margin-right:10px;
+}
+#msg_added li.add_title {
+	height: 120px;
+}
+#msg_added li.add_title a {
+	color: #c4a96f;
+}
+#msg_added li.add_title b {
+	font-weight: normal;
+}
+#msg_added .msg_body {
+	border-bottom: 0px none #e7f2fb;
+}
+
+
+
+/*sidebar*/
+#sidebar{
+	text-align: center;
+	width: 330px;
+	margin: 14px 0 0;
+	color: #FFFFFF;
+	position: relative;
+}
+
+#admin{text-align:center}
+.box{
+	margin: 10px 0;
+	padding: 10px 5px;
+	color:#333;
+	border-bottom: 1px dotted #5e89aa;
+}
+
+#action {
+	margin: 10px auto 0;
+	width: 288px;
+}
+#friendlist {
+	margin: auto auto 10px;
+}
+#friendlist select {
+	width: 290px;
+	margin: auto auto 0;
+}
+
+#info span{padding:0 10px;font-weight:bold}
+#info a{font-weight:bold}
+#stats{
+	background: url(/img/wretch2012/skin1911/stats.gif) no-repeat 94px bottom;
+	height: 90px;
+	overflow: hidden;
+	border-style: none;
+	padding: 0 0 0 17px;
+	text-align: left;
+	color: #5e89aa;
+}
+
+
+
+/*namecard*/
+#mine {
+	background: url(/img/wretch2012/skin1911/mine.gif) no-repeat center top;
+	height: 183px;
+	overflow: hidden;
+}
+
+.myDesc {
+	color: #264059;
+}
+
+#namecard {
+	text-align: left;
+	background:#dfecf5 !important;
+	border-color:#f5f9fc !important;
+	margin: 13px auto 0px;
+}
+#myService li a {
+	border-bottom:1px solid #dfecf5;
+	background:#95c5e4;
+	color: #1C4E5D;
+}
+#myService li a:hover{
+	border-bottom:1px solid #dfecf5;
+	background:#dfecf5;
+	color: #000;
+}
+#myName a {
+	color: #4f8cba;
+	text-decoration: none;
+}
+#myName a:hover {
+	text-decoration: underline;
+}
+
+#footer {
+	background: #eff8ff url(/img/wretch2012/skin1911/footer.gif) no-repeat center top;
+	height: 50px;
+}
+
+#automusic{
+	display:block;
+}

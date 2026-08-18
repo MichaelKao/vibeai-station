@@ -1,95 +1,87 @@
-<%- include('partials/head',{title:'免費註冊',nav:'home',layout:'index'}) %>
 <%
-  /* 免費註冊：2005 首頁綠版外框（760px 置中，WRETCH_DOM.md 第 7 節）。
-     逐字用語見 WRETCH_SPEC.md 5-1／5-9：「帳號:」「密碼:」「免費註冊」
-     「一個帳號，多項功能」「個人相簿／個人網誌 (BLOG,部落格)／個人留言板」。
-     表單維持原本的 method=post、同網址送出，欄位 name：name / nick / pass / pass2。 */
+  /* 免費註冊
+     ─────────────────────────────────────────────────────────────
+     與 login.ejs 同樣是刻意偏離：2012 年無名沒有自己的註冊頁，
+     Register 連結一樣導去 Yahoo 帳號系統。理由與樣式來源見 login.ejs 檔頭。
+
+     表單對應 src/server.js 的 app.post('/register')：
+     欄位 name / nick / pass / pass2，帳號限 3~20 位英數字或底線。
+     出錯時 server 會把使用者填過的值放在 form 裡回傳，要填回去，
+     不然使用者每錯一次就要全部重打。 */
+  const f = locals.form || {};
 %>
-<table id="bigtab" width="760" border="0" cellpadding="0" cellspacing="0" align="center">
-<tr>
-	<td rowspan="3" width="5" class="side1"></td>
+<%- include('partials/head2012', { title: '免費註冊 - 無名小站' }) %>
 
-	<td width="750" height="100" id="banner1">
-		<div id="banner">
-			<a href="/"><img id="sitelogo" src="<%= SITE_LOGO %>" alt="<%= SITE_NAME %>"></a>
-			<div id="pageheader">
-				<h1><a href="/"><%= SITE_NAME %></a></h1>
-				<span class="description"><%= SITE_DESC %></span>
-			</div>
-			<div class="font_banner" align="right">
-				<a href="/">設為首頁</a> |
-				<a href="/help">常見問題</a> |
-				<a href="/help">新手上路</a> |
-				<a href="/login">會員登入</a>
-			</div>
-		</div>
-	</td>
+  <div class="bd big-bd clearfix">
+    <div class="main">
 
-	<td rowspan="3" width="5" class="side1"></td>
-</tr>
+      <div class="mod w2-auth">
+        <div class="hd"><h2>免費註冊</h2></div>
+        <div class="bd">
 
-<tr>
-	<td height="30" class="side2" align="center">
-		<a href="/"><%= SITE_NAME %></a> |
-		<a href="/albums">相簿</a> |
-		<a href="/blogs">網誌</a> |
-		<a href="/rank">排行榜</a> |
-		<a href="/help">服務說明</a>
-	</td>
-</tr>
+          <% if (err) { %><p class="w2-auth-err"><%= err %></p><% } %>
 
-<tr>
-	<td id="content1" height="100%">
-		<table border="0" cellpadding="0" cellspacing="0" width="100%">
-		<tr>
-			<td width="20" height="20" class="content2">&nbsp;</td>
-			<td></td>
-			<td width="20" height="20" class="content3">&nbsp;</td>
-		</tr>
-		<tr>
-			<td colspan="3" align="center" valign="top">
+          <form action="/register" method="POST">
+            <table class="w2-auth-form">
+              <tr>
+                <th><label for="w2-name">帳號</label></th>
+                <td>
+                  <input type="text" id="w2-name" name="name" size="24" value="<%= f.name || '' %>" autofocus>
+                  <span class="w2-auth-hint">3~20 位英數字或底線，之後就是你的小站網址</span>
+                </td>
+              </tr>
+              <tr>
+                <th><label for="w2-nick">暱稱</label></th>
+                <td>
+                  <input type="text" id="w2-nick" name="nick" size="24" value="<%= f.nick || '' %>">
+                  <span class="w2-auth-hint">顯示在小站與留言上的名字</span>
+                </td>
+              </tr>
+              <tr>
+                <th><label for="w2-pass">密碼</label></th>
+                <td>
+                  <input type="password" id="w2-pass" name="pass" size="24" autocomplete="new-password">
+                  <span class="w2-auth-hint">至少 4 個字</span>
+                </td>
+              </tr>
+              <tr>
+                <th><label for="w2-pass2">確認密碼</label></th>
+                <td><input type="password" id="w2-pass2" name="pass2" size="24" autocomplete="new-password"></td>
+              </tr>
+              <tr>
+                <th></th>
+                <td>
+                  <button type="submit" class="w2-btn">送出</button>
+                  <a class="w2-auth-alt" href="/login">已經有帳號了</a>
+                </td>
+              </tr>
+            </table>
+          </form>
 
-	<!-- CONTENT BEGIN -->
-	<table width="320" border="0" cellpadding="0" cellspacing="0" align="center"><tr><td>
+        </div>
+      </div>
 
-		<div class="title">免費註冊</div>
-		<div class="side">
-			<% if (err) { %><div class="err"><%= err %></div><% } %>
-			<form method="post">
-			<table border="0" cellpadding="2" cellspacing="0">
-			<tr><td align="right">帳號:</td>
-				<td><input class="small-c" type="text" name="name" size="16" maxlength="20" value="<%= form.name || '' %>" pattern="[A-Za-z0-9_]{3,20}" required></td></tr>
-			<tr><td></td><td class="small-c">3~20 位英數字或底線，你的網址會是 /帳號</td></tr>
-			<tr><td align="right">暱稱:</td>
-				<td><input class="small-c" type="text" name="nick" size="16" maxlength="20" value="<%= form.nick || '' %>" required></td></tr>
-			<tr><td align="right">密碼:</td>
-				<td><input class="small-c" type="password" name="pass" size="16" maxlength="40" required></td></tr>
-			<tr><td align="right">確認密碼:</td>
-				<td><input class="small-c" type="password" name="pass2" size="16" maxlength="40" required></td></tr>
-			<tr><td></td><td><input class="small-c" type="submit" value="免費註冊"></td></tr>
-			</table>
-			</form>
-		</div>
+    </div>
 
-		<div class="title">一個帳號，多項功能</div>
-		<div class="side">
-			<ul>
-				<li>個人相簿
-				<li>個人網誌 (BLOG,部落格)
-				<li>個人留言板
-			</ul>
-			完全免費、不打廣告。請勿上傳侵權或不當內容。
-			<div align="center">已經有帳號了？<a href="/login">會員登入</a></div>
-		</div>
+    <div class="side">
+      <div class="mod w2-auth-side">
+        <div class="hd"><h2>註冊之後可以做什麼</h2></div>
+        <div class="bd">
+          <ul>
+            <li>開自己的<strong>相簿</strong>，整本或單張都能上鎖</li>
+            <li>寫<strong>網誌</strong>，單篇可以設密碼，只給想看的人看</li>
+            <li>有自己的<strong>留言板</strong>與<strong>名片</strong></li>
+            <li>加好友、看好友動態、收藏別人的文章</li>
+            <li>換版面樣式，也可以自己寫 CSS</li>
+          </ul>
+          <p class="w2-auth-cta">完全免費，不放廣告。</p>
+        </div>
+      </div>
+    </div>
+  </div>
 
-	</td></tr></table>
-	<!-- CONTENT END -->
+</div><!-- /#wrapper -->
 
-			</td>
-		</tr>
-		<tr><td colspan="3" height="20"></td></tr>
-		</table>
-	</td>
-</tr>
-</table>
-<%- include('partials/foot') %>
+<div id="lower-wrapper" class="clearfix">
+  <div class="bd clearfix"></div>
+<%- include('partials/foot2012') %>

@@ -1,103 +1,134 @@
-<%- include('partials/head',{title: u.nick + '的網誌', layout:'blog'}) %>
-<%# 網誌文章列表（WRETCH_DOM.md 第 5 節）
-    網誌頁不用 700px table，用原始的 div 版面：
-      #container1 > #container2 > #banner + #main2( #content 浮左 + #links > #links2 ) + extraDiv
-    每篇文章的 DOM 照契約一字不差：
-      .blog > .date > .datediv ／ .blogbody > .blogbody2 > .articletext( a[name] + h3.title
-              + .innertext + .extended ) + .posted
-    同一天的多篇文章共用一個 .date 分隔，日期用英文長格式（November 1, 2007）。
-    連結一律沿用原本的網址，沒有改任何 href。 %>
 <%
-  const MON = ['January','February','March','April','May','June',
-               'July','August','September','October','November','December'];
-  /* November 1, 2007 */
-  const wDate = s => MON[+String(s).slice(5,7) - 1] + ' ' + (+String(s).slice(8,10)) + ', ' + String(s).slice(0,4);
+  /* 網誌文章列表（無名小站 2012 最後版）
+     ─────────────────────────────────────────────────────────────
+     DOM 照抄 assets_src2/html/blog_2012_default_skin_afuuu.html，
+     規格見 assets_src2/spec/blog.md 第 8-1 / 8-2 節：
+
+       #content
+       ├ input[type=hidden][name=check_url][value=on]
+       └ .blog
+         ├ .date > .datediv                  ← 每篇文章都有自己的一條，不是換日才出現
+         ├ .blogbody > .blogbody2
+         │  ├ .articletext > a[name] + h3.title + .social-wrapper + .innertext + .extended + br
+         │  └ .posted
+         └ …（重複 N 篇）
+
+     .date 與 .blogbody 是兄弟節點：圓角是 date.gif（530×30）與 blogbody.gif（530×20）
+     上下兩張圖夾出來的，中間 .blogbody2 用 #ddd 撐開（spec 第 10 節第 2 點）。
+
+     原站的首頁沒有分頁（要往前翻靠側欄的月份彙整／分類），本站的 route 有 ?p=，
+     所以借用原站列表模式的 .list-linkcontrol（spec 第 8-5 節）把分頁印出來。
+
+     文案：存檔頁面全是英文語系表，中文對照見 spec 第 6-C 節【推】。
+     連結一律沿用原本的網址，沒有改任何 href。
+
+     EJS 用 with(locals)，不能宣告和 local 同名的 const。 */
+  /* 原站 .datediv 的格式是 Month D, YYYY（英文語系表）；中文版改成 YYYY 年 M 月 D 日 */
+  const wDate = s => String(s).slice(0,4) + ' 年 ' + (+String(s).slice(5,7)) + ' 月 ' + (+String(s).slice(8,10)) + ' 日';
   /* 03:00 PM */
   const wTime = s => { let h = +String(s).slice(11,13); const ap = h < 12 ? 'AM' : 'PM';
                        h = h % 12 || 12;
                        return String(h).padStart(2,'0') + ':' + String(s).slice(14,16) + ' ' + ap; };
+  /* 分頁時要保留目前的篩選條件 */
+  const qs = (p) => {
+    const a = ['p=' + p];
+    if (cat) a.push('cat=' + encodeURIComponent(cat));
+    if (ym)  a.push('ym='  + encodeURIComponent(ym));
+    if (day) a.push('d='   + encodeURIComponent(day));
+    return '/' + u.name + '/blog?' + a.join('&');
+  };
+  const filterLabel = cat ? '文章分類：' + cat
+                    : ym  ? '月份彙整：' + ym.slice(0,4) + ' 年 ' + (+ym.slice(5,7)) + ' 月'
+                    : day ? '文章日曆：' + day
+                    : '';
 %>
-<div id="container1"><div id="container2">
+<%- include('partials/blog2012_head', { title: u.nick + ' - 無名小站', artTitle: filterLabel, medium: '' }) %>
 
-  <div id="banner">
-    <a href="/"><img id="sitelogo" src="<%= SITE_LOGO %>" alt="<%= SITE_NAME %>"></a>
-    <div id="pageheader">
-      <h1><a href="/<%= u.name %>/blog"><%= u.nick %> 的小站</a></h1>
-      <span class="description"><%= u.intro ? u.intro.split('\n')[0].slice(0,60) : SITE_DESC %></span>
-      <div id="description2"><span class="description"></span></div>
-    </div>
-  </div>
+<div id="content">
+<input type="hidden" name="check_url" value="on">
+<div class="blog" >
 
-  <div id="main2">
-
-    <div id="content">
-
-      <% if (cat || ym || day) { %>
-      <div class="side">
-        <% if (cat) { %>文章分類：<b><%= cat %></b>　<% } %>
-        <% if (ym)  { %>月份彙整：<b><%= ym %></b>　<% } %>
-        <% if (day) { %>文章日曆：<b><%= day %></b>　<% } %>
-        <a href="/<%= u.name %>/blog">- 全部 -</a>
+<% if (filterLabel) { %>
+      <div class="date">
+        <div class="datediv">
+          <%= filterLabel %>　<a href="/<%= u.name %>/blog">全部文章</a>        </div>
       </div>
-      <% } %>
+<% } %>
 
-      <div class="blog">
-        <% if (!posts.length) { %><div class="side">還沒有文章</div><% } %>
-        <%
-          let lastDay = null;
-          posts.forEach(p=>{
-            const day1   = p.created.slice(0,10);
-            const locked = p.pass && !isOwner;          /* 上鎖文章不吐內文 */
-            const cut    = p.body.length > 300;
-            if (day1 !== lastDay) { lastDay = day1;
-        %>
-        <div class="date">
-          <div class="datediv"><%= wDate(p.created) %></div>
+<% if (pages > 1) { %>
+        <div class="list-linkcontrol">
+          <% if (page > 1) { %><span class="previous"><a href="<%= qs(page-1) %>">上一頁</a></span><% } %>
+          <% for (let i=1; i<=pages; i++) { %><% if (i === page) { %><span class="current"><%= i %></span>
+          <% } else { %><span><a href="<%= qs(i) %>"><%= i %></a></span>
+          <% } %><% } %>
+          <% if (page < pages) { %><span class="next"><a href="<%= qs(page+1) %>">下一頁</a></span><% } %>
         </div>
-        <% } %>
-        <div class="blogbody">
-          <div class="blogbody2">
+<% } %>
+
+<% if (!posts.length) { %>
+      <div class="date">
+        <div class="datediv">
+          還沒有文章        </div>
+      </div>
+<% } %>
+
+<%
+  posts.forEach(p => {
+    const locked = p.pass && !isOwner;          /* 上鎖文章不吐內文 */
+    const cut    = p.body.length > 300;
+%>
+      <div class="date">
+        <div class="datediv">
+          <%= wDate(p.created) %>        </div>
+      </div>
+
+      <div class="blogbody">
+        <div class="blogbody2">
             <div class="articletext">
-              <a name="<%= p.id %>"></a>
-              <h3 class="title"><% if (p.pass) { %><img src="<%= CDN %>/icon/key.gif" width="16" height="16" alt="[鎖]"> <% } %><a href="/<%= u.name %>/blog/<%= p.id %>"><%= p.title %></a></h3>
-              <div class="innertext"><% if (locked) { %>＊ 這篇文章已上鎖，需要密碼才能觀看 ＊<% } else { %><%- render(cut ? p.body.slice(0,300) + '…' : p.body) %><% } %></div>
-              <% if (locked || cut) { %>
-              <div class="extended"><a href="/<%= u.name %>/blog/<%= p.id %>">(繼續閱讀)</a></div>
-              <% } %>
+            <a name="<%= p.id %>"></a>
+            <h3 class="title"><% if (p.pass) { %><img src="/img/wretch2012/blog/lock.gif" width="21" height="16" border="0" align="absmiddle" alt="[鎖]"><% } %><a href="/<%= u.name %>/blog/<%= p.id %>"><%= p.title %></a><% if (p.featured) { %><a href="/blogs" target="_blank"><img src="/img/wretch2012/blog/hot.png" border="0" alt=""></a><% } %></h3>
+            <%- include('partials/blogshare', { shPost: p, shOwner: u.name, shTb: null, shCan: !!(me && !isOwner) }) %>
+
+            <div class="innertext"><% if (locked) { %>＊ 這篇文章已上鎖，需要密碼才能觀看 ＊<% } else { %><%- render(cut ? p.body.slice(0,300) + '…' : p.body) %><% } %></div>
+
+            <% if (locked || cut) { %>
+            <div class="extended"><a href="/<%= u.name %>/blog/<%= p.id %>">(繼續閱讀)</a></div>
+            <% } %>
               <br clear="all" />
-            </div>
+            </div> <!-- end of articletext -->
 
             <div class="posted">
-              <%= u.name %> at <a href="/blogs"><%= SITE_NAME %></a> at <%= wTime(p.created) %> post
-              | <a href="/<%= u.name %>/blog/<%= p.id %>#comments">迴響(<%= p.nc %>)</a>
-              | <a href="/<%= u.name %>/blog/<%= p.id %>#boxNewTrackback">引用</a>
-              | <a href="/<%= u.name %>/blog/<%= p.id %>">收藏</a>
-              | <a href="/<%= u.name %>/blog/<%= p.id %>">檢舉</a>
-              | 分類：<a href="/<%= u.name %>/blog?cat=<%= encodeURIComponent(p.category) %>"><%= p.category %></a>
-              <% if (p.mood) { %>| 心情：<%= p.mood %> <% } %><% if (p.weather) { %>| 天氣：<%= p.weather %><% } %>
-            </div>
+            <a href="/<%= u.name %>/blog"><%= u.name %></a> at <a href="/blogs">無名小站</a> at <%= wTime(p.created) %> post            | <a href="/<%= u.name %>/blog/<%= p.id %>#postComments">回應(<%= p.nc %>)</a>
+            | <a href="/<%= u.name %>/blog/<%= p.id %>#trackbacks">引用</a>
+            | <a href="/<%= u.name %>/blog/<%= p.id %>">收藏</a>
+            | <a href="/<%= u.name %>/blog/<%= p.id %>">檢舉</a>
+            | 分類：<a href="/<%= u.name %>/blog?cat=<%= encodeURIComponent(p.category) %>"><%= p.category %></a>
+            <% if (p.mood) { %>| 心情：<%= p.mood %> <% } %><% if (p.weather) { %>| 天氣：<%= p.weather %><% } %>
+                      </div>
 
-          </div><!-- /.blogbody2 -->
-        </div><!-- /.blogbody -->
-        <% }) %>
-      </div><!-- /.blog -->
+        </div> <!-- end of blogbody2 -->
+      </div> <!-- end of blogbody -->
+<% }) %>
 
-      <div class="side"><%- include('partials/pager') %></div>
+<% if (pages > 1) { %>
+        <div class="list-linkcontrol">
+          <% if (page > 1) { %><span class="previous"><a href="<%= qs(page-1) %>">上一頁</a></span><% } %>
+          <% for (let i=1; i<=pages; i++) { %><% if (i === page) { %><span class="current"><%= i %></span>
+          <% } else { %><span><a href="<%= qs(i) %>"><%= i %></a></span>
+          <% } %><% } %>
+          <% if (page < pages) { %><span class="next"><a href="<%= qs(page+1) %>">下一頁</a></span><% } %>
+        </div>
+<% } %>
 
-    </div><!-- /#content -->
+</div> <!-- end of class=blog -->
+</div> <!-- end of content -->
 
-    <div id="links"><div id="links2">
-      <%- include('partials/blogside') %>
-    </div></div>
+<div id="links">
 
-  </div><!-- /#main2 -->
+  <div id="links2">
+  <%- include('partials/blogside') %>
+  </div> <!-- end of links2 -->
 
-  <div id="extraDiv1"><span></span></div>
-  <div id="extraDiv2"><span></span></div>
-  <div id="extraDiv3"><span></span></div>
-  <div id="extraDiv4"><span></span></div>
-  <div id="extraDiv5"><span></span></div>
-  <div id="extraDiv6"><span></span></div>
+</div> <!-- end of links -->
 
-</div></div><!-- /#container2 /#container1 -->
-<%- include('partials/foot') %>
+<%- include('partials/blog2012_foot') %>

@@ -1,0 +1,52 @@
+<%# 個人頁（留言板家族）外框的上半段 — 留言板版型 skin 1/1911，總寬 958px
+    ─────────────────────────────────────────────────────────────
+    骨架逐字照 assets_src2/html/gb_guestbook_a000000010_20131226.html：
+
+      #container > #header（h1 + #description）
+                 > #main > #content（ul#main_tab + a.message + #mainSection）
+                         > #sidebar        ← partials/side.ejs，由 gbfoot 收尾
+                 > #footer
+
+    尺寸來自版型：#container 958 ＝ #content 612 ＋ #sidebar 330 ＋ #main 左右各 8。
+    #main_tab 是 position:absolute，靠 a.message（message.gif 120×39，高 55px）
+    撐出頁籤那條帶子——所以 a.message 一定要緊接在 ul#main_tab 後面，
+    不放的話要改放同高的 .w2-tabband 空帶，不然頁籤會壓到內容上。
+
+    原站這裡還有 #ad_gbook（728×90 橫幅廣告，overwrite.css 用 !important 撐開 90px）。
+    本站不放廣告，整個節點不輸出，那 90px 也就不存在。
+
+    呼叫端可傳：
+      head       h1 文字（預設「暱稱 的小站」）
+      here       目前在哪一頁：home / visitors / favs / feed / settings
+                 （用來決定預設頁籤哪一個是 .hover；留言板自己傳 tabs 蓋掉）
+      tabs       自訂頁籤 [{href,label,on}]
+      noMessage  不要「我要留言」那顆按鈕，改放空帶 %>
+<%
+  const gbTabs = locals.tabs || [
+    { href: '/' + u.name,             label: 'MyPage',   on: locals.here === 'home' },
+    { href: '/' + u.name + '/visitors', label: '誰來我家', on: locals.here === 'visitors' },
+    { href: '/' + u.name + '/favs',     label: '我的收藏', on: locals.here === 'favs' },
+    ...(isOwner ? [
+      { href: '/' + u.name + '/feed',     label: '好友動態', on: locals.here === 'feed' },
+      { href: '/' + u.name + '/settings', label: '個人設定', on: locals.here === 'settings' },
+    ] : []),
+  ];
+%>
+<div id="container">
+
+  <div id="header">
+    <h1><a href="/<%= u.name %>"><%= locals.head || (u.nick + ' 的小站') %></a></h1>
+    <div id="description"><%= u.intro ? u.intro.split('\n')[0].slice(0,60) : '' %></div>
+  </div>
+
+  <div id="main">
+    <div id="content">
+
+      <ul id="main_tab">
+        <% gbTabs.forEach(function(t){ %><li class="<%= t.on ? 'hover' : '' %>"><a href="<%= t.href %>"><%= t.label %></a></li><% }) %>
+      </ul>
+      <% if (locals.noMessage) { %><span class="w2-tabband"></span><% } else { %>
+      <a class="message" href="/<%= u.name %>/guestbook?tab=new">我要留言...</a>
+      <% } %>
+
+      <div id="mainSection">

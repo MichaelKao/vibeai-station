@@ -1,0 +1,107 @@
+<%
+  /* 內頁頁尾：#kukubar-lower ＋ #footer-switch（assets_src2/spec/chrome.md 第 5.2、6.2 節）
+     這支收掉 partials/head2012in.ejs 開的 #bigcontainer 與 #hugewrapper。
+
+     文案逐字照抄，連結改指本站的頁。三處刻意偏離，理由寫在旁邊。 */
+%></div><!-- /#bigcontainer -->
+</div><!-- /#hugewrapper -->
+
+<div id="kukubar-lower" class="kukubar-bar">
+  <%# 未登入時點「分類好文」跳出的小浮層 %>
+  <div class="login-request dropdown">
+    <div class="login-btn"><a class="footer-ok-btn" href="/login">登入</a></div>
+    <div class="login-msg login-msg-subscription">登入無名小站瀏覽分類好文</div>
+  </div>
+
+  <div class="left-side">
+    <div id="footer-feedback" class="bar-block"><a href="/help">我有建議</a></div>
+    <div id="footer-subscription" class="bar-block bar-block-click">
+      <a class="footer-subscription-btn" href="/blogs">分類好文<span class="bar-block-btn">展開</span></a>
+      <div id="scrb-panel" class="dropdown">
+        <div class="hd panel-block"></div>
+        <div class="bd panel-block"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="right-side">
+    <%# 原站這條跑馬是編輯台每天挑的「首頁好文：…」。本站沒有編輯台，
+        改成三個固定入口，前綴不硬掰成「首頁好文」。 %>
+    <div id="text-carousel">
+      <ul>
+        <li><a href="/blogs">熱門網誌</a></li>
+        <li><a href="/albums">熱門相簿</a></li>
+        <li><a href="/rank">人氣排行榜</a></li>
+      </ul>
+    </div>
+
+    <ul id="footer-ugc-compose">
+      <li class="bar-block bar-block-click blog-service"><em>網誌</em>
+        <ul class="dropdown">
+          <li><a class="bar-link" href="<%= me ? '/'+me.name+'/blog/new' : '/login' %>">發表文章</a></li>
+          <li><a class="bar-link" href="<%= me ? '/'+me.name+'/settings' : '/login' %>">網誌樣式</a></li>
+          <li class="last"><a class="bar-link" href="<%= me ? '/'+me.name+'/blog' : '/login' %>">網誌管理</a></li>
+        </ul>
+      </li>
+      <li class="bar-block bar-block-click album-service"><em>相簿</em>
+        <ul class="dropdown">
+          <li><a class="bar-link" href="<%= me ? '/'+me.name+'/album' : '/login' %>">上傳照片</a></li>
+          <li><a class="bar-link" href="<%= me ? '/'+me.name+'/settings' : '/login' %>">相簿樣式</a></li>
+          <li class="last"><a class="bar-link" href="<%= me ? '/'+me.name+'/album' : '/login' %>">相簿管理</a></li>
+        </ul>
+      </li>
+      <%# 原站第三個是「影音」。本站沒有影音服務，改成同樣三格的「好友」。 %>
+      <li class="bar-block bar-block-click video-service"><em>好友</em>
+        <ul class="dropdown">
+          <li><a class="bar-link" href="<%= me ? '/'+me.name+'/friends' : '/login' %>">好友名單</a></li>
+          <li><a class="bar-link" href="<%= me ? '/'+me.name+'/feed' : '/login' %>">好友動態</a></li>
+          <li class="last"><a class="bar-link" href="<%= me ? '/'+me.name+'/visitors' : '/login' %>">誰來我家</a></li>
+        </ul>
+      </li>
+    </ul>
+  </div>
+</div>
+
+<div id="footer-switch"><button type="button">關閉工具列</button></div>
+
+<script>
+/* kukubar 的展開／收合。原站是 kukubar.js（39KB，還含通知輪詢與訂閱面板的 Ajax），
+   本站只留純外觀的兩件事，用的是 kukubar.css 原本就有的 class：
+     .bar-block-click 被點 → 自己加 .expanded-btn（overflow:visible），
+                             底下的 .dropdown 加 .expanded（visibility:visible）
+     #footer-switch   被點 → #kukubar-lower 加 .hidden-footer（bottom:-25px）
+                             按鈕自己加 .off（換成展開的圖示） */
+(function(){
+  var bars = document.querySelectorAll('#kukubar-upper .bar-block-click, #kukubar-lower .bar-block-click');
+  function closeAll(){
+    for (var i = 0; i < bars.length; i++){
+      bars[i].classList.remove('expanded-btn');
+      var d = bars[i].querySelector('.dropdown');
+      if (d) d.classList.remove('expanded');
+    }
+  }
+  for (var i = 0; i < bars.length; i++) (function(bar){
+    var drop = bar.querySelector('.dropdown');
+    if (!drop) return;
+    bar.addEventListener('click', function(e){
+      // 下拉裡面的連結照常點得到，不要被收合攔掉
+      if (e.target.closest('.dropdown')) return;
+      var open = bar.classList.contains('expanded-btn');
+      closeAll();
+      if (!open){ bar.classList.add('expanded-btn'); drop.classList.add('expanded'); }
+      e.preventDefault();
+    });
+  })(bars[i]);
+  document.addEventListener('click', function(e){
+    if (!e.target.closest('.bar-block-click')) closeAll();
+  });
+
+  var sw = document.querySelector('#footer-switch button'), lower = document.getElementById('kukubar-lower');
+  if (sw && lower) sw.addEventListener('click', function(){
+    lower.classList.toggle('hidden-footer');
+    sw.parentNode.classList.toggle('off');
+  });
+})();
+</script>
+</body>
+</html>

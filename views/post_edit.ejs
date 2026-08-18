@@ -1,106 +1,123 @@
-<%- include('partials/head',{title: post ? '編輯文章' : '發表文章', layout:'blog'}) %>
-<%# 發表／編輯文章（WRETCH_DOM.md 第 5 節：網誌頁用 #container1 > #main2 浮動兩欄，不是 700px table）
-    表單 action／method／欄位 name 一律沿用原本的：
-      新增 POST /:name/blog/new   編輯 POST /:name/blog/:id/edit
-      title / category / topic / pass / mood / weather / body
-    格式工具列（[b][i][u][color][img]）、顏文字、插入自己的照片三個功能都保留，
-    只把外觀換成無名的 .sidetitle + .side。 %>
-<div id="container1"><div id="container2">
+<%
+  /* 發表／編輯文章
+     ─────────────────────────────────────────────────────────────
+     原站的發文頁（/blog/post.php）**存檔裡查無**（spec/blog.md 第 11 節），
+     所以這一頁沒有可照抄的 DOM。做法是不自創新的視覺語言：
+     整頁套用文章卡片那組骨架（.date > .datediv ＋ .blogbody > .blogbody2 > .articletext），
+     表單本身用一張 .w2b-form 表格，樣式集中在 wretch2012-blog-site.css 並附理由。
 
-  <div id="banner">
-    <a href="/"><img id="sitelogo" src="<%= SITE_LOGO %>" alt="<%= SITE_NAME %>"></a>
-    <div id="pageheader">
-      <h1><a href="/<%= u.name %>/blog"><%= u.nick %> 的小站</a></h1>
-      <span class="description"><%= u.intro ? u.intro.split('\n')[0].slice(0,60) : SITE_DESC %></span>
-      <div id="description2"><span class="description"></span></div>
-    </div>
-  </div>
+     表單 action／method／欄位 name 一律沿用原本的（對得上 src/server.js）：
+       新增 POST /:name/blog/new     編輯 POST /:name/blog/:id/edit
+       欄位 title / category / topic / pass / mood / weather / body
+     （form 沒有 action，就送回目前這個網址，跟原本的作法一樣。）
 
-  <div id="main2">
+     **三個編輯功能一個都沒少**，只換外觀：
+       1. 格式工具列 [b] [i] [u] [color] [img]   → button[data-wrap]
+       2. 顏文字（src/format.js 的 EMOTES）      → button[data-ins]
+       3. 插入自己的照片                          → a[data-img]（點縮圖插到游標位置）
+     行為由頁尾那段 JS 提供，與改版前一字未改。
 
-    <div id="content">
-      <div class="blog">
-        <div class="blogbody"><div class="blogbody2">
+     EJS 用 with(locals)，不能宣告和 local 同名的 const。 */
+  const isNew = !post;
+%>
+<%- include('partials/blog2012_head', { title: (isNew ? '發表文章' : '編輯文章') + ' - ' + u.nick + ' - 無名小站',
+                                        artTitle: isNew ? '發表文章' : '編輯文章', medium: '' }) %>
+
+<div id="content">
+<input type="hidden" name="check_url" value="on">
+<div class="blog" >
+
+      <div class="date">
+        <div class="datediv">
+          <%= isNew ? '發表文章' : '編輯文章' %>        </div>
+      </div>
+
+      <div class="blogbody">
+        <div class="blogbody2">
           <div class="articletext">
 
-            <div class="blogtools">
-              [ <a href="/<%= u.name %>/blog/new">發表文章</a> |
-                <a href="/<%= u.name %>/settings">網誌樣式</a> |
-                <a href="/<%= u.name %>/settings">網誌設定</a> ]
-            </div>
+            <form method="post">
+            <table class="w2b-form">
+              <tr>
+                <th><label for="ed_title">標題</label></th>
+                <td><input id="ed_title" name="title" size="48" maxlength="100" value="<%= post ? post.title : '' %>" required></td>
+              </tr>
+              <tr>
+                <th><label for="ed_cat">個人分類</label></th>
+                <td><input id="ed_cat" name="category" list="cats" maxlength="20" value="<%= post ? post.category : '' %>" placeholder="未分類"><datalist id="cats"><% cats.forEach(c=>{ %><option value="<%= c.category %>"><% }) %></datalist></td>
+              </tr>
+              <tr>
+                <th><label for="ed_topic">站內分類</label></th>
+                <td><select id="ed_topic" name="topic"><option value="">（不分類）</option><% blogTopics.forEach(t=>{ %><option <%= post && post.topic===t ? 'selected' : '' %>><%= t %></option><% }) %></select>
+                  <span class="w2b-hint">會出現在網誌總站</span></td>
+              </tr>
+              <tr>
+                <th><label for="ed_pass">密碼</label></th>
+                <td><input id="ed_pass" name="pass" size="14" maxlength="20" value="<%= post ? post.pass : '' %>">
+                  <span class="w2b-hint">留空＝公開；設了密碼別人要輸入才看得到</span></td>
+              </tr>
+              <tr>
+                <th><label for="ed_mood">心情／天氣</label></th>
+                <td><select id="ed_mood" name="mood"><option value="">（不設定）</option><% moods.forEach(m=>{ %><option <%= post && post.mood===m ? 'selected' : '' %>><%= m %></option><% }) %></select>
+                  　<select name="weather"><option value="">（不設定）</option><% weathers.forEach(w=>{ %><option <%= post && post.weather===w ? 'selected' : '' %>><%= w %></option><% }) %></select></td>
+              </tr>
 
-            <div class="sidetitle"><%= post ? '編輯文章' : '發表文章' %></div>
-            <div class="side">
-              <form method="post" class="gb"><table class="pf">
-                <tr><td width="60">標題</td>
-                  <td><input name="title" size="60" maxlength="100" value="<%= post ? post.title : '' %>" required></td></tr>
+              <tr>
+                <th>工具</th>
+                <td>
+                  <div class="edtools">
+                    <button type="button" data-wrap="[b]|[/b]">粗體</button>
+                    <button type="button" data-wrap="[i]|[/i]">斜體</button>
+                    <button type="button" data-wrap="[u]|[/u]">底線</button>
+                    <button type="button" data-wrap="[color=#cc3399]|[/color]">顏色</button>
+                    <button type="button" data-wrap="[img]|[/img]">圖片</button>
+                  </div>
+                  <div class="edtools">顏文字：<% emotes.forEach(e=>{ %><button type="button" class="emo" data-ins="<%= e[0] %>" title="<%= e[0] %>"><%= e[1] %></button><% }) %></div>
+                </td>
+              </tr>
 
-                <tr><td>分類</td>
-                  <td><input name="category" list="cats" maxlength="20" value="<%= post ? post.category : '' %>" placeholder="未分類"><datalist id="cats"><% cats.forEach(c=>{ %><option value="<%= c.category %>"><% }) %></datalist></td></tr>
+              <tr>
+                <th><label for="body">內容</label></th>
+                <td><textarea id="body" name="body" cols="56" rows="18" required><%= post ? post.body : '' %></textarea>
+                  <span class="w2b-hint">可用 [b]粗體[/b]、[i]斜體[/i]、[u]底線[/u]、[color=#f60]顏色[/color]、[img]圖片網址[/img]，網址會自動變連結。</span></td>
+              </tr>
 
-                <tr><td>站內分類</td>
-                  <td><select name="topic"><option value="">（不分類）</option><% blogTopics.forEach(t=>{ %><option <%= post && post.topic===t ? 'selected' : '' %>><%= t %></option><% }) %></select>
-                    <span class="font_desc">會出現在網誌總站</span></td></tr>
+              <% if (photos.length) { %>
+              <tr>
+                <th>插入照片</th>
+                <td>
+                  <div class="photopick">
+                    <% photos.forEach(p=>{ %><a href="#" data-img="<%= p.url %>" title="點一下插入文章"><img src="<%= p.thumb || p.url %>" alt=""></a><% }) %>
+                  </div>
+                  <span class="w2b-hint">點縮圖就會把該張照片插入游標位置。</span>
+                </td>
+              </tr>
+              <% } %>
 
-                <tr><td>密碼</td>
-                  <td><input name="pass" size="14" maxlength="20" value="<%= post ? post.pass : '' %>">
-                    <span class="font_desc">留空＝公開；設了密碼別人要輸入才看得到</span></td></tr>
+              <tr>
+                <th></th>
+                <td><input type="submit" value="<%= isNew ? '發表' : '儲存' %>">
+                  <input type="button" id="ed_cancel" value="取消"></td>
+              </tr>
+            </table>
+            </form>
 
-                <tr><td>心情</td>
-                  <td><select name="mood"><option value="">（不設定）</option><% moods.forEach(m=>{ %><option <%= post && post.mood===m ? 'selected' : '' %>><%= m %></option><% }) %></select>
-                    　天氣 <select name="weather"><option value="">（不設定）</option><% weathers.forEach(w=>{ %><option <%= post && post.weather===w ? 'selected' : '' %>><%= w %></option><% }) %></select></td></tr>
-
-                <tr><td>工具</td>
-                  <td>
-                    <div class="edtools">
-                      <button type="button" class="btn" data-wrap="[b]|[/b]">粗體</button>
-                      <button type="button" class="btn" data-wrap="[i]|[/i]">斜體</button>
-                      <button type="button" class="btn" data-wrap="[u]|[/u]">底線</button>
-                      <button type="button" class="btn" data-wrap="[color=#cc3399]|[/color]">顏色</button>
-                      <button type="button" class="btn" data-wrap="[img]|[/img]">圖片</button>
-                    </div>
-                    <div class="edtools">顏文字：<% emotes.forEach(e=>{ %><button type="button" class="emo" data-ins="<%= e[0] %>" title="<%= e[0] %>"><%= e[1] %></button><% }) %></div>
-                  </td></tr>
-
-                <tr><td>內容</td>
-                  <td><textarea id="body" name="body" cols="70" rows="18" required><%= post ? post.body : '' %></textarea>
-                    <div class="font_desc">可用 [b]粗體[/b]、[i]斜體[/i]、[u]底線[/u]、[color=#f60]顏色[/color]、[img]圖片網址[/img]，網址會自動變連結。</div></td></tr>
-
-                <% if (photos.length) { %>
-                <tr><td>插入照片</td>
-                  <td>
-                    <div class="photopick">
-                      <% photos.forEach(p=>{ %><a href="#" data-img="<%= p.url %>" title="點一下插入文章"><img src="<%= p.thumb || p.url %>" alt=""></a><% }) %>
-                    </div>
-                    <span class="font_desc">點縮圖就會把該張照片插入游標位置。</span>
-                  </td></tr>
-                <% } %>
-
-                <tr><td></td>
-                  <td><input type="submit" class="btn" value="<%= post ? '儲存' : '發表' %>">
-                    <a href="/<%= u.name %>/blog">取消</a></td></tr>
-              </table></form>
-            </div>
-
+              <br clear="all" />
           </div>
-        </div></div>
+        </div>
       </div>
-    </div>
 
-    <div id="links"><div id="links2">
-      <%- include('partials/blogside') %>
-    </div></div>
+</div> <!-- end of class=blog -->
+</div> <!-- end of content -->
 
-  </div><!-- /#main2 -->
+<div id="links">
 
-  <div id="extraDiv1"><span></span></div>
-  <div id="extraDiv2"><span></span></div>
-  <div id="extraDiv3"><span></span></div>
-  <div id="extraDiv4"><span></span></div>
-  <div id="extraDiv5"><span></span></div>
-  <div id="extraDiv6"><span></span></div>
+  <div id="links2">
+  <%- include('partials/blogside') %>
+  </div> <!-- end of links2 -->
 
-</div></div><!-- /#container2 /#container1 -->
+</div> <!-- end of links -->
+
 <script>
 (function(){
   var ta=document.getElementById('body');
@@ -117,7 +134,8 @@
     if(m){ ev.preventDefault(); insert(m.getAttribute('data-ins')); return; }
     var p=ev.target.closest('[data-img]');
     if(p){ ev.preventDefault(); insert('\n[img]'+p.getAttribute('data-img')+'[/img]\n'); return; }
+    if(ev.target.id==='ed_cancel'){ location.href='/<%= u.name %>/blog'; }
   });
 })();
 </script>
-<%- include('partials/foot') %>
+<%- include('partials/blog2012_foot') %>

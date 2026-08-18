@@ -1,0 +1,115 @@
+<%
+  /* 2012 內頁頂端工具列 #kukubar-upper
+     ─────────────────────────────────────────────────────────────
+     DOM 逐節點照抄 assets_src2/html/blog_2012_default_skin_afuuu.html，
+     規格見 assets_src2/spec/chrome.md 第 5.1 / 6.1 節。只換 href，不動結構與 class。
+
+     樣式來自 public/wretch2012-blog.css 尾端串進來的 common/css/kukubar.css
+     （見 tools/build-css2012.mjs 的 bundle 表），素材在 /img/wretch2012/chrome/。
+
+     登入後的節點原站沒有存檔，chrome.md 第 5.3 節是由 CSS/JS 選擇器反推的【推】，
+     這裡照那份反推做：暱稱 + span.bar-block-btn-login + ul.dropdown。
+
+     這一輪保留原版品牌：logo 用 kukubar.css 的 ico_wretch_logo_24.png，
+     站名文字寫「無名小站」（WRETCH_2012.md 第 4 節第 1 條）。
+
+     EJS 用 with(locals)，不能宣告和 local 同名的 const；
+     非必定存在的 local 一律走 locals.xxx。 */
+  const kkService = locals.kkService || 'blog';
+  const kkMe      = locals.me || null;
+  /* 工具列底色是**每一頁自己的 inline <style> 決定的**，不在 kukubar.css 裡
+     （chrome.md 第 2.1 節）。存檔實測：網誌頁是深色（#353535→#000 ＋ font-white），
+     留言板／名片／好友頁是淺色（#FFFFFF→#EEEDDD ＋ font-black）。
+     預設沿用網誌那一版，呼叫端傳 kkTheme:'light' 就切成留言板那一版。 */
+  const kkLight   = locals.kkTheme === 'light';
+  /* #infozone 原站放編輯部挑的「今日主題」。內頁的 route 沒有這份 local，
+     用手邊有的 recent[0]（這個網誌的最新文章）湊，前綴保留原站的「今日主題：」。 */
+  const kkInfo    = (locals.recent && locals.recent.length) ? locals.recent[0] : null;
+  const kkInfoUrl = (kkInfo && locals.u) ? '/' + u.name + '/blog/' + kkInfo.id : '/blogs';
+%>
+<style>
+.kukubar-customized {
+    background:#000000; /* old browsers */
+    background: -moz-linear-gradient(top, #353535 0%, #000000 100%); /* firefox */
+    background: -webkit-gradient(linear, left top, left bottom, color-stop(0%,#353535), color-stop(100%,#000000)); /* webkit */
+
+}
+</style>
+<div id="kukubar-upper" class="font-white kukubar-customized kukubar-bar">
+    <div class="left-side">
+        <div id="wretch-logo" class="bar-block bar-block-click">
+        <h1><a class="bar-link" tabindex="1" href="/">無名小站</a></h1>
+        </div>
+        <div id="wretch-service" class="bar-block bar-block-click">
+            <a class="current-service bar-link theme" tabindex="2" href="/blogs">Blog</a>
+            <span class="bar-block-btn" tabindex="3">展開</span>
+            <ul class="dropdown <%= kkService %>-service">
+                <li class="album-index"><a class="bar-link" href="/albums">Album</a></li>
+                <li class="blog-index"><a class="bar-link" href="/blogs">Blog</a></li>
+                <li class="video-index"><a class="bar-link" href="/help">Video</a></li>
+                <li class="digu-index"><a class="bar-link" href="/help">Digu</a></li>
+                <li class="join-index"><a class="bar-link" href="/help">Join</a></li>
+                <li><a class="bar-link" href="/">Yahoo!</a></li>
+                <li><a class="bar-link" href="/help">Help</a></li>
+                <li><a class="bar-link" href="/help">Premium</a></li>
+            </ul>
+        </div>
+        <div id="infozone">
+             <ul>
+                <li><a href="<%= kkInfoUrl %>" class="theme">今日主題：<%= kkInfo ? kkInfo.title : '逛逛大家的網誌' %></a></li>
+             </ul>
+        </div>
+    </div>
+
+
+    <div class="right-side">
+        <div id="wretch-search" class="bar-block">
+            <%# 站內搜尋：src/server.js 的 app.get('/search') 只讀 q，所以輸入框 name 換成 q。
+                三顆 radio（name=type）是原站的服務切換，後端沒有這個參數、會被忽略，
+                但 .service-list 與 legend 的版面要靠它們，照原樣留著。 %>
+            <form method="get" action="/search" name="searchForm">
+                            <fieldset>
+                    <legend>Article<span>選擇服務</span></legend>
+                    <div class="service-list dropdown">
+                        <input type="radio" id="srch-blog" name="type" value="article" checked="checked" data="checked">
+                        <label for="srch-blog" _target="Article Search">Article</label>
+                        <input type="radio" id="srch-album" name="type" value="photo" data="false">
+                        <label for="srch-album" _target="Album Search">Album</label>
+                        <input type="radio" id="srch-video" name="type" value="video" data="false">
+                        <label for="srch-video" _target="Video Search">Video</label>
+                    </div>
+                    <div class="search-field">
+                        <label for="wretch-search-text" class="hidden">搜尋</label>
+                        <input id="wretch-search-text" type="text" name="q" title="Article Search" value="" class="blur">
+                        <input id="wretch-search-btn" type="submit" value="送出">
+                    </div>
+                </fieldset>
+            </form>
+        </div>
+        <% if (kkMe) { %>
+        <%# 登入後：chrome.md 5.3【推】——暱稱 + 展開鈕 + 下拉選單 %>
+        <div id="wretch-login" class="bar-block bar-block-click bar-link">
+            <span class="theme"><%= kkMe.nick %></span>
+            <span class="bar-block-btn-login" tabindex="4">展開</span>
+            <ul class="dropdown">
+                <li><a class="bar-link" href="/<%= kkMe.name %>">我的小站</a></li>
+                <li><a class="bar-link" href="/<%= kkMe.name %>/blog/new">發表文章</a></li>
+                <li><a class="bar-link" href="/<%= kkMe.name %>/settings">個人設定</a></li>
+                <li><a class="bar-link" href="/<%= kkMe.name %>/favs">我的收藏</a></li>
+                <% if (kkMe.admin) { %><li><a class="bar-link" href="/admin">後台</a></li><% } %>
+                <li><form method="post" action="/logout"><button class="bar-link">登出</button></form></li>
+            </ul>
+        </div>
+        <% } else { %>
+        <div id="wretch-login" class="bar-block bar-block-click bar-link no-hover">
+                            <ul class="login-links">
+                <li class="link-item first"><a class="bar-link theme" href="/login">Login</a></li>
+                <li class="link-item"><a class="bar-link theme" href="/register">Register</a></li>
+            </ul>
+                        </div>
+        <% } %>
+        <div id="cam">
+        <a class="theme" href="/">Yahoo!</a>
+        </div>
+    </div>
+</div>

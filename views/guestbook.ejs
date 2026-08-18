@@ -1,96 +1,209 @@
-<%# 留言板（WRETCH_DOM.md 第 6 節、WRETCH_SPEC.md 4-E / 5-6）
-    頁籤：留言板 / 系統訊息（只有站主看得到）/ 我要留言
-    每則留言五行逐字：暱稱／主題／時間／內容／通知，右上角「檢舉」
-    悄悄話：secret=1 且看的人不是站主時，暱稱／主題／內容三處全部顯示「悄悄話」 %>
-<%- include('partials/head',{title:u.nick+'的留言板',layout:'site'}) %>
-<%- include('partials/sitetop') %>
+<%# 留言板 — 無名小站 2012 最後版，官方骨架 guestbook/css/layout.css ＋ 原廠版型 skin 1/1911
+    ─────────────────────────────────────────────────────────────
+    每一則留言的 DOM 逐字照 assets_src2/html/gb_guestbook_a000000010_20131226.html：
 
-<table width="700" border="0" cellpadding="0" cellspacing="0" align="center"><tr>
-  <td class="side1"></td>
-  <td id="content1">
+      ul.msg_body > li.msg_content > ul > li.msg_img    （60px 頭像，絕對定位 left:20 top:12）
+                                        > li.msg_man    <span>暱稱：</span>
+                                        > li.msg_title  <span>主題：</span><strong>…</strong><cite>鎖頭</cite>
+                                        > li.msg_date   <span>時間：</span>… ＋ 檢舉
+                                        > li.msg_word   <span>內容：</span><strong>…</strong>
+                                        > li.msg_info   <span>通知：</span>
+                  > li.reply_content > ul > li.reply_word <span>板主回覆：</span>
 
-<div class="tabs"><a href="/<%= u.name %>/guestbook"<%- tab==='list'?' class="on"':'' %>>留言板</a><% if(isOwner){ %><a href="/<%= u.name %>/guestbook?tab=sys"<%- tab==='sys'?' class="on"':'' %>>系統訊息<% if(unread){ %>(<%= unread %>)<% } %></a><% } %><a href="/<%= u.name %>/guestbook?tab=new"<%- tab==='new'?' class="on"':'' %>>我要留言</a></div>
+    鎖頭在**主題後面**的 <cite> 裡（原始檔就是這樣寫的，不是放在主題前面）。
+    悄悄話：secret=1 且看的人不是站主時，暱稱／主題／內容三處全部顯示「悄悄話」。
 
-<% if (tab==='sys') { %>
+    頁籤：留言板 / 系統訊息（只有站主看得到）；「我要留言」在原站是右邊那顆
+    a.message 按鈕（message.gif 120×39），不是第三個頁籤——這裡照原樣。
+
+    表單 action 與欄位 name 對應 src/server.js：
+      POST /:name/guestbook            author / subject / body / secret
+      POST /:name/guestbook/:id/reply  reply
+      POST /:name/guestbook/:id/del
+      POST /report                     kind / target / url / reason %>
+<%
+  // 表情圖：原站 guestbook/img/Smileys/ 那 20 張（18×18）。
+  // 留言內容一律先過 format.js 的 render()（會 escape 全部字元），
+  // 之後才把 [img]名稱[/img] 這種 token 換成 <img>——名稱是白名單裡的固定字串，
+  // 使用者插不進任何自己的屬性或標籤。
+  const GB_SMILEYS = ['angry','biggrin','bighug','blushing','broken_heart','confused','crying',
+    'happy','laughing','lovestruck','notalking','phbbbbt','sad','shameonyou','straightface',
+    'surprise','tongue','waiting','winking','worried'];
+  const GB_SMILEY_RE = new RegExp('\\[img\\](' + GB_SMILEYS.join('|') + ')\\[\\/img\\]', 'g');
+  const gbBody = s => render(s).replace(GB_SMILEY_RE,
+    (m, n) => '<img class="smiley" src="/img/wretch2012/gb/Smileys/' + n + '.gif" width="18" height="18" alt="' + n + '">');
+%>
+<%- include('partials/head2012in', {
+      title: u.nick + '的留言板 - 無名小站',
+      page: 'w2-gb',
+      skin: ['/wretch2012-skin-guestbook.css'] }) %>
+
+<%- include('partials/gbtop', {
+      head: u.nick + ' 的留言板',
+      tabs: [
+        { href:'/'+u.name+'/guestbook', label:'留言板', on: tab==='list' },
+        ...(isOwner ? [{ href:'/'+u.name+'/guestbook?tab=sys',
+                         label:'系統訊息' + (unread ? '('+unread+')' : ''), on: tab==='sys' }] : []),
+      ] }) %>
+
+<% if (tab === 'sys') { %>
 <%# ===== 系統訊息（站方通知、板主收到新留言的通知） ===== %>
-<div class="side" align="center">共 <b><%= total %></b> 則系統訊息</div>
-<div class="side">
-<% if(!sys.length){ %><div class="gbempty">沒有系統訊息</div><% } %>
-<% sys.forEach(m=>{ %>
-<div class="gbitem">
-  <div>暱稱：<%= SITE_NAME %></div>
-  <div>主題：<%= m.title || '無標題' %></div>
-  <div>時間：<%= m.created %></div>
-  <div>內容：<span style="white-space:pre-wrap"><%= m.body %></span></div>
-  <div>通知：</div>
-</div>
-<% }) %>
-</div>
-<%# 系統訊息的分頁要帶著 tab=sys，不能用共用的 partials/pager（它只送 ?p=） %>
-<% if(pages>1){ %>
-<div class="side" align="center"><div class="pager">
-<% if(page>1){ %><a href="?tab=sys&p=<%= page-1 %>">上一頁</a> <% } %>
-<% for(let i=1;i<=pages;i++){ %><% if(i===page){ %><b>[<%= i %>]</b><% } else { %><a href="?tab=sys&p=<%= i %>"><%= i %></a><% } %> <% } %>
-<% if(page<pages){ %><a href="?tab=sys&p=<%= page+1 %>">下一頁</a><% } %>
-</div></div>
+<div id="search">共 <b><%= total %></b> 則系統訊息</div>
+
+<% if (pages > 1) { %>
+<ul class="page_control">
+  <% if (page > 1) { %><a id="prev" href="?tab=sys&p=<%= page-1 %>">上一頁</a><% } %>
+  <% for (let i = 1; i <= pages; i++) { %><% if (i === page) { %><%= i %><% } else { %><a href="?tab=sys&p=<%= i %>"><%= i %></a><% } %><% } %>
+  <% if (page < pages) { %><a id="next" href="?tab=sys&p=<%= page+1 %>">下一頁</a><% } %>
+</ul>
 <% } %>
 
-<% } else if (tab==='new') { %>
-<%# ===== 我要留言（表單 action 與欄位 name 不可更動） ===== %>
-<div class="side">
-<form method="post" action="/<%= u.name %>/guestbook">
-<table border="0" cellpadding="2" cellspacing="0">
-<tr><td align="right" valign="top">暱稱：</td>
-    <td><% if(me){ %><b><%= me.nick %></b><% } else { %><input class="small-c" type="text" name="author" size="20" maxlength="20" required><% } %></td></tr>
-<tr><td align="right" valign="top">主題：</td>
-    <td><input class="small-c" type="text" name="subject" size="36" maxlength="40"></td></tr>
-<tr><td align="right" valign="top">內容：</td>
-    <td><textarea class="small-c" name="body" cols="50" rows="6" maxlength="500" required></textarea></td></tr>
-<tr><td></td>
-    <td><label><input type="checkbox" name="secret"> 悄悄話（只有板主看得到）</label></td></tr>
-<tr><td></td><td><input class="small-c" type="submit" value="送出"></td></tr>
-</table>
-</form>
+<div id="msg_list">
+  <% if (!sys.length) { %><div class="msg_body"><div class="w2-empty">沒有系統訊息</div></div><% } %>
+  <% sys.forEach(m => { %>
+  <ul class="msg_body">
+    <li class="msg_content">
+      <ul>
+        <li class="msg_img"><img src="/favicon.ico" width="60" height="60" alt="無名小站"></li>
+        <li class="msg_man"><span>暱稱：</span>無名小站</li>
+        <li class="msg_title"><span>主題：</span><strong><%= m.title || '無標題' %></strong><cite></cite></li>
+        <li class="msg_date"><span>時間：</span><%= m.created %></li>
+        <li class="msg_word"><span>內容：</span><strong><%- gbBody(m.body) %></strong></li>
+        <li class="msg_info"><span>通知：</span></li>
+      </ul>
+    </li>
+  </ul>
+  <% }) %>
 </div>
+
+<% if (pages > 1) { %>
+<ul class="page_control">
+  <% if (page > 1) { %><a id="prev" href="?tab=sys&p=<%= page-1 %>">上一頁</a><% } %>
+  <% for (let i = 1; i <= pages; i++) { %><% if (i === page) { %><%= i %><% } else { %><a href="?tab=sys&p=<%= i %>"><%= i %></a><% } %><% } %>
+  <% if (page < pages) { %><a id="next" href="?tab=sys&p=<%= page+1 %>">下一頁</a><% } %>
+</ul>
+<% } %>
+
+<% } else if (tab === 'new') { %>
+<%# ===== 我要留言 =====
+    骨架照 assets_src2/html/gb_gbook_addpost_a0913375433_20110625.html：
+      #msg_list > #msg_added > h2 + div.msg_body > form > ul > li.add_img / li.add_title / li.add_name / …
+    原站還有 Email／URL／記住我／驗證碼四欄，本站的 POST /:name/guestbook
+    只收 author / subject / body / secret，所以那四欄不做假的。 %>
+<div id="msg_list">
+  <div id="msg_added">
+    <h2>我要留言</h2>
+    <div class="msg_body">
+      <form method="post" action="/<%= u.name %>/guestbook">
+        <ul>
+          <li class="add_img"><img src="<%= u.avatar %>" width="90" height="90" alt="<%= u.nick %>"></li>
+          <li class="add_title">
+            <a href="/<%= u.name %>/guestbook"><b><%= u.nick %> 的留言板</b></a>
+          </li>
+          <li class="add_name"><span>暱稱</span>
+            <% if (me) { %><b><%= me.nick %></b>
+            <% } else { %><input class="small-c" type="text" name="author" size="20" maxlength="20" value="<%= guest && guest.nick ? guest.nick : '' %>" required><% } %>
+          </li>
+          <li><span>悄悄話</span>
+            <label><input type="checkbox" name="secret" value="1"> 只有板主看得到</label>
+          </li>
+          <li><span>主題</span>
+            <input class="small-c" type="text" name="subject" size="36" maxlength="40">
+          </li>
+          <li><span>表情圖案</span>
+            <span class="w2-emo">
+              <% GB_SMILEYS.forEach(n => { %><a href="#" data-emo="<%= n %>"><img src="/img/wretch2012/gb/Smileys/<%= n %>.gif" width="18" height="18" alt="<%= n %>"></a><% }) %>
+            </span>
+          </li>
+          <li><span>內容</span>
+            <textarea class="small-c" name="body" id="content_data" cols="50" rows="10" maxlength="500" required></textarea>
+          </li>
+          <li><span>&nbsp;</span>
+            <input class="small-c" type="submit" name="leavemsg" value="送出">
+            <input class="small-c" type="reset" value="清除">
+          </li>
+        </ul>
+      </form>
+    </div>
+  </div>
+</div>
+<script>
+/* 表情圖：把 [img]名稱[/img] 插到游標位置。原站是 emoticon() 那支 JS，做的事一樣。 */
+document.addEventListener('click', function(e){
+  var a = e.target.closest('.w2-emo a'); if (!a) return; e.preventDefault();
+  var t = document.getElementById('content_data'), tag = '[img]' + a.getAttribute('data-emo') + '[/img]';
+  var s = t.selectionStart, n = t.selectionEnd;
+  t.value = t.value.slice(0, s) + tag + t.value.slice(n);
+  t.selectionStart = t.selectionEnd = s + tag.length; t.focus();
+});
+</script>
 
 <% } else { %>
 <%# ===== 留言板本體 ===== %>
-<div class="side" align="center">共 <b><%= total %></b> 則留言</div>
-<div class="side" align="center"><%- include('partials/pager') %></div>
+<div id="search">共 <b><%= total %></b> 則留言</div>
 
-<div class="side">
-<%# 原站這一列是留言搜尋的範圍下拉（標題／來自／內容／回覆），本站沒有留言搜尋，
-    只留下同樣的四個字當表頭，不做成假的表單 %>
-<div class="gbhead">標題 ｜ 來自 ｜ 內容 ｜ 回覆</div>
-<% if(!msgs.length){ %><div class="gbempty">還沒有留言</div><% } %>
-<% msgs.forEach(m=>{ const hide = m.secret && !isOwner; %>
-<div class="gbitem">
-  <div class="gbtool" align="right"><a href="#" class="reportlink" data-kind="guestbook" data-id="<%= m.id %>">檢舉</a><% if(isOwner){ %>
-    <form method="post" action="/<%= u.name %>/guestbook/<%= m.id %>/del" style="display:inline" onsubmit="return confirm('刪除這則留言？')"><button class="lnk">刪除</button></form><% } %></div>
-  <div>暱稱：<%= hide ? '悄悄話' : m.author %></div>
-  <div>主題：<% if(m.secret){ %><img src="<%= CDN %>/icon/key.gif" width="16" height="16" align="absmiddle" alt="悄悄話"><% } %><%= hide ? '悄悄話' : (m.subject || '無標題') %></div>
-  <div>時間：<%= m.created %></div>
-  <div>內容：<span style="white-space:pre-wrap"><%= hide ? '悄悄話' : m.body %></span></div>
-  <div>通知：</div>
-  <% if(m.reply && !hide){ %><div class="reply"><b>板主回覆</b>：<%= m.reply %></div><% } %>
-  <% if(isOwner){ %>
-  <div class="gbreply"><form method="post" action="/<%= u.name %>/guestbook/<%= m.id %>/reply"><input class="small-c" type="text" name="reply" size="40" maxlength="500" value="<%= m.reply %>"> <input class="small-c" type="submit" value="回覆"></form></div>
-  <% } %>
+<% if (pages > 1) { %>
+<ul class="page_control">
+  <% if (page > 1) { %><a id="prev" href="?p=<%= page-1 %>">上一頁</a><% } %>
+  <% for (let i = 1; i <= pages; i++) { %><% if (i === page) { %><%= i %><% } else { %><a href="?p=<%= i %>"><%= i %></a><% } %><% } %>
+  <% if (page < pages) { %><a id="next" href="?p=<%= page+1 %>">下一頁</a><% } %>
+</ul>
+<% } %>
+
+<div id="msg_list">
+  <% if (!msgs.length) { %><div class="msg_body"><div class="w2-empty">還沒有留言，來當第一個吧</div></div><% } %>
+  <% msgs.forEach(m => { const hide = m.secret && !isOwner; %>
+  <ul class="msg_body">
+    <li class="msg_content">
+      <ul>
+        <li class="msg_img"><img src="/img/avatar.png" width="60" height="60" alt=""></li>
+        <li class="msg_man"><span>暱稱：</span><%= hide ? '悄悄話' : m.author %></li>
+        <li class="msg_title"><span>主題：</span><strong><%= hide ? '悄悄話' : (m.subject || '無標題') %></strong><cite><% if (m.secret) { %><img src="/img/wretch2012/gb/lock.gif" width="21" height="16" alt="悄悄話"><% } %></cite></li>
+        <li class="msg_date"><span>時間：</span><%= m.created %>
+          &nbsp;<a href="#" class="reportlink" data-kind="guestbook" data-id="<%= m.id %>">檢舉</a></li>
+        <li class="msg_word"><span>內容：</span><strong><% if (hide) { %>悄悄話<% } else { %><%- gbBody(m.body) %><% } %></strong></li>
+        <li class="msg_info"><span>通知：</span></li>
+      </ul>
+    </li>
+    <% if (m.reply && !hide) { %>
+    <li class="reply_content">
+      <ul><li class="reply_word"><span>板主回覆：</span><strong><%- gbBody(m.reply) %></strong></li></ul>
+    </li>
+    <% } %>
+    <% if (isOwner) { %>
+    <li class="reply_content">
+      <form method="post" action="/<%= u.name %>/guestbook/<%= m.id %>/reply">
+        <span>板主回覆：</span>
+        <textarea name="reply" rows="2" maxlength="500"><%= m.reply %></textarea>
+        <input class="small-c" type="submit" value="回覆">
+      </form>
+      <form class="w2-del" method="post" action="/<%= u.name %>/guestbook/<%= m.id %>/del" onsubmit="return confirm('刪除這則留言？')">
+        <input class="small-c" type="submit" value="刪除這則留言">
+      </form>
+    </li>
+    <% } %>
+  </ul>
+  <% }) %>
 </div>
-<% }) %>
-</div>
 
-<div class="side" align="center"><%- include('partials/pager') %></div>
+<% if (pages > 1) { %>
+<ul class="page_control">
+  <% if (page > 1) { %><a id="prev" href="?p=<%= page-1 %>">上一頁</a><% } %>
+  <% for (let i = 1; i <= pages; i++) { %><% if (i === page) { %><%= i %><% } else { %><a href="?p=<%= i %>"><%= i %></a><% } %><% } %>
+  <% if (page < pages) { %><a id="next" href="?p=<%= page+1 %>">下一頁</a><% } %>
+</ul>
+<% } %>
 
-<%# 檢舉（點「檢舉」才展開；action 與欄位 name 同 /report） %>
-<div id="reportbox" class="side" style="display:none">
-<form method="post" action="/report">
-<input type="hidden" name="kind" id="rkind"><input type="hidden" name="target" id="rtarget">
-<input type="hidden" name="url" value="/<%= u.name %>/guestbook">
-請說明檢舉原因：<br>
-<textarea class="small-c" name="reason" cols="45" rows="3" maxlength="500" required></textarea><br>
-<input class="small-c" type="submit" value="送出檢舉"> <input class="small-c" type="button" id="rcancel" value="取消">
-</form>
+<%# 檢舉：原站是跳到 cc.wretch.cc/help/prosecute.php 另一頁，本站同頁展開 %>
+<div id="reportbox" class="w2-report" style="display:none">
+  <form method="post" action="/report">
+    <input type="hidden" name="kind" id="rkind"><input type="hidden" name="target" id="rtarget">
+    <input type="hidden" name="url" value="/<%= u.name %>/guestbook">
+    請說明檢舉原因：<br>
+    <textarea class="small-c" name="reason" cols="45" rows="3" maxlength="500" required></textarea><br>
+    <input class="small-c" type="submit" value="送出檢舉">
+    <input class="small-c" type="button" id="rcancel" value="取消">
+  </form>
 </div>
 <script>
 document.addEventListener('click',function(e){
@@ -105,9 +218,5 @@ document.addEventListener('click',function(e){
 </script>
 <% } %>
 
-  </td>
-  <td class="side2"></td>
-</tr></table>
-
-<%- include('partials/sitefoot') %>
-<%- include('partials/foot') %>
+<%- include('partials/gbfoot') %>
+<%- include('partials/foot2012in') %>

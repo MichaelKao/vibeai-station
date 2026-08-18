@@ -1,0 +1,118 @@
+/* 網誌內頁對 2012 原始樣式的「刻意偏離」層
+ * ---------------------------------------------------------------------------
+ * 載入順序：wretch2012-blog.css（原站原檔：top → 版型 skin117 → sharing → font
+ *           → trackback → kukubar）→ wretch2012-chrome-site.css → 本檔
+ *           → 使用者自訂 CSS（<style>，永遠最後）。
+ * 這支手寫，不是 tools/build-css2012.mjs 產的，改了不會被蓋掉。
+ *
+ * 每一條都是**明知與原站不同、而且是故意的**，並附上理由。
+ * 數值能沿用原檔的就照抄原檔，不自己發明。
+ */
+
+/* --- 1. 原站用 JS 送出的東西，本站用 <form> --------------------------------
+ * 推薦(推)、收藏(收)、發文(引用)、刪除、板主回覆、加好友——原站這些都是
+ * href="javascript:void(0)" 加 AJAX。本站沒有那些端點，一律走 POST 表單，
+ * 所以節點從 <a> 變成 <button>。外觀數值逐條沿用原檔，讓它看起來一模一樣。
+ */
+
+/* 1a. #push 的「推」「收」——數值抄自 font.css 的 html #push a 那一組 */
+#content #push form { display: inline; float: left; margin: 0; padding: 0; }
+html #content #push button {
+  display: block; width: 24px; height: 19px; float: left;
+  border: 1px solid #aaa; text-decoration: none; color: #777;
+  font-size: 13px; font-family: georgia; line-height: 19px;
+  margin: 0 0 0 1px; padding: 0 0 0 12px;
+  background-color: transparent; cursor: pointer;
+}
+html #content #push button.push { background: url(/img/wretch2012/blog/push.gif) no-repeat center; }
+html #content #push button.pull { background: url(/img/wretch2012/blog/pull.gif) no-repeat center; }
+html #content #push button.push:hover { color: #09c; border-color: #1A84B7; }
+html #content #push button.pull:hover { color: #f09; border-color: #e2669e; }
+html > body #content #push button.push { margin: 0 0 0 2px; }
+
+/* 1b. 分享列的「發文」——數值抄自 sharing.css 的 .wretch-reblog .bd a.wretch */
+.wretch-reblog .bd form { display: inline; float: left; margin: 0; padding: 0; }
+.wretch-reblog .bd button.wretch {
+  height: 28px; line-height: 28px; display: inline-block;
+  font-family: arial; font-size: 12px;
+  padding: 0 5px 0 24px; text-decoration: none; margin: 0; float: left;
+  color: #666; border: 1px solid #e3e3e3; border-radius: 0 3px 3px 0;
+  background: url(/img/wretch2012/chrome/ico_wretch.png) no-repeat 7px 8px;
+  background-color: #fff; vertical-align: top; cursor: pointer;
+}
+.wretch-reblog .bd button.wretch:hover { border: 1px solid #bfbfbf; background-color: #f8f8f8; }
+
+/* 1c. .posted 與迴響列裡的表單鈕：長得像文字連結（#content a 的顏色） */
+.posted form, .comments-post form, .w2b-owner form { display: inline; margin: 0; padding: 0; }
+.posted button, .comments-post button {
+  border: 0; background: none; padding: 0; cursor: pointer;
+  font: inherit; color: #547F8F; text-decoration: none;
+}
+.posted button:hover, .comments-post button:hover { color: #2B5D70; }
+
+/* 1d. 側欄的表單鈕（加好友）：數值抄自版型的 #links a 那一組
+ * （#links a 是 width:173 + padding 5/10 = 188，button 用 box-sizing 湊同一個外框） */
+#links form { margin: 0; padding: 0; }
+#links button.mySpaceLink {
+  display: block; width: 188px; box-sizing: border-box; text-align: left;
+  color: #728A3E; background: #e5e5e5; border: 0; border-bottom: 1px solid #eee;
+  font-size: 12px; font-family: inherit; padding: 2px 5px 2px 10px; cursor: pointer;
+}
+#links button.mySpaceLink:hover { color: #4381A1; background: #fff; }
+
+/* --- 2. 迴響內文保留換行 ---------------------------------------------------
+ * 原站把迴響內容存成含 <br /> 的 HTML。本站的迴響一律走 <%= %> 轉義輸出
+ * （硬性規則：使用者輸入不進 <%- %>），換行只能靠 CSS 還原。
+ */
+.comments-body ul li.comments-word p { white-space: pre-wrap; }
+.comments-author li p { white-space: pre-wrap; }
+
+/* --- 3. 分頁列的間距 -------------------------------------------------------
+ * 原站的 .list-linkcontrol / .comments-linkcontrol 完全沒有 CSS，
+ * 每個 <span> 之間只靠原始碼裡的換行產生一個空白。本站的樣板也照那樣換行，
+ * 這裡只多給一點呼吸空間，避免中文的「上一頁 1 2 下一頁」擠在一起。
+ */
+.list-linkcontrol { padding: 6px 0; }
+.list-linkcontrol span { margin-right: 6px; }
+.list-linkcontrol span.current { font-weight: bold; }
+
+/* --- 4. 原站查無存檔、只能自己補的頁面元素 --------------------------------
+ * spec/blog.md 第 11 節列了幾樣「查無」：站長登入後的編輯／刪除鈕、
+ * 發文頁、零迴響空狀態。下面這幾條就是補那些，做法是沿用文章卡片既有的
+ * 底色（#ddd / #eee）與字級，不引進新的視覺語言。
+ */
+.w2b-owner { padding: 6px 0; text-align: right; }
+.w2b-err   { color: #C00; }
+
+/* flash 訊息：原站沒有這種東西（它用整頁跳轉的提示頁），
+ * 本站沿用既有的 flash 機制，做成貼近 2012 的淡黃提示條，擺在 banner 下方。 */
+.w2b-flash {
+  margin: -10px 0 10px; padding: 6px 10px;
+  background: #FFFBE6; border: 1px solid #F0DFA0; color: #6B5A18;
+}
+
+/* 發表／編輯文章的表單（原站的 post.php 查無） */
+.w2b-form { border-collapse: collapse; width: 100%; }
+.w2b-form th {
+  width: 76px; text-align: right; vertical-align: top;
+  padding: 5px 8px 5px 0; font-weight: normal; color: #555; line-height: 20px;
+}
+.w2b-form td { padding: 5px 0; }
+.w2b-form input[type=text], .w2b-form input:not([type]), .w2b-form select, .w2b-form textarea {
+  font-family: inherit; font-size: 12px; border: 1px solid #bbb; background: #fff; padding: 2px 4px;
+}
+.w2b-form textarea { width: 96%; }
+.w2b-hint { display: block; color: #666; font-size: 10px; margin-top: 3px; }
+.edtools { margin-bottom: 4px; }
+.edtools button {
+  font: 12px inherit; padding: 1px 6px; margin: 0 3px 3px 0;
+  border: 1px solid #bbb; background: #f4f4f4; cursor: pointer;
+}
+.edtools button:hover { background: #fff; border-color: #547F8F; }
+.edtools button.emo { font-size: 14px; padding: 0 4px; }
+.photopick { max-height: 150px; overflow: auto; background: #fff; border: 1px solid #ddd; padding: 3px; }
+.photopick a { display: inline-block; margin: 2px; }
+.photopick img { width: 48px; height: 48px; object-fit: cover; border: 1px solid #ccc; }
+
+/* 引用網址那一列：原站的 input 沒設寬度，在 300px 的迴響區裡會撐破 */
+.trackback-url input[type=text] { width: 96%; font-size: 10px; }

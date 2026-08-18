@@ -1,27 +1,46 @@
-<%- include('partials/head',{title:album.title}) %>
-<%- include('partials/sitetop') %>
-<%# 密碼相簿（無名的 key.gif 相簿）：只問密碼，form action 維持
-    POST /:name/album/:id/unlock，欄位仍是 pass。 %>
-<table width="700" border="0" cellpadding="0" cellspacing="0" align="center"><tr>
-  <td class="side1"></td>
-  <td id="content1">
+<%
+  /* 密碼相簿 /:name/album/:id（未解鎖時）
+     ═══════════════════════════════════════════════════════════════════════
+     無名的密碼相簿在 2012 是「相簿頁上直接長一個輸入框」，
+     爬蟲抓到的存檔都是公開相簿，所以沒有畫面可以逐字照抄。
+     外框（kukubar ＋ #banner ＋ 導覽鈕列 ＋ #detail ＋ 人氣頁尾）與一般相簿頁
+     完全相同，只把照片格換成輸入框；樣式見 public/wretch2012-album-in.css §11。
 
-    <div class="side"><a href="/<%= u.name %>/album"><%= u.name %>'s Album</a>
-      &gt; <b><img src="<%= CDN %>/icon/key.gif" width="16" height="16" alt=""><%= album.title %></b></div>
+     key.gif 是 2012 的原始素材（common/img/key.gif，16×16），
+     網誌的密碼文章就是用這一張（assets_src2/html/chrome_blog_20131226_readonly.html）。
 
-    <div class="side" align="center">
-      這是密碼相簿，請輸入密碼：<br>
-      <form method="post" action="/<%= u.name %>/album/<%= album.id %>/unlock">
-        <input name="pass" type="password" size="12">
-        <input type="submit" class="btn" value="進入">
-        <% if (err) { %><br><span class="err"><%= err %></span><% } %>
-      </form>
-    </div>
+     表單維持 POST /:name/album/:id/unlock、欄位 pass —— 對得上 src/server.js。 */
+%>
+<%- include('partials/head2012_site', {
+      w2Title:   album.title + ' - ' + u.name + "'s Album - " + SITE_NAME,
+      w2Service: 'Album',
+      w2Head:    'book',
+      w2Book:    album,
+    }) %>
 
-    <div class="side" align="center"><a href="/<%= u.name %>/album">回相簿列表</a></div>
+<!-- content part -->
+<table width="700" border="0" cellpadding="0" cellspacing="0" align="center">
+<tr>
+<td id="ad_word">
+</td>
+</tr>
+<tr>
+<td>
+  <div class="w2a-lock">
+    <p>
+      <img src="/img/wretch2012/album/key.gif" width="16" height="16" border="0" alt="密碼相簿" />
+      這是密碼相簿，請輸入密碼：
+    </p>
+    <form method="post" action="/<%= u.name %>/album/<%= album.id %>/unlock">
+      <input type="password" name="pass" size="12">
+      <input type="submit" class="yui3_button_content" value="進入">
+<% if (err) { %>      <br><span class="err"><%= err %></span>
+<% } %>    </form>
+    <p><a href="/<%= u.name %>/album">回相簿列表</a></p>
+  </div>
+</td>
+</tr>
+</table>
+<!--  end of content part -->
 
-  </td>
-  <td class="side2"></td>
-</tr></table>
-<%- include('partials/sitefoot') %>
-<%- include('partials/foot') %>
+<%- include('partials/foot2012_site') %>

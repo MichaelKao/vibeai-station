@@ -1,0 +1,83 @@
+/* 無名小站 2012 最後版樣式 — 名片預設版型（無素材）
+ *
+ * 這個檔是 tools/build-css2012.mjs 產生的，**請不要手改**——
+ * 改了下次重建就會被蓋掉。要調整請改 assets_src2/css/ 底下的來源，或改建置腳本。
+ *
+ * 內容是無名當年的原始 CSS，只把 url(…) 改指到 /img/wretch2012/。
+ * 單獨出檔，套在名片頁 user/css/font.css 之前。這支完全沒有引用圖檔。
+ */
+/* ===== 名片預設版型  <css/gb_default_user.css> ===== */
+	body {
+		margin:20px 20px 20px 20px;
+		background:#FFF;		
+		}
+	A 			{ color: #336666; text-decoration: none;} 
+	A:link		{ color: #336666; text-decoration: none; } 
+	A:visited	{ color: #336666; text-decoration: none; } 
+	A:active	{ color: #669999;  } 
+	A:hover		{ color: #669999;  }
+
+	#banner {
+		font-family:verdana, arial, sans-serif;
+		color:#CC9933;
+		font-size:x-large;
+		font-weight:bold;
+  		background:#FFF;
+  		padding-left:15px; 					
+		}
+		
+	#banner a,
+        #banner a:link,
+        #banner a:visited,
+        #banner a:active,
+        #banner a:hover {
+		font-family:verdana, arial, sans-serif;
+		font-size: x-large;
+		color: #CC9933;
+		text-decoration: none;
+		}
+
+	.description {
+		font-family:verdana, arial, sans-serif;
+		color:#CCC;
+		font-size:x-small;
+		font-weight:bold;
+  		background:#FFF;	
+  		text-transform:none;	
+		letter-spacing: none; 		
+		}	
+	.side {
+		font-family:verdana, arial, sans-serif;
+		color:#CCC;
+		font-size:x-small;
+		font-weight:normal;
+  		background:#FFF;
+  		line-height:140%;				
+		}	
+		
+	.sidetitle {
+		font-family:verdana, arial, sans-serif;
+		color:#999;
+		font-size:x-small;
+		font-weight:bold;
+  		background:#FFF;
+  		line-height:140%;
+  		padding:2px;
+  		margin-top:10px;
+  		border-bottom:1px dotted #666;
+		letter-spacing: .2em;  					
+		}		
+	.powered {
+		font-family:verdana, arial, sans-serif;
+		color:#CCC;
+		font-size:xx-small;
+		font-weight:bold;
+		border-top:1px dotted #666;
+		border-bottom:1px dotted #666;		
+		line-height:140%;
+		padding:2px;
+		margin-top:10px;
+		text-align:center;
+		letter-spacing: .2em 
+		background:#FFF; 					
+		}	

@@ -1,84 +1,82 @@
-<%- include('partials/head',{title:'個人設定'}) %>
-<%- include('partials/sitetop') %>
+<%# 個人設定
+    ─────────────────────────────────────────────────────────────
+    無名的設定在 www.wretch.cc/admin/ 底下，那幾頁沒有存檔（登入才看得到），
+    所以這一頁沿用留言板骨架與原廠版型 skin 1/1911，表單則直接借用
+    版型為「我要留言」準備好的那一套（#msg_added：標籤 105px 靠右、
+    底線 #b8d7f0、表單頂端 msg_added_form.gif）——原站的表單長相就是這個。
 
-<%# 個人設定：700px 個人小站頁（WRETCH_DOM.md 第 3 節）
-    三個區塊標題逐字：網誌設定 / 網誌樣式 / 相簿設定（WRETCH_SPEC.md 5-8） %>
-<table width="700" border="0" cellpadding="0" cellspacing="0" align="center"><tr>
-  <td class="side1"></td>
-  <td id="content1">
+    三個區塊標題逐字：網誌設定 / 網誌樣式 / 相簿設定（WRETCH_SPEC.md 5-8）。
+    表單 action 與欄位 name 對應 src/server.js：
+      POST /:name/settings          nick / intro / avatar / pass / pass2 / theme / css / music
+      POST /:name/settings/delete   pass %>
+<%- include('partials/head2012in', {
+      title: '個人設定 - ' + u.nick + '的小站',
+      page: 'w2-gb',
+      skin: ['/wretch2012-skin-guestbook.css'] }) %>
 
-  <form method="post" enctype="multipart/form-data">
+<%- include('partials/gbtop', { here: 'settings', head: u.nick + ' 的小站' }) %>
 
-  <div class="title">網誌設定</div>
-  <div class="side">
-    <table class="pf" border="0" cellpadding="3" cellspacing="0">
-      <tr><td width="90" valign="top">帳號</td>
-          <td><b><%= u.name %></b> <span class="gray">（不可更改）</span></td></tr>
-      <tr><td valign="top">暱稱</td>
-          <td><input name="nick" value="<%= u.nick %>" size="20" maxlength="20" required></td></tr>
-      <tr><td valign="top">自我介紹</td>
-          <td><textarea name="intro" cols="50" rows="4" maxlength="500"><%= u.intro %></textarea><br>
-              <span class="gray">會出現在橫幅副標與名片上。</span></td></tr>
-      <tr><td valign="top">大頭貼</td>
-          <td><img class="avatar" src="<%= u.avatar %>" width="90" height="90" alt="<%= u.nick %>"><br>
-              <input type="file" name="avatar" accept="image/*"> <span class="gray">建議 90×90</span></td></tr>
-      <tr><td valign="top">新密碼</td>
-          <td><input name="pass" type="password" size="12"> 再輸入一次
-              <input name="pass2" type="password" size="12"> <span class="gray">不改請留空</span></td></tr>
-    </table>
-  </div>
+<div id="msg_list">
+  <div id="msg_added">
+    <h2>個人設定</h2>
+    <div class="msg_body">
+      <form method="post" enctype="multipart/form-data">
+        <ul>
 
-  <div class="title">網誌樣式</div>
-  <div class="side">
-    版面樣式：
-    <div class="themepick">
-      <% themes.forEach(t=>{ %><a href="#" data-theme="<%= t.id %>" class="<%= (u.theme||'')===t.id?'on':'' %>"><div class="sw"><i style="background:<%= t.sw1 %>"></i><i style="background:<%= t.sw2 %>"></i></div><%= t.name %></a><% }) %>
+          <li><div class="w2-h3">網誌設定</div></li>
+          <li><span>帳號</span><b><%= u.name %></b> <span class="w2-sub">（不可更改）</span></li>
+          <li><span>暱稱</span><input class="small-c" type="text" name="nick" value="<%= u.nick %>" size="20" maxlength="20" required></li>
+          <li><span>自我介紹</span><textarea class="small-c" name="intro" cols="50" rows="4" maxlength="500"><%= u.intro %></textarea></li>
+          <li><span>&nbsp;</span><span class="w2-sub">會出現在小站標題下方與名片上。</span></li>
+          <li><span>大頭貼</span><img src="<%= u.avatar %>" width="90" height="90" alt="<%= u.nick %>"></li>
+          <li><span>&nbsp;</span><input type="file" name="avatar" accept="image/*"> <span class="w2-sub">建議 90×90</span></li>
+          <li><span>新密碼</span><input class="small-c" type="password" name="pass" size="12">
+            　再輸入一次 <input class="small-c" type="password" name="pass2" size="12">
+            <span class="w2-sub">不改請留空</span></li>
+
+          <li><div class="w2-h3">網誌樣式</div></li>
+          <li><span>版面樣式</span>
+            <span class="w2-themepick">
+              <% themes.forEach(t => { %><a href="#" data-theme="<%= t.id %>" class="<%= (u.theme||'')===t.id ? 'on' : '' %>"><span class="sw"><i style="background:<%= t.sw1 %>"></i><i style="background:<%= t.sw2 %>"></i></span><%= t.name %></a><% }) %>
+            </span>
+            <input type="hidden" name="theme" value="<%= u.theme || '' %>">
+          </li>
+          <li><span>自訂樣式</span>
+            <textarea class="small-c" name="css" cols="60" rows="8" maxlength="20000" placeholder="/* 你的小站專屬 CSS，例如 */&#10;body{background:#000}&#10;#content{background:#333}"><%= u.css %></textarea></li>
+          <li><span>&nbsp;</span><span class="w2-sub">會套在你的每一頁上，蓋得過預設版型。玩壞了清空即可復原。</span></li>
+
+          <li><div class="w2-h3">相簿設定</div></li>
+          <li><span>音樂盒</span>
+            <textarea class="small-c" name="music" cols="50" rows="4" maxlength="2000" placeholder="一行一個 mp3 網址，可放多首組成播放清單"><%= u.music %></textarea></li>
+          <li><span>&nbsp;</span><span class="w2-sub">一行一首。放在小站側欄，訪客可切換曲目。</span></li>
+          <li><span>相簿權限</span>每本相簿的密碼、好友限定、封面、站內分類與地區，
+            請到 <a href="/<%= u.name %>/album">相簿</a> 頁各本相簿自己設定。</li>
+          <li><span>快速入口</span><a href="/<%= u.name %>/album">上傳照片</a>　<a href="/<%= u.name %>/blog/new">發表文章</a></li>
+
+          <li><span>&nbsp;</span><input class="small-c" type="submit" value="儲存設定"></li>
+        </ul>
+      </form>
     </div>
-    <input type="hidden" name="theme" value="<%= u.theme || '' %>">
-    <span class="gray">選好按下方「儲存設定」。</span><br><br>
-    自訂樣式（CSS）：<br>
-    <textarea name="css" cols="60" rows="8" maxlength="20000" placeholder="/* 你的小站專屬 CSS，例如 */&#10;body{background:#000 url(...)}&#10;#content1{background:#333}"><%= u.css %></textarea><br>
-    <span class="gray">會套在你的每一頁上，蓋得過預設樣式。玩壞了清空即可復原。</span>
   </div>
+</div>
 
-  <div class="title">相簿設定</div>
-  <div class="side">
-    <table class="pf" border="0" cellpadding="3" cellspacing="0">
-      <tr><td width="90" valign="top">音樂盒</td>
-          <td><textarea name="music" cols="50" rows="4" maxlength="2000" placeholder="一行一個 mp3 網址，可放多首組成播放清單"><%= u.music %></textarea><br>
-              <span class="gray">一行一首。放在小站側欄，訪客可切換曲目。</span></td></tr>
-      <tr><td valign="top">相簿權限</td>
-          <td>每本相簿的密碼、好友限定、封面、站內分類與地區，
-              請到 <a href="/<%= u.name %>/album">相簿</a> 頁各本相簿自己設定。</td></tr>
-      <tr><td valign="top">上傳照片</td>
-          <td><a href="/<%= u.name %>/album">上傳照片</a>
-              <a href="/<%= u.name %>/blog/new">發表文章</a></td></tr>
-    </table>
-  </div>
-
-  <div class="side" align="center"><input type="submit" class="btn" value="儲存設定"></div>
+<div class="msg_body">
+  <div class="w2-h3">刪除帳號</div>
+  <div class="w2-sub">刪除後你的相簿、照片、網誌、留言板都會一起消失，無法復原。</div>
+  <form method="post" action="/<%= u.name %>/settings/delete" onsubmit="return confirm('真的要刪除帳號嗎？所有內容都會消失，無法復原。')">
+    輸入密碼確認：<input class="small-c" type="password" name="pass" size="14" required>
+    <input class="small-c" type="submit" value="永久刪除我的帳號">
   </form>
+</div>
 
-  <div class="title">刪除帳號</div>
-  <div class="side">
-    <span class="gray">刪除後你的相簿、照片、網誌、留言板都會一起消失，無法復原。</span>
-    <form method="post" action="/<%= u.name %>/settings/delete" onsubmit="return confirm('真的要刪除帳號嗎？所有內容都會消失，無法復原。')">
-      輸入密碼確認：<input name="pass" type="password" size="14" required>
-      <button class="btn red">永久刪除我的帳號</button>
-    </form>
-  </div>
-
-  </td>
-  <td class="side2"></td>
-</tr></table>
-
-<%- include('partials/sitefoot') %>
 <script>
 document.addEventListener('click',function(e){
-  var a=e.target.closest('.themepick a'); if(!a) return; e.preventDefault();
-  document.querySelectorAll('.themepick a').forEach(function(x){ x.classList.remove('on'); });
+  var a=e.target.closest('.w2-themepick a'); if(!a) return; e.preventDefault();
+  document.querySelectorAll('.w2-themepick a').forEach(function(x){ x.classList.remove('on'); });
   a.classList.add('on');
   document.querySelector('input[name=theme]').value=a.getAttribute('data-theme');
 });
 </script>
-<%- include('partials/foot') %>
+
+<%- include('partials/gbfoot') %>
+<%- include('partials/foot2012in') %>

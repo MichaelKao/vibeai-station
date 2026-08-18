@@ -1,35 +1,37 @@
-<%- include('partials/head',{title:'好友動態'}) %>
-<%- include('partials/sitetop') %>
-<table width="700" border="0" cellpadding="0" cellspacing="0" align="center"><tr>
-  <td class="side1"></td>
-  <td id="content1">
+<%# 好友動態 — 對應無名底部工具列的「好友動態」浮層（chrome.md 第 5.3 節）。
+    原站那個是 kukubar 的下拉，不是一整頁，也沒有版型檔，
+    所以這一頁沿用留言板骨架與原廠版型 skin 1/1911（同 views/home.ejs 的取捨）。
+    只有站主看得到（route 掛了 requireOwner）。 %>
+<%- include('partials/head2012in', {
+      title: '好友動態 - ' + u.nick + '的小站',
+      page: 'w2-gb',
+      skin: ['/wretch2012-skin-guestbook.css'] }) %>
 
-    <div class="title">好友動態</div>
+<%- include('partials/gbtop', { here: 'feed', head: u.nick + ' 的好友動態' }) %>
 
-    <% if (!acts.length) { %>
-    <div class="side" align="center">好友還沒有新動態。先去加幾個好友吧！</div>
-    <% } else { %>
-    <table width="100%" border="0" cellpadding="0" cellspacing="0">
-      <% acts.forEach(a => { %>
-      <tr>
-        <td class="side" width="60" align="center" valign="top">
-          <a href="/<%= a.uname %>"><img src="<%= a.avatar %>" width="48" height="48" alt="<%= a.nick %>"></a>
-        </td>
-        <td class="side" valign="top">
-          <a href="/<%= a.uname %>" class="font_title"><%= a.nick %></a>
-          <%= a.kind==='blog' ? '發表了新文章' : (a.kind==='album' ? '上傳了新照片' : '有新動態') %>：
-          <a href="<%= a.url %>"><%= a.title %></a><br>
-          <span class="font_desc"><%= a.created.slice(0,16) %></span>
-        </td>
-      </tr>
-      <% }) %>
-    </table>
-    <% } %>
+<div id="search">共 <b><%= acts.length %></b> 則動態</div>
 
-    <%- include('partials/side',{visitors,friends}) %>
+<div class="msg_body">
+  <% if (!acts.length) { %>
+  <div class="w2-empty">好友還沒有新動態。<br>先去加幾個好友吧！</div>
+  <% } else { %>
+  <table class="w2-rows">
+    <% acts.forEach(a => { %>
+    <tr>
+      <td width="60" align="center" valign="top">
+        <a href="/<%= a.uname %>"><img src="<%= a.avatar %>" width="48" height="48" alt="<%= a.nick %>"></a>
+      </td>
+      <td valign="top">
+        <a href="/<%= a.uname %>" class="w2-who"><%= a.nick %></a>
+        <%= a.kind==='blog' ? '發表了新文章' : (a.kind==='album' ? '上傳了新照片' : '有新動態') %>：
+        <a href="<%= a.url %>"><%= a.title %></a>
+      </td>
+      <td class="w2-when" valign="top"><%= a.created.slice(0,16) %></td>
+    </tr>
+    <% }) %>
+  </table>
+  <% } %>
+</div>
 
-  </td>
-  <td class="side2"></td>
-</tr></table>
-<%- include('partials/sitefoot') %>
-<%- include('partials/foot') %>
+<%- include('partials/gbfoot') %>
+<%- include('partials/foot2012in') %>

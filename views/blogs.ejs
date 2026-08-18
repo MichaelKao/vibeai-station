@@ -1,13 +1,21 @@
-<%# 網誌總站 /blogs：不是個人頁，用 2005 首頁綠版面（WRETCH_DOM.md 第 1、7 節）。
-    nav 留空 → THEME_FOR('') = t-index（綠）。版面與 albums.ejs（相簿總站）成對。 %>
-<%- include('partials/head',{title:'網誌總站',layout:'index'}) %>
 <%
-  /* 上方：12 個網誌站內分類（.grid_class 230×40）；下方：熱門網誌清單
-     （左 120×120 縮圖 .blog_grid ＋ 右 380 文字 .blog_grid1，同 2005 首頁）。
-     一頁 20 篇，server.js 已是 per=20。
+  /* 網誌總站 /blogs
+     ─────────────────────────────────────────────────────────────
+     這一頁**不是**個人網誌頁，所以不吃 750px 的 skin117 版型，
+     跟首頁、登入、註冊一樣走 2012 的站台外框（partials/head2012 + foot2012 ＋
+     public/wretch2012.css 的 .mod / .main / .side 模組語言）。
 
-     摘要用的純文字化：把 [img]…[/img] 整段拿掉，其餘 [tag] 只去掉標記本身，
-     再把換行壓成空白，最後截斷；輸出一律走轉義輸出，不會有 HTML 進來。 */
+     為什麼不照抄原站的 /blog/：那一頁載的是 2008 年的
+     l.yimg.com/e/serv/index/blog/css/{layout,style}.css（原始檔已經收在
+     assets_src2/css/assets_l_index-blog-css_*.css），但它引用的 27 張
+     ../img/*.gif 一張都還沒抓，也還沒有對應的 bundle。
+     在素材補齊、build-css2012.mjs 加一組 bundle 之前，先用站台既有的元件語言組，
+     不自創新的視覺。這件事列在回報的「還沒做」清單。
+
+     資料來自 src/server.js 的 app.get('/blogs')：
+       topic / page / pages / total / topics（BLOG_TOPICS 12 類）/ counts / posts。
+
+     EJS 用 with(locals)，不能宣告和 local 同名的 const。 */
   const CAP = (s, n) => {
     const t = String(s || '')
       .replace(/\[img\][\s\S]*?\[\/img\]/gi, '')
@@ -15,120 +23,88 @@
       .replace(/\s+/g, ' ').trim();
     return t.length > n ? t.slice(0, n) + '  ...' : t;
   };
+  const qs = p => '/blogs?p=' + p + (topic ? '&topic=' + encodeURIComponent(topic) : '');
+  const COVER = '/img/wretch2012/blog/user_cover.gif';
 %>
-<table id="bigtab" width="760" border="0" cellpadding="0" cellspacing="0" align="center">
-<tr>
-	<td rowspan="3" width="5" class="side1"></td>
+<%- include('partials/head2012', { title: (topic ? topic + ' - ' : '') + '網誌 - 無名小站' }) %>
 
-	<td width="750" height="100" id="banner1">
-		<div id="banner">
-			<a href="/"><img id="sitelogo" src="<%= SITE_LOGO %>" alt="<%= SITE_NAME %>"></a>
-			<div id="pageheader">
-				<h1><a href="/"><%= SITE_NAME %></a></h1>
-				<span class="description">網誌總站</span>
-			</div>
-		</div>
-	</td>
+  <div class="bd big-bd clearfix">
+    <div class="main">
 
-	<td rowspan="3" width="5" class="side1"></td>
-</tr>
+      <div class="mod w2-auth">
+        <div class="hd"><h2><%= topic || '熱門網誌' %></h2></div>
+        <div class="bd">
 
-<tr>
-	<td height="30" class="side2" align="center">
-		<a href="/"><%= SITE_NAME %></a> |
-		<a href="/albums">相簿</a> |
-		<a href="/blogs">網誌</a> |
-		<a href="/rank">排行榜</a> |
-		<a href="/help">服務說明</a>
-	</td>
-</tr>
+          <p class="w2-blog-count">共 <b><%= total %></b> 篇文章<% if (topic) { %>　<a href="/blogs">看全部分類</a><% } %></p>
 
-<tr>
-	<td id="content1">
-		<table border="0" cellpadding="0" cellspacing="0" width="100%">
-		<tr>
-			<td width="20" height="20" class="content2">&nbsp;</td>
-			<td></td>
-			<td width="20" height="20" class="content3">&nbsp;</td>
-		</tr>
-		<tr>
-			<td colspan="3" valign="top">
-<!-- CONTENT BEGIN -->
+          <% if (!posts.length) { %>
+          <p>這個分類還沒有文章。<a href="/register">開一個帳號</a>，第一篇就是你的。</p>
+          <% } %>
 
-			<div class="blog_title">
-				<a href="/blogs">網誌站內分類</a>
-			</div>
+          <ol class="w2-bloglist">
+            <% posts.forEach(p => { %>
+            <li>
+              <a class="thumbnail" href="/<%= p.uname %>/blog/<%= p.id %>"><img src="<%= COVER %>" width="85" height="85" alt=""></a>
+              <div class="content">
+                <p class="meta">
+                  <a class="uname" href="/<%= p.uname %>"><%= p.uname %></a>
+                  <% if (p.topic) { %><a class="topic" href="/blogs?topic=<%= encodeURIComponent(p.topic) %>"><%= p.topic %></a><% } %>
+                </p>
+                <h3><a class="skin-main-link" href="/<%= p.uname %>/blog/<%= p.id %>"><%= p.title %></a></h3>
+                <p class="description"><%= CAP(p.body, 90) %>
+                  <a href="/<%= p.uname %>/blog/<%= p.id %>">(繼續閱讀)</a></p>
+                <p class="stat">
+                  <a href="/<%= p.uname %>/blog/<%= p.id %>#postComments">回應(<%= p.nc %>)</a>
+                  <span>得點: <%= p.views * 10 + p.likes * 50 %></span>
+                </p>
+              </div>
+            </li>
+            <% }) %>
+          </ol>
 
-			<% topics.forEach(t => { %>
-			<div class="grid_class">
-				<a href="/blogs?topic=<%= encodeURIComponent(t) %>"><% if (topic === t) { %><b><%= t %></b><% } else { %><%= t %><% } %></a>
-				<span class="font_desc">(<%= counts[t] || 0 %>)</span>
-			</div>
-			<% }) %>
-			<br clear="all">
+          <% if (pages > 1) { %>
+          <div class="w2-pager">
+            <% if (page > 1) { %><a href="<%= qs(page-1) %>">上一頁</a><% } %>
+            <% for (let i=1; i<=pages; i++) { %><% if (i === page) { %><b><%= i %></b><% } else { %><a href="<%= qs(i) %>"><%= i %></a><% } %><% } %>
+            <% if (page < pages) { %><a href="<%= qs(page+1) %>">下一頁</a><% } %>
+          </div>
+          <% } %>
 
-			<div class="side"><a href="/blogs">所有分類</a></div>
+        </div>
+      </div>
 
-			<div class="blog_title">
-				<%= topic || '熱門網誌' %>
-			</div>
+    </div>
+    <div class="side">
 
-			<div class="side" align="center">共 <b><%= total %></b> 篇文章</div>
-			<div class="side" align="center"><%- include('partials/pager') %></div>
+      <div class="mod w2-auth-side">
+        <div class="hd"><h2>網誌站內分類</h2></div>
+        <div class="bd">
+          <ul>
+            <% topics.forEach(t => { %>
+            <li><a href="/blogs?topic=<%= encodeURIComponent(t) %>"><% if (topic === t) { %><b><%= t %></b><% } else { %><%= t %><% } %></a>
+              <span class="w2-blog-n">(<%= counts[t] || 0 %>)</span></li>
+            <% }) %>
+          </ul>
+        </div>
+      </div>
 
-			<% if (!posts.length) { %>
-			<div class="side" align="center">這個分類還沒有文章</div>
-			<% } %>
+      <div class="mod w2-auth-side">
+        <div class="hd"><h2>逛逛別的</h2></div>
+        <div class="bd">
+          <ul>
+            <li><a href="/rank">人氣排行榜</a></li>
+            <li><a href="/albums">相簿總站</a></li>
+            <li><a href="/search">站內搜尋</a></li>
+            <li><a href="/help">服務說明</a></li>
+          </ul>
+        </div>
+      </div>
 
-	<% posts.forEach(p => { %>
-	<table border="0" height="80" width="500" cellspacing="0" cellpadding="0" align="center">
-	<tr>
-		<td width="120" height="120" align="center" class="blog_grid">
-			<a href="/<%= p.uname %>/blog/<%= p.id %>"><img src="<%= CDN %>/icon/user_cover.gif" width="85" height="85" alt=""></a>
-		</td>
-		<td>
-			<table width="380" border="0" cellpadding="0" cellspacing="0" class="blog_grid1">
-			<tr>
-				<td valign="middle" height="30">
-					<span class="blog_font_id"><a href="/<%= p.uname %>"><%= p.uname %></a></span>
-					<span class="blog_font_desc"><%= p.topic %></span>
-				</td>
-			</tr>
-			<tr>
-				<td height="20" valign="middle">
-					<span class="blog_font_arttitle"><a href="/<%= p.uname %>/blog/<%= p.id %>"><%= p.title %></a></span>
-				</td>
-			</tr>
-			<tr>
-				<td height="70" valign="top">
-					<span class="blog_font_desc"><%= CAP(p.body, 90) %></span>
-					<span class="blog_font_desc"><a href="/<%= p.uname %>/blog/<%= p.id %>">(繼續閱讀)</a></span>
-					<div align="right">
-						<span class="blog_font_desc"><a href="/<%= p.uname %>/blog/<%= p.id %>#comments">迴響(<%= p.nc %>)</a></span>
-						&nbsp;<span class="blog_point_title">得點: </span><span class="blog_point_grade"><%= p.views * 10 + p.likes * 50 %></span>
-					</div>
-				</td>
-			</tr>
-			</table>
-		</td>
-	</tr>
-	<tr>
-		<td height="20" colspan="2"></td>
-	</tr>
-	</table>
-	<% }) %>
+    </div>
+  </div>
 
-			<div class="side" align="center"><%- include('partials/pager') %></div>
-			<div align="right"><span class="blog_font_desc"><a href="/rank">網誌人氣</a></span></div>
+</div><!-- /#wrapper -->
 
-<!-- CONTENT END -->
-			</td>
-		</tr>
-		<tr>
-			<td colspan="3" height="40"></td>
-		</tr>
-		</table>
-	</td>
-</tr>
-</table>
-<%- include('partials/foot') %>
+<div id="lower-wrapper" class="clearfix">
+  <div class="bd clearfix"></div>
+<%- include('partials/foot2012') %>

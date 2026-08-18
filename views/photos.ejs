@@ -1,145 +1,220 @@
-<%- include('partials/head',{title:album.title}) %>
-<%- include('partials/sitetop') %>
 <%
-  /* 單本相簿 /:name/album/:id（WRETCH_DOM.md 4-B、原始碼 assets_src/html/album_one.html）
-     麵包屑 → Topic:/Place: → 工具列 → #ad_square 照片格（5 欄）。
-     viewAll（?all=1「一頁瀏覽」）時改成整本大圖直排。 */
+  /* 單本相簿 /:name/album/:id ── 無名 2012 的 album/album.php?id=X&book=N
+     ═══════════════════════════════════════════════════════════════════════
+     DOM 逐節點照抄 assets_src2/html/album_album_list.html：
+
+       #bigcontainer
+       ├ table[700]  banner part   ← head2012_site.ejs
+       │   #banner「NAME's Album &gt; 相簿名」＋ .description
+       │   .sidetitle：導覽鈕列 ＋「- Friends' Album -」下拉 ＋ #detail
+       │              （Topic / Place / Category ＋ [One Page][Add to Friend List]）
+       └ table[700]  content part
+         ├ tr > td#ad_word
+         ├ tr > td[align=center]  .social-wrapper  分享列
+         ├ tr > td.small-c[align=center]
+         │  ├ center > #photowall   「Photo Wall (VIP only): Mosaic | Waterfall」
+         │  └ table#ad_square[cellspacing=10]  照片格，一列 5 張
+         │     ├ tr > td.side[width=120][height=120] > a > img + br + font.small-c
+         │     └ tr > td[height=30][width=120]       > b > font.small-e > a
+         ├ tr > td > center
+         └ tr > td[align=right]  人氣頁尾  ← foot2012_site.ejs
+
+     說明列的字級：這一頁是 font.small-e（11px Verdana），
+     相簿列表頁是 font.small-c（12px 新細明體）——兩頁本來就不一樣，各自照抄。
+
+     【偏離】#photowall 的 Mosaic / Waterfall 原本指向 album/display.php 的兩種
+     相片牆（存檔 album_display_angel.html / album_display_taylor.html）。
+     本站沒有做這兩頁，兩顆都接到幻燈片 /:name/album/:id/slide。
+
+     EJS 用 with(locals)：內部變數加 ph 前綴，避免和 local 撞名（TDZ）。 */
+
+  const phRows = [];
+  for (let i = 0; i < photos.length; i += 5) phRows.push(photos.slice(i, i + 5));
+  const phPath = '/' + u.name + '/album/' + album.id;
 %>
-<table width="700" border="0" cellpadding="0" cellspacing="0" align="center"><tr>
-  <td class="side1"></td>
-  <td id="content1">
+<%- include('partials/head2012_site', {
+      w2Title:   album.title + ' - ' + u.name + "'s Album - " + SITE_NAME,
+      w2Service: 'Album',
+      w2Head:    'book',
+      w2Book:    album,
+    }) %>
 
-    <div class="side"><a href="/<%= u.name %>/album"><%= u.name %>'s Album</a>
-      &gt; <b><% if (album.pass) { %><img src="<%= CDN %>/icon/key.gif" width="16" height="16" alt=""><% } %><%= album.title %></b></div>
-    <% if (album.descr) { %>
-    <div class="side"><%= album.descr %></div>
-    <% } %>
+<!-- content part -->
+<table width="700" border="0" cellpadding="0" cellspacing="0" align="center">
 
-    <div id="detail" class="small-c" align="right">
-      Topic: <% if (album.topic) { %><a href="/albums?topic=<%= encodeURIComponent(album.topic) %>"><%= album.topic %></a><% } else { %>None<% } %>
-      &nbsp;
-      Place: <% if (album.place) { %><a href="/albums?place=<%= encodeURIComponent(album.place) %>"><%= album.place %></a><% } else { %>None<% } %>
-      <% if (album.friends_only) { %>&nbsp; <span class="font_desc">好友限定</span><% } %>
+<tr>
+<td id="ad_word">
+</td>
+</tr>
+<!-- social sharing module -->
+<tr>
+  <td align="center">
+<%# 分享列 .social-wrapper：DOM 照抄存檔，樣式來自串在 bundle 裡的
+    common/css/sharing.css（pic.wretch.cc 版）。fb / plurk / 即時通要絕對網址，
+    EJS 拿不到 host，所以先寫 data-share/data-path/data-title，
+    由 foot2012_site.ejs 那段 JS 在瀏覽器端補上 location.origin。 %>
+<div class="social-wrapper">
+<div class="social-widget">
+  <div class="bd">
+      <a class="fb" title="分享在我的Facebook" target="_blank" data-share="fb" data-path="<%= phPath %>" data-title="<%= album.title %>" href="<%= phPath %>">分享在我的Facebook</a>
+      <a class="plurk" title="分享在我的Plurk" target="_blank" data-share="plurk" data-path="<%= phPath %>" data-title="<%= album.title %>" href="<%= phPath %>">分享在我的Plurk</a>
+      <a class="yim" title="分享在我的即時通" data-share="yim" data-path="<%= phPath %>" data-title="<%= album.title %>" href="<%= phPath %>">分享在我的即時通</a>
+  </div>
+</div>
+<div class="wretch-reblog fixinline">
+    <div class="bd bubble-none">
+        <%# 原站的「發文」是把這本相簿轉貼到自己的網誌（blog/post.php?rtype=album，
+            標題／連結／封面用 query 帶進發文頁）。本站的 GET /:me/blog/new
+            不吃 query，所以只開一張空白的發文頁，不假裝有預帶內容。 %>
+        <a class="wretch" href="<%= me ? '/' + me.name + '/blog/new' : '/login' %>" title="發文至無名">發文
+                </a>
     </div>
-
-    <div class="albumtools">
-      <% if (viewAll) { %>
-      [ <a href="/<%= u.name %>/album/<%= album.id %>">縮圖瀏覽</a> ]
-      <% } else { %>
-      [ <a href="/<%= u.name %>/album/<%= album.id %>?all=1">一頁瀏覽</a> ]
-      <% } %>
-      <% if (photos.length) { %>
-      [ <a href="/<%= u.name %>/album/<%= album.id %>/slide">幻燈片</a> ]
-      <% } %>
-      <% if (me && !isOwner) { %>
-      [ <form method="post" action="/<%= u.name %>/friend" style="display:inline"><button class="lnk"><%= isFriend ? '取消好友' : '加入好友名單' %></button></form> ]
-      <% } %>
-      <% if (me && me.admin) { %>
-      [ <form method="post" action="/admin/feature/album/<%= album.id %>" style="display:inline"><input type="hidden" name="back" value="/<%= u.name %>/album/<%= album.id %>"><button class="lnk"><%= album.featured ? '取消精選' : '設為精選' %></button></form> ]
-      <% } %>
-    </div>
-
-    <div class="side" align="center"><%= photos.length %>張照片
-      &nbsp;相簿人氣: <span class="point_grade"><%= album.views %></span></div>
-
-    <% if (!photos.length) { %>
-    <div class="side" align="center">這本相簿還沒有照片</div>
-
-    <% } else if (viewAll) { %>
-    <%# 一頁瀏覽：整本大圖直排 %>
-    <% photos.forEach((p, i) => { %>
-    <div class="onepage" align="center">
-      <img src="<%= p.url %>" alt="<%= p.caption %>"><br>
-      <span class="font_desc"><%= i+1 %> / <%= photos.length %></span>
-      &nbsp;<a href="/<%= u.name %>/photo/<%= p.id %>" class="font_title"><%= p.caption || (i+1) %></a>
-    </div>
-    <% }) %>
-
-    <% } else { %>
-    <table id="ad_square" border="0" align="center" cellspacing="10" style="word-break:break-all">
-      <% for (let i = 0; i < photos.length; i += 5) { const row = photos.slice(i, i+5); %>
-      <tr>
-        <% row.forEach(p => { %>
-        <td class="side" width="120" height="120" align="center" valign="middle">
-          <a href="/<%= u.name %>/photo/<%= p.id %>"><img src="<%= p.thumb || p.url %>" width="120" height="120" alt="Cover"></a>
-        </td>
-        <% }) %>
-        <% for (let k = row.length; k < 5; k++) { %><td width="120"></td><% } %>
-      </tr>
-      <tr>
-        <% row.forEach((p, j) => { %>
-        <td height="40" width="120" valign="top" align="center">
-          <a href="/<%= u.name %>/photo/<%= p.id %>" class="font_title"><%= p.caption || (i+j+1) %></a>
-        </td>
-        <% }) %>
-        <% for (let k = row.length; k < 5; k++) { %><td width="120"></td><% } %>
-      </tr>
-      <% } %>
-    </table>
-    <% } %>
-
-    <% if (isOwner) { %>
-    <%# ── 以下只有站主本人看得到 ───────────────────────────────── %>
-    <div class="title">上傳照片</div>
-    <div class="side">
-      <form method="post" enctype="multipart/form-data" action="/<%= u.name %>/album/<%= album.id %>/upload">
-        <input type="file" name="photos" accept="image/*" multiple required>
-        &nbsp;說明 <input name="caption" size="18" maxlength="100">
-        <input type="submit" class="btn" value="上傳"><br>
-        <span class="font_desc">一次最多 20 張，每張 8MB 內（jpg/png/gif/webp）</span>
-      </form>
-    </div>
-
-    <div class="title">相簿設定</div>
-    <div class="side">
-      <form method="post" action="/<%= u.name %>/album/<%= album.id %>/edit">
-        <table border="0" cellpadding="2" cellspacing="0">
-          <tr>
-            <td width="70">相簿名稱</td>
-            <td><input name="title" size="24" maxlength="40" value="<%= album.title %>"></td>
-          </tr>
-          <tr>
-            <td>說明</td>
-            <td><input name="descr" size="40" maxlength="200" value="<%= album.descr %>"></td>
-          </tr>
-          <tr>
-            <td>站內分類</td>
-            <td>
-              <select name="topic">
-                <option value="">- 相簿分類 -</option>
-                <% topics.forEach(t => { %><option <%= album.topic===t ? 'selected' : '' %>><%= t %></option><% }) %>
-              </select>
-              &nbsp;地區
-              <select name="place">
-                <option value="">- 全部 -</option>
-                <% places.forEach(p => { %><option <%= album.place===p ? 'selected' : '' %>><%= p %></option><% }) %>
-              </select>
-            </td>
-          </tr>
-          <tr>
-            <td>密碼</td>
-            <td><input name="pass" size="12" maxlength="20" value="<%= album.pass %>">
-              <span class="font_desc">留空＝公開相簿</span></td>
-          </tr>
-          <tr>
-            <td>好友限定</td>
-            <td><label><input type="checkbox" name="friends_only" <%= album.friends_only ? 'checked' : '' %>> 只有我的好友看得到（不出現在相簿總站與搜尋）</label></td>
-          </tr>
-          <tr>
-            <td></td>
-            <td><input type="submit" class="btn" value="儲存"></td>
-          </tr>
-        </table>
-      </form>
-      <form method="post" action="/<%= u.name %>/album/<%= album.id %>/del"
-            onsubmit="return confirm('確定刪除整本相簿與所有照片？')">
-        <input type="submit" class="btn red" value="刪除相簿">
-      </form>
-    </div>
-    <% } %>
-
+</div>
+</div>
   </td>
-  <td class="side2"></td>
-</tr></table>
-<%- include('partials/sitefoot') %>
-<%- include('partials/foot') %>
+</tr>
+<!-- social sharing module -->
+
+<tr>
+<td class="small-c" align="center">
+  <center><font class="small-c">
+  </font>
+    <div id="photowall">
+        <img src="/img/wretch2012/album/new_album.gif" />
+        <div class="vip_only">
+            <span>Photo Wall&nbsp;(VIP only):&nbsp;</span>
+            <div class="tooltip"><span><a target="_blank" href="/help">僅相簿主人為VIP會員時才有此功能喔！</a></span></div>
+        </div>
+        <a class="mosazic" href="<%= phPath %>/slide">Mosaic            <div class="overlay">
+                <img src ="/img/wretch2012/album/mosazic.jpg"/>
+            </div>
+        </a>
+        <span class="separator">&nbsp;|&nbsp;</span>
+        <a class="waterfall" href="<%= phPath %>/slide">Waterfall            <div class="overlay">
+                <img src ="/img/wretch2012/album/waterfall.jpg" />
+            </div>
+        </a>
+    </div>
+
+  </center>
+
+<% if (!photos.length) { %>
+  <center><font class="small-c">這本相簿還沒有照片</font></center>
+
+<% } else if (viewAll) { %>
+<%# 「One Page」（原站 cookie showall=1）：整本大圖一次看完 %>
+<% photos.forEach((p, phI) => { %>
+<div class="w2a-onepage">
+  <a href="/<%= u.name %>/photo/<%= p.id %>"><img src="<%= p.url %>" border="0" alt="<%= p.caption %>" /></a>
+  <br/>
+  <b><font class="small-e"><%= p.caption || (phI + 1) %></font></b>
+  <font class="small-c">&nbsp;<%= phI + 1 %> / <%= photos.length %></font>
+</div>
+<% }) %>
+
+<% } else { %>
+<script>
+  var selrow_lang = new Array();
+  selrow_lang[0] = "Clear";
+  selrow_lang[1] = "Row";
+</script>
+<table id="ad_square" border="0" align="center" cellspacing="10" style="word-break:break-all">
+<% phRows.forEach((phRow, phR) => { %>
+<tr>
+<% phRow.forEach((p, phI) => { %>  <td class="side" width="120" height="120" align="center" valign="middle">
+    <a href="/<%= u.name %>/photo/<%= p.id %>"<% if (phR === 0 && phI === 0) { %>  id='FirstPic'<% } %> ><img src="<%= p.thumb || p.url %>" border="0" alt="Cover" /></a>
+    <br/>
+    <font class="small-c"><% if (album.cover && album.cover === p.url) { %>Cover<% } %></font>
+  </td>
+<% }) %><% for (let phK = phRow.length; phK < 5; phK++) { %>  <td width="120"></td>
+<% } %></tr>
+
+<tr>
+<% phRow.forEach((p, phI) => { %>  <td height="30" width="120" valign="top" align="center">
+        <b><font class="small-e"><a href="/<%= u.name %>/photo/<%= p.id %>"><%= p.caption || (phR * 5 + phI + 1) %></a></font></b>
+  </td>
+<% }) %><% for (let phK = phRow.length; phK < 5; phK++) { %>  <td width="120"></td>
+<% } %></tr>
+<% }) %>
+</table>
+<% } %>
+
+</td>
+</tr>
+
+<tr>
+<td>
+  <center><font class="small-c">
+    <%= photos.length %> pictures&nbsp;&nbsp;相簿人氣: <%= album.views %>
+    <% if (viewAll) { %>&nbsp;[<a href="<%= phPath %>">Thumbnails</a>]<% } %>
+    <% if (photos.length) { %>&nbsp;[<a href="<%= phPath %>/slide">自動播放</a>]<% } %>
+    <% if (me && me.admin) { %>&nbsp;[<form method="post" action="/admin/feature/album/<%= album.id %>" style="display:inline"><input type="hidden" name="back" value="<%= phPath %>"><button class="small-c w2a-linkbtn"><%= album.featured ? '取消精選' : '設為精選' %></button></form>]<% } %>
+  </font></center>
+</td>
+</tr>
+</table>
+<!--  end of content part -->
+
+<% if (isOwner) { %>
+<%# ── 以下只有站主本人看得到（原站在 admin/album 與 yuiuploader.php，沒有存檔可抄）%>
+<div class="w2a-tools">
+  <h4>Upload Photo</h4>
+  <div class="bd">
+    <form method="post" enctype="multipart/form-data" action="<%= phPath %>/upload">
+      <input type="file" name="photos" accept="image/*" multiple required>
+      &nbsp;說明 <input type="text" name="caption" size="18" maxlength="100">
+      <input type="submit" class="yui3_button_content" value="上傳">
+      <br><span class="w2a-note">一次最多 20 張，每張 8MB 內（jpg/png/gif/webp）</span>
+    </form>
+  </div>
+
+  <h4>Album Setting</h4>
+  <div class="bd">
+    <form method="post" action="<%= phPath %>/edit">
+      <table border="0" cellpadding="0" cellspacing="0">
+        <tr>
+          <th>相簿名稱</th>
+          <td><input type="text" name="title" size="24" maxlength="40" value="<%= album.title %>"></td>
+        </tr>
+        <tr>
+          <th>說明</th>
+          <td><input type="text" name="descr" size="40" maxlength="200" value="<%= album.descr %>"></td>
+        </tr>
+        <tr>
+          <th>站內分類</th>
+          <td>
+            <select name="topic">
+              <option value="">- 相簿分類 -</option>
+<% topics.forEach(t => { %>              <option<%= album.topic === t ? ' selected' : '' %>><%= t %></option>
+<% }) %>            </select>
+            &nbsp;地區
+            <select name="place">
+              <option value="">- 全部 -</option>
+<% places.forEach(pl => { %>              <option<%= album.place === pl ? ' selected' : '' %>><%= pl %></option>
+<% }) %>            </select>
+          </td>
+        </tr>
+        <tr>
+          <th>密碼</th>
+          <td><input type="text" name="pass" size="12" maxlength="20" value="<%= album.pass %>">
+            <span class="w2a-note">留空＝公開相簿</span></td>
+        </tr>
+        <tr>
+          <th>好友限定</th>
+          <td><label><input type="checkbox" name="friends_only" <%= album.friends_only ? 'checked' : '' %>> 只有我的好友看得到（不出現在相簿總站與搜尋）</label></td>
+        </tr>
+        <tr>
+          <th></th>
+          <td><input type="submit" class="yui3_button_content" value="儲存"></td>
+        </tr>
+      </table>
+    </form>
+    <form method="post" action="<%= phPath %>/del"
+          onsubmit="return confirm('確定刪除整本相簿與所有照片？')">
+      <input type="submit" class="yui3_button_content yui3_button_cancel w2a-danger" value="刪除相簿">
+    </form>
+  </div>
+</div>
+<% } %>
+
+<%- include('partials/foot2012_site') %>

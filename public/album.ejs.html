@@ -1,0 +1,605 @@
+
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<meta http-equiv="imagetoolbar" content="no">
+<title>kellyla&#39;s Album - 無名小站</title>
+<link rel="shortcut icon" type="image/x-icon" href="/favicon.ico">
+
+<link rel="stylesheet" href="/wretch2012-album.css" type="text/css">
+<link rel="stylesheet" href="/wretch2012-album-in.css" type="text/css">
+<style>body{}</style>
+</head>
+
+<body onDragStart="return false" oncontextmenu="return false" onSelectStart="return false">
+<!-- nv hugewrepper -->
+<div id="hugewrapper">
+
+<input id="static-path" type="hidden" value="/img/wretch2012/">
+<style>
+.kukubar-customized {
+    background:#EEEDDD; /* old browsers */
+    background: -moz-linear-gradient(top, #FFFFFF 0%, #EEEDDD 100%); /* firefox */
+    background: -webkit-gradient(linear, left top, left bottom, color-stop(0%,#FFFFFF), color-stop(100%,#EEEDDD)); /* webkit */
+
+}
+</style>
+<div id="kukubar-upper" class="font-black kukubar-customized kukubar-bar">
+    <div class="left-side">
+        <div id="wretch-logo" class="bar-block bar-block-click">
+        <h1><a class="bar-link" tabindex="1" href="/">無名小站</a></h1>
+        </div>
+        <div id="wretch-service" class="bar-block bar-block-click">
+            <a class="current-service bar-link theme" tabindex="2" href="/albums">Album</a>
+            <span class="bar-block-btn" tabindex="3">展開</span>
+            <ul class="dropdown album-service">
+                <li class="album-index"><a class="bar-link" href="/albums">Album</a></li>
+                <li class="blog-index"><a class="bar-link" href="/blogs">Blog</a></li>
+                <li class="video-index"><a class="bar-link" href="/help">Video</a></li>
+                <li class="digu-index"><a class="bar-link" href="/help">Digu</a></li>
+                <li class="join-index"><a class="bar-link" href="/help">Join</a></li>
+                <li><a class="bar-link" href="/">Yahoo!</a></li>
+                <li><a class="bar-link" href="/help">Help</a></li>
+                <li><a class="bar-link" href="/help">Premium</a></li>
+            </ul>
+        </div>
+        
+        <div id="infozone">
+             <ul>
+                <li><a href="/albums" class="theme">今日主題：逛逛大家的相簿</a></li>
+             </ul>
+        </div>
+    </div>
+
+
+    <div class="right-side">
+        <div id="wretch-search" class="bar-block">
+            
+            <form method="get" action="/search" name="searchForm">
+                            <fieldset>
+                    <legend>Album<span>選擇服務</span></legend>
+                    <div class="service-list dropdown">
+                        <input type="radio" id="srch-blog" name="type" value="article" data="false">
+                        <label for="srch-blog" _target="Article Search">Article</label>
+                        <input type="radio" id="srch-album" name="type" value="photo" checked="checked" data="checked">
+                        <label for="srch-album" _target="Album Search">Album</label>
+                        <input type="radio" id="srch-video" name="type" value="video" data="false">
+                        <label for="srch-video" _target="Video Search">Video</label>
+                    </div>
+                    <div class="search-field">
+                        <label for="wretch-search-text" class="hidden">搜尋</label>
+                        <input id="wretch-search-text" type="text" name="q" title="Album Search" value="" class="blur">
+                        <input id="wretch-search-btn" type="submit" value="送出">
+                    </div>
+                </fieldset>
+            </form>
+        </div>
+        
+        
+        <div id="wretch-login" class="bar-block bar-block-click bar-link">
+            <span class="theme">我</span>
+            <span class="bar-block-btn-login" tabindex="4">展開</span>
+            <ul class="dropdown">
+                <li><a class="bar-link" href="/me">我的小站</a></li>
+                <li><a class="bar-link" href="/me/album">我的相簿</a></li>
+                <li><a class="bar-link" href="/me/settings">個人設定</a></li>
+                <li><a class="bar-link" href="/me/favs">我的收藏</a></li>
+                <li><a class="bar-link" href="/admin">後台</a></li>
+                <li><form method="post" action="/logout"><button class="bar-link w2a-linkbtn">登出</button></form></li>
+            </ul>
+        </div>
+        
+        <div id="cam">
+        <a class="theme" href="/">Yahoo!</a>
+        </div>
+    </div>
+</div>
+<div id="bigcontainer" style="position: relative !important; zoom:1 !important;" >
+<div class="w2a-flash">測試訊息</div>
+
+
+<!-- banner part -->
+<table width="700" border="0" cellpadding="0" cellspacing="0" align="center">
+  <tr>
+    <td>
+      <div id="banner">
+        
+        <a href="/kellyla/album">kellyla's AlbumList</a>
+        
+      </div>
+    </td>
+  </tr>
+
+  <tr>
+    <td class="sidetitle">
+
+  
+  <div class="small-c" id="MySpace">
+    <span>[ kellyla 的</span>
+    <a id="linkMypage" href="/kellyla">MyPage</a><span>&nbsp;&nbsp;|&nbsp;</span>
+    <a id="linkAlbum" href="/kellyla/album">album</a><span>&nbsp;&nbsp;|&nbsp;</span>
+    <a id="linkBlog" href="/kellyla/blog">blog</a><span>&nbsp;&nbsp;|&nbsp;</span>
+    <a id="linkGbook" href="/kellyla/guestbook">guestbook</a><span>&nbsp;&nbsp;|&nbsp;</span>
+    <a id="linkUser" href="/kellyla/card">User</a><span>&nbsp;&nbsp;|&nbsp;</span>
+    <a id="linkFriend" href="/kellyla/friends">Friend</a><span>&nbsp;&nbsp;|&nbsp;</span>
+    <a id="linkVideo" href="/help">Video</a>
+    <span>]</span>
+  </div>
+  <span class="small-c">
+    
+    <select id="friendlist" name="friendlist" data-user-go="/album">
+  <option>- Friends' Album -</option>
+    </select>
+
+    
+    <select id="category" name="category" data-url-go="/albums?topic=">
+      <option value=''>- Category -</option>
+      <option value=''>- All -</option>
+      <option value="國內旅遊">國內旅遊</option>
+      <option value="國外旅遊">國外旅遊</option>
+      <option value="美食記錄">美食記錄</option>
+      <option value="流行時尚">流行時尚</option>
+    </select>
+
+  </span>
+
+        <div id="rss" class="small-c" align="right">
+          <div class="syndicate">
+            <a href="/kellyla/blog/rss"><img border="0" src="/img/wretch2012/blog/rss.gif" alt="" /></a>
+      (<a target="_blank" href="/help#rss">RSS HOWTO</a>)
+          </div>
+        </div>
+
+    </td>
+  </tr>
+</table>
+<!-- end of banner part -->
+
+
+
+<!-- content part -->
+<table width="700" border="0" cellpadding="0" cellspacing="0" align="center">
+
+<tr>
+<td id="ad_word">
+    
+</td>
+</tr>
+
+<tr>
+<td>
+                <center>
+                  <font class='small-c'>
+                  7 Albums                  </font>
+                </center>
+
+
+        <center><font class="small-c">
+1 <a href="?p=2" class="">2</a> <a id='next' href="?p=2" class="">下一頁</a>        </font></center>
+
+
+
+<table id="ad_square" border="0" align="center" cellspacing="10" style="word-break:break-all">
+
+<tr>
+<td class="side" width="120" height="120" align="center" valign="middle">
+  <a href="/kellyla/album/1"  id="FirstAlbum" >
+    <img src="/uploads/a.jpg" border="0" alt="Cover"/>
+  </a>
+<br/>
+
+
+
+</td>
+
+
+<td class="side" width="120" height="120" align="center" valign="middle">
+  <a href="/kellyla/album/2" >
+    <img src="/uploads/a.jpg" border="0" alt="Cover"/>
+  </a>
+<br/>
+
+
+
+</td>
+
+
+<td class="side" width="120" height="120" align="center" valign="middle">
+  <a href="/kellyla/album/3" >
+    <img src="/uploads/a.jpg" border="0" alt="Cover"/>
+  </a>
+<br/>
+
+
+
+</td>
+
+
+<td class="side" width="120" height="120" align="center" valign="middle">
+  <a href="/kellyla/album/4" >
+    <img src="/uploads/a.jpg" border="0" alt="Cover"/>
+  </a>
+<br/>
+
+
+
+</td>
+
+
+<td class="side" width="120" height="120" align="center" valign="middle">
+  <a href="/kellyla/album/5" >
+    <img src="/uploads/a.jpg" border="0" alt="Cover"/>
+  </a>
+<br/>
+
+
+
+</td>
+
+
+</tr>
+
+
+<tr>
+
+<td height="40" width="120" valign="top" align="center">
+  <b>
+    <font class="small-c">
+    <a href="/kellyla/album/1">相簿1</a>
+    </font>
+  </b>
+
+  <br/>
+  <b>
+    <font class="small-c">
+            <img src="/img/wretch2012/album/new_album.gif" width="21" height="11" border="0" alt="new" />5pictures          </font>
+  </b>
+</td>
+
+
+<td height="40" width="120" valign="top" align="center">
+  <b>
+    <font class="small-c">
+    <img src="/img/wretch2012/album/key.gif" width="16" height="16" border="0" alt="密碼相簿" /><a href="/kellyla/album/2">相簿2</a>
+    </font>
+  </b>
+
+  <br/>
+  <b>
+    <font class="small-c">
+            <img src="/img/wretch2012/album/new_album.gif" width="21" height="11" border="0" alt="new" />5pictures          </font>
+  </b>
+</td>
+
+
+<td height="40" width="120" valign="top" align="center">
+  <b>
+    <font class="small-c">
+    <a href="/kellyla/album/3">相簿3</a>
+    </font>
+  </b>
+
+  <br/>
+  <b>
+    <font class="small-c">
+            <img src="/img/wretch2012/album/new_album.gif" width="21" height="11" border="0" alt="new" />5pictures&nbsp;(friends only)          </font>
+  </b>
+</td>
+
+
+<td height="40" width="120" valign="top" align="center">
+  <b>
+    <font class="small-c">
+    <a href="/kellyla/album/4">相簿4</a>
+    </font>
+  </b>
+
+  <br/>
+  <b>
+    <font class="small-c">
+            <img src="/img/wretch2012/album/new_album.gif" width="21" height="11" border="0" alt="new" />5pictures          </font>
+  </b>
+</td>
+
+
+<td height="40" width="120" valign="top" align="center">
+  <b>
+    <font class="small-c">
+    <a href="/kellyla/album/5">相簿5</a>
+    </font>
+  </b>
+
+  <br/>
+  <b>
+    <font class="small-c">
+            <img src="/img/wretch2012/album/new_album.gif" width="21" height="11" border="0" alt="new" />5pictures          </font>
+  </b>
+</td>
+
+
+</tr>
+
+<tr>
+<td class="side" width="120" height="120" align="center" valign="middle">
+  <a href="/kellyla/album/6" >
+    <img src="/uploads/a.jpg" border="0" alt="Cover"/>
+  </a>
+<br/>
+
+
+
+</td>
+
+
+<td class="side" width="120" height="120" align="center" valign="middle">
+  <a href="/kellyla/album/7" >
+    <img src="/uploads/a.jpg" border="0" alt="Cover"/>
+  </a>
+<br/>
+
+
+
+</td>
+
+
+<td width="120"></td>
+<td width="120"></td>
+<td width="120"></td>
+</tr>
+
+
+<tr>
+
+<td height="40" width="120" valign="top" align="center">
+  <b>
+    <font class="small-c">
+    <a href="/kellyla/album/6">相簿6</a>
+    </font>
+  </b>
+
+  <br/>
+  <b>
+    <font class="small-c">
+            <img src="/img/wretch2012/album/new_album.gif" width="21" height="11" border="0" alt="new" />5pictures          </font>
+  </b>
+</td>
+
+
+<td height="40" width="120" valign="top" align="center">
+  <b>
+    <font class="small-c">
+    <a href="/kellyla/album/7">相簿7</a>
+    </font>
+  </b>
+
+  <br/>
+  <b>
+    <font class="small-c">
+            <img src="/img/wretch2012/album/new_album.gif" width="21" height="11" border="0" alt="new" />5pictures          </font>
+  </b>
+</td>
+
+
+<td width="120"></td>
+<td width="120"></td>
+<td width="120"></td>
+</tr>
+
+</table>
+
+
+
+        <center><font class="small-c">
+1 <a href="?p=2" class="">2</a> <a href="?p=2" class="">下一頁</a>        </font></center>
+
+
+</td>
+</tr>
+</table>
+<!--  end of content part -->
+
+
+
+<div class="w2a-tools">
+
+  <h4>Album Space</h4>
+  <div class="bd">
+    已使用 <b>1.2 MB</b> / 100.0 MB
+    <div class="w2a-quota"><i style="width:1%"></i></div>
+    <span class="w2a-note">空間快滿時請先刪掉不要的照片。</span>
+  </div>
+
+
+  <h4>New Album</h4>
+  <div class="bd">
+    <form method="post" action="/kellyla/album">
+      <table border="0" cellpadding="0" cellspacing="0">
+        <tr>
+          <th>相簿名稱</th>
+          <td><input type="text" name="title" size="24" maxlength="40" required></td>
+        </tr>
+        <tr>
+          <th>說明</th>
+          <td><input type="text" name="descr" size="40" maxlength="200"></td>
+        </tr>
+        <tr>
+          <th>站內分類</th>
+          <td>
+            <select name="topic">
+              <option value="">- 相簿分類 -</option>
+              <option>國內旅遊</option>
+              <option>國外旅遊</option>
+              <option>美食記錄</option>
+              <option>流行時尚</option>
+            </select>
+            &nbsp;地區
+            <select name="place">
+              <option value="">- 全部 -</option>
+              <option>台灣</option>
+              <option>香港與澳門</option>
+              <option>中國</option>
+              <option>世界各地</option>
+            </select>
+          </td>
+        </tr>
+        <tr>
+          <th>密碼</th>
+          <td><input type="text" name="pass" size="12" maxlength="20">
+            <span class="w2a-note">留空＝公開相簿</span></td>
+        </tr>
+        <tr>
+          <th>好友限定</th>
+          <td><label><input type="checkbox" name="friends_only"> 只有我的好友看得到（不出現在相簿總站與搜尋）</label></td>
+        </tr>
+        <tr>
+          <th></th>
+          <td><input type="submit" class="yui3_button_content" value="建立"></td>
+        </tr>
+      </table>
+    </form>
+  </div>
+</div>
+
+
+
+
+<table width="700" border="0" cellpadding="0" cellspacing="0" align="center">
+<tr>
+<td align="right">
+    <font class="small-c">
+    <a>Today's Visitors: 3</a>
+    <br />
+    <a>Total Visitors: 142</a>
+  </font>
+</td>
+</tr>
+</table>
+
+
+</div><!-- /#bigcontainer -->
+</div>
+<!-- nv hugewrepper -->
+<div id="kukubar-lower" class="kukubar-bar  ">
+
+        <div class="left-side">
+        <div id="footer-feedback" class="bar-block">
+            <a class="" href="/help" target="_blank">我有建議</a>
+        </div>
+        <div id="footer-subscription" class="bar-block bar-block-click">
+            <a class="footer-subscription-btn" href="#">分類好文<span class="bar-block-btn">展開</span></a>
+                <div id="scrb-panel" class="dropdown ">
+                <div class="hd panel-block">
+                    <div class="heading"><h5>請選擇你有興趣的分類</h5></div>
+                    
+                    <ul>
+                        <li><a href="/albums?topic=%E5%9C%8B%E5%85%A7%E6%97%85%E9%81%8A">國內旅遊</a></li>
+                        <li><a href="/albums?topic=%E5%9C%8B%E5%A4%96%E6%97%85%E9%81%8A">國外旅遊</a></li>
+                        <li><a href="/albums?topic=%E7%BE%8E%E9%A3%9F%E8%A8%98%E9%8C%84">美食記錄</a></li>
+                        <li><a href="/albums?topic=%E6%B5%81%E8%A1%8C%E6%99%82%E5%B0%9A">流行時尚</a></li>
+                    </ul>
+                </div>
+                <div class="bd panel-block">
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="right-side">
+                <div id="text-carousel">
+            <ul>
+                <li><a href="/kellyla/album/1">首頁好文：相簿1</a></li>
+                <li><a href="/kellyla/album/2">首頁好文：相簿2</a></li>
+                <li><a href="/kellyla/album/3">首頁好文：相簿3</a></li>
+                <li><a href="/kellyla/album/4">首頁好文：相簿4</a></li>
+                <li><a href="/kellyla/album/5">首頁好文：相簿5</a></li>
+                <li><a href="/kellyla/album/6">首頁好文：相簿6</a></li>
+            </ul>
+        </div>
+                <ul id="footer-ugc-compose">
+            <li class="bar-block bar-block-click blog-service"><em>網誌</em>
+                <ul class="dropdown">
+                    <li><a class="bar-link" href="/me/blog/new">Post Article</a></li>
+                    <li><a class="bar-link" href="/me/settings">Blog Style</a></li>
+                    <li class="last"><a class="bar-link" href="/me/settings">Blog Setting</a></li>
+                </ul>
+            </li>
+            <li class="bar-block bar-block-click album-service"><em>相簿</em>
+                <ul class="dropdown">
+                    <li><a class="bar-link" href="/me/album">Upload Photo</a></li>
+                    <li><a class="bar-link" href="/me/settings">Album Style</a></li>
+                    <li class="last"><a class="bar-link" href="/me/album">Album Setting</a></li>
+                </ul>
+            </li>
+            <li class="bar-block bar-block-click video-service"><em>影音</em>
+                <ul class="dropdown">
+                    <li><a class="bar-link" href="/help">Upload Video</a></li>
+                    <li><a class="bar-link" href="/help">Video Style</a></li>
+                    <li class="last"><a class="bar-link" href="/help">Video Setting</a></li>
+                </ul>
+            </li>
+        </ul>
+    </div>
+</div>
+<div id="footer-switch" class=" ">
+<button>關閉工具列</button>
+</div>
+<script>
+/* kukubar 的互動：原站是 YUI3 寫的 kukubar.js（assets_src2/css/chrome_kukubar.js），
+   這裡只重做「展開／收合」與「關閉工具列」兩件事，class 名稱與原站一致，
+   所以 chrome_kukubar.css 的 .expanded / .expanded-btn / .hidden-footer 規則直接生效。 */
+(function(){
+  function panelOf(block){ return block.querySelector('ul.dropdown, div.dropdown'); }
+  function close(block){
+    block.classList.remove('expanded-btn');
+    var p = panelOf(block); if (p) p.classList.remove('expanded');
+  }
+  function allBlocks(){
+    return document.querySelectorAll('#kukubar-upper .bar-block-click, #kukubar-lower .bar-block-click');
+  }
+  document.addEventListener('click', function(e){
+    var block = e.target.closest('#kukubar-upper .bar-block-click, #kukubar-lower .bar-block-click');
+    /* 點在下拉選單「裡面」的連結不切換，讓它正常跳頁 */
+    if (block && e.target.closest('.dropdown') && e.target.closest('a,button')) return;
+    allBlocks().forEach(function(b){ if (b !== block) close(b); });
+    if (!block) return;
+    var p = panelOf(block); if (!p) return;
+    if (e.target.closest('a') && !e.target.closest('.bar-block-btn, .bar-block-btn-login, .footer-subscription-btn')) return;
+    e.preventDefault();
+    var on = block.classList.toggle('expanded-btn');
+    p.classList.toggle('expanded', on);
+  });
+  var sw = document.getElementById('footer-switch');
+  if (sw) sw.addEventListener('click', function(){
+    var bar = document.getElementById('kukubar-lower');
+    var off = bar.classList.toggle('hidden-footer');
+    sw.classList.toggle('off', off);
+  });
+
+  /* 頁首那兩個下拉：原站是 meetfriend.js 的 MeetFriend() 與一行 inline onChange。
+     data-user-go="/album"      → 跳 /<選到的帳號>/album
+     data-url-go="/albums?topic=" → 跳 /albums?topic=<選到的值> */
+  document.addEventListener('change', function(e){
+    var s = e.target;
+    if (!s || s.tagName !== 'SELECT') return;
+    var v = s.value; if (!v) return;
+    var u = s.getAttribute('data-user-go');
+    if (u) { location.href = '/' + encodeURIComponent(v) + u; return; }
+    var q = s.getAttribute('data-url-go');
+    if (q) { location.href = q + encodeURIComponent(v); }
+  });
+
+  /* 社群分享列：fb / plurk / 即時通要「絕對網址」，EJS 拿不到 host，
+     所以 DOM 先寫 data-share / data-path / data-title，這裡補上 location.origin。 */
+  document.querySelectorAll('a[data-share]').forEach(function(a){
+    var url = location.origin + a.getAttribute('data-path');
+    var t   = a.getAttribute('data-title') || document.title;
+    var k   = a.getAttribute('data-share');
+    if (k === 'fb')    a.href = 'https://www.facebook.com/sharer.php?u=' + encodeURIComponent(url) + '&t=' + encodeURIComponent(t);
+    if (k === 'plurk') a.href = 'https://www.plurk.com/?qualifier=shares&status=' + encodeURIComponent(url + ' (' + t + ')');
+    if (k === 'yim')   a.href = 'ymsgr:customstatus?' + encodeURIComponent(t + ' ' + url);
+  });
+})();
+</script>
+</body>
+</html>
+

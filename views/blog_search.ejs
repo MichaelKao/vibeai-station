@@ -1,91 +1,80 @@
-<%- include('partials/head',{title:'搜尋這個網誌', layout:'blog'}) %>
-<%# 搜尋這個網誌的結果（WRETCH_DOM.md 第 5 節）
-    表單 action／method／欄位 name 沿用原本的：GET /:name/blog/search 的 q 與 body。
-    ☑標題 ☐內容：server.js 兩種模式都一定比對標題，勾了「內容」才多送 body=1
-    連內文一起找，所以「標題」那格固定勾選且不送出。 %>
 <%
-  const MON = ['January','February','March','April','May','June',
-               'July','August','September','October','November','December'];
-  const wDate = s => MON[+String(s).slice(5,7) - 1] + ' ' + (+String(s).slice(8,10)) + ', ' + String(s).slice(0,4);
-  const wTime = s => { let h = +String(s).slice(11,13); const ap = h < 12 ? 'AM' : 'PM';
-                       h = h % 12 || 12;
-                       return String(h).padStart(2,'0') + ':' + String(s).slice(14,16) + ' ' + ap; };
+  /* 搜尋這個網誌的結果（無名小站 2012 最後版）
+     ─────────────────────────────────────────────────────────────
+     原站側欄 #boxSearch 送出後回到 blog.php 的「列表模式」，
+     版面就是 spec/blog.md 第 8-5 節那一種：
+
+       .date > .datediv（放這一頁的標題，例如原站的 `Category: 搞笑影片`）
+       .blogbody > .blogbody2 > .articletext
+         .list-linkcontrol（分頁）＋ <table> 一列一篇：日期 + 標題 + 作者
+
+     列表模式的日期格式是 YYYY.MM.DD（跟文章區的 Month D, YYYY 不同），照抄。
+     外面那層 <form action="do_modify.php"> 是原站給站長批次刪除用的，
+     本站沒有這個功能就不放。
+
+     表單 action／method／欄位 name 沿用原本的：GET /:name/blog/search 的 q 與 body。
+     ☑標題 ☐內容：src/server.js 兩種模式都一定比對標題，勾了「內容」才多送 body=1，
+     所以「標題」那格固定勾選且不送出。
+
+     EJS 用 with(locals)，不能宣告和 local 同名的 const。 */
+  const wDot  = s => String(s).slice(0,4) + '.' + String(s).slice(5,7) + '.' + String(s).slice(8,10);
+  const IMG   = '/img/wretch2012/blog';
 %>
-<div id="container1"><div id="container2">
+<%- include('partials/blog2012_head', { title: '搜尋本站 - ' + u.nick + ' - 無名小站',
+                                        artTitle: k ? '搜尋：' + k : '搜尋本站', medium: '' }) %>
 
-  <div id="banner">
-    <a href="/"><img id="sitelogo" src="<%= SITE_LOGO %>" alt="<%= SITE_NAME %>"></a>
-    <div id="pageheader">
-      <h1><a href="/<%= u.name %>/blog"><%= u.nick %> 的小站</a></h1>
-      <span class="description"><%= u.intro ? u.intro.split('\n')[0].slice(0,60) : SITE_DESC %></span>
-      <div id="description2"><span class="description"></span></div>
-    </div>
-  </div>
+<div id="content">
+<input type="hidden" name="check_url" value="on">
+<div class="blog" >
 
-  <div id="main2">
-
-    <div id="content">
-
-      <div class="sidetitle">搜尋這個網誌</div>
-      <div class="side">
-        <form action="/<%= u.name %>/blog/search" method="get">
-          <input name="q" type="text" size="20" maxlength="30" value="<%= k %>">
-          <input type="submit" class="btn" value="搜尋">
-          <br />
-          <input type="checkbox" checked disabled>標題
-          <input type="checkbox" name="body" value="1" <%= inBody ? 'checked' : '' %>>內容
-        </form>
+      <div class="date">
+        <div class="datediv">
+          搜尋本站        </div>
       </div>
 
-      <% if (k) { %>
-      <div class="side">「<b><%= k %></b>」找到 <b><%= rows.length %></b> 篇</div>
+      <div class="blogbody">
+        <div class="blogbody2">
+          <div class="articletext" >
+            <br />
+            <form action="/<%= u.name %>/blog/search" method="get">
+              <input name="q" type="text" size="20" maxlength="30" value="<%= k %>">
+              <input type="submit" value="搜尋">
+              <br />
+              <input type="checkbox" class="blog_search_filter" value="1" checked disabled>標題
+              <input type="checkbox" name="body" class="blog_search_filter" value="1" <%= inBody ? 'checked' : '' %>>內容
+            </form>
+            <br />
 
-      <div class="blog">
-        <%
-          let lastDay = null;
-          rows.forEach(p=>{
-            const day1 = p.created.slice(0,10);
-            if (day1 !== lastDay) { lastDay = day1;
-        %>
-        <div class="date">
-          <div class="datediv"><%= wDate(p.created) %></div>
+            <% if (k) { %>
+            <p>「<b><%= k %></b>」找到 <b><%= rows.length %></b> 篇</p>
+            <table>
+              <% rows.forEach(p => { %>
+              <tr>
+                <td nowrap>
+                <%= wDot(p.created) %> <% if (p.pass) { %><img src="<%= IMG %>/lock.gif" width="21" height="16" border="0" align="absmiddle" alt="[鎖]"><% } %><a href="/<%= u.name %>/blog/<%= p.id %>"><%= p.title %></a>
+                </td>
+                <td><a href="/<%= u.name %>/blog?cat=<%= encodeURIComponent(p.category) %>"><%= p.category %></a></td>
+              </tr>
+              <% }) %>
+              <% if (!rows.length) { %>
+              <tr><td nowrap>找不到符合的文章</td><td></td></tr>
+              <% } %>
+            </table>
+            <br />
+            <% } %>
+          </div>
         </div>
-        <% } %>
-        <div class="blogbody">
-          <div class="blogbody2">
-            <div class="articletext">
-              <a name="<%= p.id %>"></a>
-              <h3 class="title"><% if (p.pass) { %><img src="<%= CDN %>/icon/key.gif" width="16" height="16" alt="[鎖]"> <% } %><a href="/<%= u.name %>/blog/<%= p.id %>"><%= p.title %></a></h3>
-              <div class="innertext"><%= p.pass && !isOwner ? '＊ 這篇文章已上鎖，需要密碼才能觀看 ＊' : (p.body.length > 100 ? p.body.slice(0,100) + '…' : p.body) %></div>
-              <div class="extended"><a href="/<%= u.name %>/blog/<%= p.id %>">(繼續閱讀)</a></div>
-              <br clear="all" />
-            </div>
-            <div class="posted">
-              <%= u.name %> at <a href="/blogs"><%= SITE_NAME %></a> at <%= wTime(p.created) %> post
-              | 分類：<a href="/<%= u.name %>/blog?cat=<%= encodeURIComponent(p.category) %>"><%= p.category %></a>
-            </div>
-          </div><!-- /.blogbody2 -->
-        </div><!-- /.blogbody -->
-        <% }) %>
-      </div><!-- /.blog -->
+      </div>
 
-      <% if (!rows.length) { %><div class="side">找不到符合的文章</div><% } %>
-      <% } %>
+</div> <!-- end of class=blog -->
+</div> <!-- end of content -->
 
-    </div><!-- /#content -->
+<div id="links">
 
-    <div id="links"><div id="links2">
-      <%- include('partials/blogside') %>
-    </div></div>
+  <div id="links2">
+  <%- include('partials/blogside') %>
+  </div> <!-- end of links2 -->
 
-  </div><!-- /#main2 -->
+</div> <!-- end of links -->
 
-  <div id="extraDiv1"><span></span></div>
-  <div id="extraDiv2"><span></span></div>
-  <div id="extraDiv3"><span></span></div>
-  <div id="extraDiv4"><span></span></div>
-  <div id="extraDiv5"><span></span></div>
-  <div id="extraDiv6"><span></span></div>
-
-</div></div><!-- /#container2 /#container1 -->
-<%- include('partials/foot') %>
+<%- include('partials/blog2012_foot') %>

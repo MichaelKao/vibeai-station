@@ -1,184 +1,229 @@
 <%
-  /* 網誌右側欄（WRETCH_DOM.md 第 5 節「側欄模組」）
-     ------------------------------------------------------------------
-     這支 partial 只吐「側欄內容」，不含外框。
-     呼叫端必須自己開 <div id="links"><div id="links2">，
-     include 這支之後再把兩層關掉（見 post_edit.ejs）。
+  /* 網誌右側欄 #links 的內容（200px）
+     ─────────────────────────────────────────────────────────────
+     模組順序與 DOM 逐節點照抄 assets_src2/html/blog_2012_default_skin_afuuu.html，
+     規格見 assets_src2/spec/blog.md 第 8-4 節：
 
-     模組一律三層，順序與 id 照契約：
-       #links2   → 1 boxMySpace  2 boxNewArticle 3 boxCategory 4 boxDate 5 boxSearch
-       #divThird2→ 6 boxNewComment 7 boxNewTrackback 8 boxCounter 9 .syndicate 10 .powered
+       .calendar          ← 月曆（獨立一塊，不在任何 box 裡）
+       #boxMySpace        ← 個人資訊
+       #boxNewArticle     ← 最新文章
+       #boxCategory       ← 文章分類
+       #boxDate           ← 月份彙整
+       #boxSearch         ← 站內搜尋
+       #divThird > #divThird2 > #boxNewComment / #boxNewTrackback / #boxCounter
+                 > .syndicate
 
-     資料來自 server.js 的 blogSide()：cats / recent / recentC / months / cal。
-     只在部分頁面存在的 local（ym、k、inBody、trackbacks）一律用 typeof 保護。 */
+     每個模組固定三層：#boxXxx > .boxXxx0 > .sidetitle ／ .boxXxx1 > .side，
+     模組尾巴一個 <br />（`#links br{display:none}` 平常看不到，換造型時會跑出來，
+     所以照抄要留著）。#boxMySpace 與 #boxCounter 在原始檔裡就沒有那個 <br />。
+
+     這支只吐側欄內容，不含外框；呼叫端自己開 <div id="links"><div id="links2">。
+
+     文案：存檔頁面全是英文語系表（爬蟲沒有語系 cookie），台灣使用者看到的中文
+     blog.md 第 6-C 節列為【推】，這裡照那份對照表用中文。
+
+     資料來自 src/server.js 的 blogSide()：cats / recent / recentC / months / cal。
+     只在部分頁面存在的 local（ym、k、inBody、trackbacks）一律用 locals 保護。
+
+     EJS 用 with(locals)，不能宣告和 local 同名的 const。 */
   const todayHits = u.hits_date === new Date().toLocaleDateString('sv-SE') ? (u.today_hits || 0) : 0;
-  const curYm     = (typeof ym !== 'undefined' && ym) ? ym : '';
-  const curK      = (typeof k  !== 'undefined' && k)  ? k  : '';
-  const curInBody = (typeof inBody !== 'undefined') && inBody;
-  const tbs       = (typeof trackbacks !== 'undefined' && trackbacks) ? trackbacks : [];
+  const curYm     = locals.ym || '';
+  const curK      = locals.k  || '';
+  const curInBody = !!locals.inBody;
+  const tbs       = locals.trackbacks || [];
+  const wk        = ['日','一','二','三','四','五','六'];
+  const wkAbbr    = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+  const IMG       = '/img/wretch2012/blog';
 %>
-<%# ── 1 boxMySpace ─────────────────────────────────────────────── %>
+<%# ── 月曆 .calendar（200×200，底圖 calendar.gif） ───────────────── %>
+<div align="center" class="calendar">
+  <a href="/<%= u.name %>/blog?cal=<%= cal.key %>" rel="nofollow">文章日曆</a>
+  <table border="0" cellspacing="4" cellpadding="0" summary="Monthly calendar with links to each day's posts">
+    <caption class="calendarhead">
+      <a href="/<%= u.name %>/blog?cal=<%= cal.prevYm %>" rel="nofollow">&lt&lt</a>
+      <a href="/<%= u.name %>/blog?ym=<%= cal.key %>" rel="nofollow"><%= cal.y %> 年 <%= cal.m %> 月</a>
+      <% if (!cal.isFuture) { %><a href="/<%= u.name %>/blog?cal=<%= cal.nextYm %>" rel="nofollow">&gt&gt</a><% } %>
+    </caption>
+    <tr>
+      <% wk.forEach((d,i)=>{ %><th abbr="<%= wkAbbr[i] %>" align="center"><span class="calendar"><%= d %></span></th><% }) %>
+    </tr>
+    <% for (let i=0; i<cal.cells.length; i+=7) { %>
+    <tr>
+      <% for (let j=i; j<i+7; j++) { const c=cal.cells[j]; %><td align="center"><span class="calendar"><% if (!c) { %>&nbsp;<% } else if (c.has) { %><a href="/<%= u.name %>/blog?d=<%= cal.key %>-<%= String(c.d).padStart(2,'0') %>" rel="nofollow"><%= c.d %></a><% } else { %><%= c.d %><% } %></span></td><% } %>
+    </tr>
+    <% } %>
+  </table>
+</div>
+
+<%# ── #boxMySpace ─────────────────────────────────────────────── %>
 <div id="boxMySpace">
-  <div class="boxMySpace0">
-    <div class="sidetitle"><%= u.nick %> 的小站</div>
+ <div class="boxMySpace0">
+  <div class="sidetitle">
+   <%= u.nick %> 的小站  </div>
+ </div>
+ <div class="boxMySpace1">
+  <div class="side">
+   <div class="boxMySpaceImg">
+    <a href="/<%= u.name %>/card">
+     <img border="0" width="90" height="90" src="<%= u.avatar || (IMG + '/user_cover.gif') %>" alt="<%= u.nick %>"/>
+    </a>
+   </div>
+
+   <div id="service">
+    <ul id="serviceList">
+     <li><a class="mySpaceLink" id="linkMypage" href="/<%= u.name %>">MyPage</a></li>
+     <li><a class="mySpaceLink" id="linkAlbum" href="/<%= u.name %>/album">相簿</a></li>
+     <li><a class="mySpaceLink" id="linkBlog" href="/<%= u.name %>/blog">網誌</a></li>
+     <li><a class="mySpaceLink" id="linkGbook" href="/<%= u.name %>/guestbook">留言板</a></li>
+     <li><a class="mySpaceLink" id="linkUser" href="/<%= u.name %>/card">名片</a></li>
+     <li><a class="mySpaceLink" id="linkFriend" href="/<%= u.name %>/friends">好友</a></li>
+    </ul>
+
+    <ul id="interactionList">
+     <% if (me && !isOwner) { %>
+     <li class="boxAddFriendLink"><form method="post" action="/<%= u.name %>/friend"><button class="mySpaceLink" id="link_addfriend"><%= isFriend ? '取消好友' : '加入好友名單' %></button></form></li>
+     <% } %>
+     <% if (isOwner) { %>
+     <li class="boxAddFriendLink"><a class="mySpaceLink" href="/<%= u.name %>/blog/new">發表文章</a></li>
+     <li class="boxAddFriendLink"><a class="mySpaceLink" href="/<%= u.name %>/settings">網誌樣式</a></li>
+     <li class="boxAddFriendLink"><a class="mySpaceLink" href="/<%= u.name %>/settings">網誌設定</a></li>
+     <% } %>
+    </ul>
+   </div>
   </div>
-  <div class="boxMySpace1">
-    <div class="side">
-      <div class="boxMySpaceImg">
-        <a href="/<%= u.name %>"><img src="<%= u.avatar || (CDN + '/icon/user_cover.gif') %>" width="90" height="90" alt="<%= u.nick %>"></a>
+ </div>
+</div>
+
+<%# ── #boxNewArticle ──────────────────────────────────────────── %>
+      <div id="boxNewArticle">
+      <div class="boxNewArticle0">
+        <div class="sidetitle">
+          最新文章        </div>
       </div>
-      <div id="service">
-        <ul id="serviceList">
-          <li><a class="mySpaceLink" id="linkMypage" href="/<%= u.name %>">MyPage</a></li>
-          <li><a class="mySpaceLink" id="linkAlbum" href="/<%= u.name %>/album">相簿</a></li>
-          <li><a class="mySpaceLink" id="linkBlog" href="/<%= u.name %>/blog">網誌</a></li>
-          <li><a class="mySpaceLink" id="linkGbook" href="/<%= u.name %>/guestbook">留言板</a></li>
-          <li><a class="mySpaceLink" id="linkUser" href="/<%= u.name %>/card">名片</a></li>
-          <li><a class="mySpaceLink" id="linkFriend" href="/<%= u.name %>/friends">好友</a></li>
-        </ul>
-        <ul id="interactionList">
-          <% if (me && !isOwner) { %>
-          <li class="boxAddFriendLink">
-            <form method="post" action="/<%= u.name %>/friend"><button class="lnk mySpaceLink"><%= isFriend ? '取消好友' : '加入好友名單' %></button></form>
-          </li>
-          <% } %>
-          <% if (isOwner) { %>
-          <li class="boxAddFriendLink"><a class="mySpaceLink" href="/<%= u.name %>/blog/new">發表文章</a></li>
-          <li class="boxAddFriendLink"><a class="mySpaceLink" href="/<%= u.name %>/settings">網誌樣式</a></li>
-          <li class="boxAddFriendLink"><a class="mySpaceLink" href="/<%= u.name %>/settings">網誌設定</a></li>
-          <% } %>
-        </ul>
+      <div class="boxNewArticle1">
+        <div class="side">
+          <% recent.forEach(r=>{ %><a href="/<%= u.name %>/blog/<%= r.id %>"><%= r.title %></a><br />
+          <% }) %><% if (!recent.length) { %><a href="/<%= u.name %>/blog">尚無文章</a><br /><% } %>
+        </div>
       </div>
+      <br />
     </div>
-  </div>
-  <br />
-</div>
-<%# ── 2 boxNewArticle ──────────────────────────────────────────── %>
-<div id="boxNewArticle">
-  <div class="boxNewArticle0">
-    <div class="sidetitle">最新文章</div>
-  </div>
-  <div class="boxNewArticle1">
-    <div class="side">
-      <% recent.forEach(r=>{ %><a href="/<%= u.name %>/blog/<%= r.id %>"><%= r.title %></a><br />
-      <% }) %><% if (!recent.length) { %>尚無文章<% } %>
+
+<%# ── #boxCategory ────────────────────────────────────────────── %>
+<%# 注意 .boxCategory1 是 font-size:0/color:#eee（原站用來藏樣板空白字的老招），
+    只有 <a> 會被 #links .boxCategory1 a 拉回 12px，所以這一格裡不要放純文字。 %>
+      <div id="boxCategory">
+      <div class="boxCategory0">
+        <div class="sidetitle">
+          文章分類        </div>
+      </div>
+      <div class="boxCategory1">
+        <div class="side">
+          <% cats.forEach(c=>{ %><a href="/<%= u.name %>/blog?cat=<%= encodeURIComponent(c.category) %>"><%= c.category %>(<%= c.n %>)</a><br />
+          <% }) %><a href="/<%= u.name %>/blog">全部文章</a><br />
+        </div>
+      </div>
+      <br />
     </div>
-  </div>
-  <br />
-</div>
-<%# ── 3 boxCategory ────────────────────────────────────────────── %>
-<div id="boxCategory">
-  <div class="boxCategory0">
-    <div class="sidetitle">文章分類</div>
-  </div>
-  <div class="boxCategory1">
-    <div class="side">
-      <% cats.forEach(c=>{ %><a href="/<%= u.name %>/blog?cat=<%= encodeURIComponent(c.category) %>"><%= c.category %>(<%= c.n %>)</a><br />
-      <% }) %><a href="/<%= u.name %>/blog">全部</a><br />
+
+<%# ── #boxDate ────────────────────────────────────────────────── %>
+      <div id="boxDate">
+      <div class="boxDate0">
+        <div class="sidetitle">
+          月份彙整        </div>
+      </div>
+      <div class="boxDate1">
+        <div class="side">
+          <a href="/<%= u.name %>/blog">全部文章</a>
+          <br />
+          <form action="/<%= u.name %>/blog" method="get" class="monthly">
+          <select name="ym" onChange="if(this.value)this.form.submit();">
+            <option value="">- 月份彙整 -</option>
+            <% months.forEach(m=>{ %><option value="<%= m.ym %>" <%= curYm===m.ym ? 'selected' : '' %>><%= m.ym.slice(0,4) %> 年 <%= +m.ym.slice(5,7) %> 月(<%= m.n %>)</option>
+            <% }) %>
+          </select>
+          </form>
+          <br />
+        </div>
+      </div>
+      <br />
     </div>
-  </div>
-  <br />
-</div>
-<%# ── 4 boxDate ────────────────────────────────────────────────── %>
-<div id="boxDate">
-  <div class="boxDate0">
-    <div class="sidetitle">文章日曆</div>
-  </div>
-  <div class="boxDate1">
-    <div class="side">
-      <table class="cal" border="0" cellpadding="0" cellspacing="0" align="center">
-        <tr class="calnav">
-          <td colspan="2"><a href="/<%= u.name %>/blog?cal=<%= cal.prevYm %>">&laquo;</a></td>
-          <td colspan="3"><%= cal.y %> / <%= cal.m %></td>
-          <td colspan="2"><% if (!cal.isFuture) { %><a href="/<%= u.name %>/blog?cal=<%= cal.nextYm %>">&raquo;</a><% } %></td>
-        </tr>
-        <tr class="wk"><th>日</th><th>一</th><th>二</th><th>三</th><th>四</th><th>五</th><th>六</th></tr>
-        <% for (let i=0; i<cal.cells.length; i+=7) { %>
-        <tr>
-          <% for (let j=i; j<i+7; j++) { const c=cal.cells[j]; %><td><% if (!c) { %>&nbsp;<% } else if (c.has) { %><a href="/<%= u.name %>/blog?d=<%= cal.key %>-<%= String(c.d).padStart(2,'0') %>"><b><%= c.d %></b></a><% } else { %><%= c.d %><% } %></td><% } %>
-        </tr>
-        <% } %>
-      </table>
-      <form action="/<%= u.name %>/blog" method="get" class="monthly">
-        <select name="ym" onchange="this.form.submit()">
-          <option value="">- 月份彙整 -</option>
-          <% months.forEach(m=>{ %><option value="<%= m.ym %>" <%= curYm===m.ym ? 'selected' : '' %>><%= m.ym.slice(0,4) %> 年 <%= +m.ym.slice(5,7) %> 月(<%= m.n %>)</option><% }) %>
-        </select>
-      </form>
+
+<%# ── #boxSearch ──────────────────────────────────────────────── %>
+      <div id="boxSearch">
+      <div class="boxSearch0">
+        <div class="sidetitle">
+          搜尋本站        </div>
+      </div>
+      <div class="boxSearch1">
+        <div class="side">
+          <br />
+          <%# 對應 src/server.js 的 site.get('/blog/search')：q 與 body。
+              「標題」兩種模式都一定比對，所以那格固定勾選且不送出。 %>
+          <form action="/<%= u.name %>/blog/search" method="get" >
+            <input type="text" name="q" id="blog_search_key" size="12" maxlength="30" value="<%= curK %>">
+            <input type="submit" id="blog_search_submit" value="搜尋">
+            <br />
+
+            <input type="checkbox" class="blog_search_filter" value="1" checked disabled>標題
+            <input type="checkbox" name="body" class="blog_search_filter" value="1" <%= curInBody ? 'checked' : '' %>>內容
+          </form>
+        </div>
+      </div>
+      <br />
     </div>
-  </div>
-  <br />
-</div>
-<%# ── 5 boxSearch ──────────────────────────────────────────────── %>
-<div id="boxSearch">
-  <div class="boxSearch0">
-    <div class="sidetitle">搜尋這個網誌</div>
-  </div>
-  <div class="boxSearch1">
-    <div class="side">
-      <form action="/<%= u.name %>/blog/search" method="get">
-        <input name="q" type="text" size="12" maxlength="30" value="<%= curK %>">
-        <input type="submit" value="搜尋">
+
+  <div id="divThird">
+    <div id="divThird2">
+<%# ── #boxNewComment（標題右側有 RSS 圖） ─────────────────────── %>
+        <div id="boxNewComment">
+        <div class="boxNewComment0">
+          <div class="sidetitle">
+            最新回應
+                        <span class="syndicate">
+            <a href="/<%= u.name %>/blog/rss"><img border="0" src="<%= IMG %>/rss.gif" /></a>
+            </span>
+                      </div>
+        </div>
+        <div class="boxNewComment1">
+          <div class="side">
+            <% recentC.forEach(c=>{ %><a href="/<%= u.name %>/blog/<%= c.post_id %>#comments">Re: <%= c.title %></a>, by <%= c.author %><br />
+            <% }) %><% if (!recentC.length) { %><a href="/<%= u.name %>/blog">尚無回應</a><br /><% } %>
+          </div>
+        </div>
         <br />
-        <%# 標題一律比對（server.js 兩種模式都查 title），所以這格固定勾選；
-            「內容」勾了才送出 body=1，行為與原本的 radio 完全相同。 %>
-        <input type="checkbox" checked disabled>標題
-        <input type="checkbox" name="body" value="1" <%= curInBody ? 'checked' : '' %>>內容
-      </form>
-    </div>
-  </div>
-  <br />
-</div>
-<div id="divThird">
-<div id="divThird2">
-<%# ── 6 boxNewComment ──────────────────────────────────────────── %>
-  <div id="boxNewComment">
-    <div class="boxNewComment0">
-      <div class="sidetitle">最新迴響</div>
-    </div>
-    <div class="boxNewComment1">
-      <div class="side">
-        <% recentC.forEach(c=>{ %><a href="/<%= u.name %>/blog/<%= c.post_id %>#comments">Re: <%= c.title %></a>, by <%= c.author %><br />
-        <% }) %><% if (!recentC.length) { %>尚無迴響<% } %>
       </div>
-    </div>
-    <br />
-  </div>
-<%# ── 7 boxNewTrackback ────────────────────────────────────────── %>
-  <div id="boxNewTrackback">
-    <div class="boxNewTrackback0">
-      <div class="sidetitle">最新引用</div>
-    </div>
-    <div class="boxNewTrackback1">
-      <div class="side">
-        <% tbs.forEach(t=>{ %><a href="/<%= t.uname %>/blog/<%= t.pid %>">Re: <%= t.title %></a><span>, by <%= t.uname %> (<%= t.created ? t.created.slice(5,10) : '' %>)</span><br />
-        <% }) %><% if (!tbs.length) { %>尚無引用<% } %>
+
+<%# ── #boxNewTrackback ────────────────────────────────────────── %>
+        <div id="boxNewTrackback">
+        <div class="boxNewTrackback0">
+          <div class="sidetitle">
+            最新引用          </div>
+        </div>
+        <div class="boxNewTrackback1">
+          <div class="side">
+            <% tbs.forEach(t=>{ %><a href="/<%= t.uname %>/blog/<%= t.pid %>">Re: <%= t.title %></a><span>, by <a href="/<%= t.uname %>/blog"><%= t.uname %></a> (<%= t.created ? t.created.slice(5,10) : '' %>)</span><br />
+            <% }) %><% if (!tbs.length) { %><a href="/<%= u.name %>/blog">尚無引用</a><br /><% } %>
+          </div>
+        </div>
+        <br />
       </div>
-    </div>
-    <br />
-  </div>
-<%# ── 8 boxCounter ─────────────────────────────────────────────── %>
-  <div id="boxCounter">
-    <div class="boxCounter0">
-      <div class="sidetitle">人氣指數</div>
-    </div>
-    <div class="boxCounter1">
-      <div class="side">
-        今日人氣: <span class="point_grade"><%= todayHits %></span><br />
-        累積人氣: <span class="point_grade"><%= u.visits %></span>
+
+<%# ── #boxCounter ─────────────────────────────────────────────── %>
+        <div id="boxCounter">
+        <div class="boxCounter0">
+          <div class="sidetitle">
+            訪客人數          </div>
+        </div>
+        <div class="boxCounter1">
+          <div class="side">
+            今日人氣: <%= todayHits %><br />
+            累積人氣: <%= u.visits %>              </div>
+        </div>
       </div>
-    </div>
-    <br />
-  </div>
-<%# ── 9 .syndicate ─────────────────────────────────────────────── %>
-  <div class="syndicate">
-    <a href="/<%= u.name %>/blog/rss">RSS</a>
-    ( <a href="/help#rss">RSS HOWTO</a> )
-  </div>
-<%# ── 10 .powered ──────────────────────────────────────────────── %>
-  <div class="powered">
-    POWERED BY <a class="powerlogo" href="/"><%= SITE_NAME %></a>
-    <% if (me) { %>| <a href="/<%= me.name %>">我的小站</a><% } else { %>| <a href="/login">登入</a> | <a href="/register">免費註冊</a><% } %>
-  </div>
-</div><!-- /#divThird2 -->
-</div><!-- /#divThird -->
+
+    </div> <!-- end of divThird2 -->
+      <div class="syndicate">
+      <a href="/<%= u.name %>/blog/rss"><img border="0" src="<%= IMG %>/rss.gif" /></a>
+      </div>
+    </div> <!-- end of divThird -->

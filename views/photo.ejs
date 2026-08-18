@@ -1,119 +1,271 @@
-<%- include('partials/head',{title:(p.caption||p.atitle)}) %>
-<%- include('partials/sitetop') %>
+<%
+  /* 單張照片 /:name/photo/:pid ── 無名 2012 的 album/show.php
+     ═══════════════════════════════════════════════════════════════════════
+     DOM 逐節點照抄 assets_src2/html/album_show_zh_kellyla.html（繁中版）：
 
-<%# 單張照片頁（WRETCH_DOM.md 4-C）
-    麵包屑 → 10 / 80 → 第一張|上一張|下一張|最後一張|回頂端 → 幻燈片
-    → #DisplayImage 大圖 → 照片說明 → 工具列 → 其他照片縮圖列 → 迴響 %>
-<table width="700" border="0" cellpadding="0" cellspacing="0" align="center"><tr>
-  <td class="side1"></td>
-  <td id="content1">
+       body#body_show                       ← skin 1/189 靠這個 id 把底色切成白的
+       #bigcontainer
+       ├ div[align=center]
+       │  ├ table[700]                      （空的，原站是 AD 位）
+       │  ├ table[700]
+       │  │  ├ tr > td[rowspan=2][width=360] > font.normal-a  麵包屑
+       │  │  │    + td[align=center] > font.small-c > strong > span#CurrentPicNum「16 / 611」
+       │  │  └ tr > td > font.small-a
+       │  │       第一張|上一張|下一張|最後一張|回上一層 <br> 自動播放 | 相片牆(VIP only): 馬賽克 | 瀑布
+       │  └ font.small-e
+       ├ div[align=center]
+       │  ├ hr[noshade][size=1]
+       │  ├ font.normal-c > b > span#DisplayTitle          照片標題
+       │  ├ table.show[width=100%] > tr > td[align=center]
+       │  │    .social-wrapper（分享列）
+       │  │    a#DisplayLink > img#DisplayImage            大圖，點了跳下一張
+       │  ├ font.normal-c > span#DisplayDesc               照片說明
+       │  ├ hr
+       │  ├ p[align=right]  搜尋更多 / 留言 / 檢舉這張相片
+       │  ├ table#ad_square  縮圖列（5 張：目前這張前後各兩張）
+       │  └ hr
+       └ 迴響區（本站加的，理由見下）
 
-    <a name="top" id="top"></a>
+     熱鍵照抄原站 show_hotkey：z 第一張 / x 上一張 / c 下一張 / v 最後一張 / b 回上一層 /
+     s 自動播放。原站另外有 i（圖片資訊 EXIF），本站沒有存 EXIF，那顆連結與熱鍵都拿掉。
+     一併拿掉的還有「iZoom Revolution」（VIP 的放大鏡服務，本站沒有）。
 
-    <div class="side"><%= u.name %>'s Album &gt;
-      <a href="/<%= u.name %>/album/<%= p.aid %>"><%= p.atitle %></a></div>
+     【偏離】迴響區：本站照抄的舊版 show.php 沒有迴響——2012 年只有「新版相片頁」
+     （assets_src2/html/album_show_teresagiol.html，CSS 是 album/css/wspp.css）才有，
+     而那是另一整套版面（.mod_post / .commentthread / section 骨架）。
+     本站的 photo_comments 資料表已經在跑，所以用舊版頁面自己的語彙補一塊，
+     樣式寫在 public/wretch2012-album-in.css §7。
 
-    <div class="side" align="center"><b><%= idx %></b> / <%= total %></div>
+     【偏離】相片牆的「馬賽克 / 瀑布」原本指向 album/display.php 的兩種相片牆，
+     本站沒做這兩頁，兩顆都接到幻燈片。
 
-    <div class="photonav" align="center">
-      <% if (prev) { %><a href="/<%= u.name %>/photo/<%= first %>">第一張</a> |
-      <a href="/<%= u.name %>/photo/<%= prev %>">上一張</a><% } else { %><span class="gray">第一張 | 上一張</span><% } %> |
-      <% if (next) { %><a href="/<%= u.name %>/photo/<%= next %>">下一張</a> |
-      <a href="/<%= u.name %>/photo/<%= last %>">最後一張</a><% } else { %><span class="gray">下一張 | 最後一張</span><% } %> |
-      <a href="#top">回頂端</a>
+     EJS 用 with(locals)：內部變數加 ph 前綴，避免和 local 撞名（TDZ）。 */
+
+  const phBook  = '/' + u.name + '/album/' + p.aid;
+  const phPath  = '/' + u.name + '/photo/' + p.id;
+  /* 縮圖列：原站固定 5 張（目前這張前後各兩張）。本站的 strip 是整本，自己開窗。 */
+  const phAll   = strip;
+  const phAt    = Math.max(0, phAll.findIndex(s => s.id === p.id));
+  const phFrom  = Math.max(0, Math.min(phAt - 2, phAll.length - 5));
+  const phStrip = phAll.slice(phFrom, phFrom + 5);
+%>
+<%- include('partials/head2012_site', {
+      w2Title:   (p.caption || p.atitle) + ' - ' + u.name + "'s Album - " + SITE_NAME,
+      w2Service: 'Album',
+      w2BodyId:  'body_show',
+      w2Head:    'none',
+    }) %>
+<div align="center">
+  <table border="0" width="700">
+
+
+  </table>
+
+
+  <table border="0" width="700">
+    <tr>
+      <td rowspan="2" width="360" valign=middle>
+        <font class="normal-a">
+            <a href="/<%= u.name %>/album"><%= u.nick %>的相簿</a> &gt;
+            <a href="<%= phBook %>"><%= p.atitle %></a>
+        </font>
+      </td>
+
+      <td align="center" valign="middle">
+        <font class="small-c" >
+          <strong>
+            <span id="CurrentPicNum"><%= idx %></span> / <%= total %>          </strong>
+        </font>
+      </td>
+    </tr>
+    <tr>
+      <td valign="middle"><font class="small-a">
+<% if (prev) { %>          <a href="/<%= u.name %>/photo/<%= first %>" id="first" title="第一張(熱鍵:z)">第一張</a> |
+              <a id="prev" href="/<%= u.name %>/photo/<%= prev %>" title="上一張(熱鍵:x)">上一張</a> |
+<% } else { %>          第一張 | 上一張 |
+<% } %><% if (next) { %>              <a href="/<%= u.name %>/photo/<%= next %>" id="next" title="下一張(熱鍵:c)">下一張</a>  |
+        <a id="last" href="/<%= u.name %>/photo/<%= last %>" title="最後一張(熱鍵:v)">最後一張</a> |
+<% } else { %>          下一張 | 最後一張 |
+<% } %>        <a href="<%= phBook %>" id="updir" title="回上一層(熱鍵:b)"> 回上一層</a>
+        <br>
+
+              <a href="<%= phBook %>/slide?i=<%= idx %>" id="slide" title="自動播放(熱鍵:s)" target="_blank">自動播放</a>
+
+            |    相片牆&nbsp;<span class="hide-fun">(VIP only)</span>:&nbsp;<a class="mosazic" href="<%= phBook %>/slide">馬賽克</a>
+      | <a class="waterfall" href="<%= phBook %>/slide">瀑布</a>
+        </font>
+      </td>
+            </tr>
+  </table>
+  <font class="small-e"><b><a href="/<%= u.name %>/album"> </a></b></font>
+</div>
+
+<div align="center">
+  <hr noshade size="1" align="center">
+  <font class="normal-c"><b>
+  <span id="DisplayTitle">
+      <%= p.caption %>  </span>
+  </b></font>
+<p align="right">
+
+</p>
+  <table class="show" border=0 width=100%>
+  <tr>
+    <td align="center">
+
+<%# 分享列 .social-wrapper：DOM 照抄存檔，樣式來自 bundle 裡的 sharing.css。
+    絕對網址由 foot2012_site.ejs 的 JS 在瀏覽器端補（EJS 拿不到 host）。 %>
+              <div class="social-wrapper">
+<div class="social-widget">
+  <div class="bd">
+      <a class="fb" title="分享在我的Facebook" target="_blank" data-share="fb" data-path="<%= phPath %>" data-title="<%= p.caption || p.atitle %>" href="<%= phPath %>">分享在我的Facebook</a>
+      <a class="plurk" title="分享在我的Plurk" target="_blank" data-share="plurk" data-path="<%= phPath %>" data-title="<%= p.caption || p.atitle %>" href="<%= phPath %>">分享在我的Plurk</a>
+      <a class="yim" title="分享在我的即時通" data-share="yim" data-path="<%= phPath %>" data-title="<%= p.caption || p.atitle %>" href="<%= phPath %>">分享在我的即時通</a>
+  </div>
+</div>
+<div class="wretch-reblog fixinline">
+    <div class="bd bubble-none">
+        <a class="wretch" href="<%= me ? '/' + me.name + '/blog/new' : '/login' %>" target="_blank" title="發文至無名">發文
+                </a>
     </div>
+</div>
+</div>
 
-    <div class="albumtools">
-      [ <a href="/<%= u.name %>/album/<%= p.aid %>/slide?i=<%= idx %>">幻燈片</a> ]
-      [ <a href="/<%= u.name %>/album/<%= p.aid %>?all=1">一頁瀏覽</a> ]
-    </div>
+      <a id='DisplayLink' href='<%= next ? "/" + u.name + "/photo/" + next : phBook %>'>
+        <img id='DisplayImage' src='<%= p.url %>' border=0 alt='下一張(熱鍵:c)' />
+      </a>
 
-    <div class="bigphoto" align="center"><img id="DisplayImage" src="<%= p.url %>" alt="<%= p.caption %>"></div>
+    </td>
+  </tr>
+  </table>
 
-    <% if (p.caption) { %><div class="side" align="center"><%= p.caption %></div><% } %>
-    <div class="side" align="center">人氣: <span class="point_grade"><%= p.views %></span></div>
 
-    <div class="albumtools">
-      [ <a href="<%= p.url %>" target="_blank" title="開啟原圖">切割照片</a> ]
-      [ <a href="/search?q=<%= encodeURIComponent(p.caption || p.atitle) %>">搜尋更多</a> ]
-      [ <a href="#" class="reportlink" data-kind="photo" data-id="<%= p.id %>">檢舉這張照片</a> ]
-    </div>
+  <font class="normal-c">
+  <br>
+  <span id="DisplayDesc">
+    照片人氣: <%= p.views %>              </span>
+  <br>
+  </font>
 
-    <% if (isOwner) { %>
-    <div class="side" align="center">
-      <form method="post" action="/<%= u.name %>/photo/<%= p.id %>/caption" style="display:inline">
-        <input name="caption" size="24" maxlength="100" value="<%= p.caption %>">
-        <input type="submit" class="btn" value="改說明">
-      </form>
-      <form method="post" action="/<%= u.name %>/photo/<%= p.id %>/cover" style="display:inline">
-        <input type="submit" class="btn" value="設為封面">
-      </form>
-      <form method="post" action="/<%= u.name %>/photo/<%= p.id %>/del" style="display:inline"
-            onsubmit="return confirm('刪除這張照片？')">
-        <input type="submit" class="btn red" value="刪除">
-      </form>
-    </div>
-    <% } %>
+            <hr noshade size="1" align="center">
+    <p align="right">
+        <a style="font-size=8pt" target="_blank" href="/search?q=<%= encodeURIComponent(p.caption || p.atitle) %>">搜尋更多</a>&nbsp;
+    <a style="font-size=8pt" target="_blank" href="/<%= u.name %>/guestbook">留言</a>&nbsp;
+&nbsp;
+<a style="font-size=8pt" href="#" class="w2a-reportlink" data-kind="photo" data-id="<%= p.id %>">檢舉這張相片</a>
+<br/>
+</p>
+<% if (phStrip.length) { %>
+<table id="ad_square" border="0" align="center" cellspacing="10" style="word-break:break-all">
+  <tr>
+<% phStrip.forEach(s => { %>                <td class="side<%= s.id === p.id ? ' w2a-cur' : '' %>" align="center" width="120" height="120" valign="middle">
+            <a href="/<%= u.name %>/photo/<%= s.id %>"><img src="<%= s.thumb || s.url %>" border="0" alt="縮圖"/></a><br/>
+            <font class="small-c"></font>
+            </td>
+<% }) %>            </tr>
+    <tr>
+<% phStrip.forEach(s => { %>                <td height="40" width="120" valign="top" align="center">
+                        <b><font class="small-e"><a href="/<%= u.name %>/photo/<%= s.id %>"><%= s.caption %></a></font></b>
+            </td>
+<% }) %>            </tr>
+    </table>
+<% } %>
+    <hr noshade size="1" align="center">
 
-    <%# 下方其他照片縮圖列，目前這張加 class="cur" %>
-    <div class="strip" align="center">
-      <% strip.forEach(s=>{ %><a href="/<%= u.name %>/photo/<%= s.id %>" class="<%= s.id===p.id?'cur':'' %>"><img src="<%= s.thumb||s.url %>" alt="<%= s.caption %>" title="<%= s.caption %>"></a><% }) %>
-    </div>
+</div>
 
-    <a name="comments"></a>
-    <div class="side">迴響(<%= comments.length %>)</div>
-    <% comments.forEach((c,i)=>{ %>
-    <div class="side"><b><%= i+1 %>樓</b> <%= c.author %>
-      <span class="gray"><%= c.created.slice(0,16) %></span><br><%= c.body %></div>
-    <% }) %>
+<%# ── 站主的照片工具（原站在 admin/album，沒有存檔可抄）─────────────────── %>
+<% if (isOwner) { %>
+<div class="w2a-tools">
+  <h4>Photo Setting</h4>
+  <div class="bd">
+    <form method="post" action="<%= phPath %>/caption" style="display:inline">
+      <input type="text" name="caption" size="24" maxlength="100" value="<%= p.caption %>">
+      <input type="submit" class="yui3_button_content" value="改說明">
+    </form>
+    <form method="post" action="<%= phPath %>/cover" style="display:inline">
+      <input type="submit" class="yui3_button_content" value="設為封面">
+    </form>
+    <form method="post" action="<%= phPath %>/del" style="display:inline"
+          onsubmit="return confirm('刪除這張照片？')">
+      <input type="submit" class="yui3_button_content yui3_button_cancel w2a-danger" value="刪除">
+    </form>
+  </div>
+</div>
+<% } %>
 
-    <div class="side">
-      <form method="post" action="/<%= u.name %>/photo/<%= p.id %>/comment">
-        <b>發表迴響</b><br>
-        <% if (!me) { %>暱稱：<input name="author" size="12" maxlength="20" value="<%= guest ? guest.author : '' %>"><br><% } %>
-        迴響內容：<br>
-        <input name="body" size="40" maxlength="300" required>
-        <input type="submit" class="btn" value="送出">
-      </form>
-    </div>
+<%# ── 迴響（本站加的，理由見檔頭）───────────────────────────────────────── %>
+<a name="comments"></a>
+<div class="w2a-cmt">
+  <h4>迴響(<%= comments.length %>)</h4>
+<% if (!comments.length) { %>
+  <div class="empty">還沒有人留下迴響。</div>
+<% } else { %>
+  <ol>
+<% comments.forEach((c, ci) => { %>    <li>
+      <span class="who"><%= ci + 1 %>樓 <%= c.author %></span>
+      <span class="when"><%= String(c.created).slice(0, 16) %></span>
+      <div class="body"><%= c.body %></div>
+    </li>
+<% }) %>  </ol>
+<% } %>
+  <div class="bd">
+    <form method="post" action="<%= phPath %>/comment">
+<% if (!me) { %>      暱稱：<input type="text" name="author" size="12" maxlength="20" value="<%= guest ? guest.author : '' %>"><br>
+<% } %>      <input type="text" name="body" size="48" maxlength="300" required>
+      <input type="submit" class="yui3_button_content" value="送出">
+    </form>
+  </div>
+</div>
 
-    <%# 檢舉表單（點「檢舉這張照片」才展開） %>
-    <div id="reportbox" style="display:none">
-      <div class="side">
-        <form method="post" action="/report">
-          <input type="hidden" name="kind" id="rkind">
-          <input type="hidden" name="target" id="rtarget">
-          <input type="hidden" name="url" value="/<%= u.name %>/photo/<%= p.id %>">
-          請說明檢舉原因：<br>
-          <textarea name="reason" cols="45" rows="3" maxlength="500" required></textarea><br>
-          <input type="submit" class="btn" value="送出檢舉">
-          <input type="button" class="btn" id="rcancel" value="取消">
-        </form>
-      </div>
-    </div>
+<%# 檢舉表單（點「檢舉這張相片」才展開）。原站是跳到 prosecute.php 另一頁。 %>
+<div id="w2a-reportbox" class="w2a-report" style="display:none">
+  <form method="post" action="/report">
+    <input type="hidden" name="kind" id="w2a-rkind">
+    <input type="hidden" name="target" id="w2a-rtarget">
+    <input type="hidden" name="url" value="<%= phPath %>">
+    請說明檢舉原因：<br>
+    <textarea name="reason" cols="45" rows="3" maxlength="500" required></textarea><br>
+    <input type="submit" class="yui3_button_content" value="送出檢舉">
+    <input type="button" class="yui3_button_content yui3_button_cancel" id="w2a-rcancel" value="取消">
+  </form>
+</div>
 
-  </td>
-  <td class="side2"></td>
-</tr></table>
-
-<%- include('partials/sitefoot') %>
 <script>
-// 無名照片頁的快捷鍵：c＝下一張（左右方向鍵同義）。在輸入框裡不觸發。
-document.addEventListener('keydown',function(e){
-  var t=e.target, n=t.tagName;
-  if(n==='INPUT'||n==='TEXTAREA'||n==='SELECT'||t.isContentEditable) return;
-  if(e.ctrlKey||e.altKey||e.metaKey) return;
-  if(e.key==='c'||e.key==='C'||e.key==='ArrowRight'){ <% if(next){ %>location.href='/<%= u.name %>/photo/<%= next %>';<% } %> }
-  if(e.key==='ArrowLeft'){ <% if(prev){ %>location.href='/<%= u.name %>/photo/<%= prev %>';<% } %> }
-});
-// 檢舉這張照片
-document.addEventListener('click',function(e){
-  var a=e.target.closest('.reportlink');
-  if(a){ e.preventDefault();
-    document.getElementById('rkind').value=a.getAttribute('data-kind');
-    document.getElementById('rtarget').value=a.getAttribute('data-id');
-    var b=document.getElementById('reportbox'); b.style.display='block'; b.scrollIntoView({behavior:'smooth'}); }
-  if(e.target.id==='rcancel'){ document.getElementById('reportbox').style.display='none'; }
-});
+/* 熱鍵：原站是 album/js/hotkey.js 的 show_hotkey()，鍵位照抄
+   z 第一張 / x 上一張 / c 下一張 / v 最後一張 / b 回上一層 / s 自動播放。
+   方向鍵是本站多加的（2012 沒有），在輸入框裡一律不觸發。 */
+(function(){
+  var go = {
+    z: <%- first && prev ? JSON.stringify('/' + u.name + '/photo/' + first) : 'null' %>,
+    x: <%- prev ? JSON.stringify('/' + u.name + '/photo/' + prev) : 'null' %>,
+    c: <%- next ? JSON.stringify('/' + u.name + '/photo/' + next) : 'null' %>,
+    v: <%- last && next ? JSON.stringify('/' + u.name + '/photo/' + last) : 'null' %>,
+    b: <%- JSON.stringify(phBook) %>,
+    s: <%- JSON.stringify(phBook + '/slide?i=' + idx) %>
+  };
+  document.addEventListener('keydown', function(e){
+    var t = e.target, n = t.tagName;
+    if (n === 'INPUT' || n === 'TEXTAREA' || n === 'SELECT' || t.isContentEditable) return;
+    if (e.ctrlKey || e.altKey || e.metaKey) return;
+    var k = (e.key || '').toLowerCase();
+    if (k === 'arrowright') k = 'c';
+    if (k === 'arrowleft')  k = 'x';
+    if (go[k]) { e.preventDefault(); location.href = go[k]; }
+  });
+  document.addEventListener('click', function(e){
+    var a = e.target.closest('.w2a-reportlink');
+    if (a) {
+      e.preventDefault();
+      document.getElementById('w2a-rkind').value   = a.getAttribute('data-kind');
+      document.getElementById('w2a-rtarget').value = a.getAttribute('data-id');
+      var b = document.getElementById('w2a-reportbox');
+      b.style.display = 'block';
+      b.scrollIntoView({ behavior: 'smooth' });
+    }
+    if (e.target.id === 'w2a-rcancel') document.getElementById('w2a-reportbox').style.display = 'none';
+  });
+})();
 </script>
-<%- include('partials/foot') %>
+
+<%- include('partials/foot2012_site') %>

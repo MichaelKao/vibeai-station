@@ -1,60 +1,96 @@
-<%# 個人小站的側欄模組串（WRETCH_DOM.md 第 3、5 節）
-    一律 <div class="sidetitle">標題</div><div class="side">內容</div>，
-    放在 700px 表格的 #content1 內、主內容之後。
-    呼叫端可傳 visitors / friends；傳 null 代表該頁本身就是那份名單，不重複顯示。
-    sideAvatar:false 用在 MyPage（大頭貼已經在主內容出現過一次）。 %>
-<div class="sidetitle"><%= u.nick %> 的小站</div>
-<div class="side">
-  <% if (typeof sideAvatar === 'undefined' || sideAvatar) { %>
-  <div align="center">
-    <a href="/<%= u.name %>"><img class="avatar" src="<%= u.avatar %>" width="90" height="90" alt="<%= u.nick %>"></a><br>
-    <span class="font_title"><%= u.nick %></span> <span class="font_desc">(<%= u.name %>)</span>
-  </div>
+<%# 個人小站的側欄 = 留言板版型 skin 1/1911 的 #sidebar（寬 330px）
+    ─────────────────────────────────────────────────────────────
+    骨架逐字照 assets_src2/html/gb_guestbook_a000000010_20131226.html：
+
+      #sidebar > ul > li#mine   > #namecard（#myImg / #myName / #myInfo / ul#myService）
+                     > li#action.box       加好友 ｜ 我要留言 ｜ RSS
+                     > li#friendlist.box   好友的留言板（下拉）
+                     > li.box × N          誰來我家 ／ 好友連結 ／ 音樂盒
+                     > li#stats.box        人氣
+
+    必須放在 #main 裡、#content 之後——overwrite.css 的名片修正是
+    `div#main div#sidebar ul li#mine div#namecard`，位置不對就不生效。
+
+    原站這裡還有一格 li#ad_lrec（300×250 廣告）。本站不放廣告，整格不輸出。
+
+    呼叫端可傳 visitors / friends；沒傳（例如留言板頁的 route 就沒送這兩份資料）
+    或傳 null 就不顯示那一格。sideAvatar 已經不需要了：名片小卡本來就永遠有頭像。 %>
+<div id="sidebar">
+<ul>
+
+  <li id="mine">
+    <div id="namecard">
+      <div id="myImg">
+        <a href="/<%= u.name %>"><span></span><img src="<%= u.avatar %>" alt="<%= u.nick %>"></a>
+      </div>
+      <div id="myName">
+        <a class="myId" href="/<%= u.name %>/card"><%= u.name %></a>
+      </div>
+      <div id="myInfo">
+        <p class="myNick"><%= u.nick %></p>
+        <p class="myDesc"><%= u.intro %></p>
+      </div>
+      <ul id="myService">
+        <li id="myMypage"><a href="/<%= u.name %>">MyPage</a></li>
+        <li id="myAlbum"><a href="/<%= u.name %>/album">相簿</a></li>
+        <li id="myBlog"><a href="/<%= u.name %>/blog">網誌</a></li>
+        <li id="myGbook"><a href="/<%= u.name %>/guestbook">留言板</a></li>
+        <li id="myUser"><a href="/<%= u.name %>/card">名片</a></li>
+        <li id="myFriend"><a href="/<%= u.name %>/friends">好友</a></li>
+      </ul>
+    </div>
+  </li>
+
+  <li id="action" class="box">
+    <% if (me && !isOwner) { %>
+    <form method="post" action="/<%= u.name %>/friend" style="display:inline">
+      <button class="w2-linkbtn" type="submit"><%= isFriend ? '移出好友名單' : '加入好友名單' %></button>
+    </form><span>&nbsp;&nbsp;|&nbsp;</span>
+    <% } %>
+    <a href="/<%= u.name %>/guestbook?tab=new">我要留言</a><span>&nbsp;&nbsp;|&nbsp;</span>
+    <a class="rss" href="/<%= u.name %>/blog/rss">RSS <img align="bottom" border="0" src="/img/wretch2012/gb/rss.gif" alt="RSS"></a>
+  </li>
+
+  <% if (typeof friends !== 'undefined' && friends && friends.length) { %>
+  <li id="friendlist" class="box">
+    <%# 原站是 MeetFriend()，跳到選中那位好友的同一個服務。這裡跳留言板。 %>
+    <select name="friendlist" onchange="if(this.value)location.href='/'+encodeURIComponent(this.value)+'/guestbook'">
+      <option value="">－ 好友的留言板 －</option>
+      <% friends.forEach(f => { %><option value="<%= f.name %>"><%= f.name %>(<%= f.nick %>)</option><% }) %>
+    </select>
+  </li>
   <% } %>
-  [ <a href="/<%= u.name %>">MyPage</a> |
-    <a href="/<%= u.name %>/album">相簿</a> |
-    <a href="/<%= u.name %>/blog">網誌</a> |
-    <a href="/<%= u.name %>/guestbook">留言板</a> |
-    <a href="/<%= u.name %>/card">名片</a> |
-    <a href="/<%= u.name %>/friends">好友</a> ]<br>
-  <a href="/<%= u.name %>/visitors">誰來我家</a> ｜
-  <a href="/<%= u.name %>/favs">我的收藏</a><% if (isOwner) { %> ｜
-  <a href="/<%= u.name %>/feed">好友動態</a> ｜
-  <a href="/<%= u.name %>/settings">個人設定</a><% } %><br>
-  <% if (me && !isOwner) { %>
-  <form method="post" action="/<%= u.name %>/friend">
-    <input type="submit" value="<%= isFriend ? '取消好友名單' : '加入好友名單' %>">
-  </form>
+
+  <% if (typeof visitors !== 'undefined' && visitors) { %>
+  <li class="box">
+    <div class="w2-h3">誰來我家</div>
+    <% if (!visitors.length) { %><div class="w2-empty">目前還沒有人來過</div><% } %>
+    <% visitors.forEach(v => { %>
+    <div><a href="/<%= v.who %>"><%= v.who %></a>
+      <span class="w2-sub"><%= v.created.slice(5,16) %></span></div>
+    <% }) %>
+    <div class="w2-more"><a href="/<%= u.name %>/visitors">更多足跡..</a></div>
+  </li>
   <% } %>
-  <span class="font_desc">加入日期：<%= u.created.slice(0,10) %></span>
-</div>
 
-<% if (typeof visitors !== 'undefined' && visitors) { %>
-<div class="sidetitle">誰來我家</div>
-<div class="side">
-  <% if (!visitors.length) { %>目前還沒有人來過<% } %>
-  <% visitors.forEach(v => { %>
-  <div><a href="/<%= v.who %>"><%= v.who %></a>
-    <span class="font_desc"><%= v.created.slice(5,16) %></span></div>
-  <% }) %>
-  <div align="right"><a href="/<%= u.name %>/visitors">更多足跡..</a></div>
-</div>
-<% } %>
+  <% if (typeof friends !== 'undefined' && friends) { %>
+  <li class="box">
+    <div class="w2-h3">好友連結</div>
+    <% if (!friends.length) { %><div class="w2-empty">目前還沒有好友</div><% } %>
+    <% friends.forEach(f => { %>
+    <div><a href="/<%= f.name %>"><%= f.nick %></a>
+      <span class="w2-sub">(<%= f.name %>)</span></div>
+    <% }) %>
+    <div class="w2-more"><a href="/<%= u.name %>/friends">更多好友..</a></div>
+  </li>
+  <% } %>
 
-<% if (typeof friends !== 'undefined' && friends) { %>
-<div class="sidetitle">好友連結</div>
-<div class="side">
-  <% if (!friends.length) { %>目前還沒有好友<% } %>
-  <% friends.forEach(f => { %>
-  <div><a href="/<%= f.name %>"><%= f.nick %></a>
-    <span class="font_desc">(<%= f.name %>)</span></div>
-  <% }) %>
-  <div align="right"><a href="/<%= u.name %>/friends">更多好友..</a></div>
-</div>
-<% } %>
-
-<div class="sidetitle">音樂盒</div>
-<div class="side" align="center">
+  <%# 音樂盒。無名側欄本來就有一台播放器（原站是 Flash 的 #automusic，
+      版型 skin1911 最後一條就是 #automusic{display:block}）。
+      本站改用 <audio>，以下這段 JavaScript 一字未動。 %>
+  <li class="box">
+    <div class="w2-h3">音樂盒</div>
+    <div align="center">
 <% const tracks=(u.music||'').split('\n').map(s=>s.trim()).filter(Boolean); if (tracks.length) { %>
 <audio id="mbox" controls loop style="width:100%;height:26px"></audio>
 <%# 曲目清單放在 data 屬性，交給 EJS 的 HTML escape 處理，避免使用者網址跳出 script 區塊 %>
@@ -74,5 +110,15 @@
   a.src=t[0]; draw();
 })();
 </script>
-<% } else { %>♪ 沒有背景音樂<br><span class="font_desc">[▶] [■] 音量 ▮▮▮▮▯</span><% } %>
+<% } else { %>♪ 沒有背景音樂<br><span class="w2-sub">[▶] [■] 音量 ▮▮▮▮▯</span><% } %>
+    </div>
+  </li>
+
+  <li id="stats" class="box">
+    今日人氣：<%= u.hits_date === new Date().toLocaleDateString('sv-SE') ? (u.today_hits || 0) : 0 %><br>
+    累積人氣：<%= u.visits %><br>
+    加入日期：<%= u.created.slice(0,10) %>
+  </li>
+
+</ul>
 </div>

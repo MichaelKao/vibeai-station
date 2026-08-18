@@ -1,92 +1,75 @@
-<%- include('partials/head',{title:'會員登入',nav:'home',layout:'index'}) %>
 <%
-  /* 會員登入：2005 首頁綠版外框（760px 置中，WRETCH_DOM.md 第 7 節），
-     登入表單逐字照 assets_src/html/home2005.html 右欄那組：
-     「帳號:」「密碼:」「登入」「忘記密碼」「記住我的帳號」。
-     表單維持原本的 method=post、同網址送出（帶 next），欄位 name：name / pass / next。 */
+  /* 會員登入
+     ─────────────────────────────────────────────────────────────
+     原站沒有這一頁：2012 年無名的 Login / Register 兩個連結都指向
+     www.wretch.cc/IDintegration/，302 轉去 Yahoo!奇摩的登入頁
+     （assets_src2/spec/chrome.md 第 7 節有原始 HTML 與逐字欄位）。
+
+     本站有自己的會員系統，一定要有這頁，所以這是**刻意偏離原站**。
+     做法是只用 2012 既有的元件語言組出來——.mod 卡片框、.hd h2 標題、
+     my-promotion 的按鈕漸層——不自創新的視覺，樣式集中在 wretch2012-site.css
+     的「刻意偏離」段落，每條都有理由。
+
+     表單對應 src/server.js 的 app.post('/login')：欄位 name / pass / next。 */
 %>
-<table id="bigtab" width="760" border="0" cellpadding="0" cellspacing="0" align="center">
-<tr>
-	<td rowspan="3" width="5" class="side1"></td>
+<%- include('partials/head2012', { title: '會員登入 - 無名小站' }) %>
 
-	<td width="750" height="100" id="banner1">
-		<div id="banner">
-			<a href="/"><img id="sitelogo" src="<%= SITE_LOGO %>" alt="<%= SITE_NAME %>"></a>
-			<div id="pageheader">
-				<h1><a href="/"><%= SITE_NAME %></a></h1>
-				<span class="description"><%= SITE_DESC %></span>
-			</div>
-			<div class="font_banner" align="right">
-				<a href="/">設為首頁</a> |
-				<a href="/help">常見問題</a> |
-				<a href="/help">新手上路</a> |
-				<a href="/register">免費註冊</a>
-			</div>
-		</div>
-	</td>
+  <div class="bd big-bd clearfix">
+    <div class="main">
 
-	<td rowspan="3" width="5" class="side1"></td>
-</tr>
+      <div class="mod w2-auth">
+        <div class="hd"><h2>會員登入</h2></div>
+        <div class="bd">
 
-<tr>
-	<td height="30" class="side2" align="center">
-		<a href="/"><%= SITE_NAME %></a> |
-		<a href="/albums">相簿</a> |
-		<a href="/blogs">網誌</a> |
-		<a href="/rank">排行榜</a> |
-		<a href="/help">服務說明</a>
-	</td>
-</tr>
+          <% if (err) { %><p class="w2-auth-err"><%= err %></p><% } %>
 
-<tr>
-	<td id="content1" height="100%">
-		<table border="0" cellpadding="0" cellspacing="0" width="100%">
-		<tr>
-			<td width="20" height="20" class="content2">&nbsp;</td>
-			<td></td>
-			<td width="20" height="20" class="content3">&nbsp;</td>
-		</tr>
-		<tr>
-			<td colspan="3" align="center" valign="top">
+          <form action="/login" method="POST">
+            <input type="hidden" name="next" value="<%= locals.next || '' %>">
+            <table class="w2-auth-form">
+              <tr>
+                <th><label for="w2-name">帳號</label></th>
+                <td><input type="text" id="w2-name" name="name" size="24" autocomplete="username" autofocus></td>
+              </tr>
+              <tr>
+                <th><label for="w2-pass">密碼</label></th>
+                <td><input type="password" id="w2-pass" name="pass" size="24" autocomplete="current-password"></td>
+              </tr>
+              <tr>
+                <th></th>
+                <td><label><input type="checkbox" name="remember" value="1"> 記住我的帳號</label></td>
+              </tr>
+              <tr>
+                <th></th>
+                <td>
+                  <button type="submit" class="w2-btn">登入</button>
+                  <a class="w2-auth-alt" href="/register">免費註冊</a>
+                </td>
+              </tr>
+            </table>
+          </form>
 
-	<!-- CONTENT BEGIN -->
-	<table width="320" border="0" cellpadding="0" cellspacing="0" align="center"><tr><td>
+        </div>
+      </div>
 
-		<div class="title">會員登入</div>
-		<div class="side">
-			<% if (err) { %><div class="err"><%= err %></div><% } %>
-			您還沒登入喔<br>
-			<form method="post">
-				<input type="hidden" name="next" value="<%= next %>">
-				帳號:<input class="small-c" type="text" name="name" size="12" maxlength="20" autofocus><br>
-				密碼:<input class="small-c" type="password" name="pass" size="12" maxlength="40"><br>
-				<input class="small-c" type="submit" value="登入">
-				&nbsp;<a href="/help">忘記密碼</a><br>
-				<input type="checkbox" name="remember" value="TRUE">記住我的帳號
-			</form>
-		</div>
+    </div>
 
-		<div class="title">一個帳號，多項功能</div>
-		<div class="side">
-			<div align="center">
-				<a href="/register"><img src="<%= CDN %>/icon/joinfree_index.gif" width="150" height="60" alt="免費註冊"></a>
-			</div>
-			<ul>
-				<li>個人相簿
-				<li>個人網誌 (BLOG,部落格)
-				<li>個人留言板
-			</ul>
-			<div align="center">還沒有帳號？<a href="/register">免費註冊</a></div>
-		</div>
+    <div class="side">
+      <div class="mod w2-auth-side">
+        <div class="hd"><h2>一個帳號，多項功能</h2></div>
+        <div class="bd">
+          <ul>
+            <li><a href="/albums">個人相簿</a>　放照片、分相簿、可以上鎖</li>
+            <li><a href="/blogs">個人網誌</a>　寫文章、貼圖、單篇可設密碼</li>
+            <li><a href="/rank">個人留言板</a>　朋友來留言，可以寫悄悄話</li>
+          </ul>
+          <p class="w2-auth-cta"><a href="/register">還沒有帳號？免費註冊一個</a></p>
+        </div>
+      </div>
+    </div>
+  </div>
 
-	</td></tr></table>
-	<!-- CONTENT END -->
+</div><!-- /#wrapper -->
 
-			</td>
-		</tr>
-		<tr><td colspan="3" height="20"></td></tr>
-		</table>
-	</td>
-</tr>
-</table>
-<%- include('partials/foot') %>
+<div id="lower-wrapper" class="clearfix">
+  <div class="bd clearfix"></div>
+<%- include('partials/foot2012') %>

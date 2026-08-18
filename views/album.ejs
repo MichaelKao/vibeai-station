@@ -1,118 +1,182 @@
-<%- include('partials/head',{title:u.nick+'的相簿'}) %>
-<%- include('partials/sitetop') %>
 <%
-  /* 個人相簿列表 /:name/album（WRETCH_DOM.md 4-A、原始碼 assets_src/html/album_list.html）
-     黃金文字 → 共 N 本相簿 → 分頁 → #ad_square（5 欄封面列 + 5 欄說明列）→ 分頁。
-     一頁 20 本（5×4），server.js 已是 per=20。
-     有密碼掛 key.gif、7 天內建立掛 new_album.gif、沒封面用 user_cover.gif。 */
-  const isNew = c => { const t = Date.parse(String(c||'').replace(' ','T'));
-                       return !!t && (Date.now() - t) < 7*864e5; };
-  const pct = (typeof quota !== 'undefined' && quota.total)
-    ? Math.min(100, Math.round(quota.used / quota.total * 100)) : 0;
+  /* 個人相簿列表 /:name/album ── 無名 2012 的 www.wretch.cc/album/<帳號>
+     ═══════════════════════════════════════════════════════════════════════
+     DOM 逐節點照抄 assets_src2/html/album_index_a000000jay.html：
+
+       #bigcontainer
+       ├ table[700]  banner part   ← head2012_site.ejs（#banner + .sidetitle）
+       └ table[700]  content part
+         ├ tr > td#ad_word                         （黃金文字，本站不放廣告）
+         ├ tr > td
+         │  ├ center > font.small-c   「35 Albums」
+         │  ├ center > font.small-c   「1 2 下一頁」
+         │  ├ table#ad_square[cellspacing=10]      封面列 / 說明列 交錯，一列 5 格
+         │  │  ├ tr > td.side[width=120][height=120]  > a > img
+         │  │  └ tr > td[height=40][width=120]        > b > font.small-c > a
+         │  │                                          <br/> b > font.small-c 「Npictures」
+         │  └ center > font.small-c   「1 2 下一頁」  （底部再一次）
+         └ tr > td[align=right]  人氣頁尾           ← foot2012_site.ejs
+
+     一頁 20 本（5×4），src/server.js 的 per 已經是 20，格子尺寸 120×120
+     也是存檔 HTML 的 <td width="120" height="120"> ＋ skin 1/189 的
+     side_a.gif（正好 120×120）給的，不是沿用 2005 的猜測值。
+
+     字級：封面下那行原站用 font.small-c（12px 新細明體），
+     跟單本相簿頁的 font.small-e（11px Verdana）不一樣，兩邊都照抄。
+
+     【推】密碼相簿掛 key.gif、七天內新增掛 new_album.gif：
+     這兩張圖確實在 2012 的素材裡（common/img/key.gif 16×16、
+     album/img/new_album.gif 21×11），但抓到的兩份相簿列表存檔剛好沒有
+     上鎖或全新的相簿，所以「掛在標題前／後」這個位置是推的，不是驗的。
+
+     EJS 用 with(locals)：不能宣告和 local 同名的 const，內部變數加 al 前綴。 */
+
+  const alNew  = c => { const t = Date.parse(String(c || '').replace(' ', 'T'));
+                        return !!t && (Date.now() - t) < 7 * 864e5; };
+  const alPct  = (locals.quota && quota.total)
+                 ? Math.min(100, Math.round(quota.used / quota.total * 100)) : 0;
+  const alRows = [];
+  for (let i = 0; i < albums.length; i += 5) alRows.push(albums.slice(i, i + 5));
 %>
-<table width="700" border="0" cellpadding="0" cellspacing="0" align="center"><tr>
-  <td class="side1"></td>
-  <td id="content1">
+<%- include('partials/head2012_site', {
+      w2Title:   u.name + "'s Album - " + SITE_NAME,
+      w2Service: 'Album',
+      w2Head:    'list',
+    }) %>
 
-    <%# 黃金文字（無名的 td#ad_word）：站方連結一行 %>
-    <table width="100%" border="0" cellpadding="0" cellspacing="0"><tr>
-      <td id="ad_word" class="small-c" align="center">
-        <a href="/albums">相簿站內分類</a> ｜
-        <a href="/albums">各地相簿</a> ｜
-        <a href="/rank">相簿人氣</a>
-      </td>
-    </tr></table>
+<!-- content part -->
+<table width="700" border="0" cellpadding="0" cellspacing="0" align="center">
 
-    <div class="side" align="center">共 <b><%= total %></b> 本相簿</div>
-    <div class="side" align="center"><%- include('partials/pager') %></div>
+<tr>
+<td id="ad_word">
+    <%# 原站這格是「相簿內頁 黃金文字」文字廣告。本站不放廣告（見 wretch2012-album-in.css §1） %>
+</td>
+</tr>
 
-    <% if (!albums.length) { %>
-    <div class="side" align="center">目前沒有相簿</div>
-    <% } else { %>
-    <table id="ad_square" border="0" align="center" cellspacing="10" style="word-break:break-all">
-      <% for (let i = 0; i < albums.length; i += 5) { const row = albums.slice(i, i+5); %>
-      <tr>
-        <% row.forEach(a => { %>
-        <td class="side" width="120" height="120" align="center" valign="middle">
-          <a href="/<%= u.name %>/album/<%= a.id %>"><% if (a.cover) { %><img src="<%= a.cover %>" width="120" height="120" alt="Cover"><% } else { %><img src="<%= CDN %>/icon/user_cover.gif" width="85" height="85" alt="Cover"><% } %></a>
-        </td>
-        <% }) %>
-        <% for (let k = row.length; k < 5; k++) { %><td width="120"></td><% } %>
-      </tr>
-      <tr>
-        <% row.forEach(a => { %>
-        <td height="40" width="120" valign="top" align="center">
-          <% if (a.pass) { %><img src="<%= CDN %>/icon/key.gif" width="16" height="16" alt=""><% } %><a href="/<%= u.name %>/album/<%= a.id %>" class="font_title"><%= a.title %></a><br>
-          <% if (isNew(a.created)) { %><img src="<%= CDN %>/icon/new_album.gif" width="21" height="11" alt="" class="ico-new"><% } %><span class="font_desc"><%= a.n %>張照片<% if (a.friends_only) { %>・好友限定<% } %></span>
-        </td>
-        <% }) %>
-        <% for (let k = row.length; k < 5; k++) { %><td width="120"></td><% } %>
-      </tr>
-      <% } %>
-    </table>
-    <% } %>
+<tr>
+<td>
+                <center>
+                  <font class='small-c'>
+                  <%= total %> Albums                  </font>
+                </center>
 
-    <div class="side" align="center"><%- include('partials/pager') %></div>
+<% if (pages > 1) { %>
+        <center><font class="small-c">
+<% if (page > 1) { %><a id='prev' href="?p=<%= page - 1 %>" class="">上一頁</a> <% } %><% for (let i = 1; i <= pages; i++) { %><% if (i === page) { %><%= i %> <% } else { %><a href="?p=<%= i %>" class=""><%= i %></a> <% } %><% } %><% if (page < pages) { %><a id='next' href="?p=<%= page + 1 %>" class="">下一頁</a><% } %>        </font></center>
+<% } %>
 
-    <% if (isOwner) { %>
-    <%# ── 以下只有站主本人看得到 ───────────────────────────────── %>
-    <% if (typeof quota !== 'undefined') { %>
-    <div class="title">相簿空間</div>
-    <div class="side" align="center">
-      已使用 <b><%= quota.mb(quota.used) %> MB</b> / <%= quota.mb(quota.total) %> MB
-      <div style="width:240px;height:10px;margin:4px auto;background:#fff;border:1px solid #894500">
-        <div style="height:10px;width:<%= pct %>%;background:<%= pct > 90 ? '#C11361' : '#DE750B' %>"></div>
-      </div>
-      <span class="font_desc">空間快滿時請先刪掉不要的照片。</span>
-    </div>
-    <% } %>
+<% if (!albums.length) { %>
+        <center><font class="small-c">還沒有相簿</font></center>
+<% } else { %>
+<table id="ad_square" border="0" align="center" cellspacing="10" style="word-break:break-all">
+<% alRows.forEach((alRow, alR) => { %>
+<tr>
+<% alRow.forEach((a, alI) => { %><td class="side" width="120" height="120" align="center" valign="middle">
+  <a href="/<%= u.name %>/album/<%= a.id %>"<% if (alR === 0 && alI === 0) { %>  id="FirstAlbum"<% } %> >
+    <img src="<%= a.cover || '/img/wretch2012/blog/user_cover.gif' %>" border="0" alt="Cover"/>
+  </a>
+<br/>
 
-    <div class="title">建立相簿</div>
-    <div class="side">
-      <form method="post" action="/<%= u.name %>/album">
-        <table border="0" cellpadding="2" cellspacing="0">
-          <tr>
-            <td width="70">相簿名稱</td>
-            <td><input name="title" size="24" maxlength="40" required></td>
-          </tr>
-          <tr>
-            <td>說明</td>
-            <td><input name="descr" size="40" maxlength="200"></td>
-          </tr>
-          <tr>
-            <td>站內分類</td>
-            <td>
-              <select name="topic">
-                <option value="">- 相簿分類 -</option>
-                <% topics.forEach(t => { %><option><%= t %></option><% }) %>
-              </select>
-              &nbsp;地區
-              <select name="place">
-                <option value="">- 全部 -</option>
-                <% places.forEach(p => { %><option><%= p %></option><% }) %>
-              </select>
-            </td>
-          </tr>
-          <tr>
-            <td>密碼</td>
-            <td><input name="pass" size="12" maxlength="20">
-              <span class="font_desc">留空＝公開相簿</span></td>
-          </tr>
-          <tr>
-            <td>好友限定</td>
-            <td><label><input type="checkbox" name="friends_only"> 只有我的好友看得到（不出現在相簿總站與搜尋）</label></td>
-          </tr>
-          <tr>
-            <td></td>
-            <td><input type="submit" class="btn" value="建立"></td>
-          </tr>
-        </table>
-      </form>
-    </div>
-    <% } %>
 
-  </td>
-  <td class="side2"></td>
-</tr></table>
-<%- include('partials/sitefoot') %>
-<%- include('partials/foot') %>
+
+</td>
+
+
+<% }) %><% for (let alK = alRow.length; alK < 5; alK++) { %><td width="120"></td>
+<% } %></tr>
+
+
+<tr>
+
+<% alRow.forEach(a => { %><td height="40" width="120" valign="top" align="center">
+  <b>
+    <font class="small-c">
+    <% if (a.pass) { %><img src="/img/wretch2012/album/key.gif" width="16" height="16" border="0" alt="密碼相簿" /><% } %><a href="/<%= u.name %>/album/<%= a.id %>"><%= a.title %></a>
+    </font>
+  </b>
+
+  <br/>
+  <b>
+    <font class="small-c">
+            <% if (alNew(a.created)) { %><img src="/img/wretch2012/album/new_album.gif" width="21" height="11" border="0" alt="new" /><% } %><%= a.n %>pictures<% if (a.friends_only) { %>&nbsp;(friends only)<% } %>          </font>
+  </b>
+</td>
+
+
+<% }) %><% for (let alK = alRow.length; alK < 5; alK++) { %><td width="120"></td>
+<% } %></tr>
+<% }) %>
+</table>
+<% } %>
+
+<% if (pages > 1) { %>
+        <center><font class="small-c">
+<% if (page > 1) { %><a href="?p=<%= page - 1 %>" class="">上一頁</a> <% } %><% for (let i = 1; i <= pages; i++) { %><% if (i === page) { %><%= i %> <% } else { %><a href="?p=<%= i %>" class=""><%= i %></a> <% } %><% } %><% if (page < pages) { %><a href="?p=<%= page + 1 %>" class="">下一頁</a><% } %>        </font></center>
+<% } %>
+
+</td>
+</tr>
+</table>
+<!--  end of content part -->
+
+<% if (isOwner) { %>
+<%# ── 以下只有站主本人看得到 ──────────────────────────────────────────────
+    無名把這些放在另一個服務（www.wretch.cc/admin/album/ 與 yuiuploader.php），
+    爬蟲永遠是登出狀態，存檔裡沒有畫面可以照抄，樣式見 wretch2012-album-in.css §6。
+    表單的 action / method / 欄位 name 完全照 src/server.js 現有的 route。 %>
+<div class="w2a-tools">
+<% if (locals.quota) { %>
+  <h4>Album Space</h4>
+  <div class="bd">
+    已使用 <b><%= quota.mb(quota.used) %> MB</b> / <%= quota.mb(quota.total) %> MB
+    <div class="w2a-quota"><i style="width:<%= alPct %>%"></i></div>
+    <span class="w2a-note">空間快滿時請先刪掉不要的照片。</span>
+  </div>
+<% } %>
+
+  <h4>New Album</h4>
+  <div class="bd">
+    <form method="post" action="/<%= u.name %>/album">
+      <table border="0" cellpadding="0" cellspacing="0">
+        <tr>
+          <th>相簿名稱</th>
+          <td><input type="text" name="title" size="24" maxlength="40" required></td>
+        </tr>
+        <tr>
+          <th>說明</th>
+          <td><input type="text" name="descr" size="40" maxlength="200"></td>
+        </tr>
+        <tr>
+          <th>站內分類</th>
+          <td>
+            <select name="topic">
+              <option value="">- 相簿分類 -</option>
+<% topics.forEach(t => { %>              <option><%= t %></option>
+<% }) %>            </select>
+            &nbsp;地區
+            <select name="place">
+              <option value="">- 全部 -</option>
+<% places.forEach(pl => { %>              <option><%= pl %></option>
+<% }) %>            </select>
+          </td>
+        </tr>
+        <tr>
+          <th>密碼</th>
+          <td><input type="text" name="pass" size="12" maxlength="20">
+            <span class="w2a-note">留空＝公開相簿</span></td>
+        </tr>
+        <tr>
+          <th>好友限定</th>
+          <td><label><input type="checkbox" name="friends_only"> 只有我的好友看得到（不出現在相簿總站與搜尋）</label></td>
+        </tr>
+        <tr>
+          <th></th>
+          <td><input type="submit" class="yui3_button_content" value="建立"></td>
+        </tr>
+      </table>
+    </form>
+  </div>
+</div>
+<% } %>
+
+<%- include('partials/foot2012_site') %>

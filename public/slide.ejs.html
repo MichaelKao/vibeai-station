@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<meta http-equiv="imagetoolbar" content="no">
+<title>相簿1 - kellyla's Album - 無名小站</title>
+<link rel="shortcut icon" type="image/x-icon" href="/favicon.ico">
+<link href="/wretch2012-slider.css" rel="stylesheet" type="text/css">
+</head>
+<body>
+  <h2 id="booktitle">&nbsp;</h2>
+    <div id="paused">Paused</div>
+    <div id="loading">Loading (0%)</div>
+    <div id="slideinfo">
+        <h2 id="title">&nbsp;</h2>
+        <p id="desc">&nbsp;</p>
+        <p id="operation">
+            <span id="intervalControl">
+                <img  id="decInterval" src="/img/wretch2012/album/slideshowminus_on.gif">
+                <span id="interval">&nbsp;</span>
+                <img id="incInterval" src="/img/wretch2012/album/slideshowplus_on.gif">
+            </span>
+            <span id="pauseBtn">Pause</span>
+            <span id="resumeBtn">Play</span>
+        </p>
+    </div>
+    <input type="button" title="Previous(Hotkey:x)" value="&laquo;" id="prev"></input>
+  <input type="button" title="Next(Hotkey:c)" value="&raquo;" id="next"></input>
+  <div id="slidewrap" data-prepare="{&#34;xname&#34;:&#34;1&#34;,&#34;bookTitle&#34;:&#34;相簿1&#34;,&#34;img&#34;:[{&#34;src&#34;:&#34;/uploads/p1.jpg&#34;,&#34;url&#34;:&#34;/kellyla/photo/1&#34;,&#34;title&#34;:&#34;照片1&#34;,&#34;desc&#34;:&#34;&#34;},{&#34;src&#34;:&#34;/uploads/p2.jpg&#34;,&#34;url&#34;:&#34;/kellyla/photo/2&#34;,&#34;title&#34;:&#34;照片2&#34;,&#34;desc&#34;:&#34;&#34;},{&#34;src&#34;:&#34;/uploads/p3.jpg&#34;,&#34;url&#34;:&#34;/kellyla/photo/3&#34;,&#34;title&#34;:&#34;照片3&#34;,&#34;desc&#34;:&#34;&#34;}]}" data-start="2" data-back="/kellyla/album/1"></div>
+<script type="text/javascript">
+/* 原站 slider.js 的兩個全域變數，字串逐字照抄 */
+var jslang = {
+  'second': 'second',
+  'nophoto': 'No pictures in album'
+};
+var prepare = JSON.parse(document.getElementById('slidewrap').getAttribute('data-prepare'));
+(function(){
+  var wrap  = document.getElementById('slidewrap');
+  var imgs  = prepare.img || [];
+  var back  = wrap.getAttribute('data-back');
+  var $     = function(id){ return document.getElementById(id); };
+
+  $('booktitle').textContent = prepare.bookTitle;
+  if (!imgs.length) { $('loading').textContent = jslang.nophoto; return; }
+
+  /* 原站 #slidewrap 在寬螢幕會被 inline script 撐成 1024px，這裡照做 */
+  if (screen.width >= 1280) wrap.style.width = '1024px';
+
+  var i        = Math.max(0, Math.min(imgs.length - 1, (+wrap.getAttribute('data-start') || 1) - 1));
+  var interval = 4;                 /* 秒；原站的 +/- 也是以秒為單位 */
+  var timer    = null;
+  var playing  = true;
+  var loaded   = 0;
+  var cur      = null;
+
+  /* 預載：原站的「Loading (n%)」就是這個計數 */
+  imgs.forEach(function(o){
+    var im = new Image();
+    im.onload = im.onerror = function(){
+      loaded++;
+      $('loading').textContent = 'Loading (' + Math.round(loaded / imgs.length * 100) + '%)';
+      if (loaded === imgs.length) $('loading').style.display = 'none';
+    };
+    im.src = o.src;
+  });
+
+  function show(n){
+    i = (n + imgs.length) % imgs.length;
+    var o = imgs[i];
+    var el = document.createElement('div');
+    el.className = 'slideElement';
+    el.style.backgroundImage = 'url("' + o.src.replace(/"/g, '%22') + '")';
+    el.style.opacity = 0;
+    wrap.appendChild(el);
+    /* 交叉淡入（原站是 YUI Anim，效果一樣） */
+    requestAnimationFrame(function(){
+      el.style.transition = 'opacity .5s';
+      el.style.opacity = 1;
+    });
+    var old = cur; cur = el;
+    if (old) setTimeout(function(){ if (old.parentNode) old.parentNode.removeChild(old); }, 600);
+    $('title').textContent = o.title || '';
+    $('desc').textContent  = o.desc  || '';
+  }
+  function paint(){
+    $('interval').textContent = interval + ' ' + jslang.second;
+    $('paused').style.visibility    = playing ? 'hidden' : 'visible';
+    $('pauseBtn').style.visibility  = playing ? 'visible' : 'hidden';
+    $('resumeBtn').style.visibility = playing ? 'hidden' : 'visible';
+  }
+  function play(){ stop(); playing = true;  timer = setInterval(function(){ show(i + 1); }, interval * 1000); paint(); }
+  function stop(){ if (timer) clearInterval(timer); timer = null; playing = false; paint(); }
+
+  $('prev').onclick = function(){ show(i - 1); if (playing) play(); };
+  $('next').onclick = function(){ show(i + 1); if (playing) play(); };
+  $('pauseBtn').onclick  = stop;
+  $('resumeBtn').onclick = play;
+  $('decInterval').onclick = function(){ interval = Math.max(1,  interval - 1); if (playing) play(); else paint(); };
+  $('incInterval').onclick = function(){ interval = Math.min(30, interval + 1); if (playing) play(); else paint(); };
+
+  /* 滑鼠不動就把控制列與左右鈕藏起來（原站的行為） */
+  var hideT = null;
+  function wake(){
+    $('slideinfo').style.opacity = 1;
+    $('prev').style.visibility = $('next').style.visibility = 'visible';
+    clearTimeout(hideT);
+    hideT = setTimeout(function(){
+      $('slideinfo').style.opacity = 0;
+      $('prev').style.visibility = $('next').style.visibility = 'hidden';
+    }, 2000);
+  }
+  document.addEventListener('mousemove', wake);
+
+  document.addEventListener('keydown', function(e){
+    var k = (e.key || '').toLowerCase();
+    if (k === 'arrowleft')  k = 'x';
+    if (k === 'arrowright') k = 'c';
+    if (k === 'x') { show(i - 1); if (playing) play(); }
+    if (k === 'c') { show(i + 1); if (playing) play(); }
+    if (k === ' ') { e.preventDefault(); playing ? stop() : play(); }
+    if (k === 'escape') location.href = back;
+  });
+
+  show(i); play(); wake();
+})();
+</script>
+</body>
+</html>

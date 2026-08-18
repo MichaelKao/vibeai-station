@@ -1,0 +1,194 @@
+html {
+border-left:14px solid #BBAD8E;
+}
+body {
+background:#FFFFFF url(http://l.yimg.com/e/style/5/577/body_bg.gif) repeat-y scroll right top;
+color:#666666;
+height:100%;
+margin:0pt;
+padding:0pt;
+}
+a {
+color:#333333;
+text-decoration:none;
+}
+a:hover {
+color:#FF6600;
+}
+#container {
+background:transparent url(http://l.yimg.com/e/style/5/577/corner_top.gif) no-repeat scroll right top;
+height:100%;
+margin:0px;
+padding:0px;
+}
+#header {
+background:transparent url(http://l.yimg.com/e/style/5/577/header.gif) no-repeat scroll 0px 0px;
+float:left;
+padding-left:35px;
+padding-top:30px;
+width:360px;
+}
+#content {
+padding:57px 30px 0px 20px;
+background:none;
+}
+#extraDiv1 {
+}
+#extraDiv2 {
+}
+#extraDiv3 {
+}
+#extraDiv4 {
+}
+#header #navigator {
+color:#BBBBBB;
+float:left;
+margin:25px 0px 0px;
+padding:3px 0px;
+text-align:right;
+width:335px;
+}
+#header #navigator a {
+color:#BBBBBB;
+padding:4px;
+}
+#header #navigator a:hover {
+color:#00CCFF;
+text-decoration:underline;
+}
+#boxProfile {
+clear:both;
+position:relative;/*fix for ie6*/
+}
+#header .Pcover {
+background:#FAFAFA none repeat scroll 0%;
+border:1px solid #999999;
+margin:20px 0px;
+}
+#header .Ptext {
+clear:both;
+margin:0px;
+padding-bottom:10px;
+}
+#header h1 {
+color:#66AAFF;
+font-family:simhei,arial;
+font-size:1.4em;
+font-size-adjust:none;
+font-stretch:normal;
+font-style:normal;
+font-variant:normal;
+font-weight:normal;
+height:30px;
+line-height:normal;
+}
+#header .Ptext li {
+list-style-type:none;
+}
+#header .Ptext li a {
+border-left:4px solid #FFFFFF;
+color:#666666;
+display:block;
+letter-spacing:0.1em;
+padding:2px 0px 2px 5px;
+width:150px;
+}
+#header .Ptext li a:hover {
+background:#FCFCFC none repeat scroll 0%;
+border-color:#00CCFF;
+color:#FF6600;
+}
+#header #menu {
+margin:0px 25px 0px 0px;
+}
+#menu ul.inline{
+height:95px;
+}
+.il {
+margin:5px;
+width:250px;
+}
+#msg {
+clear:both;
+color:#999999;
+}
+#friendListDiv ol li {
+background:#F9FAFF none repeat scroll 0%;
+height:155px;
+}
+#friendListDiv ol li a {
+border:1px solid #CCCCCC;
+color:#999999;
+font-family:verdana;
+
+font-size-adjust:none;
+font-stretch:normal;
+font-style:normal;
+font-variant:normal;
+font-weight:normal;
+line-height:normal;
+}
+#friendListDiv ol li a:hover {
+background:#FFFFFF none repeat scroll 0%;
+border:1px solid black;
+color:#FF9900;
+}
+#friendListDiv ol li a span.font_id {
+}
+#descDiv {
+background:white none repeat scroll 0%;
+border:1px solid #AAAAAA;
+color:#555555;
+padding:4px 8px;
+}
+#desc_update a{text-decoration:underline;}
+.font_id2 {
+background:#66CCFF none repeat scroll 0%;
+color:#FFFFFF;
+display:block;
+padding:4px;
+text-align:center;
+}
+.font_desc {
+color:black;
+padding:0px 5px;
+}
+.font_cate {
+color:#999999;
+padding:0px 5px;
+}
+.font_cate strong {
+}
+#footer {
+clear:both;
+}
+
+
+/*condition*/
+
+#friendListDiv{
+margin-left: 375px;
+padding-left:30px;
+}
+#condition li{
+margin-right:5px;
+}
+#condition li a{
+background:#eee;
+}
+#condition li.current a{
+color:#999;
+}
+
+#pagelink,
+#pagelink_1{
+color:#999;
+margin-left: 375px;
+}
+#pagelink a{
+}
+#pagelink a:hover,
+#pagelink_1 a:hover{
+background:#eee;
+}
+#num_friends{margin-left: 375px;}*html #friendListDiv ol li p{left:0;padding-bottom:8px}

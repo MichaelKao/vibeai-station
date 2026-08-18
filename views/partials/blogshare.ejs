@@ -1,0 +1,49 @@
+<%
+  /* 每篇文章的社群分享列 .social-wrapper
+     ─────────────────────────────────────────────────────────────
+     DOM 照抄 assets_src2/html/blog_2012_default_skin_afuuu.html 的
+     .social-wrapper（規格見 spec/blog.md 第 8-3 與 spec/chrome.md 第 6.7 節），
+     樣式來自串在 wretch2012-blog.css 裡的 common/css/sharing.css。
+
+       .social-wrapper
+       ├ .social-widget > .bd > a.fb / a.plurk / a.yim
+       ├ .wretch-reblog.fixinline > .bd > a.wretch (+ span.bubble)
+       └ .kplizer.fixinline > a.kplizer-btn
+
+     文案逐字：分享在我的Facebook／分享在我的Plurk／分享在我的即時通／發文／找知識。
+
+     兩處對應到本站的路由：
+       發文（原站 = 轉貼到自己的網誌）→ POST /:owner/blog/:id/trackback
+         （src/server.js 的 site.post('/blog/:id/trackback')，會在自己的網誌開一篇引用文）
+         不能引用時（未登入／是自己的文章）退回原站那顆 <a>，指向登入或發文頁。
+       找知識 → /search?q=<文章標題>
+
+     fb / plurk 的分享網址要「絕對網址」，EJS 這裡拿不到 host，
+     所以先寫成 data-share/data-path/data-title，由 blog2012_foot.ejs 的
+     一小段 JS 在瀏覽器端補上 location.origin。
+
+     include 參數：shPost（文章）、shOwner（網誌主人帳號）、
+                   shTb（轉貼數，null＝不顯示泡泡）、shCan（可不可以引用）。 */
+  const shPath = '/' + shOwner + '/blog/' + shPost.id;
+%>
+<div class="social-wrapper">
+<div class="social-widget">
+  <div class="bd">
+      <a class="fb" title="分享在我的Facebook" target="_blank" data-share="fb" data-path="<%= shPath %>" data-title="<%= shPost.title %>" href="<%= shPath %>">分享在我的Facebook</a>
+      <a class="plurk" title="分享在我的Plurk" target="_blank" data-share="plurk" data-path="<%= shPath %>" data-title="<%= shPost.title %>" href="<%= shPath %>">分享在我的Plurk</a>
+      <a class="yim" title="分享在我的即時通" data-share="yim" data-path="<%= shPath %>" data-title="<%= shPost.title %>" href="<%= shPath %>">分享在我的即時通</a>
+  </div>
+</div>
+<div class="wretch-reblog fixinline">
+    <div class="bd <%= (locals.shTb === null || locals.shTb === undefined) ? 'bubble-none' : '' %>">
+        <% if (shCan) { %>
+        <form method="post" action="<%= shPath %>/trackback"><button class="wretch" title="發文至無名">發文<% if (locals.shTb !== null && locals.shTb !== undefined) { %><span class="bubble bubble-gradient"><span></span><%= shTb %></span><% } %></button></form>
+        <% } else { %>
+        <a class="wretch" href="<%= me ? '/' + me.name + '/blog/new' : '/login' %>" title="發文至無名">發文<% if (locals.shTb !== null && locals.shTb !== undefined) { %><span class="bubble bubble-gradient"><span></span><%= shTb %></span><% } %></a>
+        <% } %>
+    </div>
+</div>
+<div class="kplizer fixinline">
+    <a class="kplizer-btn" href="/search?q=<%= encodeURIComponent(shPost.title) %>">找知識</a>
+</div>
+</div>

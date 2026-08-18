@@ -1,0 +1,42 @@
+/* 內頁工具列 kukubar 的「刻意偏離」層
+ * ---------------------------------------------------------------------------
+ * 載入順序：wretch2012-<服務>.css（原站原檔，尾端含 common/css/kukubar.css）→ 本檔。
+ * 這支手寫，不是 tools/build-css2012.mjs 產的，改了不會被蓋掉。
+ *
+ * 每一條都是**明知與原站不同、而且是故意的**，並附上理由。
+ * 純粹的還原缺陷不要寫在這裡，那要回去修 DOM 或補素材。
+ */
+
+/* --- 1. 工具列裡用 <button> 取代 <a> ------------------------------------
+ * 原站的「登出」是一個 GET 連結。本站的登出是 POST /logout（避免 CSRF 與
+ * 預抓連結誤觸），所以那一格只能是 <form><button>。
+ * 數值直接沿用 kukubar.css 的 #wretch-login ul.dropdown li a 那一組，
+ * 讓它跟旁邊的連結逐像素一致。
+ */
+#kukubar-upper .right-side #wretch-login ul.dropdown li form { margin: 0; padding: 0; }
+#kukubar-upper .right-side #wretch-login ul.dropdown li button {
+  width: 100%; display: block; text-align: left;
+  padding: 8px 5px; line-height: 1; float: none;
+  border: 0; background: none; cursor: pointer;
+  font-family: Arial; font-size: 12px; color: #666666;
+}
+#kukubar-upper .right-side #wretch-login ul.dropdown li button:hover {
+  background: #D3ECF6; color: #000000;
+}
+
+/* --- 2. 分類好文面板 #scrb-panel ----------------------------------------
+ * 原站的面板內容是 AJAX 回來的 innerHTML（/ajax/common/ajax_get_subscription.php），
+ * 每一格是 <li> 帶 JS 行為。本站沒有訂閱機制，直接把站內分類做成連結，
+ * 所以那些 <li> 裡多了一個 <a>。kukubar.css 沒有這層選擇器，補上顏色與點擊範圍。
+ */
+#kukubar-lower #scrb-panel .hd ul li a { display: block; color: inherit; text-decoration: none; }
+#kukubar-lower #scrb-panel .hd ul li:hover { color: #FFFFFF; background: #48B2D5; }
+#kukubar-lower #scrb-panel .hd ul li:hover a { color: #FFFFFF; }
+#kukubar-lower #scrb-panel .heading h5 { font-size: 12px; }
+
+/* --- 3. 首頁好文跑馬 #text-carousel --------------------------------------
+ * 原站是 kukubar.js 每幾秒把 <ul> 往上捲一格。本站沒有搬那段 JS，
+ * 容器本來就是 height:25px + overflow:hidden，只會露出第一則——
+ * 也就是「不會動的跑馬燈」。這是刻意的簡化，不是漏做。
+ */
+#kukubar-lower .right-side #text-carousel li a { white-space: nowrap; }

@@ -1,123 +1,248 @@
-<%# 相簿總站 /albums：不是個人頁，用 2005 首頁綠版面（WRETCH_DOM.md 第 1、7 節）。
-    nav 留空 → THEME_FOR('') = t-index（綠）。 %>
-<%- include('partials/head',{title:'相簿總站',layout:'index'}) %>
 <%
-  /* 上方：24 個站內分類（.grid_class 230×40）與地區；下方：ad_square 相簿格（5 欄）。
-     一頁 20 本，server.js 已是 per=20。7 天內建立的掛 new_album.gif。 */
-  const isNew = c => { const t = Date.parse(String(c||'').replace(' ','T'));
-                       return !!t && (Date.now() - t) < 7*864e5; };
-  const qTopic = topic ? 'topic=' + encodeURIComponent(topic) : '';
-%>
-<table id="bigtab" width="760" border="0" cellpadding="0" cellspacing="0" align="center">
-<tr>
-	<td rowspan="3" width="5" class="side1"></td>
+  /* 相簿總站 /albums ── 無名 2012 的 www.wretch.cc/album/
+     ═══════════════════════════════════════════════════════════════════════
+     DOM 逐節點照抄 assets_src2/html/album_service_index_20121211.html
+     （2012-12-11 快照，本輪新抓的）：
 
-	<td width="750" height="100" id="banner1">
-		<div id="banner">
-			<a href="/"><img id="sitelogo" src="<%= SITE_LOGO %>" alt="<%= SITE_NAME %>"></a>
-			<div id="pageheader">
-				<h1><a href="/"><%= SITE_NAME %></a></h1>
-				<span class="description">相簿總站</span>
-			</div>
-		</div>
-	</td>
+       body.cn
+       └ #container1.chameleon > #container2
+         ├ #header                       （header.jpg 960×80）
+         │  ├ h1 > a                      logo_album_cn.png，CSS 背景圖
+         │  ├ ul#access_link              WRETCH / Yahoo! / Help / Login / Free Sign Up
+         │  └ form#searchForm
+         │     ├ .wrapper#search_tab      四個服務籤（radio 藏在 top:-10000px，看到的是 label）
+         │     ├ .search_control          #search_keyword + #search_submit
+         │     └ #Hot_Keyword             「Keyword:」＋熱門關鍵字
+         ├ #main > #main2
+         │  ├ dl#navigation.upper_column  sprite_fplink.png 的四顆服務鈕
+         │  ├ ul#browse_album.left_column #condition / #category / #region_album
+         │  └ #main_content.middle_column
+         │     └ #album > h3 + ul#page_control_top + ul.album_list + ul#page_control_bottom
+         ├ ul#sidebar.right_column
+         └ #footer > #ft
 
-	<td rowspan="3" width="5" class="side1"></td>
-</tr>
+     **這一頁沒有 kukubar**（存檔整份搜不到 kukubar 三個字），
+     它有自己的 #header 與 #footer，所以不走 head2012_site.ejs。
+     樣式是本輪新加的 public/wretch2012-album-index.css
+     （＝ index/album/css/fix.css ＋ index.css 兩支原檔，只改素材路徑）。
 
-<tr>
-	<td height="30" class="side2" align="center">
-		<a href="/"><%= SITE_NAME %></a> |
-		<a href="/albums">相簿</a> |
-		<a href="/blogs">網誌</a> |
-		<a href="/rank">排行榜</a> |
-		<a href="/help">服務說明</a>
-	</td>
-</tr>
+     相簿格是 .album_list li 108×160（縮圖 108×108 ＋ 文字 42），
+     和個人相簿頁的 120×120 不一樣——總站與個人頁本來就是兩套版面。
 
-<tr>
-	<td id="content1">
-		<table border="0" cellpadding="0" cellspacing="0" width="100%">
-		<tr>
-			<td width="20" height="20" class="content2">&nbsp;</td>
-			<td></td>
-			<td width="20" height="20" class="content3">&nbsp;</td>
-		</tr>
-		<tr>
-			<td colspan="3" valign="top">
-<!-- CONTENT BEGIN -->
+     ── 原站有、本站沒有資料所以沒做的區塊（都列在回報裡）──────────────
+       #column        五個分類的當期精選（編輯部挑的，本站沒有這份資料）
+       #celebrity     藝人／模特兒／運動員／作家／政治人物分類
+       #taiwan_album  台灣地圖 Flash（county.swf）
+       #slider_rolling 藝人輪播
+       所有 AD 位（ad_banner / ad_morten / ad_stamp / sandwitch / square）
+       #banner_language 語言切換（本站只有中文）
 
-			<div class="album_title">
-				<a href="/albums">相簿站內分類</a>
-			</div>
+     ── 湊出來的資料（現有 locals：topics / places / counts / albums / total）──
+       #condition   原站是 Hot / Random / Collection / Mobile 四種排序。
+                    src/server.js 的 /albums 固定 ORDER BY views DESC，
+                    所以只印「Hot」而且永遠 current，不假裝有另外三種。
+       #Hot_Keyword 原站是編輯部挑的關鍵字，這裡用相簿數最多的幾個站內分類。
+       右欄         原站是廣告與藝人輪播，這裡放「熱門分類」與站內連結。
 
-			<% topics.forEach(t => { %>
-			<div class="grid_class">
-				<a href="/albums?topic=<%= encodeURIComponent(t) %>"><% if (topic === t) { %><b><%= t %></b><% } else { %><%= t %><% } %></a>
-				<span class="font_desc">(<%= counts[t] || 0 %>)</span>
-			</div>
-			<% }) %>
-			<br clear="all">
+     EJS 用 with(locals)：內部變數加 as 前綴，避免和 local 撞名（TDZ）。 */
 
-			<div class="side"><a href="/albums">所有分類</a></div>
+  const asNew  = c => { const t = Date.parse(String(c || '').replace(' ', 'T'));
+                        return !!t && (Date.now() - t) < 7 * 864e5; };
+  const asQ    = extra => {
+    const q = [];
+    if (extra.topic !== undefined ? extra.topic : topic) q.push('topic=' + encodeURIComponent(extra.topic !== undefined ? extra.topic : topic));
+    if (extra.place !== undefined ? extra.place : place) q.push('place=' + encodeURIComponent(extra.place !== undefined ? extra.place : place));
+    if (extra.p) q.push('p=' + extra.p);
+    return q.length ? '/albums?' + q.join('&') : '/albums';
+  };
+  const asHot  = [...topics].sort((a, b) => (counts[b] || 0) - (counts[a] || 0)).filter(t => counts[t]);
+%><!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<title>相簿總站 - <%= SITE_NAME %></title>
+<meta name="keywords" content="photo, image, album, photographer, collection, show girls, nature, holiday, school, families, baby, travel, fashion" />
+<meta name="description" content="Upload and share photos to the world from Wretch Album" />
+<link rel="shortcut icon" type="image/x-icon" href="/favicon.ico">
+<link rel="stylesheet" href="/wretch2012-album-index.css" type="text/css" />
+<%# 本站刻意偏離的那幾條（§12 專門給這一頁） %>
+<link rel="stylesheet" href="/wretch2012-album-in.css" type="text/css" />
+</head>
+<body class="cn">
+<% if (flash) { %><div class="w2i-flash"><%= flash %></div><% } %>
+<div id="container1" class="chameleon">
+  <div id="container2">
+    <div id="header">
+    <h1><a href="/" title="<%= SITE_NAME %>相簿"></a></h1>
+      <ul id="access_link">
+        <li><a href="/">WRETCH</a>&nbsp;</li>
+        <li><a href="/">Yahoo!</a>&nbsp;</li>
+        <li><a href="/help">Help</a>&nbsp;</li>
+<% if (me) { %>        <li><a href="/<%= me.name %>"><%= me.nick %></a>&nbsp;</li>
+        <li><form method="post" action="/logout" style="display:inline"><button class="w2i-linkbtn">Logout</button></form>&nbsp;</li>
+<% } else { %>        <li><a href="/login">Login</a>&nbsp;</li>
+        <li><a href="/register">Free Sign Up</a>&nbsp;</li>
+<% } %>      </ul>
+      <form id="searchForm" name="searchForm" action="/search" method="get">
+        <div id="suggestMenu" style="visibility:hidden"></div>
+        <fieldset>
+          <legend>Search</legend>
+          <%# 四顆 radio 是原站的服務切換（name=type），/search 不吃這個參數、會被忽略，
+              但 .wrapper 的版面（label 的背景圖籤）要靠它們，照原樣留著。 %>
+          <div class="wrapper" id="search_tab">
+            <input type="radio" name="type" id="searchType_album" value="photo" checked="checked" />
+            <label for="searchType_album" title="相簿搜尋（熱鍵：A）" class="Aclick" accesskey="A">相簿<cite></cite></label>
+            <input type="radio" name="type" id="searchType_blog" value="site" />
+            <label for="searchType_blog" title="網誌搜尋（熱鍵：B）" accesskey="B">網誌<cite></cite></label>
+            <input type="radio" name="type" id="searchType_video" value="video" />
+            <label for="searchType_video" title="影音" accesskey="S">影音<cite></cite></label>
+            <input type="radio" name="type" id="searchType_web" value="web" />
+            <label for="searchType_web" title="網頁搜尋（熱鍵：W）" accesskey="W">網頁<cite></cite></label>
+          </div>
+          <div class="search_control">
+            <input type="text" name="q" id="search_keyword" size="40" value="" accesskey="S" title="請在這裡輸入（熱鍵：S）" autocomplete="off" />
+            <input type="submit" id="search_submit" value="相簿搜尋" />
+          </div>
+          <div id="Hot_Keyword">
+            <span>Keyword:</span>
+<% asHot.slice(0, 7).forEach((t, ti) => { %><%= ti ? '、' : '' %><a href="/albums?topic=<%= encodeURIComponent(t) %>"><%= t %></a>
+<% }) %>          </div>
+        </fieldset>
+      </form>
+    </div>
 
-			<div class="album_title">
-				<a href="/albums">各地相簿</a>
-			</div>
-			<div class="side">
-				<a href="/albums<%= qTopic ? '?' + qTopic : '' %>"><% if (!place) { %><b>全部</b><% } else { %>全部<% } %></a>
-				<% places.forEach(pl => { %>
-				｜ <a href="/albums?<%= qTopic ? qTopic + '&' : '' %>place=<%= encodeURIComponent(pl) %>"><% if (place === pl) { %><b><%= pl %></b><% } else { %><%= pl %><% } %></a>
-				<% }) %>
-			</div>
+    <div id="main">
+      <div id="main2">
+        <dl id="navigation" class="upper_column">
+          <dt class="service_link">service link</dt>
+          <dd class="services_link">
+            <ul>
+              <li><a href="/albums">Wretch Album</a></li>
+              <li><a href="/blogs">Blog</a></li>
+              <li><a href="/help">Wretch Video</a></li>
+              <li><a href="/help">Join</a></li>
+            </ul>
+          </dd>
+        </dl>
 
-			<div class="album_title">
-				<%= topic || '所有分類' %><% if (place) { %>　<%= place %><% } %>
-			</div>
+        <ul id="browse_album" class="left_column">
+          <li id="condition">
+            <h4>Conditions</h4>
+            <div class="side">
+              <div class="sideII">
+                <ul>
+                    <li class="current"><a href="/albums">Hot</a></li>
+                </ul>
+              </div>
+            </div>
+          </li>
+          <li id="category">
+            <h4>Categories</h4>
+            <div class="side">
+              <div class="sideII">
+                <ul>
+                    <li<%= topic ? '' : ' class="current"' %>><a href="<%= asQ({ topic: '' }) %>">All</a></li>
+<% topics.forEach(t => { %>                      <li<%= topic === t ? ' class="current"' : '' %>><a href="<%= asQ({ topic: t }) %>"><%= t %></a></li>
+<% }) %>                    </ul>
+              </div>
+            </div>
+          </li>
+          <li id="region_album">
+            <h4>Locations</h4>
+            <div class="side">
+              <div class="sideII">
+                <ul>
+                  <li<%= place ? '' : ' class="current"' %>><a href="<%= asQ({ place: '' }) %>">全部</a></li>
+<% places.forEach(pl => { %>                  <li<%= place === pl ? ' class="current"' : '' %>><a href="<%= asQ({ place: pl }) %>"><%= pl %></a></li>
+<% }) %>                </ul>
+              </div>
+            </div>
+          </li>
+        </ul>
 
-			<div class="side" align="center">共 <b><%= total %></b> 本相簿</div>
-			<div class="side" align="center"><%- include('partials/pager') %></div>
+        <div id="main_content" class="middle_column">
+          <div id="album">
+                        <h3>Hot &gt; <%= topic || 'All' %><% if (place) { %>　<%= place %><% } %>（<%= total %>）</h3>
+<% if (pages > 1) { %>
+                        <ul id="page_control_top" class="page_control">
+<% if (page > 1) { %>              <li><a href="<%= asQ({ p: page - 1 }) %>">上一頁</a></li>
+<% } else { %>              <li>上一頁</li>
+<% } %><% for (let i = 1; i <= pages; i++) { %> <li><% if (i === page) { %><span><%= i %></span><% } else { %><a href="<%= asQ({ p: i }) %>"><%= i %></a><% } %></li>
+<% } %> <% if (page < pages) { %><li><a href="<%= asQ({ p: page + 1 }) %>">下一頁</a></li>
+<% } else { %><li>下一頁</li>
+<% } %>            </ul>
+<% } %>
+            <ul class="album_list">
+<% albums.forEach(a => { %>              <li>
+                <div class="image_link">
+                  <a href="/<%= a.uname %>/album/<%= a.id %>">
+<img src="<%= a.cover %>" alt="<%= a.title %>" /><cite></cite></a>
+                </div>
+                <div class="grid">
+                                  <a href="/<%= a.uname %>"><%= a.uname %></a>
+                  <strong><a href="/<%= a.uname %>/album/<%= a.id %>"><%= a.title %></a></strong>
+                                    <span><% if (asNew(a.created)) { %><img src="/img/wretch2012/album/new_album.gif" width="21" height="11" alt="new" /><% } %><%= a.n %>pictures</span>
+                                </div>
+              </li>
+<% }) %><% if (!albums.length) { %>              <li><div class="grid"><strong>這個分類還沒有相簿</strong></div></li>
+<% } %>            </ul>
+<% if (pages > 1) { %>
+            <ul id="page_control_bottom" class="page_control">
+<% if (page > 1) { %>              <li><a href="<%= asQ({ p: page - 1 }) %>">上一頁</a></li>
+<% } else { %>              <li>上一頁</li>
+<% } %><% for (let i = 1; i <= pages; i++) { %> <li><% if (i === page) { %><span><%= i %></span><% } else { %><a href="<%= asQ({ p: i }) %>"><%= i %></a><% } %></li>
+<% } %> <% if (page < pages) { %><li><a href="<%= asQ({ p: page + 1 }) %>">下一頁</a></li>
+<% } else { %><li>下一頁</li>
+<% } %>            </ul>
+<% } %>
+          </div>
+        </div>
+      </div>
 
-			<% if (!albums.length) { %>
-			<div class="side" align="center">這個分類還沒有相簿</div>
-			<% } else { %>
-	<table id="ad_square" border="0" align="center" cellspacing="10" style="word-break:break-all">
-	<% for (let i = 0; i < albums.length; i += 5) { const row = albums.slice(i, i+5); %>
-	<tr>
-		<% row.forEach(a => { %>
-		<td class="album_grid" width="120" height="120" align="center" valign="middle">
-			<a href="/<%= a.uname %>/album/<%= a.id %>"><% if (a.cover) { %><img src="<%= a.cover %>" width="120" height="120" alt="Cover"><% } else { %><img src="<%= CDN %>/icon/user_cover.gif" width="85" height="85" alt="Cover"><% } %></a>
-		</td>
-		<% }) %>
-		<% for (let k = row.length; k < 5; k++) { %><td width="120"></td><% } %>
-	</tr>
-	<tr>
-		<% row.forEach(a => { %>
-		<td class="album_grid1" height="60" width="120" valign="top" align="center">
-			<span class="album_font_id"><a href="/<%= a.uname %>"><%= a.uname %></a></span>
-			<br>
-			<span class="album_font_title"><a href="/<%= a.uname %>/album/<%= a.id %>"><%= a.title %></a></span>
-			<br>
-			<% if (isNew(a.created)) { %><img src="<%= CDN %>/icon/new_album.gif" width="21" height="11" alt="" class="ico-new"><% } %><span class="album_font_desc"><%= a.n %>張照片</span>
-		</td>
-		<% }) %>
-		<% for (let k = row.length; k < 5; k++) { %><td width="120"></td><% } %>
-	</tr>
-	<% } %>
-	</table>
-			<% } %>
+      <ul id="sidebar" class="right_column">
+        <li id="hot_category">
+          <h3>熱門分類</h3>
+          <div class="side">
+            <div class="sideII">
+              <ul>
+<% asHot.slice(0, 10).forEach(t => { %>                <li><a href="<%= asQ({ topic: t }) %>"><%= t %></a> (<%= counts[t] %>)</li>
+<% }) %><% if (!asHot.length) { %>                <li>還沒有相簿</li>
+<% } %>              </ul>
+            </div>
+          </div>
+        </li>
+        <li id="album_links">
+          <h3>逛逛別的</h3>
+          <div class="side">
+            <div class="sideII">
+              <ul>
+                <li><a href="/rank">相簿人氣榜</a></li>
+                <li><a href="/blogs">網誌總站</a></li>
+                <li><a href="/help">服務說明</a></li>
+              </ul>
+            </div>
+          </div>
+        </li>
+      </ul>
+    </div>
 
-			<div class="side" align="center"><%- include('partials/pager') %></div>
-			<div align="right"><span class="blog_font_desc"><a href="/rank">相簿人氣</a></span></div>
+    <div id="footer">
+    <div id="ft" style="position:relative;">
+        <ul>
+            <li><a href="/help">新首頁介紹</a></li>
+            <li><a href="/help">服務條款</a></li>
+            <li><a href="/help">隱私權政策</a></li>
+            <li><a href="/blogs">新聞中心</a></li>
+            <li><a href="/help">聯絡我們</a></li>
+            <li><a href="/help">網路行銷</a></li>
+            <li class="last"><a href="/help">招賢納士</a></li>
+        </ul>
+        <p><span><a href="/help">著作權侵權</a></span>本站設有管理員並依台灣網站內容分級規定處理</p>
+        <p>雅虎資訊 版權所有 &copy; 2012 Yahoo! Taiwan All Rights Reserved.</p>
+    </div>
+</div>
 
-<!-- CONTENT END -->
-			</td>
-		</tr>
-		<tr>
-			<td colspan="3" height="40"></td>
-		</tr>
-		</table>
-	</td>
-</tr>
-</table>
-<%- include('partials/foot') %>
+  </div>
+</div>
+</body>
+</html>

@@ -1,0 +1,715 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+  <link rel="shortcut icon" type="image/x-icon" href="http://l.yimg.com/e/serv/common/favicon.ico" />
+  <title>Album - Wretch.cc</title>
+  <meta name="keywords" content="photo, image, album, photographer, collection, show girls, nature, holiday, school, families, baby, travel, fashion" />
+  <meta name="description" content="Upload and share photos to the world from Wretch Album" />
+  <link rel="canonical" href="http://www.wretch.cc/album/?func=&class_id=0&hid=6&page=1" />
+  <link rel="stylesheet" href="http://l.yimg.com/e/serv/index/album/css/fix.css?20121101" type="text/css" />
+  <link rel="stylesheet" href="http://l.yimg.com/e/serv/index/album/css/index.css?20121101" type="text/css" />
+  <style type="text/css">
+    .yzq_x{
+       display:none;
+    }
+  </style>
+  <script type="text/javascript" src="http://l.yimg.com/e/serv/base/js/prototype/prototype.js?20121101"></script>
+  <script type="text/javascript" src="http://l.yimg.com/e/serv/base/js/prototype/prototype.wretch.js?20121101"></script>
+  <script type="text/javascript" src="http://l.yimg.com/f/i/tw/ysm/wretch/wrechhptab.js?20121101"></script>
+  <script type="text/javascript" src="http://l.yimg.com/e/serv/base/objects/observer/observer.js?20121101"></script>
+  <script type="text/javascript" src="http://l.yimg.com/e/serv/base/objects/slider/slider.js?20121101"></script>
+  <script type="text/javascript" src="http://l.yimg.com/e/serv/base/js/swfobject.js?20121101"></script>
+  <script type="text/javascript">
+  <!--//
+  var this_column = Math.floor(Math.random()*5)+1;
+  var url_search_1 = 'http://tw.blog.search.yahoo.com/search';
+  var url_search_2 = 'http://tw.blog.search.yahoo.com/search?';
+  var columns, si, hoverNow, tabs, covers, innercontents ;
+  var is_collapse = false;
+  var list = {
+              'list_1_1':{
+              'name':'s011550','url':'http://www.wretch.cc/album/show.php?i=s011550&b=41&f=1874733426','index':1  },
+              'list_1_2':{
+              'name':'s011550','url':'http://www.wretch.cc/album/show.php?i=s011550&b=41&f=1874733382','index':1  },
+              'list_1_3':{
+              'name':'s011550','url':'http://www.wretch.cc/album/show.php?i=s011550&b=41&f=1874733391','index':1  },
+              'list_1_4':{
+              'name':'s011550','url':'http://www.wretch.cc/album/show.php?i=s011550&b=41&f=1874733371','index':1  },
+              'list_1_5':{
+              'name':'s011550','url':'http://www.wretch.cc/album/show.php?i=s011550&b=41&f=1874733441','index':1  },
+              'list_2_1':{
+              'name':'pmana','url':'http://www.wretch.cc/album/show.php?i=pmana&b=174&f=1943972654','index':2  },
+              'list_2_2':{
+              'name':'pmana','url':'http://www.wretch.cc/album/show.php?i=pmana&b=174&f=1943972651','index':2  },
+              'list_2_3':{
+              'name':'pmana','url':'http://www.wretch.cc/album/show.php?i=pmana&b=174&f=1943972655','index':2  },
+              'list_2_4':{
+              'name':'pmana','url':'http://www.wretch.cc/album/show.php?i=pmana&b=174&f=1943972658','index':2  },
+              'list_2_5':{
+              'name':'pmana','url':'http://www.wretch.cc/album/show.php?i=pmana&b=174&f=1943972660','index':2  },
+              'list_3_1':{
+              'name':'passion1979','url':'http://www.wretch.cc/album/show.php?i=passion1979&b=81&f=1231478145','index':3  },
+              'list_3_2':{
+              'name':'passion1979','url':'http://www.wretch.cc/album/show.php?i=passion1979&b=81&f=1231454517','index':3  },
+              'list_3_3':{
+              'name':'passion1979','url':'http://www.wretch.cc/album/show.php?i=passion1979&b=81&f=1231454523','index':3  },
+              'list_3_4':{
+              'name':'passion1979','url':'http://www.wretch.cc/album/show.php?i=passion1979&b=81&f=1231462125','index':3  },
+              'list_3_5':{
+              'name':'passion1979','url':'http://www.wretch.cc/album/show.php?i=passion1979&b=81&f=1231439181','index':3  },
+              'list_4_1':{
+              'name':'momo76217','url':'http://www.wretch.cc/album/show.php?i=momo76217&b=100&f=1131739082','index':4  },
+              'list_4_2':{
+              'name':'momo76217','url':'http://www.wretch.cc/album/show.php?i=momo76217&b=100&f=1131739080','index':4  },
+              'list_4_3':{
+              'name':'momo76217','url':'http://www.wretch.cc/album/show.php?i=momo76217&b=100&f=1131739079','index':4  },
+              'list_4_4':{
+              'name':'momo76217','url':'http://www.wretch.cc/album/show.php?i=momo76217&b=100&f=1131739101','index':4  },
+              'list_4_5':{
+              'name':'momo76217','url':'http://www.wretch.cc/album/show.php?i=momo76217&b=100&f=1131739108','index':4  },
+              'list_5_1':{
+              'name':'luss','url':'http://www.wretch.cc/album/show.php?i=luss&b=11&f=1567747406','index':5  },
+              'list_5_2':{
+              'name':'luss','url':'http://www.wretch.cc/album/show.php?i=luss&b=11&f=1567747377','index':5  },
+              'list_5_3':{
+              'name':'luss','url':'http://www.wretch.cc/album/show.php?i=luss&b=11&f=1567747383','index':5  },
+              'list_5_4':{
+              'name':'luss','url':'http://www.wretch.cc/album/show.php?i=luss&b=11&f=1567747391','index':5  },
+              'list_5_5':{
+              'name':'luss','url':'http://www.wretch.cc/album/show.php?i=luss&b=11&f=1567747375','index':5  }
+  }
+  
+  Slider.currentNum = 5;
+  Slider.data=[
+    {id:'a80906',cover:'http://pic.wretch.cc/e/icon/star/pr_use/a80906.jpg?10587661',name:'藝人: AK-陳奕',location:'http://tw.rd.yahoo.com/referurl/wretch/album/pr/artists/*http://www.wretch.cc/album/a80906'},    {id:'Achin0311',cover:'http://pic.wretch.cc/e/icon/star/pr_use/achin0311.jpg?10587661',name:'藝人: 阿沁',location:'http://tw.rd.yahoo.com/referurl/wretch/album/pr/artists/*http://www.wretch.cc/album/Achin0311'},    {id:'alex9127',cover:'http://pic.wretch.cc/e/icon/star/pr_use/alex9127.jpg?10587661',name:'藝人: 酷愛樂團 吉他手阿龍(黃冠龍)',location:'http://tw.rd.yahoo.com/referurl/wretch/album/pr/artists/*http://www.wretch.cc/album/alex9127'},    {id:'alfgoahead',cover:'http://pic.wretch.cc/e/icon/star/pr_use/alfgoahead.jpg?10587661',name:'藝人: 蘇打綠-阿福',location:'http://tw.rd.yahoo.com/referurl/wretch/album/pr/artists/*http://www.wretch.cc/album/alfgoahead'},    {id:'alien3647',cover:'http://pic.wretch.cc/e/icon/star/pr_use/alien3647.jpg?10587661',name:'藝人: 小鬼',location:'http://tw.rd.yahoo.com/referurl/wretch/album/pr/artists/*http://www.wretch.cc/album/alien3647'},    {id:'alplus',cover:'http://pic.wretch.cc/e/icon/star/pr_use/alplus.jpg?10587661',name:'藝人: 六甲樂團-何官錠',location:'http://tw.rd.yahoo.com/referurl/wretch/album/pr/artists/*http://www.wretch.cc/album/alplus'},    {id:'Anan1983',cover:'http://pic.wretch.cc/e/icon/star/pr_use/anan1983.jpg?10587661',name:'藝人: 錢柏渝',location:'http://tw.rd.yahoo.com/referurl/wretch/album/pr/artists/*http://www.wretch.cc/album/Anan1983'},    {id:'anancrown',cover:'http://pic.wretch.cc/e/icon/star/pr_use/anancrown.jpg?10587661',name:'藝人: 許安安',location:'http://tw.rd.yahoo.com/referurl/wretch/album/pr/artists/*http://www.wretch.cc/album/anancrown'},    {id:'andyisaw',cover:'http://pic.wretch.cc/e/icon/star/pr_use/andyisaw.jpg?10587661',name:'藝人: 西瓜',location:'http://tw.rd.yahoo.com/referurl/wretch/album/pr/artists/*http://www.wretch.cc/album/andyisaw'},    {id:'angela5247',cover:'http://pic.wretch.cc/e/icon/star/pr_use/angela5247.jpg?10587661',name:'藝人: 李佳豫',location:'http://tw.rd.yahoo.com/referurl/wretch/album/pr/artists/*http://www.wretch.cc/album/angela5247'}  ];
+
+  function press()
+  {
+  }
+  //-->
+        var js_lang_album = 'Album';
+        var js_lang_blog =  'Blog';
+        var js_lang_web =  'Web';
+        var js_lang_video = 'Video';
+        var js_lang_search = 'Search';
+
+
+  </script>
+  <script>                                                                       
+    var ysmrubyctxtID = 'wretch_tw_photo_ron_001';                       
+  </script>
+</head>
+<body class="en">
+<div id="container1" class="chameleon">
+  <div id="container2">
+    <div id="header">
+    <h1><a href="http://tw.rd.yahoo.com/referurl/wretch/album/head/logo/*http://www.wretch.cc/"></a></h1>
+      <ul id="access_link">
+        <li><a href="http://tw.rd.yahoo.com/referurl/wretch/album/head/wretch/*http://www.wretch.cc/">WRETCH</a>&nbsp;</li>
+        <li><a href="http://tw.rd.yahoo.com/referurl/wretch/album/head/yahoo/*http://tw.yahoo.com">Yahoo!</a>&nbsp;</li>
+        <li><a href="http://tw.rd.yahoo.com/referurl/wretch/album/head/faq/*http://tw.help.cc.yahoo.com/?product=wretch">Help</a>&nbsp;</li>
+        <li><a href="http://tw.rd.yahoo.com/referurl/wretch/album/head/in/*http://www.wretch.cc/IDintegration/?ref=%2525252Falbum%2525252F">Login</a>&nbsp;</li>
+        <li><a href="http://tw.rd.yahoo.com/referurl/wretch/album/head/up/*http://www.wretch.cc/IDintegration/">Free Sign Up</a>&nbsp;</li>
+              </ul>
+     <div id="chameleon_flash"><script language="JavaScript" type="text/javascript" charset="big5" src="http://tw2.adserver.yahoo.com/a?f=2022137083&p=tw_kwretch&l=LREC1&c=r"></script><noscript><iframe src="http://tw2.adserver.yahoo.com/a?f=2022137083&p=tw_kwretch&l=LREC1&c=h&bg=white" width=2 height=2 marginwidth=0 marginheight=0 hspace=0 vspace=0 frameborder=0 scrolling=no></iframe></noscript></div>
+      <DIV id="banner_link"></div>
+      <DIV id="banner_linkII"></DIV>
+      <DIV id="banner_linkIII"></DIV>
+      <div id="banner_language">
+        <select name="language" id="language">
+          <option value="">-- Auto Detect --</option>
+          <option value='zh-tw'>中文(臺灣)</option>
+					<option value='zh-hk'>中文(香港)</option>
+					<option value='zh-cn'>中文(简体)</option>
+					<option value='en' selected="selected">English</option>
+        </select>
+      </div>
+      <form id="searchForm" name="searchForm" action="http://tw.blog.search.yahoo.com/search" >
+        <div id="suggestMenu" style="visibility:hidden"></div>
+        <fieldset>
+          <legend>Search</legend>
+          <div class="wrapper" id="search_tab">
+            <input type="radio" name="type" id="searchType_album" value="photo" checked="checked" />
+            <label for="searchType_album" title="album search(hotkey：A）" class="Aclick"  accesskey="A">Album<cite></cite></label>
+            <input type="radio" name="type" id="searchType_blog" value="site" />
+            <label for="searchType_blog" title="blog search(hotkey：B）" accesskey="B">Blog<cite></cite></label>
+            <input type="radio" name="type" id="searchType_video" value="video" />
+            <label for="searchType_video" title="Video" accesskey="S">Video<cite></cite></label>
+            <input type="radio" name="type" id="searchType_web" value="web" />
+            <label for="searchType_web" title="web search(hotkey：W）" accesskey="W">Web<cite></cite></label>
+          </div>
+          <div class="search_control">
+            <input type="text" name="p" id="search_keyword" size="40" value="" accesskey="S" title="input here(hotkey：S）" autocomplete="off" />
+            <input type="submit" id="search_submit" value="AlbumSearch" />
+            <input name="provider" type="hidden" value="wretch" />
+            <input name="fr" type="hidden" value="cb-wretch" />
+          </div>
+          <div id="Hot_Keyword">
+            <span>Keyword:</span>
+            <a href="http://tw.rd.yahoo.com/referurl/wretch/album/srchkw/01/*http://tw.blog.search.yahoo.com/search?type=photo&p=%E5%A4%A7%E5%B0%8F%E6%88%80&fr=cb-wretch&provider=wretch">大小戀</a>
+            、<a href="http://tw.rd.yahoo.com/referurl/wretch/album/srchkw/02/*http://tw.blog.search.yahoo.com/search?type=photo&p=%E7%94%B7%E7%89%88%E5%A4%9C%E5%90%8E&fr=cb-wretch&provider=wretch">男版夜后</a>
+            、<a href="http://tw.rd.yahoo.com/referurl/wretch/album/srchkw/03/*http://tw.blog.search.yahoo.com/search?type=photo&p=%E6%AD%A3%E5%A6%B9%E7%89%86&fr=cb-wretch&provider=wretch">正妹牆</a>
+            、<a href="http://tw.rd.yahoo.com/referurl/wretch/album/srchkw/04/*http://tw.blog.search.yahoo.com/search?type=photo&p=%E9%9F%93%E4%BD%A9%E7%A9%8E&fr=cb-wretch&provider=wretch">韓佩穎</a>
+            、<a href="http://tw.rd.yahoo.com/referurl/wretch/album/srchkw/05/*http://tw.blog.search.yahoo.com/search?type=photo&p=%E6%87%89%E9%87%87%E5%85%92&fr=cb-wretch&provider=wretch">應采兒</a>
+            、<a href="http://tw.rd.yahoo.com/referurl/wretch/album/srchkw/06/*http://tw.blog.search.yahoo.com/search?type=photo&p=%E6%97%85%E5%B1%95&fr=cb-wretch&provider=wretch">旅展</a>
+            、<a href="http://tw.rd.yahoo.com/referurl/wretch/album/srchkw/07/*http://tw.blog.search.yahoo.com/search?type=photo&p=%E8%BB%8A%E5%B1%95&fr=cb-wretch&provider=wretch">車展</a>
+          </div>
+        </fieldset>
+      </form>
+    </div>
+
+    <div id="main">
+      <div id="main2">
+        <dl id="navigation" class="upper_column">
+          <dt class="service_link">service link</dt>
+          <dd class="services_link">
+            <ul>
+              <li><a href="http://tw.rd.yahoo.com/referurl/wretch/album/me/album/*http://www.wretch.cc/album/">Wretch Album</a></li>
+              <li><a href="http://tw.rd.yahoo.com/referurl/wretch/album/me/blog/*http://www.wretch.cc/blog/">Blog</a></li>
+              <li><a href="http://tw.rd.yahoo.com/referurl/wretch/album/me/video/*http://www.wretch.cc/video/">Wretch Video</a></li>
+              <li><a href="http://tw.rd.yahoo.com/referurl/wretch/album/me/join/*http://www.wretch.cc/join/"></a></li>
+            </ul>
+          </dd>
+        </dl>
+        
+        <ul id="browse_album" class="left_column">
+          <li id="condition">
+            <h4>Conditions</h4>
+            <div class="side">
+              <div class="sideII">
+                <ul>
+                    <li ><a href="http://tw.rd.yahoo.com/referurl/wretch/album/score/0/0/*http://www.wretch.cc/album/?func=hot&amp;hid=0&amp;class_id=0">Hot</a></li>
+                    <li class="current"><a href="http://tw.rd.yahoo.com/referurl/wretch/album/score/6/0/*http://www.wretch.cc/album/?func=hot&amp;hid=6&amp;class_id=0">Random</a></li>
+                    <li ><a href="http://tw.rd.yahoo.com/referurl/wretch/album/score/4/0/*http://www.wretch.cc/album/?func=hot&amp;hid=4">Collection</a></li>
+                    <li ><a href="http://tw.rd.yahoo.com/referurl/wretch/album/score/7/0/*http://www.wretch.cc/album/?func=hot&amp;hid=7">Mobile</a></li>
+                </ul>
+              </div>
+            </div>
+          </li>
+          <li id="category">
+            <h4>Categories</h4>
+            <div class="side">
+              <div class="sideII">
+                <ul>
+                    <li class="current"><a href="http://tw.rd.yahoo.com/referurl/wretch/album/score/6/0/*http://www.wretch.cc/album/?func=hot&amp;hid=6&amp;class_id=0">All</a></li>
+                      <li ><a href="http://tw.rd.yahoo.com/referurl/wretch/album/score/6/112/*http://www.wretch.cc/album/?func=hot&amp;hid=6&amp;class_id=112">國內旅遊</a></li>
+                      <li ><a href="http://tw.rd.yahoo.com/referurl/wretch/album/score/6/113/*http://www.wretch.cc/album/?func=hot&amp;hid=6&amp;class_id=113">國外旅遊</a></li>
+                      <li ><a href="http://tw.rd.yahoo.com/referurl/wretch/album/score/6/12/*http://www.wretch.cc/album/?func=hot&amp;hid=6&amp;class_id=12">美食記錄</a></li>
+                      <li ><a href="http://tw.rd.yahoo.com/referurl/wretch/album/score/6/213/*http://www.wretch.cc/album/?func=hot&amp;hid=6&amp;class_id=213">流行時尚</a></li>
+                      <li ><a href="http://tw.rd.yahoo.com/referurl/wretch/album/score/6/114/*http://www.wretch.cc/album/?func=hot&amp;hid=6&amp;class_id=114">圖像創作</a></li>
+                      <li ><a href="http://tw.rd.yahoo.com/referurl/wretch/album/score/6/10/*http://www.wretch.cc/album/?func=hot&amp;hid=6&amp;class_id=10">美學設計</a></li>
+                      <li ><a href="http://tw.rd.yahoo.com/referurl/wretch/album/score/6/5/*http://www.wretch.cc/album/?func=hot&amp;hid=6&amp;class_id=5">專業攝影</a></li>
+                      <li ><a href="http://tw.rd.yahoo.com/referurl/wretch/album/score/6/20/*http://www.wretch.cc/album/?func=hot&amp;hid=6&amp;class_id=20">蒐集收藏</a></li>
+                      <li ><a href="http://tw.rd.yahoo.com/referurl/wretch/album/score/6/214/*http://www.wretch.cc/album/?func=hot&amp;hid=6&amp;class_id=214">電腦通訊</a></li>
+                      <li ><a href="http://tw.rd.yahoo.com/referurl/wretch/album/score/6/8/*http://www.wretch.cc/album/?func=hot&amp;hid=6&amp;class_id=8">電玩動漫</a></li>
+                      <li ><a href="http://tw.rd.yahoo.com/referurl/wretch/album/score/6/17/*http://www.wretch.cc/album/?func=hot&amp;hid=6&amp;class_id=17">交通工具</a></li>
+                      <li ><a href="http://tw.rd.yahoo.com/referurl/wretch/album/score/6/39/*http://www.wretch.cc/album/?func=hot&amp;hid=6&amp;class_id=39">心肝寵物</a></li>
+                      <li ><a href="http://tw.rd.yahoo.com/referurl/wretch/album/score/6/116/*http://www.wretch.cc/album/?func=hot&amp;hid=6&amp;class_id=116">展覽活動</a></li>
+                      <li ><a href="http://tw.rd.yahoo.com/referurl/wretch/album/score/6/215/*http://www.wretch.cc/album/?func=hot&amp;hid=6&amp;class_id=215">自然觀察</a></li>
+                      <li ><a href="http://tw.rd.yahoo.com/referurl/wretch/album/score/6/115/*http://www.wretch.cc/album/?func=hot&amp;hid=6&amp;class_id=115">運動體育</a></li>
+                      <li ><a href="http://tw.rd.yahoo.com/referurl/wretch/album/score/6/15/*http://www.wretch.cc/album/?func=hot&amp;hid=6&amp;class_id=15">影視娛樂</a></li>
+                      <li ><a href="http://tw.rd.yahoo.com/referurl/wretch/album/score/6/111/*http://www.wretch.cc/album/?func=hot&amp;hid=6&amp;class_id=111">拍賣市集</a></li>
+                      <li ><a href="http://tw.rd.yahoo.com/referurl/wretch/album/score/6/14/*http://www.wretch.cc/album/?func=hot&amp;hid=6&amp;class_id=14">特定節日</a></li>
+                      <li ><a href="http://tw.rd.yahoo.com/referurl/wretch/album/score/6/212/*http://www.wretch.cc/album/?func=hot&amp;hid=6&amp;class_id=212">學園生活</a></li>
+                      <li ><a href="http://tw.rd.yahoo.com/referurl/wretch/album/score/6/2/*http://www.wretch.cc/album/?func=hot&amp;hid=6&amp;class_id=2">朋友團體</a></li>
+                      <li ><a href="http://tw.rd.yahoo.com/referurl/wretch/album/score/6/201/*http://www.wretch.cc/album/?func=hot&amp;hid=6&amp;class_id=201">家庭親情</a></li>
+                      <li ><a href="http://tw.rd.yahoo.com/referurl/wretch/album/score/6/51/*http://www.wretch.cc/album/?func=hot&amp;hid=6&amp;class_id=51">情侶合照</a></li>
+                      <li ><a href="http://tw.rd.yahoo.com/referurl/wretch/album/score/6/9/*http://www.wretch.cc/album/?func=hot&amp;hid=6&amp;class_id=9">女生個人</a></li>
+                      <li ><a href="http://tw.rd.yahoo.com/referurl/wretch/album/score/6/1/*http://www.wretch.cc/album/?func=hot&amp;hid=6&amp;class_id=1">男生個人</a></li>
+                    </ul>
+              </div>
+            </div>
+          </li>
+          <li id="celebrity">
+            <h4>Celebrity</h4>
+            <div class="side">
+              <div class="sideII">
+                <ul>
+                  <li><a href="http://tw.rd.yahoo.com/referurl/wretch/album/cele/artists/*http://www.wretch.cc/album/?func=artists">Artist</a></li>
+                  <li><a href="http://tw.rd.yahoo.com/referurl/wretch/album/cele/models/*http://www.wretch.cc/album/?func=models">Model</a></li>
+                  <li><a href="http://tw.rd.yahoo.com/referurl/wretch/album/cele/athletes/*http://www.wretch.cc/album/?func=athletes">Sport</a></li>
+                  <li><a href="http://tw.rd.yahoo.com/referurl/wretch/album/cele/writers/*http://www.wretch.cc/album/?func=writers">Author</a></li>
+                  <li><a href="http://tw.rd.yahoo.com/referurl/wretch/album/cele/politics/*http://www.wretch.cc/album/?func=politics">Politician</a></li>
+                </ul>
+              </div>
+            </div>
+          </li>
+          <li id="region_album">
+            <h4>Locations</h4>
+            <div class="side">
+              <div class="sideII">
+                <ul>
+                  <li ><a href="http://tw.rd.yahoo.com/referurl/wretch/album/location/1/*http://www.wretch.cc/album/?func=locations&amp;lid=1">台灣</a></li>
+                  <li ><a href="http://tw.rd.yahoo.com/referurl/wretch/album/location/2/*http://www.wretch.cc/album/?func=locations&amp;lid=2">香港與澳門</a></li>
+                  <li ><a href="http://tw.rd.yahoo.com/referurl/wretch/album/location/3/*http://www.wretch.cc/album/?func=locations&amp;lid=3">中國</a></li>
+                  <li ><a href="http://tw.rd.yahoo.com/referurl/wretch/album/location/4/*http://www.wretch.cc/album/?func=locations&amp;lid=4">世界各地</a></li>
+                </ul>
+              </div>
+            </div>
+          </li>
+          <li id="square">
+            <script language="JavaScript" type="text/javascript" charset="big5" src="http://tw2.adserver.yahoo.com/a?f=2022137083&p=tw_kwretch&l=W1&c=r"></script><noscript><iframe src="http://tw2.adserver.yahoo.com/a?f=2022137083&p=tw_kwretch&l=W1&c=h&bg=white" width=130 height=60 marginwidth=0 marginheight=0 hspace=0 vspace=0 frameborder=0 scrolling=no></iframe></noscript>          </li>
+          <li id="new_css">
+            <h3>New Template</h3>
+            <div class="side">
+              <div class="sideII">
+                <ul>
+                <li><img width="145" src="http://l.yimg.com/e//style1/12/1219/thumb.jpg" alt="New Template" /></li>
+                <li><img width="145" src="http://l.yimg.com/e//style1/12/1270/thumb.jpg" alt="New Template" /></li>
+                <li><img width="145" src="http://l.yimg.com/e//style1/11/1151/thumb.jpg" alt="New Template" /></li>
+                </ul>
+              </div>
+            </div>
+          </li>
+        </ul>
+
+        <div id="main_content" class="middle_column">
+          <div id="column">
+            <ul class="nav">
+              <li id="column_1"><h2>國內旅遊</h2><cite></cite></li>
+              <li id="column_2"><h2>美食記錄</h2><cite></cite></li>
+              <li id="column_3"><h2>專業攝影</h2><cite></cite></li>
+              <li id="column_4"><h2>圖像創作</h2><cite></cite></li>
+              <li id="column_5"><h2>心肝寵物</h2><cite></cite></li>
+            </ul>
+            <div class="innercontent" id="column_1_content">
+              <a class="cover_link" href="http://tw.rd.yahoo.com/referurl/wretch/album/feature/112/1/*http://www.wretch.cc/album/show.php?i=s011550&b=41&f=1874733426" target="_blank"><img id="column_cover_1" src="http://l.yimg.com/e/photos/serv/dynamic/index_page/index_column/album/0/izoom_col_album_4090_1.jpg?1301560478" alt="s011550" /></a>
+              <ol>
+                <li><a href="http://tw.rd.yahoo.com/referurl/wretch/album/feature/112/2/*http://www.wretch.cc/album/show.php?i=s011550&b=41&f=1874733382" target="_blank"><img src="http://l.yimg.com/e/photos/serv/dynamic/index_page/index_column/album/0/izoom_col_album_4090_2.jpg?1301560478" alt="s011550" /></a></li>
+                <li><a href="http://tw.rd.yahoo.com/referurl/wretch/album/feature/112/3/*http://www.wretch.cc/album/show.php?i=s011550&b=41&f=1874733391" target="_blank"><img src="http://l.yimg.com/e/photos/serv/dynamic/index_page/index_column/album/0/izoom_col_album_4090_3.jpg?1301560478" alt="s011550" /></a></li>
+                <li><a href="http://tw.rd.yahoo.com/referurl/wretch/album/feature/112/4/*http://www.wretch.cc/album/show.php?i=s011550&b=41&f=1874733371" target="_blank"><img src="http://l.yimg.com/e/photos/serv/dynamic/index_page/index_column/album/0/izoom_col_album_4090_4.jpg?1301560478" alt="s011550" /></a></li>
+                <li><a href="http://tw.rd.yahoo.com/referurl/wretch/album/feature/112/5/*http://www.wretch.cc/album/show.php?i=s011550&b=41&f=1874733441" target="_blank"><img src="http://l.yimg.com/e/photos/serv/dynamic/index_page/index_column/album/0/izoom_col_album_4090_5.jpg?1301560478" alt="s011550" /></a></li>
+              </ol>
+              <div class="moreinfo">
+                <a href="http://tw.rd.yahoo.com/referurl/wretch/album/feature/112/a/*http://www.wretch.cc/album/?func=hot&amp;hid=6&amp;class_id=112">More國內旅遊</a>
+              </div>
+              <ul class="column_ad" id="column_ad_tw_travel_001">
+                <!--
+                <li><a href="#ad0">【免費】 要不要一起來買個基金壓，連張國治都自嘆不如的幽</a></li>
+                <li><a href="#ad1">【流行】 秀出你的音樂作品讓無名鄉民套用囉無名 </a></li>
+                -->
+              </ul>
+            </div>
+            <div class="innercontent" id="column_2_content">
+              <a class="cover_link" href="http://tw.rd.yahoo.com/referurl/wretch/album/feature/12/1/*http://www.wretch.cc/album/show.php?i=pmana&b=174&f=1943972654" target="_blank"><img id="column_cover_2" src="http://l.yimg.com/e/photos/serv/dynamic/index_page/index_column/album/1/izoom_col_album_4091_1.jpg?1301560478" alt="pmana" /></a>
+              <ol>
+                <li><a href="http://tw.rd.yahoo.com/referurl/wretch/album/feature/12/2/*http://www.wretch.cc/album/show.php?i=pmana&b=174&f=1943972651" target="_blank"><img src="http://l.yimg.com/e/photos/serv/dynamic/index_page/index_column/album/1/izoom_col_album_4091_2.jpg?1301560478" alt="pmana" /></a></li>
+                <li><a href="http://tw.rd.yahoo.com/referurl/wretch/album/feature/12/3/*http://www.wretch.cc/album/show.php?i=pmana&b=174&f=1943972655" target="_blank"><img src="http://l.yimg.com/e/photos/serv/dynamic/index_page/index_column/album/1/izoom_col_album_4091_3.jpg?1301560478" alt="pmana" /></a></li>
+                <li><a href="http://tw.rd.yahoo.com/referurl/wretch/album/feature/12/4/*http://www.wretch.cc/album/show.php?i=pmana&b=174&f=1943972658" target="_blank"><img src="http://l.yimg.com/e/photos/serv/dynamic/index_page/index_column/album/1/izoom_col_album_4091_4.jpg?1301560478" alt="pmana" /></a></li>
+                <li><a href="http://tw.rd.yahoo.com/referurl/wretch/album/feature/12/5/*http://www.wretch.cc/album/show.php?i=pmana&b=174&f=1943972660" target="_blank"><img src="http://l.yimg.com/e/photos/serv/dynamic/index_page/index_column/album/1/izoom_col_album_4091_5.jpg?1301560478" alt="pmana" /></a></li>
+              </ol>
+              <div class="moreinfo">
+                <a href="http://tw.rd.yahoo.com/referurl/wretch/album/feature/12/a/*http://www.wretch.cc/album/?func=hot&amp;hid=6&amp;class_id=12">More美食記錄</a>
+              </div>
+              <ul class="column_ad" id="column_ad_tw_blog_food_001">
+                <!--
+                <li><a href="#ad2">【青春】 無瑕乎 17歲的青春年華 </a></li>
+                <li><a href="#ad3">【感性】 不要為我哭泣、難過、甚至停留</a></li>
+                -->
+              </ul>
+            </div>
+            <div class="innercontent" id="column_3_content">
+              <a class="cover_link" href="http://tw.rd.yahoo.com/referurl/wretch/album/feature/5/1/*http://www.wretch.cc/album/show.php?i=passion1979&b=81&f=1231478145" target="_blank"><img id="column_cover_3" src="http://l.yimg.com/e/photos/serv/dynamic/index_page/index_column/album/2/izoom_col_album_4092_1.jpg?1301560478" alt="passion1979" /></a>
+              <ol>
+                <li><a href="http://tw.rd.yahoo.com/referurl/wretch/album/feature/5/2/*http://www.wretch.cc/album/show.php?i=passion1979&b=81&f=1231454517" target="_blank"><img src="http://l.yimg.com/e/photos/serv/dynamic/index_page/index_column/album/2/izoom_col_album_4092_2.jpg?1301560478" alt="passion1979" /></a></li>
+                <li><a href="http://tw.rd.yahoo.com/referurl/wretch/album/feature/5/3/*http://www.wretch.cc/album/show.php?i=passion1979&b=81&f=1231454523" target="_blank"><img src="http://l.yimg.com/e/photos/serv/dynamic/index_page/index_column/album/2/izoom_col_album_4092_3.jpg?1301560478" alt="passion1979" /></a></li>
+                <li><a href="http://tw.rd.yahoo.com/referurl/wretch/album/feature/5/4/*http://www.wretch.cc/album/show.php?i=passion1979&b=81&f=1231462125" target="_blank"><img src="http://l.yimg.com/e/photos/serv/dynamic/index_page/index_column/album/2/izoom_col_album_4092_4.jpg?1301560478" alt="passion1979" /></a></li>
+                <li><a href="http://tw.rd.yahoo.com/referurl/wretch/album/feature/5/5/*http://www.wretch.cc/album/show.php?i=passion1979&b=81&f=1231439181" target="_blank"><img src="http://l.yimg.com/e/photos/serv/dynamic/index_page/index_column/album/2/izoom_col_album_4092_5.jpg?1301560478" alt="passion1979" /></a></li>
+              </ol>
+              <div class="moreinfo">
+                <a href="http://tw.rd.yahoo.com/referurl/wretch/album/feature/5/a/*http://www.wretch.cc/album/?func=hot&amp;hid=6&amp;class_id=5">More專業攝影</a>
+              </div>
+              <ul class="column_ad" id="column_ad_tw_blog_video_001">
+                <!--
+                <li><a href="#ad4">【狂歡】 邊錄音邊喝酒，興致高昂不低落</a></li>
+                <li><a href="#ad5">【慶祝】 她們最愛網購宅配，是牛爾保養網忠實買家。</a></li>
+                -->
+              </ul>
+            </div>
+            <div class="innercontent" id="column_4_content">
+              <a class="cover_link" href="http://tw.rd.yahoo.com/referurl/wretch/album/feature/114/1/*http://www.wretch.cc/album/show.php?i=momo76217&b=100&f=1131739082" target="_blank"><img id="column_cover_4" src="http://l.yimg.com/e/photos/serv/dynamic/index_page/index_column/album/3/izoom_col_album_4093_1.jpg?1301560478" alt="momo76217" /></a>
+              <ol>
+                <li><a href="http://tw.rd.yahoo.com/referurl/wretch/album/feature/114/2/*http://www.wretch.cc/album/show.php?i=momo76217&b=100&f=1131739080" target="_blank"><img src="http://l.yimg.com/e/photos/serv/dynamic/index_page/index_column/album/3/izoom_col_album_4093_2.jpg?1301560478" alt="momo76217" /></a></li>
+                <li><a href="http://tw.rd.yahoo.com/referurl/wretch/album/feature/114/3/*http://www.wretch.cc/album/show.php?i=momo76217&b=100&f=1131739079" target="_blank"><img src="http://l.yimg.com/e/photos/serv/dynamic/index_page/index_column/album/3/izoom_col_album_4093_3.jpg?1301560478" alt="momo76217" /></a></li>
+                <li><a href="http://tw.rd.yahoo.com/referurl/wretch/album/feature/114/4/*http://www.wretch.cc/album/show.php?i=momo76217&b=100&f=1131739101" target="_blank"><img src="http://l.yimg.com/e/photos/serv/dynamic/index_page/index_column/album/3/izoom_col_album_4093_4.jpg?1301560478" alt="momo76217" /></a></li>
+                <li><a href="http://tw.rd.yahoo.com/referurl/wretch/album/feature/114/5/*http://www.wretch.cc/album/show.php?i=momo76217&b=100&f=1131739108" target="_blank"><img src="http://l.yimg.com/e/photos/serv/dynamic/index_page/index_column/album/3/izoom_col_album_4093_5.jpg?1301560478" alt="momo76217" /></a></li>
+              </ol>
+              <div class="moreinfo">
+                <a href="http://tw.rd.yahoo.com/referurl/wretch/album/feature/114/a/*http://www.wretch.cc/album/?func=hot&amp;hid=6&amp;class_id=114">More圖像創作</a>
+              </div>
+              <ul class="column_ad" id="column_ad_tw_blog_art_001">
+                <!--
+                <li><a href="#ad6">【生活】 你要當個OL還是在家裡帶孩子呢？ </a></li>
+                <li><a href="#ad7">【禮物】 只要你用心，有沒有禮物沒關係</a></li>
+                -->
+              </ul>
+            </div>
+            <div class="innercontent" id="column_5_content">
+              <a class="cover_link" href="http://tw.rd.yahoo.com/referurl/wretch/album/feature/39/1/*http://www.wretch.cc/album/show.php?i=luss&b=11&f=1567747406" target="_blank"><img id="column_cover_5" src="http://l.yimg.com/e/photos/serv/dynamic/index_page/index_column/album/4/izoom_col_album_4094_1.jpg?1301560478" alt="luss" /></a>
+              <ol>
+                <li><a href="http://tw.rd.yahoo.com/referurl/wretch/album/feature/39/2/*http://www.wretch.cc/album/show.php?i=luss&b=11&f=1567747377" target="_blank"><img src="http://l.yimg.com/e/photos/serv/dynamic/index_page/index_column/album/4/izoom_col_album_4094_2.jpg?1301560478" alt="luss" /></a></li>
+                <li><a href="http://tw.rd.yahoo.com/referurl/wretch/album/feature/39/3/*http://www.wretch.cc/album/show.php?i=luss&b=11&f=1567747383" target="_blank"><img src="http://l.yimg.com/e/photos/serv/dynamic/index_page/index_column/album/4/izoom_col_album_4094_3.jpg?1301560478" alt="luss" /></a></li>
+                <li><a href="http://tw.rd.yahoo.com/referurl/wretch/album/feature/39/4/*http://www.wretch.cc/album/show.php?i=luss&b=11&f=1567747391" target="_blank"><img src="http://l.yimg.com/e/photos/serv/dynamic/index_page/index_column/album/4/izoom_col_album_4094_4.jpg?1301560478" alt="luss" /></a></li>
+                <li><a href="http://tw.rd.yahoo.com/referurl/wretch/album/feature/39/5/*http://www.wretch.cc/album/show.php?i=luss&b=11&f=1567747375" target="_blank"><img src="http://l.yimg.com/e/photos/serv/dynamic/index_page/index_column/album/4/izoom_col_album_4094_5.jpg?1301560478" alt="luss" /></a></li>
+              </ol>
+              <div class="moreinfo">
+                <a href="http://tw.rd.yahoo.com/referurl/wretch/album/feature/39/a/*http://www.wretch.cc/album/?func=hot&amp;hid=6&amp;class_id=39">More心肝寵物</a>
+              </div>
+              <ul class="column_ad" id="column_ad_tw_blog_pets_001">
+                <!--
+                <li><a href="#ad8">【時尚】 再怎麼妥協還是堅持自己的溫度</a></li>
+                <li><a href="#ad9">【心情】 因為幽默的來源不是喜悅而是悲傷</a></li>
+                -->
+              </ul>
+            </div>
+            <div id="collapse_button"><a href="javascript:press();" title="open Column">open Column</a></div>
+          </div>
+          
+          <div id="sandwitch_top" class="sandwitch">
+            <script language="JavaScript" type="text/javascript" charset="big5" src="http://tw2.adserver.yahoo.com/a?f=2022137083&p=tw_kwretch&l=N3&c=r"></script><noscript><iframe src="http://tw2.adserver.yahoo.com/a?f=2022137083&p=tw_kwretch&l=N3&c=h&bg=white" width=486 height=60 marginwidth=0 marginheight=0 hspace=0 vspace=0 frameborder=0 scrolling=no></iframe></noscript>          </div>
+
+          <div id="album">
+                        <h3>Random > All</h3>
+                        <ul id="page_control_top" class="page_control">
+              <li>上一頁</li> <li><span>1</span></li> <li><a href='http://tw.rd.yahoo.com/referurl/wretch/album/page/up/2/*http://www.wretch.cc/album/?func=hot&amp;hid=6&amp;class_id=0&amp;page=2'>2</a></li> <li><a href='http://tw.rd.yahoo.com/referurl/wretch/album/page/up/3/*http://www.wretch.cc/album/?func=hot&amp;hid=6&amp;class_id=0&amp;page=3'>3</a></li> <li><a href='http://tw.rd.yahoo.com/referurl/wretch/album/page/up/4/*http://www.wretch.cc/album/?func=hot&amp;hid=6&amp;class_id=0&amp;page=4'>4</a></li> <li><a href='http://tw.rd.yahoo.com/referurl/wretch/album/page/up/5/*http://www.wretch.cc/album/?func=hot&amp;hid=6&amp;class_id=0&amp;page=5'>5</a></li> <li><a href='http://tw.rd.yahoo.com/referurl/wretch/album/page/up/6/*http://www.wretch.cc/album/?func=hot&amp;hid=6&amp;class_id=0&amp;page=6'>6</a></li> <li><a href='http://tw.rd.yahoo.com/referurl/wretch/album/page/up/7/*http://www.wretch.cc/album/?func=hot&amp;hid=6&amp;class_id=0&amp;page=7'>7</a></li> <li><a href='http://tw.rd.yahoo.com/referurl/wretch/album/page/up/8/*http://www.wretch.cc/album/?func=hot&amp;hid=6&amp;class_id=0&amp;page=8'>8</a></li> <li><a href='http://tw.rd.yahoo.com/referurl/wretch/album/page/up/9/*http://www.wretch.cc/album/?func=hot&amp;hid=6&amp;class_id=0&amp;page=9'>9</a></li> <li><a href='http://tw.rd.yahoo.com/referurl/wretch/album/page/up/b/*http://www.wretch.cc/album/?func=hot&amp;hid=6&amp;class_id=0&amp;page=2'>下一頁</a></li>             </ul>
+
+            <ul class="album_list">
+              <li>
+                <div class="image_link">
+                  <a href="http://tw.rd.yahoo.com/referurl/wretch/album/score/6/0/*http://www.wretch.cc/album/album.php?id=ashley0629&amp;book=91" target="_blank"><img src="http://f12.wretch.yimg.com/ashley0629/91/thumbs/t1245198996.jpg?XHspcYlDdxPwDAOIaWxuG70WiyO.plV67CCFibKpqMIlwjQ3GNWGvxjROB_JcCBvfZZwKg--" alt="小妃姬 16天瘦三公斤" /><cite></cite></a>
+                </div>
+                <div class="grid">
+                                  <a href="http://tw.rd.yahoo.com/referurl/wretch/album/score/6/0/*http://www.wretch.cc/album/album.php?id=ashley0629&amp;book=91" target="_blank">ashley0629</a>
+                  <strong>小妃姬 16天瘦三公斤</strong>
+                                    <span>30pictures</span>
+                                </div>
+              </li>
+              <li>
+                <div class="image_link">
+                  <a href="http://tw.rd.yahoo.com/referurl/wretch/album/score/6/0/*http://www.wretch.cc/album/album.php?id=dollshin&amp;book=260" target="_blank"><img src="http://f12.wretch.yimg.com/dollshin/260/thumbs/t1818203188.jpg?MVKqs4xDdxMi_CuR17fnTSa__tPgFq990PeM.5.7fhQoGRRvL3qierV2g74twv_jO5WV" alt="♡新加坡-甩尾大賽♡" /><cite></cite></a>
+                </div>
+                <div class="grid">
+                                  <a href="http://tw.rd.yahoo.com/referurl/wretch/album/score/6/0/*http://www.wretch.cc/album/album.php?id=dollshin&amp;book=260" target="_blank">dollshin</a>
+                  <strong>♡新加坡-甩尾大賽♡</strong>
+                                    <span>33pictures</span>
+                                </div>
+              </li>
+              <li>
+                <div class="image_link">
+                  <a href="http://tw.rd.yahoo.com/referurl/wretch/album/score/6/0/*http://www.wretch.cc/album/album.php?id=kuck1020&amp;book=87" target="_blank"><img src="http://f12.wretch.yimg.com/kuck1020/87/thumbs/t1366696670.jpg?a_EN2i5DdxMk2Ord77XrCHFtMUZ_L0_FR7hvJNMdXXv8Cc0p8GwMVzLVMvE78xbAZ6o-" alt="❤想念❤" /><cite></cite></a>
+                </div>
+                <div class="grid">
+                                  <a href="http://tw.rd.yahoo.com/referurl/wretch/album/score/6/0/*http://www.wretch.cc/album/album.php?id=kuck1020&amp;book=87" target="_blank">kuck1020</a>
+                  <strong>❤想念❤</strong>
+                                    <span>64pictures</span>
+                                </div>
+              </li>
+              <li>
+                <div class="image_link">
+                  <a href="http://tw.rd.yahoo.com/referurl/wretch/album/score/6/0/*http://www.wretch.cc/album/album.php?id=keiko3245&amp;book=14" target="_blank"><img src="http://f12.wretch.yimg.com/keiko3245/14/thumbs/t1640121604.jpg?wUCaZONDdxP.V9bYF2vhOgmSstHm_O7je05oEEv2SWw_4iYeISDDyf7cizjVFmnmQHoc" alt="FB搜尋：Shakira" /><cite></cite></a>
+                </div>
+                <div class="grid">
+                                  <a href="http://tw.rd.yahoo.com/referurl/wretch/album/score/6/0/*http://www.wretch.cc/album/album.php?id=keiko3245&amp;book=14" target="_blank">keiko3245</a>
+                  <strong>FB搜尋：Shakira</strong>
+                                    <span>120pictures</span>
+                                </div>
+              </li>
+              <li>
+                <div class="image_link">
+                  <a href="http://tw.rd.yahoo.com/referurl/wretch/album/score/6/0/*http://www.wretch.cc/album/album.php?id=comingkevin&amp;book=676" target="_blank"><img src="http://f12.wretch.yimg.com/comingkevin/676/thumbs/t1698304171.jpg?6EISNW9DdxNJs3fTism1BlFemtkOiPBBZEmc_myO8TyrV.TfIOvfN4J8FbkVYpVtNAXmGVTU" alt="Hot-Girl 偶像之星-Zoe(一)" /><cite></cite></a>
+                </div>
+                <div class="grid">
+                                  <a href="http://tw.rd.yahoo.com/referurl/wretch/album/score/6/0/*http://www.wretch.cc/album/album.php?id=comingkevin&amp;book=676" target="_blank">comingkevin</a>
+                  <strong>Hot-Girl 偶像之星-Zoe(一)</strong>
+                                    <span>21pictures</span>
+                                </div>
+              </li>
+              <li>
+                <div class="image_link">
+                  <a href="http://tw.rd.yahoo.com/referurl/wretch/album/score/6/0/*http://www.wretch.cc/album/album.php?id=ariel53778&amp;book=39" target="_blank"><img src="http://f12.wretch.yimg.com/ariel53778/39/thumbs/t1390149630.jpg?iF3jsXVDdxPqv_ZRAPXNEi_UBSrojY7qPRZ8rI4CKIFr9P7n6DZeAPr2RaxiX9a9qSMeiQ--" alt="外拍　　　　　　　　冬" /><cite></cite></a>
+                </div>
+                <div class="grid">
+                                  <a href="http://tw.rd.yahoo.com/referurl/wretch/album/score/6/0/*http://www.wretch.cc/album/album.php?id=ariel53778&amp;book=39" target="_blank">ariel53778</a>
+                  <strong>外拍　　　　　　　　冬</strong>
+                                    <span>29pictures</span>
+                                </div>
+              </li>
+              <li>
+                <div class="image_link">
+                  <a href="http://tw.rd.yahoo.com/referurl/wretch/album/score/6/0/*http://www.wretch.cc/album/album.php?id=cad12369&amp;book=1" target="_blank"><img src="http://f12.wretch.yimg.com/cad12369/1/thumbs/t1085622093.jpg?aKkzBFpDdxPJzBkIEmyQbhRc6g0ZfAdXg3Q24bWpfBcQB1zhD72wSAWWZVxnk2Bfng--" alt="小清" /><cite></cite></a>
+                </div>
+                <div class="grid">
+                                  <a href="http://tw.rd.yahoo.com/referurl/wretch/album/score/6/0/*http://www.wretch.cc/album/album.php?id=cad12369&amp;book=1" target="_blank">cad12369</a>
+                  <strong>小清</strong>
+                                    <span>53pictures</span>
+                                </div>
+              </li>
+              <li>
+                <div class="image_link">
+                  <a href="http://tw.rd.yahoo.com/referurl/wretch/album/score/6/0/*http://www.wretch.cc/album/album.php?id=yuer0527&amp;book=58" target="_blank"><img src="http://f12.wretch.yimg.com/yuer0527/58/thumbs/t1171837055.jpg?2ljPYHlDdxPBwmsGCv1tpsDutL2GKB7qD_VGXBFvSUBzlGW7QQJCBn2zTlMhMuFWW.k-" alt="我家寶貝剃毛毛了!" /><cite></cite></a>
+                </div>
+                <div class="grid">
+                                  <a href="http://tw.rd.yahoo.com/referurl/wretch/album/score/6/0/*http://www.wretch.cc/album/album.php?id=yuer0527&amp;book=58" target="_blank">yuer0527</a>
+                  <strong>我家寶貝剃毛毛了!</strong>
+                                    <span>26pictures</span>
+                                </div>
+              </li>
+              <li>
+                <div class="image_link">
+                  <a href="http://tw.rd.yahoo.com/referurl/wretch/album/score/6/0/*http://www.wretch.cc/album/album.php?id=mymay1130&amp;book=28" target="_blank"><img src="http://f12.wretch.yimg.com/mymay1130/28/thumbs/t1247261138.jpg?s0iZk3pDdxOkX4vkSY1hZ7bGME8x0R7SRZxdv.rJMEvtuf3E7u5BaEhbc5tP23nzb4BI" alt="東森新聞採訪外拍" /><cite></cite></a>
+                </div>
+                <div class="grid">
+                                  <a href="http://tw.rd.yahoo.com/referurl/wretch/album/score/6/0/*http://www.wretch.cc/album/album.php?id=mymay1130&amp;book=28" target="_blank">mymay1130</a>
+                  <strong>東森新聞採訪外拍</strong>
+                                    <span>88pictures</span>
+                                </div>
+              </li>
+              <li>
+                <div class="image_link">
+                  <a href="http://tw.rd.yahoo.com/referurl/wretch/album/score/6/0/*http://www.wretch.cc/album/album.php?id=pagy1118&amp;book=3" target="_blank"><img src="http://f12.wretch.yimg.com/pagy1118/3/thumbs/t1542719766.jpg?NVU6eSVDdxOMbnq.4PrDAVKb6sLKSLRHnNNtRLpf.OSak02JFgzKI.G5WU9vjMzXxA--" alt="麻吉同事" /><cite></cite></a>
+                </div>
+                <div class="grid">
+                                  <a href="http://tw.rd.yahoo.com/referurl/wretch/album/score/6/0/*http://www.wretch.cc/album/album.php?id=pagy1118&amp;book=3" target="_blank">pagy1118</a>
+                  <strong>麻吉同事</strong>
+                                    <span>36pictures</span>
+                                </div>
+              </li>
+              <li>
+                <div class="image_link">
+                  <a href="http://tw.rd.yahoo.com/referurl/wretch/album/score/6/0/*http://www.wretch.cc/album/album.php?id=kailovepig&amp;book=79" target="_blank"><img src="http://f12.wretch.yimg.com/kailovepig/79/thumbs/t1834264734.jpg?FsnhJl1DdxOSO6GdUToLttYv_taFrAIgmqZZUvgbOgD.FPNnjezJ5HVMtQjg3VKEs4NKcw--" alt="成人展~我混中東的(新增" /><cite></cite></a>
+                </div>
+                <div class="grid">
+                                  <a href="http://tw.rd.yahoo.com/referurl/wretch/album/score/6/0/*http://www.wretch.cc/album/album.php?id=kailovepig&amp;book=79" target="_blank">kailovepig</a>
+                  <strong>成人展~我混中東的(新增</strong>
+                                    <span>91pictures</span>
+                                </div>
+              </li>
+              <li>
+                <div class="image_link">
+                  <a href="http://tw.rd.yahoo.com/referurl/wretch/album/score/6/0/*http://www.wretch.cc/album/album.php?id=qaqa9696&amp;book=5" target="_blank"><img src="http://f12.wretch.yimg.com/qaqa9696/5/thumbs/t1132127804.jpg?TIthOktDdxNG1l2rbwLKAZLpEak2D36WURClciSEemhsFgv2nRl590h31P7OTqpOfg--" alt="出門手機找" /><cite></cite></a>
+                </div>
+                <div class="grid">
+                                  <a href="http://tw.rd.yahoo.com/referurl/wretch/album/score/6/0/*http://www.wretch.cc/album/album.php?id=qaqa9696&amp;book=5" target="_blank">qaqa9696</a>
+                  <strong>出門手機找</strong>
+                                    <span>36pictures</span>
+                                </div>
+              </li>
+              <li>
+                <div class="image_link">
+                  <a href="http://tw.rd.yahoo.com/referurl/wretch/album/score/6/0/*http://www.wretch.cc/album/album.php?id=lv54355435&amp;book=177" target="_blank"><img src="http://f12.wretch.yimg.com/lv54355435/177/thumbs/t1648176518.jpg?nrPGa4NDdxPXpbBM4R8DsZwDvcMOxXpeOq0Z54VFmQNLDUr3DTLe5YrdIcMip.5ZFjhQhHI-" alt="2011.11月~美樂蒂MOTEL外拍~~~" /><cite></cite></a>
+                </div>
+                <div class="grid">
+                                  <a href="http://tw.rd.yahoo.com/referurl/wretch/album/score/6/0/*http://www.wretch.cc/album/album.php?id=lv54355435&amp;book=177" target="_blank">lv54355435</a>
+                  <strong>2011.11月~美樂蒂MOTEL外拍~~~</strong>
+                                    <span>44pictures</span>
+                                </div>
+              </li>
+              <li>
+                <div class="image_link">
+                  <a href="http://tw.rd.yahoo.com/referurl/wretch/album/score/6/0/*http://www.wretch.cc/album/album.php?id=constantine&amp;book=86" target="_blank"><img src="http://f12.wretch.yimg.com/constantine/86/thumbs/t1143307359.jpg?Q3_3xj1DdxM5MFo1C_nUmQ7uL3D2En6nUFDodqUWqZJjZxDz5EaSOKMeu7nQBwDz0AJiA70-" alt="8x8婚禮寫真書-凱惠&雨霖(高雄文定河邊餐廳)" /><cite></cite></a>
+                </div>
+                <div class="grid">
+                                  <a href="http://tw.rd.yahoo.com/referurl/wretch/album/score/6/0/*http://www.wretch.cc/album/album.php?id=constantine&amp;book=86" target="_blank">constantine</a>
+                  <strong>8x8婚禮寫真書-凱惠&雨霖(高雄文定河邊餐廳)</strong>
+                                    <span>15pictures</span>
+                                </div>
+              </li>
+              <li>
+                <div class="image_link">
+                  <a href="http://tw.rd.yahoo.com/referurl/wretch/album/score/6/0/*http://www.wretch.cc/album/album.php?id=SungYiChang&amp;book=286" target="_blank"><img src="http://f12.wretch.yimg.com/sungyichang/286/thumbs/t1442800485.jpg?FPnwZRNDdxOBGUAqqbHrCie2Ty54.UQHtS4HLnKffJT242Cs7AGnvkm9JyQP0fxoSI9crV2f" alt="死神 519" /><cite></cite></a>
+                </div>
+                <div class="grid">
+                                  <a href="http://tw.rd.yahoo.com/referurl/wretch/album/score/6/0/*http://www.wretch.cc/album/album.php?id=SungYiChang&amp;book=286" target="_blank">SungYiChang</a>
+                  <strong>死神 519</strong>
+                                    <span>15pictures</span>
+                                </div>
+              </li>
+              <li>
+                <div class="image_link">
+                  <a href="http://tw.rd.yahoo.com/referurl/wretch/album/score/6/0/*http://www.wretch.cc/album/album.php?id=Dreams700610&amp;book=115" target="_blank"><img src="http://f12.wretch.yimg.com/dreams700610/115/thumbs/t1099368296.jpg?BYjceUxDdxPTOPngw4SNXhA6yMB4InbBN.MPXGcOuuJD4YdKCsq2BP8iDYTQtH8qZ7nzEfDe4A--" alt="夏のしっぽ │ Mandy" /><cite></cite></a>
+                </div>
+                <div class="grid">
+                                  <a href="http://tw.rd.yahoo.com/referurl/wretch/album/score/6/0/*http://www.wretch.cc/album/album.php?id=Dreams700610&amp;book=115" target="_blank">Dreams700610</a>
+                  <strong>夏のしっぽ │ Mandy</strong>
+                                    <span>55pictures</span>
+                                </div>
+              </li>
+              <li>
+                <div class="image_link">
+                  <a href="http://tw.rd.yahoo.com/referurl/wretch/album/score/6/0/*http://www.wretch.cc/album/album.php?id=viv149&amp;book=3" target="_blank"><img src="http://f12.wretch.yimg.com/viv149/3/thumbs/t1811958361.jpg?CrIpIWVDdxN9h7K47e_kLjmtRBdglgvomLRApkf2pbtH.mEzhhg8V_sWj1f3aws-" alt="2012/3/10~3/11 香港迪士尼" /><cite></cite></a>
+                </div>
+                <div class="grid">
+                                  <a href="http://tw.rd.yahoo.com/referurl/wretch/album/score/6/0/*http://www.wretch.cc/album/album.php?id=viv149&amp;book=3" target="_blank">viv149</a>
+                  <strong>2012/3/10~3/11 香港迪士尼</strong>
+                                    <span>35pictures</span>
+                                </div>
+              </li>
+              <li>
+                <div class="image_link">
+                  <a href="http://tw.rd.yahoo.com/referurl/wretch/album/score/6/0/*http://www.wretch.cc/album/album.php?id=carzybaby&amp;book=232" target="_blank"><img src="http://f12.wretch.yimg.com/carzybaby/232/thumbs/t1326479450.jpg?UkcCc5tDdxNcxbZyHFYQeUny_yE2fdA3_zrvXTGLzjsaQqgLYjXObgo3lcpf35pJRTJe1A--" alt="晶晶、學生、女僕" /><cite></cite></a>
+                </div>
+                <div class="grid">
+                                  <a href="http://tw.rd.yahoo.com/referurl/wretch/album/score/6/0/*http://www.wretch.cc/album/album.php?id=carzybaby&amp;book=232" target="_blank">carzybaby</a>
+                  <strong>晶晶、學生、女僕</strong>
+                                    <span>148pictures</span>
+                                </div>
+              </li>
+              <li>
+                <div class="image_link">
+                  <a href="http://tw.rd.yahoo.com/referurl/wretch/album/score/6/0/*http://www.wretch.cc/album/album.php?id=wei3450354d8&amp;book=15" target="_blank"><img src="http://f12.wretch.yimg.com/wei3450354d8/15/thumbs/t1951729056.jpg?1DuLuGZDdxNOquXevFDr5xupz80y8npXjHmX1V5nPgA4OF.3zcaXWkNAjuI5cCJQq.MfMMQ1" alt="筱薇" /><cite></cite></a>
+                </div>
+                <div class="grid">
+                                  <a href="http://tw.rd.yahoo.com/referurl/wretch/album/score/6/0/*http://www.wretch.cc/album/album.php?id=wei3450354d8&amp;book=15" target="_blank">wei3450354d8</a>
+                  <strong>筱薇</strong>
+                                    <span>131pictures</span>
+                                </div>
+              </li>
+              <li>
+                <div class="image_link">
+                  <a href="http://tw.rd.yahoo.com/referurl/wretch/album/score/6/0/*http://www.wretch.cc/album/album.php?id=JAMIEHO&amp;book=10" target="_blank"><img src="http://f12.wretch.yimg.com/jamieho/10/thumbs/t1917579614.jpg?3Q5QAYxDdxOsKmQ3jPN1XuIiq9pmqBQW0xKV7UTSB_sdZthhEm7Umbg66Y4tjDb3pQ--" alt="★ 31~33+動態檔★" /><cite></cite></a>
+                </div>
+                <div class="grid">
+                                  <a href="http://tw.rd.yahoo.com/referurl/wretch/album/score/6/0/*http://www.wretch.cc/album/album.php?id=JAMIEHO&amp;book=10" target="_blank">JAMIEHO</a>
+                  <strong>★ 31~33+動態檔★</strong>
+                                    <span>20pictures</span>
+                                </div>
+              </li>
+            </ul>
+            <ul id="page_control_bottom" class="page_control">
+              <li>上一頁</li> <li><span>1</span></li> <li><a href='http://tw.rd.yahoo.com/referurl/wretch/album/page/down/2/*http://www.wretch.cc/album/?func=hot&amp;hid=6&amp;class_id=0&amp;page=2'>2</a></li> <li><a href='http://tw.rd.yahoo.com/referurl/wretch/album/page/down/3/*http://www.wretch.cc/album/?func=hot&amp;hid=6&amp;class_id=0&amp;page=3'>3</a></li> <li><a href='http://tw.rd.yahoo.com/referurl/wretch/album/page/down/4/*http://www.wretch.cc/album/?func=hot&amp;hid=6&amp;class_id=0&amp;page=4'>4</a></li> <li><a href='http://tw.rd.yahoo.com/referurl/wretch/album/page/down/5/*http://www.wretch.cc/album/?func=hot&amp;hid=6&amp;class_id=0&amp;page=5'>5</a></li> <li><a href='http://tw.rd.yahoo.com/referurl/wretch/album/page/down/6/*http://www.wretch.cc/album/?func=hot&amp;hid=6&amp;class_id=0&amp;page=6'>6</a></li> <li><a href='http://tw.rd.yahoo.com/referurl/wretch/album/page/down/7/*http://www.wretch.cc/album/?func=hot&amp;hid=6&amp;class_id=0&amp;page=7'>7</a></li> <li><a href='http://tw.rd.yahoo.com/referurl/wretch/album/page/down/8/*http://www.wretch.cc/album/?func=hot&amp;hid=6&amp;class_id=0&amp;page=8'>8</a></li> <li><a href='http://tw.rd.yahoo.com/referurl/wretch/album/page/down/9/*http://www.wretch.cc/album/?func=hot&amp;hid=6&amp;class_id=0&amp;page=9'>9</a></li> <li><a href='http://tw.rd.yahoo.com/referurl/wretch/album/page/down/b/*http://www.wretch.cc/album/?func=hot&amp;hid=6&amp;class_id=0&amp;page=2'>下一頁</a></li>             </ul>
+          </div>
+          <div id="sandwitch_bottom" class="sandwitch">
+            <script language="JavaScript" type="text/javascript" charset="big5" src="http://tw2.adserver.yahoo.com/a?f=2022137083&p=tw_kwretch&l=S3&c=r"></script><noscript><iframe src="http://tw2.adserver.yahoo.com/a?f=2022137083&p=tw_kwretch&l=S3&c=h&bg=white" width=486 height=60 marginwidth=0 marginheight=0 hspace=0 vspace=0 frameborder=0 scrolling=no></iframe></noscript>          </div>
+        </div>
+      </div>
+      
+      <ul id="sidebar" class="right_column">
+        <li id="ad_morten">
+          <div class="side">
+            <div class="sideII">
+              <script language="JavaScript" type="text/javascript" charset="big5" src="http://tw2.adserver.yahoo.com/a?f=2022137083&p=tw_kwretch&l=LREC&c=r"></script><noscript><iframe src="http://tw2.adserver.yahoo.com/a?f=2022137083&p=tw_kwretch&l=LREC&c=h&bg=white" width=2 height=2 marginwidth=0 marginheight=0 hspace=0 vspace=0 frameborder=0 scrolling=no></iframe></noscript>            </div>
+          </div>
+        </li>
+        <li id="ad_stamp">
+          <h3>Advertisement</h3>
+          <div class="side">
+            <div class="sideII">
+              <ul>
+                <li><script language="JavaScript" type="text/javascript" charset="big5" src="http://tw2.adserver.yahoo.com/a?f=2022137083&p=tw_kwretch&l=C1&c=r"></script><noscript><iframe src="http://tw2.adserver.yahoo.com/a?f=2022137083&p=tw_kwretch&l=C1&c=h&bg=white" width=60 height=60 marginwidth=0 marginheight=0 hspace=0 vspace=0 frameborder=0 scrolling=no></iframe></noscript></li>
+                <li><script language="JavaScript" type="text/javascript" charset="big5" src="http://tw2.adserver.yahoo.com/a?f=2022137083&p=tw_kwretch&l=C2&c=r"></script><noscript><iframe src="http://tw2.adserver.yahoo.com/a?f=2022137083&p=tw_kwretch&l=C2&c=h&bg=white" width=60 height=60 marginwidth=0 marginheight=0 hspace=0 vspace=0 frameborder=0 scrolling=no></iframe></noscript></li>
+                <li><script language="JavaScript" type="text/javascript" charset="big5" src="http://tw2.adserver.yahoo.com/a?f=2022137083&p=tw_kwretch&l=C3&c=r"></script><noscript><iframe src="http://tw2.adserver.yahoo.com/a?f=2022137083&p=tw_kwretch&l=C3&c=h&bg=white" width=60 height=60 marginwidth=0 marginheight=0 hspace=0 vspace=0 frameborder=0 scrolling=no></iframe></noscript></li>
+                <li><script language="JavaScript" type="text/javascript" charset="big5" src="http://tw2.adserver.yahoo.com/a?f=2022137083&p=tw_kwretch&l=C4&c=r"></script><noscript><iframe src="http://tw2.adserver.yahoo.com/a?f=2022137083&p=tw_kwretch&l=C4&c=h&bg=white" width=60 height=60 marginwidth=0 marginheight=0 hspace=0 vspace=0 frameborder=0 scrolling=no></iframe></noscript></li>
+              </ul>
+            </div>
+          </div>
+        </li>
+<!--taiwan map-->
+        <li id="taiwan_album">
+          <h3>Taiwan Album</h3>
+          <div class="side">
+            <div class="sideII">
+              <div id="county_flash_div"></div>
+            </div>
+          </div>
+        </li>
+<!--map end-->
+        <li id="slider_rolling">
+          <h3><span id="roll_title">藝人: 六甲樂團-何官錠</span></h3>
+          <div class="side">
+            <div class="sideII">
+              <ul id="slider_pic">
+								<li id="slider0">
+									<a href="pr/artists/*http://www.wretch.cc/album/alfgoahead" target="_blank"><img src="http://pic.wretch.cc/e/icon/star/pr_use/alfgoahead.jpg?10587661" alt=""/></a>
+								</li>
+								<li id="slider1">
+									<a href="pr/artists/*http://www.wretch.cc/album/alien3647" target="_blank"><img src="http://pic.wretch.cc/e/icon/star/pr_use/alien3647.jpg?10587661" alt=""/></a>
+								</li>
+								<li id="slider2">
+									<a href="pr/artists/*http://www.wretch.cc/album/alplus" target="_blank"><img src="http://pic.wretch.cc/e/icon/star/pr_use/alplus.jpg?10587661" alt=""/></a>
+								</li>
+								<li id="slider3">
+									<a href="pr/artists/*http://www.wretch.cc/album/Anan1983" target="_blank"><img src="http://pic.wretch.cc/e/icon/star/pr_use/anan1983.jpg?10587661" alt=""/></a>
+								</li>
+								<li id="slider4">
+									<a href="pr/artists/*http://www.wretch.cc/album/anancrown" target="_blank"><img src="http://pic.wretch.cc/e/icon/star/pr_use/anancrown.jpg?10587661" alt=""/></a>
+								</li>
+              </ul>
+              <ul id="slider_navi">
+                <li id="roll_prev"><a href="javascript:press();">Pre</a></li>
+                <li id="roll_next"><a href="javascript:press();">Next</a></li>
+              </ul>
+              <div id="slider_id">
+                <a href="pr/artists/*http://www.wretch.cc/album/alplus" target="_blank">alplus</a>
+              </div>
+            </div>
+          </div>
+        </li>
+        <li id="album_stamp">
+          <h3>網誌特輯</h3>
+          <div class="side">
+            <div class="sideII">
+              <ul>
+                <li><script language="JavaScript" type="text/javascript" charset="big5" src="http://tw2.adserver.yahoo.com/a?f=2022137083&p=tw_kwretch&l=I1&c=r"></script><noscript><iframe src="http://tw2.adserver.yahoo.com/a?f=2022137083&p=tw_kwretch&l=I1&c=h&bg=white" width=60 height=60 marginwidth=0 marginheight=0 hspace=0 vspace=0 frameborder=0 scrolling=no></iframe></noscript></li>
+                <li><script language="JavaScript" type="text/javascript" charset="big5" src="http://tw2.adserver.yahoo.com/a?f=2022137083&p=tw_kwretch&l=I2&c=r"></script><noscript><iframe src="http://tw2.adserver.yahoo.com/a?f=2022137083&p=tw_kwretch&l=I2&c=h&bg=white" width=60 height=60 marginwidth=0 marginheight=0 hspace=0 vspace=0 frameborder=0 scrolling=no></iframe></noscript></li>
+                <li><script language="JavaScript" type="text/javascript" charset="big5" src="http://tw2.adserver.yahoo.com/a?f=2022137083&p=tw_kwretch&l=I3&c=r"></script><noscript><iframe src="http://tw2.adserver.yahoo.com/a?f=2022137083&p=tw_kwretch&l=I3&c=h&bg=white" width=60 height=60 marginwidth=0 marginheight=0 hspace=0 vspace=0 frameborder=0 scrolling=no></iframe></noscript></li>
+                <li><script language="JavaScript" type="text/javascript" charset="big5" src="http://tw2.adserver.yahoo.com/a?f=2022137083&p=tw_kwretch&l=I4&c=r"></script><noscript><iframe src="http://tw2.adserver.yahoo.com/a?f=2022137083&p=tw_kwretch&l=I4&c=h&bg=white" width=60 height=60 marginwidth=0 marginheight=0 hspace=0 vspace=0 frameborder=0 scrolling=no></iframe></noscript></li>
+                <li><script language="JavaScript" type="text/javascript" charset="big5" src="http://tw2.adserver.yahoo.com/a?f=2022137083&p=tw_kwretch&l=I5&c=r"></script><noscript><iframe src="http://tw2.adserver.yahoo.com/a?f=2022137083&p=tw_kwretch&l=I5&c=h&bg=white" width=60 height=60 marginwidth=0 marginheight=0 hspace=0 vspace=0 frameborder=0 scrolling=no></iframe></noscript></li>
+                <li><script language="JavaScript" type="text/javascript" charset="big5" src="http://tw2.adserver.yahoo.com/a?f=2022137083&p=tw_kwretch&l=I6&c=r"></script><noscript><iframe src="http://tw2.adserver.yahoo.com/a?f=2022137083&p=tw_kwretch&l=I6&c=h&bg=white" width=60 height=60 marginwidth=0 marginheight=0 hspace=0 vspace=0 frameborder=0 scrolling=no></iframe></noscript></li>
+              </ul>
+            </div>
+          </div>
+        </li>
+        <li id="ad_fsrvy">
+          <div class="side">
+            <div class="sideII">
+              <script language="JavaScript" type="text/javascript" charset="big5" src="http://tw2.adserver.yahoo.com/a?f=2022137083&p=tw_kwretch&l=FSRVY&c=r"></script><noscript><iframe src="http://tw2.adserver.yahoo.com/a?f=2022137083&p=tw_kwretch&l=FSRVY&c=h&bg=white" width=1 height=1 marginwidth=0 marginheight=0 hspace=0 vspace=0 frameborder=0 scrolling=no></iframe></noscript>            </div>
+          </div>
+        </li>
+      </ul>
+    </div>
+    <div id="footer">
+    <div id="ft" style="position:relative;">
+        <ul>
+                        <li><a href="http://tw.rd.yahoo.com/referurl/wretch/album/f/intro/*http://promo.wretch.cc/static/wretchFP_intro/">Take A Homepage Tour</a></li>
+                        <li><a href="http://tw.rd.yahoo.com/referurl/wretch/album/f/tos/*http://tw.info.yahoo.com/legal/utos.html">Terms of Service</a></li>
+            <li><a href="http://tw.rd.yahoo.com/referurl/wretch/album/f/pri/*http://info.yahoo.com/privacy/tw/yahoo/">Privacy Policy</a></li>
+            <li><a href="http://tw.rd.yahoo.com/referurl/wretch/album/f/press/*http://www.wretch.cc/blog/press&list=1">Company Info</a></li>
+            <li><a href="http://tw.rd.yahoo.com/referurl/wretch/album/f/contact/*http://tw.help.cc.yahoo.com/?product=wretch">Contact us</a></li>
+            <li><a href="http://tw.rd.yahoo.com/referurl/wretch/album/f/mkt/*http://tw.marketing.campaign.yahoo.net/emarketing/">eMarketing</a></li>
+            <li class="last"><a href="http://tw.rd.yahoo.com/referurl/wretch/album/f/hire/*http://tw.info.yahoo.com/careers">Jobs</a></li>
+        </ul>
+        <p><span><a href="http://tw.rd.yahoo.com/referurl/wretch/album/f/cy/*http://tw.info.yahoo.com/copyright/">Copyright/IP Policy</a></span>[This website has managers] accords with Taiwan Internet Content Rating Regulations.</p>
+        <p>Copyright &copy; 2012 Yahoo! Taiwan All Rights Reserved.</p>
+                    </div>
+</div>
+
+    <div id="extraDiv1"></div>
+    <div id="extraDiv2"></div>
+  </div>
+    <div id="extraDiv3"></div>
+    <div id="extraDiv4"></div>
+</div>
+<div id="extraDiv5"></div>
+<div id="extraDiv6"></div>
+<div id="currentSize"></div>
+<script type="text/javascript" src="http://l.yimg.com/e/serv/index/album/js/album_index.js?20121101"></script>
+<script type="text/javascript"><!--//
+album_index_init();
+
+
+//county map
+  var so = new SWFObject("http://l.yimg.com/e/serv/album/index/sample/county.swf", "county_flash", "315", "215", "6", "#ffffff");
+  so.addParam("quality", "medium");
+  so.addParam("wmode", "opaque");
+  so.addVariable("rrd","http://tw.rd.yahoo.com/referurl/wretch/album/location");
+  so.addVariable("host_name","http://www.wretch.cc/");
+  so.addVariable("user_id_arr",",mika694100,a0927195039,nice0804520,woosasa,chicken225,love526910,monkeykid221,d929929,a8594113,,joy123456t,KREN,julyrose2003,zxc7896300,julia27295,andy780717,,poo38442,,Girl85915tw,m0982635711,s83235aaa,vick19850814,i8602063453,toyo640");
+  so.addVariable("user_thumb_url_arr",",http://pic.wretch.cc/e/serv/dynamic/albumTwMap/t1218748011.jpg,http://pic.wretch.cc/e/serv/dynamic/albumTwMap/t1668994387.jpg,http://pic.wretch.cc/e/serv/dynamic/albumTwMap/t1552450027.jpg,http://pic.wretch.cc/e/serv/dynamic/albumTwMap/t1031776009.jpg,http://pic.wretch.cc/e/serv/dynamic/albumTwMap/t1084230044.jpg,http://pic.wretch.cc/e/serv/dynamic/albumTwMap/t1044898647.jpg,http://pic.wretch.cc/e/serv/dynamic/albumTwMap/t1230302180.jpg,http://pic.wretch.cc/e/serv/dynamic/albumTwMap/t1817692083.jpg,http://pic.wretch.cc/e/serv/dynamic/albumTwMap/t1484122779.jpg,,http://pic.wretch.cc/e/serv/dynamic/albumTwMap/t1229600784.jpg,http://pic.wretch.cc/e/serv/dynamic/albumTwMap/t1121141606.jpg,http://pic.wretch.cc/e/serv/dynamic/albumTwMap/t1330615604.jpg,http://pic.wretch.cc/e/serv/dynamic/albumTwMap/t1307319837.jpg,http://pic.wretch.cc/e/serv/dynamic/albumTwMap/t1803250783.jpg,http://pic.wretch.cc/e/serv/dynamic/albumTwMap/t1433143249.jpg,,http://pic.wretch.cc/e/serv/dynamic/albumTwMap/t1644860492.jpg,,http://pic.wretch.cc/e/serv/dynamic/albumTwMap/t1600531684.jpg,http://pic.wretch.cc/e/serv/dynamic/albumTwMap/t1795783152.jpg,http://pic.wretch.cc/e/serv/dynamic/albumTwMap/t1328358142.jpg,http://pic.wretch.cc/e/serv/dynamic/albumTwMap/t1479393802.jpg,http://pic.wretch.cc/e/serv/dynamic/albumTwMap/t1930972813.jpg,http://pic.wretch.cc/e/serv/dynamic/albumTwMap/t1218639406.jpg");
+  so.addVariable("county_id",Math.floor(Math.random()*25)+1);
+  so.write("county_flash_div");
+
+//--></script>
+<script id="bcw" type="text/javascript">var random_num=Math.random();document.write("<img style=\"display:none;\" width=1 height=1 src=\"http://geo.yahoo.com/b?s=2022137083&make=yahoo&type=wretch&t="+random_num+"&r="+escape(document.referrer)+"\">");</script><script language="JavaScript" type="text/javascript" charset="big5" src="http://tw2.adserver.yahoo.com/a?f=2022137083&p=tw_kwretch&l=TA&c=r"></script><noscript><iframe src="http://tw2.adserver.yahoo.com/a?f=2022137083&p=tw_kwretch&l=TA&c=h&bg=white" width=2 height=2 marginwidth=0 marginheight=0 hspace=0 vspace=0 frameborder=0 scrolling=no></iframe></noscript><script language="JavaScript" type="text/javascript" charset="big5" src="http://global.adserver.yahoo.com/a?f=2022137083&p=tw_kwretch&l=FOOT9&c=r"></script><noscript><iframe src="http://global.adserver.yahoo.com/a?f=2022137083&p=tw_kwretch&l=FOOT9&c=h&bg=white" width=1 height=1 marginwidth=0 marginheight=0 hspace=0 vspace=0 frameborder=0 scrolling=no></iframe></noscript></body>
+</html>
+<!-- w216.wretch.tp2.yahoo.com uncompressed/chunked Tue Dec 11 18:12:13 CST 2012 -->

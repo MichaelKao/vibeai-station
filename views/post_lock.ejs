@@ -1,76 +1,67 @@
-<%- include('partials/head',{title: post.title, layout:'blog'}) %>
-<%# 文章密碼頁（WRETCH_DOM.md 第 5 節）
-    版面與單篇文章完全相同，只是 .innertext 換成密碼表單。
-    表單 action／method／欄位 name 沿用原本的：POST /:name/blog/:id/unlock 的 pass。 %>
 <%
-  const MON = ['January','February','March','April','May','June',
-               'July','August','September','October','November','December'];
-  const wDate = s => MON[+String(s).slice(5,7) - 1] + ' ' + (+String(s).slice(8,10)) + ', ' + String(s).slice(0,4);
+  /* 文章密碼頁（無名的網誌可以幫單篇文章上鎖，很多人拿來寫悄悄話）
+     ─────────────────────────────────────────────────────────────
+     版面與單篇文章完全相同（spec/blog.md 第 8-3 節的 .date + .blogbody 卡片），
+     只是 .innertext 換成密碼表單，而且不吐 .social-wrapper / #push / 迴響區。
+
+     表單 action／method／欄位 name 沿用原本的：POST /:name/blog/:id/unlock 的 pass。
+
+     EJS 用 with(locals)，不能宣告和 local 同名的 const。 */
+  const wDate = s => String(s).slice(0,4) + ' 年 ' + (+String(s).slice(5,7)) + ' 月 ' + (+String(s).slice(8,10)) + ' 日';
   const wTime = s => { let h = +String(s).slice(11,13); const ap = h < 12 ? 'AM' : 'PM';
                        h = h % 12 || 12;
                        return String(h).padStart(2,'0') + ':' + String(s).slice(14,16) + ' ' + ap; };
+  const IMG = '/img/wretch2012/blog';
 %>
-<div id="container1"><div id="container2">
+<%- include('partials/blog2012_head', { title: post.title + ' - ' + u.nick + ' - 無名小站',
+                                        artTitle: post.title, medium: 'blog' }) %>
 
-  <div id="banner">
-    <a href="/"><img id="sitelogo" src="<%= SITE_LOGO %>" alt="<%= SITE_NAME %>"></a>
-    <div id="pageheader">
-      <h1><a href="/<%= u.name %>/blog"><%= u.nick %> 的小站</a></h1>
-      <span class="description"><%= u.intro ? u.intro.split('\n')[0].slice(0,60) : SITE_DESC %></span>
-      <div id="description2"><span class="description"></span></div>
-    </div>
-  </div>
+<div id="content">
+<input type="hidden" name="check_url" value="on">
+<div class="blog" >
 
-  <div id="main2">
+      <div class="date">
+        <div class="datediv">
+          <%= wDate(post.created) %>        </div>
+      </div>
 
-    <div id="content">
-
-      <div class="blog">
-        <div class="date">
-          <div class="datediv"><%= wDate(post.created) %></div>
-        </div>
-
-        <div class="blogbody">
-          <div class="blogbody2">
+      <div class="blogbody">
+        <div class="blogbody2">
             <div class="articletext">
-              <a name="<%= post.id %>"></a>
-              <h3 class="title"><img src="<%= CDN %>/icon/key.gif" width="16" height="16" alt="[鎖]"> <%= post.title %></h3>
-              <div class="innertext">
-                這篇文章有上鎖，請輸入密碼觀看：<br />
-                <form method="post" action="/<%= u.name %>/blog/<%= post.id %>/unlock">
-                  <input name="pass" type="password" autofocus>
-                  <input type="submit" class="btn" value="觀看">
-                  <% if (err) { %> <span class="err"><%= err %></span><% } %>
-                </form>
-              </div>
-              <br clear="all" />
+            <a name="<%= post.id %>"></a>
+            <h3 class="title"><img src="<%= IMG %>/lock.gif" width="21" height="16" border="0" align="absmiddle" alt="[鎖]"><%= post.title %></h3>
+
+            <div class="innertext">
+              這篇文章有上鎖，請輸入密碼觀看：<br />
+              <form method="post" action="/<%= u.name %>/blog/<%= post.id %>/unlock">
+                <input name="pass" type="password" autofocus>
+                <input type="submit" value="觀看">
+                <% if (err) { %> <span class="w2b-err"><%= err %></span><% } %>
+              </form>
             </div>
+
+            <div class="extended">
+              個人分類：<a href="/<%= u.name %>/blog?cat=<%= encodeURIComponent(post.category) %>"><%= post.category %></a>
+              <br />
+              <a href="/<%= u.name %>/blog">回 <%= u.nick %> 的網誌</a>
+            </div>
+              <br clear="all" />
+            </div> <!-- end of articletext -->
 
             <div class="posted">
-              <%= u.name %> at <a href="/blogs"><%= SITE_NAME %></a> at <%= wTime(post.created) %> post
-              | 分類：<a href="/<%= u.name %>/blog?cat=<%= encodeURIComponent(post.category) %>"><%= post.category %></a>
-            </div>
+            <a href="/<%= u.name %>/blog"><%= u.name %></a> at <a href="/blogs">無名小站</a> at <%= wTime(post.created) %> post            </div>
 
-          </div><!-- /.blogbody2 -->
-        </div><!-- /.blogbody -->
-      </div><!-- /.blog -->
+        </div> <!-- end of blogbody2 -->
+      </div> <!-- end of blogbody -->
+</div> <!-- end of class=blog -->
+</div> <!-- end of content -->
 
-      <div class="side"><a href="/<%= u.name %>/blog">&laquo; 回<%= u.nick %>的網誌</a></div>
+<div id="links">
 
-    </div><!-- /#content -->
+  <div id="links2">
+  <%- include('partials/blogside') %>
+  </div> <!-- end of links2 -->
 
-    <div id="links"><div id="links2">
-      <%- include('partials/blogside') %>
-    </div></div>
+</div> <!-- end of links -->
 
-  </div><!-- /#main2 -->
-
-  <div id="extraDiv1"><span></span></div>
-  <div id="extraDiv2"><span></span></div>
-  <div id="extraDiv3"><span></span></div>
-  <div id="extraDiv4"><span></span></div>
-  <div id="extraDiv5"><span></span></div>
-  <div id="extraDiv6"><span></span></div>
-
-</div></div><!-- /#container2 /#container1 -->
-<%- include('partials/foot') %>
+<%- include('partials/blog2012_foot') %>

@@ -1,0 +1,172 @@
+<%
+  /* 2012 個人頁共用外框（下半）── 人氣頁尾 + kukubar 底列
+     ═══════════════════════════════════════════════════════════════════════
+     收掉 partials/head2012_site.ejs 開的 #bigcontainer 與 #hugewrapper，
+     然後印出：
+       1. 人氣頁尾（Today's Visitors / Total Visitors）
+          逐字照抄 assets_src2/html/album_index_a000000jay.html 最後一列：
+            <tr><td align="right"><font class="small-c">
+              <a>Today's Visitors: 2</a><br /><a>Total Visitors: 22386</a>
+            </font></td></tr>
+          原站那一列是「內容表格」的最後一列；本站的內容表格由各頁自己開關，
+          所以這裡另外開一張同寬同色（skin189 的 table{background:#fff}）的
+          700px 表格。畫面上看不出差別，但 DOM 多一層 <table>，記在回報裡。
+       2. #kukubar-lower + #footer-switch（chrome.md 第 5.2 節逐節點）
+       3. 兩段 JS：kukubar 展開／收合、下拉選單跳頁、社群分享網址補 origin
+
+     include 參數：
+       w2Hits     false 就不印人氣頁尾（幻燈片、密碼頁用不到）
+       w2Service  kukubar 底列不需要，但留著和 head 對稱
+
+     EJS 用 with(locals)：內部變數一律加 w2 前綴，避免和 local 撞名（TDZ）。 */
+  const w2Owner = locals.u || null;
+  const w2Me    = locals.me || null;
+  const w2Hits  = locals.w2Hits !== false && !!w2Owner;
+  const w2Today = new Date().toLocaleDateString('sv-SE');
+  /* #text-carousel 原站是編輯部挑的全站好文。內頁 route 沒有這份 local，
+     只有相簿列表頁手邊有 albums，就拿它湊；其他頁印原站那句的替代版本。
+     前綴保留原站的「首頁好文：」。這條列在回報的「湊資料」清單裡。 */
+  const w2Roll  = (locals.albums || []).slice(0, 6);
+%>
+<% if (w2Hits) { %>
+<table width="700" border="0" cellpadding="0" cellspacing="0" align="center">
+<tr>
+<td align="right">
+    <font class="small-c">
+    <a>Today's Visitors: <%= w2Owner.hits_date === w2Today ? (w2Owner.today_hits || 0) : 0 %></a>
+    <br />
+    <a>Total Visitors: <%= w2Owner.visits %></a>
+  </font>
+</td>
+</tr>
+</table>
+<% } %>
+
+</div><!-- /#bigcontainer -->
+</div>
+<!-- nv hugewrepper -->
+<div id="kukubar-lower" class="kukubar-bar  ">
+<% if (!w2Me) { %>
+    <div class="login-request dropdown">
+        <div class="login-btn">
+            <a class="footer-ok-btn" href="/login">登入</a>
+        </div>
+        <div class="login-msg login-msg-subscription">
+            登入無名小站瀏覽分類好文
+        </div>
+    </div>
+<% } %>
+        <div class="left-side">
+        <div id="footer-feedback" class="bar-block">
+            <a class="" href="/help" target="_blank">我有建議</a>
+        </div>
+        <div id="footer-subscription" class="bar-block bar-block-click">
+            <a class="footer-subscription-btn" href="#">分類好文<span class="bar-block-btn">展開</span></a>
+                <div id="scrb-panel" class="dropdown ">
+                <div class="hd panel-block">
+                    <div class="heading"><h5>請選擇你有興趣的分類</h5></div>
+                    <%# 原站是 AJAX 拉訂閱清單；本站沒有那個端點，
+                        直接把相簿站內分類印出來，點了就到 /albums?topic= %>
+                    <ul>
+<% (locals.topics || []).forEach(t => { %>                        <li><a href="/albums?topic=<%= encodeURIComponent(t) %>"><%= t %></a></li>
+<% }) %>                    </ul>
+                </div>
+                <div class="bd panel-block">
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="right-side">
+                <div id="text-carousel">
+            <ul>
+<% w2Roll.forEach(r => { %>                <li><a href="/<%= r.uname || (w2Owner ? w2Owner.name : '') %>/album/<%= r.id %>">首頁好文：<%= r.title %></a></li>
+<% }) %><% if (!w2Roll.length) { %>                <li><a href="/albums">首頁好文：逛逛大家的相簿</a></li>
+<% } %>            </ul>
+        </div>
+                <ul id="footer-ugc-compose">
+            <li class="bar-block bar-block-click blog-service"><em>網誌</em>
+                <ul class="dropdown">
+                    <li><a class="bar-link" href="<%= w2Me ? '/' + w2Me.name + '/blog/new' : '/login' %>">Post Article</a></li>
+                    <li><a class="bar-link" href="<%= w2Me ? '/' + w2Me.name + '/settings' : '/login' %>">Blog Style</a></li>
+                    <li class="last"><a class="bar-link" href="<%= w2Me ? '/' + w2Me.name + '/settings' : '/login' %>">Blog Setting</a></li>
+                </ul>
+            </li>
+            <li class="bar-block bar-block-click album-service"><em>相簿</em>
+                <ul class="dropdown">
+                    <li><a class="bar-link" href="<%= w2Me ? '/' + w2Me.name + '/album' : '/login' %>">Upload Photo</a></li>
+                    <li><a class="bar-link" href="<%= w2Me ? '/' + w2Me.name + '/settings' : '/login' %>">Album Style</a></li>
+                    <li class="last"><a class="bar-link" href="<%= w2Me ? '/' + w2Me.name + '/album' : '/login' %>">Album Setting</a></li>
+                </ul>
+            </li>
+            <li class="bar-block bar-block-click video-service"><em>影音</em>
+                <ul class="dropdown">
+                    <li><a class="bar-link" href="/help">Upload Video</a></li>
+                    <li><a class="bar-link" href="/help">Video Style</a></li>
+                    <li class="last"><a class="bar-link" href="/help">Video Setting</a></li>
+                </ul>
+            </li>
+        </ul>
+    </div>
+</div>
+<div id="footer-switch" class=" ">
+<button>關閉工具列</button>
+</div>
+<script>
+/* kukubar 的互動：原站是 YUI3 寫的 kukubar.js（assets_src2/css/chrome_kukubar.js），
+   這裡只重做「展開／收合」與「關閉工具列」兩件事，class 名稱與原站一致，
+   所以 chrome_kukubar.css 的 .expanded / .expanded-btn / .hidden-footer 規則直接生效。 */
+(function(){
+  function panelOf(block){ return block.querySelector('ul.dropdown, div.dropdown'); }
+  function close(block){
+    block.classList.remove('expanded-btn');
+    var p = panelOf(block); if (p) p.classList.remove('expanded');
+  }
+  function allBlocks(){
+    return document.querySelectorAll('#kukubar-upper .bar-block-click, #kukubar-lower .bar-block-click');
+  }
+  document.addEventListener('click', function(e){
+    var block = e.target.closest('#kukubar-upper .bar-block-click, #kukubar-lower .bar-block-click');
+    /* 點在下拉選單「裡面」的連結不切換，讓它正常跳頁 */
+    if (block && e.target.closest('.dropdown') && e.target.closest('a,button')) return;
+    allBlocks().forEach(function(b){ if (b !== block) close(b); });
+    if (!block) return;
+    var p = panelOf(block); if (!p) return;
+    if (e.target.closest('a') && !e.target.closest('.bar-block-btn, .bar-block-btn-login, .footer-subscription-btn')) return;
+    e.preventDefault();
+    var on = block.classList.toggle('expanded-btn');
+    p.classList.toggle('expanded', on);
+  });
+  var sw = document.getElementById('footer-switch');
+  if (sw) sw.addEventListener('click', function(){
+    var bar = document.getElementById('kukubar-lower');
+    var off = bar.classList.toggle('hidden-footer');
+    sw.classList.toggle('off', off);
+  });
+
+  /* 頁首那兩個下拉：原站是 meetfriend.js 的 MeetFriend() 與一行 inline onChange。
+     data-user-go="/album"      → 跳 /<選到的帳號>/album
+     data-url-go="/albums?topic=" → 跳 /albums?topic=<選到的值> */
+  document.addEventListener('change', function(e){
+    var s = e.target;
+    if (!s || s.tagName !== 'SELECT') return;
+    var v = s.value; if (!v) return;
+    var u = s.getAttribute('data-user-go');
+    if (u) { location.href = '/' + encodeURIComponent(v) + u; return; }
+    var q = s.getAttribute('data-url-go');
+    if (q) { location.href = q + encodeURIComponent(v); }
+  });
+
+  /* 社群分享列：fb / plurk / 即時通要「絕對網址」，EJS 拿不到 host，
+     所以 DOM 先寫 data-share / data-path / data-title，這裡補上 location.origin。 */
+  document.querySelectorAll('a[data-share]').forEach(function(a){
+    var url = location.origin + a.getAttribute('data-path');
+    var t   = a.getAttribute('data-title') || document.title;
+    var k   = a.getAttribute('data-share');
+    if (k === 'fb')    a.href = 'https://www.facebook.com/sharer.php?u=' + encodeURIComponent(url) + '&t=' + encodeURIComponent(t);
+    if (k === 'plurk') a.href = 'https://www.plurk.com/?qualifier=shares&status=' + encodeURIComponent(url + ' (' + t + ')');
+    if (k === 'yim')   a.href = 'ymsgr:customstatus?' + encodeURIComponent(t + ' ' + url);
+  });
+})();
+</script>
+</body>
+</html>

@@ -1,90 +1,90 @@
-<%- include('partials/head',{title:u.nick+'的家'}) %>
-<%- include('partials/sitetop') %>
+<%# MyPage — 個人小站首頁
+    ─────────────────────────────────────────────────────────────
+    無名的 MyPage（www.wretch.cc/mypage/）是另一支服務，它的版型檔沒有存下來
+    （assets_src2/spec/skin.md 只找到 album / blog / guestbook / user / friend 五支）。
+    所以這一頁沿用留言板那一套骨架與原廠版型 skin 1/1911：
+    958px 容器、612px 主欄、330px 名片側欄，內容放在版型的白色面板 .msg_body 裡。
+    這是刻意的取捨，理由與其餘偏離一起記在 public/wretch2012-in.css。 %>
 <%
   // 7 天內建立的相簿掛 new_album.gif（WRETCH_DOM.md 第 8 節第 7 條）
   const isNew = c => { const t = Date.parse(String(c||'').replace(' ','T'));
                        return !!t && (Date.now() - t) < 7*864e5; };
 %>
-<table width="700" border="0" cellpadding="0" cellspacing="0" align="center"><tr>
-  <td class="side1"></td>
-  <td id="content1">
+<%- include('partials/head2012in', {
+      title: u.nick + '的小站 - 無名小站',
+      page: 'w2-gb',
+      skin: ['/wretch2012-skin-guestbook.css'] }) %>
 
-    <div class="title"><%= u.nick %> 的小站</div>
-    <div class="side">
-      <table border="0" cellpadding="0" cellspacing="0" width="100%"><tr>
-        <td width="100" valign="top" align="center">
-          <a href="/<%= u.name %>"><img class="avatar" src="<%= u.avatar %>" width="90" height="90" alt="<%= u.nick %>"></a>
-        </td>
-        <td valign="top">
-          <span class="font_title"><%= u.nick %></span>
-          <span class="font_desc">(<%= u.name %>)</span><br>
-          <div style="white-space:pre-wrap"><%= u.intro %></div>
-          <% if (u.motto) { %><div class="font_desc">「<%= u.motto %>」</div><% } %>
-          <div>
-            相簿 <b><%= counts.albums %></b> 本 ・
-            照片 <b><%= counts.photos %></b> 張 ・
-            網誌 <b><%= counts.posts %></b> 篇 ・
-            留言 <b><%= counts.gb %></b> 則 ・
-            好友 <b><%= counts.friends %></b> 人
-          </div>
-        </td>
-      </tr></table>
-    </div>
+<%- include('partials/gbtop', { here: 'home' }) %>
 
-    <div class="title">最新相簿</div>
-    <% if (!albums.length) { %>
-    <div class="side" align="center">目前沒有相簿</div>
-    <% } else { %>
-    <table id="ad_square" border="0" align="center" cellspacing="10">
-      <% for (let i = 0; i < albums.length; i += 5) { const row = albums.slice(i, i+5); %>
-      <tr>
-        <% row.forEach(a => { %>
-        <td class="side" width="120" height="120" align="center" valign="middle">
-          <a href="/<%= u.name %>/album/<%= a.id %>"><% if (a.cover) { %><img src="<%= a.cover %>" width="120" height="120" alt="Cover"><% } else { %><img src="<%= CDN %>/icon/user_cover.gif" width="85" height="85" alt="Cover"><% } %></a>
-        </td>
-        <% }) %>
-      </tr>
-      <tr>
-        <% row.forEach(a => { %>
-        <td height="40" width="120" valign="top" align="center">
-          <% if (a.pass) { %><img src="<%= CDN %>/icon/key.gif" width="16" height="16" alt=""><% } %><a href="/<%= u.name %>/album/<%= a.id %>" class="font_title"><%= a.title %></a><br>
-          <% if (isNew(a.created)) { %><img src="<%= CDN %>/icon/new_album.gif" width="21" height="11" alt="" class="ico-new"><% } %><span class="font_desc"><%= a.n %>張照片</span>
-        </td>
-        <% }) %>
-      </tr>
-      <% } %>
-    </table>
-    <% } %>
-    <div class="side" align="right"><a href="/<%= u.name %>/album">更多相簿..</a></div>
-
-    <div class="title">最新文章</div>
-    <div class="side">
-      <% if (!posts.length) { %>目前沒有文章<% } %>
-      <% posts.forEach(p => { %>
-      <div><a href="/<%= u.name %>/blog/<%= p.id %>" class="font_title"><%= p.title %></a>
-        <span class="font_desc"><%= p.created.slice(0,10) %> ・ <%= p.views %> 人次</span></div>
-      <% }) %>
-      <div align="right"><a href="/<%= u.name %>/blog">更多網誌..</a></div>
-    </div>
-
-    <div class="title">最新留言</div>
-    <div class="side">
-      <% if (!gb.length) { %>目前沒有留言<% } %>
-      <% gb.forEach(m => { %>
-      <div class="gbitem">
-        <div>暱稱：<%= m.author %></div>
-        <div>主題：<%= m.subject || '無標題' %></div>
-        <div>時間：<%= m.created %></div>
-        <div>內容：<%= m.body %></div>
+<%# ── 站主小檔案 ─────────────────────────────────────────────── %>
+<div class="msg_body">
+  <table width="100%" border="0" cellpadding="0" cellspacing="0"><tr>
+    <td width="100" valign="top" align="center">
+      <a href="/<%= u.name %>/card"><img src="<%= u.avatar %>" width="90" height="90" alt="<%= u.nick %>"></a>
+    </td>
+    <td valign="top">
+      <span class="w2-who"><%= u.nick %></span> <span class="w2-sub">(<%= u.name %>)</span><br>
+      <div style="white-space:pre-wrap"><%= u.intro %></div>
+      <% if (u.motto) { %><div class="w2-sub">「<%= u.motto %>」</div><% } %>
+      <div class="w2-stats">
+        相簿 <b><%= counts.albums %></b> 本　照片 <b><%= counts.photos %></b> 張　網誌 <b><%= counts.posts %></b> 篇　留言 <b><%= counts.gb %></b> 則　好友 <b><%= counts.friends %></b> 人
       </div>
-      <% }) %>
-      <div align="right"><a href="/<%= u.name %>/guestbook">更多留言..</a></div>
-    </div>
+    </td>
+  </tr></table>
+</div>
 
-    <%- include('partials/side',{visitors,friends,sideAvatar:false}) %>
+<%# ── 最新相簿 ───────────────────────────────────────────────── %>
+<div class="msg_body">
+  <div class="w2-h3">最新相簿</div>
+  <% if (!albums.length) { %><div class="w2-empty">目前沒有相簿</div><% } else { %>
+  <ul class="w2-grid">
+    <% albums.forEach(a => { %>
+    <li>
+      <a href="/<%= u.name %>/album/<%= a.id %>"><% if (a.cover) { %><img src="<%= a.cover %>" width="120" height="120" alt="<%= a.title %>"><% } else { %><img src="<%= CDN %>/icon/user_cover.gif" width="85" height="85" alt="<%= a.title %>"><% } %></a>
+      <span class="w2-cap">
+        <% if (a.pass) { %><img src="/img/wretch2012/gb/lock.gif" width="21" height="16" alt="上鎖"><% } %><a href="/<%= u.name %>/album/<%= a.id %>"><%= a.title %></a><br>
+        <span class="w2-sub"><%= a.n %> 張<% if (isNew(a.created)) { %> NEW<% } %></span>
+      </span>
+    </li>
+    <% }) %>
+  </ul>
+  <% } %>
+  <div class="w2-more"><a href="/<%= u.name %>/album">更多相簿..</a></div>
+</div>
 
-  </td>
-  <td class="side2"></td>
-</tr></table>
-<%- include('partials/sitefoot') %>
-<%- include('partials/foot') %>
+<%# ── 最新文章 ───────────────────────────────────────────────── %>
+<div class="msg_body">
+  <div class="w2-h3">最新文章</div>
+  <% if (!posts.length) { %><div class="w2-empty">目前沒有文章</div><% } else { %>
+  <table class="w2-rows">
+    <% posts.forEach(p => { %>
+    <tr>
+      <td><a href="/<%= u.name %>/blog/<%= p.id %>"><%= p.title %></a></td>
+      <td class="w2-when"><%= p.created.slice(0,10) %>　<%= p.views %> 人次</td>
+    </tr>
+    <% }) %>
+  </table>
+  <% } %>
+  <div class="w2-more"><a href="/<%= u.name %>/blog">更多網誌..</a></div>
+</div>
+
+<%# ── 最新留言（DOM 與留言板同一套：ul.msg_body > li.msg_content） ── %>
+<div class="msg_body">
+  <div class="w2-h3">最新留言</div>
+  <% if (!gb.length) { %><div class="w2-empty">目前沒有留言</div><% } else { %>
+  <table class="w2-rows">
+    <% gb.forEach(m => { %>
+    <tr>
+      <td width="90" valign="top"><span class="w2-who"><%= m.author %></span></td>
+      <td valign="top"><span class="w2-sub"><%= m.subject || '無標題' %></span><br><%- render(m.body) %></td>
+      <td class="w2-when" valign="top"><%= m.created.slice(0,16) %></td>
+    </tr>
+    <% }) %>
+  </table>
+  <% } %>
+  <div class="w2-more"><a href="/<%= u.name %>/guestbook">更多留言..</a></div>
+</div>
+
+<%- include('partials/gbfoot') %>
+<%- include('partials/foot2012in') %>

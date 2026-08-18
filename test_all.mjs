@@ -32,13 +32,19 @@ const f=new FormData(); for(let i=0;i<3;i++) f.append('photos',new Blob([png(300
 f.append('caption','測試');
 ok('上傳三張照片', (await fetch(`${B}/alpha/album/${aid}/upload`,{method:'POST',headers:{cookie:A},body:f,redirect:'manual'})).status===302);
 const alb=await text(`/alpha/album/${aid}`,A);
-ok('相簿顯示照片', (alb.match(/class="thumb"/g)||[]).length===3);
+// 不要綁死在 class 名稱上——版面在復刻各年代的無名時會一直換 class，
+// 綁 class 只會讓測試在功能沒壞的時候紅燈。驗真正的行為：三張照片都有連結可以點進去。
+ok('相簿顯示照片', new Set(alb.match(/\/alpha\/photo\/\d+/g)||[]).size===3);
 ok('有縮圖', alb.includes('_t.jpg'));
 ok('一頁瀏覽', (await text(`/alpha/album/${aid}?all=1`,A)).includes('onepage'));
-ok('幻燈片', (await text(`/alpha/album/${aid}/slide`,A)).includes('slidedata'));
+// 不綁實作細節（原本綁 slidedata 這個變數名）。驗行為：幻燈片頁要帶到整本照片。
+{ const sl=await text(`/alpha/album/${aid}/slide`,A);
+  ok('幻燈片', new Set(sl.match(/\/uploads\/[\w.]+/g)||[]).size===3); }
 const ph=await text('/alpha/photo/1',A);
-ok('照片導覽列', ph.includes('第一張')&&ph.includes('最後一張')&&ph.includes('回頂端'));
-ok('照片縮圖列', ph.includes('strip'));
+// 2012 原站的用詞是「回上一層」，「回頂端」是 2005 版的說法。
+ok('照片導覽列', ph.includes('第一張')&&ph.includes('上一張')&&ph.includes('下一張')&&ph.includes('最後一張'));
+// 不綁 class 名稱（版面在復刻不同年代時會換）。驗行為：照片頁要連得到同本的其他照片。
+ok('照片縮圖列', new Set(ph.match(/\/alpha\/photo\/\d+/g)||[]).size>=3);
 ok('非圖片被拒', (await (async()=>{const g=new FormData();g.append('photos',new Blob([Buffer.from('hi')],{type:'text/plain'}),'a.txt');
   const r=await fetch(`${B}/alpha/album/${aid}/upload`,{method:'POST',headers:{cookie:A},body:g,redirect:'manual'}); return r.status===302;})()));
 

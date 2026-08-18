@@ -1,81 +1,159 @@
-<%- include('partials/head',{title:u.nick+'的好友'}) %>
-<%- include('partials/sitetop') %>
+<%# 好友 /:name/friends — 無名的 www.wretch.cc/friend/<帳號>
+    ─────────────────────────────────────────────────────────────
+    骨架逐字照 assets_src2/html/gb_friend_a000001_20131226.html：
+
+      #container > #header > #boxProfile > .Pcover（200×200 大頭照）
+                                        > .Ptext（h1 + ul#serviceList + 加好友）
+                                        > #menu > #msg
+                 > hr.nohr
+                 > #content > #condition > ul > li.current > a
+                            > #friendListDiv > ol > li > a > span.font_id + div.font_img > img
+                            > #num_friends
+                 > hr.nohr
+                 > #footer
+
+    好友頁是**流動寬度**（friend/css/fix.css 只寫 #container{margin:0 20px}），
+    原廠版型 skin 5/577 用左欄 #header 360px（+padding-left 35）與右邊
+    #friendListDiv{margin-left:375px} 把版面定住，好友卡 110×155。
+    整頁左緣那條 14px 色帶是版型的 html{border-left:14px solid #BBAD8E}——
+    但 kukubar.css 有一條 html,body{border:none!important}，原站就會把它蓋掉，
+    所以這裡看不到那條色帶，這是原站本來的行為，不是漏掉。
+
+    原站的 #menu 有「分類下拉 + 搜尋好友」表單；本站的 route 不吃這兩個參數
+    （src/server.js 的 site.get('/friends') 沒有 query），所以不做假的表單，
+    分類改成 #friendListDiv 裡的分段標題。
+
+    表單 action 與欄位 name 對應 src/server.js：
+      POST /:name/friend                  （加入／移出好友）
+      POST /:name/friends/:fid/group      grp %>
 <%
   // 好友依 grp 分組（server.js 的查詢已經 ORDER BY grp）
   const groups = {};
   friends.forEach(f => { (groups[f.grp] = groups[f.grp] || []).push(f); });
-  const names = Object.keys(groups);
+  const groupNames = Object.keys(groups);
 %>
-<table width="700" border="0" cellpadding="0" cellspacing="0" align="center"><tr>
-  <td class="side1"></td>
-  <td id="content1">
+<%- include('partials/head2012in', {
+      title: u.nick + '的好友列表 - 無名小站',
+      page: 'w2-friend',
+      skin: ['/wretch2012-skin-friend.css'] }) %>
 
-    <div class="title">好友名單</div>
-    <div class="side" align="center">共 <b><%= friends.length %></b> 人<% if (names.length > 1) { %>，<b><%= names.length %></b> 個分類<% } %></div>
+<div id="container">
 
-    <% if (!friends.length) { %>
-    <div class="side" align="center">目前還沒有好友</div>
+  <div id="header">
+    <div id="boxProfile">
+
+      <div class="Pcover">
+        <span>
+          <cite></cite>
+          <img id="cover" src="<%= u.avatar %>" alt="<%= u.nick %> 的好友列表">
+        </span>
+      </div>
+
+      <div class="Ptext">
+        <h1><%= u.nick %> 的好友列表</h1>
+
+        <ul id="serviceList">
+          <li><a id="linkMypage" href="/<%= u.name %>">MyPage</a></li>
+          <li><a id="linkAlbum" href="/<%= u.name %>/album">相簿</a></li>
+          <li><a id="linkBlog" href="/<%= u.name %>/blog">網誌</a></li>
+          <li><a id="linkGbook" href="/<%= u.name %>/guestbook">留言板</a></li>
+          <li><a id="linkUser" href="/<%= u.name %>/card">名片</a></li>
+          <li><a id="linkFriend" href="/<%= u.name %>/friends">好友</a></li>
+        </ul>
+
+        <% if (me && !isOwner) { %>
+        [<form method="post" action="/<%= u.name %>/friend" style="display:inline"><button class="w2-linkbtn" type="submit"><%= isFriend ? '移出好友名單' : '加入好友名單' %></button></form>]
+        <% } %>
+        [<a href="/rank">找朋友</a>]<br>
+      </div>
+
+      <div id="menu">
+        <div id="msg"><strong>目前顯示：</strong>
+          <span>分類：</span><span id="msg0">全部</span>，
+          <span>共 </span><span id="msg2"><%= friends.length %></span> 人
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <hr class="nohr">
+
+  <div id="content">
+
+    <div id="condition">
+      <ul>
+        <li id="current_tag0" class="current"><a href="#grp-mine"><%= u.nick %> 的好友</a></li>
+        <li id="current_tag1"><a href="#grp-fans">誰加 <%= u.nick %> 為好友</a></li>
+      </ul>
+    </div>
+
+    <div id="friendListDiv">
+
+      <div class="w2-h3" id="grp-mine"><%= u.nick %> 的好友（<%= friends.length %> 人<% if (groupNames.length > 1) { %>，<%= groupNames.length %> 個分類<% } %>）</div>
+      <% if (!friends.length) { %><div class="w2-empty">目前還沒有好友</div><% } %>
+      <% groupNames.forEach(g => { %>
+      <div class="font_cate"><strong><%= g %></strong>（<%= groups[g].length %>）</div>
+      <ol>
+        <% groups[g].forEach(f => { %>
+        <li>
+          <a href="/<%= f.name %>" title="<%= f.nick %>">
+            <span class="font_id"><%= f.name %></span>
+            <div class="font_img"><img src="<%= f.avatar %>" width="90" height="90" alt="<%= f.name %>"></div>
+          </a>
+          <span class="w2-nick"><%= f.nick %></span>
+        </li>
+        <% }) %>
+      </ol>
+      <div style="clear:both"></div>
+      <% }) %>
+
+      <div class="w2-h3" id="grp-fans">誰加 <%= u.nick %> 為好友（<%= fans.length %> 人）</div>
+      <% if (!fans.length) { %><div class="w2-empty">目前還沒有人把 <%= u.nick %> 加入好友名單</div><% } else { %>
+      <ol>
+        <% fans.forEach(f => { %>
+        <li>
+          <a href="/<%= f.name %>" title="<%= f.nick %>">
+            <span class="font_id"><%= f.name %></span>
+            <div class="font_img"><img src="<%= f.avatar %>" width="90" height="90" alt="<%= f.name %>"></div>
+          </a>
+          <span class="w2-nick"><%= f.nick %></span>
+        </li>
+        <% }) %>
+      </ol>
+      <div style="clear:both"></div>
+      <% } %>
+
+    </div>
+
+    <% if (isOwner && friends.length) { %>
+    <%# 原站的好友分類是在 /admin/friend/ 改的，那幾頁沒有存檔。
+        本站就地做一張表，欄位 name 對得上 POST /:name/friends/:fid/group。 %>
+    <div class="w2-panel">
+      <div class="w2-h3">好友分類</div>
+      <table class="w2-rows">
+        <% friends.forEach(f => { %>
+        <tr>
+          <td width="200"><a href="/<%= f.name %>"><%= f.nick %></a>
+            <span class="font_cate">(<%= f.name %>)</span></td>
+          <td>
+            <form method="post" action="/<%= u.name %>/friends/<%= f.id %>/group">
+              <input type="text" name="grp" value="<%= f.grp %>" size="8" maxlength="10">
+              <input type="submit" value="改分類">
+            </form>
+          </td>
+        </tr>
+        <% }) %>
+      </table>
+    </div>
     <% } %>
 
-    <% names.forEach(g => { const list = groups[g]; %>
-    <div class="sidetitle"><%= g %> (<%= list.length %>)</div>
-    <table border="0" align="center" cellspacing="10">
-      <% for (let i = 0; i < list.length; i += 5) { const row = list.slice(i, i+5); %>
-      <tr>
-        <% row.forEach(f => { %>
-        <td class="side" width="120" height="120" align="center" valign="middle">
-          <a href="/<%= f.name %>"><img src="<%= f.avatar %>" width="90" height="90" alt="<%= f.nick %>"></a>
-        </td>
-        <% }) %>
-      </tr>
-      <tr>
-        <% row.forEach(f => { %>
-        <td height="40" width="120" valign="top" align="center">
-          <a href="/<%= f.name %>" class="font_title"><%= f.nick %></a><br>
-          <span class="font_desc">(<%= f.name %>)</span>
-          <% if (isOwner) { %>
-          <form method="post" action="/<%= u.name %>/friends/<%= f.id %>/group">
-            <input name="grp" value="<%= f.grp %>" size="5" maxlength="10">
-            <input type="submit" value="改">
-          </form>
-          <% } %>
-        </td>
-        <% }) %>
-      </tr>
-      <% } %>
-    </table>
-    <% }) %>
+    <div id="num_friends">共有 <%= friends.length %> 位好友 &nbsp;</div>
+  </div>
 
-    <div class="title">誰加 <%= u.nick %> 為好友</div>
-    <div class="side" align="center">共 <b><%= fans.length %></b> 人</div>
-    <% if (!fans.length) { %>
-    <div class="side" align="center">目前還沒有人把 <%= u.nick %> 加入好友名單</div>
-    <% } else { %>
-    <table border="0" align="center" cellspacing="10">
-      <% for (let i = 0; i < fans.length; i += 5) { const row = fans.slice(i, i+5); %>
-      <tr>
-        <% row.forEach(f => { %>
-        <td class="side" width="120" height="120" align="center" valign="middle">
-          <a href="/<%= f.name %>"><img src="<%= f.avatar %>" width="90" height="90" alt="<%= f.nick %>"></a>
-        </td>
-        <% }) %>
-      </tr>
-      <tr>
-        <% row.forEach(f => { %>
-        <td height="40" width="120" valign="top" align="center">
-          <a href="/<%= f.name %>" class="font_title"><%= f.nick %></a><br>
-          <span class="font_desc">(<%= f.name %>)</span>
-        </td>
-        <% }) %>
-      </tr>
-      <% } %>
-    </table>
-    <% } %>
+  <hr class="nohr">
 
-    <%- include('partials/side',{friends:null}) %>
+  <div id="footer"></div>
+</div><!-- /#container -->
 
-  </td>
-  <td class="side2"></td>
-</tr></table>
-<%- include('partials/sitefoot') %>
-<%- include('partials/foot') %>
+<%- include('partials/foot2012in') %>

@@ -1,0 +1,151 @@
+/* 本站對 2012 相簿頁樣式的「刻意偏離」層
+ * ---------------------------------------------------------------------------
+ * 載入順序：
+ *   wretch2012-album.css（原站原檔：skin 1/189 + album/font + newButton +
+ *   newPanel + photowall_overlay + sharing + kukubar）→ 本檔 → 使用者自訂 CSS
+ *
+ * 這裡的每一條都是**明知與原站不同、而且是故意的**，並附上理由。
+ * 純粹的還原缺陷不要寫在這裡，那要回去修 DOM 或補素材。
+ *
+ * 配色一律從 skin 1/189 既有的色盤挑，不新增視覺語言：
+ *   #eee 頁底 / #fff 表格 / #FFE8E8 banner / #A13636 連結 / #ff0000 hover
+ *   / #ccc 分隔線（hr）/ #999 說明文字（#body_show .small-e）
+ *
+ * 這個檔是手寫的，不是 tools/build-css2012.mjs 產的——不要被那支腳本蓋掉。
+ */
+
+/* --- 1. 廣告位 -----------------------------------------------------------
+ * 原站 td#ad_banner 撐 700×90、td#ad_word 是一行文字廣告、頁尾還有 FOOT9。
+ * 本站不放廣告。存檔快照裡這幾格本來就是空的，照抄只會得到空白，所以收掉高度。
+ */
+td#ad_banner, td#ad_word { height: 0; padding: 0; line-height: 0; }
+
+/* --- 2. flash 訊息 -------------------------------------------------------
+ * 原站沒有這個東西（它用整頁跳轉的提示頁）。本站沿用既有的 flash 機制，
+ * 做成貼近版型的淡黃提示條，放在 #bigcontainer 最上面、置中 700px 對齊表格。
+ */
+.w2a-flash {
+  width: 680px; margin: 8px auto 0; padding: 6px 10px; text-align: left;
+  background: #FFFBE6; border: 1px solid #F0DFA0; color: #6B5A18;
+  font-family: "新細明體"; font-size: 12px; line-height: 1.8;
+}
+
+/* --- 3. 送出鈕做成連結外觀 ----------------------------------------------
+ * 本站有幾個「動作」必須是 POST（登出、加好友、設為精選、刪除），
+ * 原站那幾處都是 <a>。用 <button> 才安全（GET 不該改狀態），
+ * 外觀沿用版型的連結色 #A13636 / hover #ff0000。
+ */
+.w2a-linkbtn {
+  background: none; border: 0; padding: 0; margin: 0;
+  font: inherit; color: #A13636; cursor: pointer;
+}
+.w2a-linkbtn:hover { color: #ff0000; text-decoration: underline; }
+
+/* --- 4. 縮圖尺寸夾住 -----------------------------------------------------
+ * 原站的縮圖一定是 thumbs/t*.jpg（120px 級距），所以 <td width=120 height=120>
+ * 直接放原尺寸就對齊。本站 src/storage.js 產的縮圖是 90×90，而且
+ * albums.cover 有時候存的是原圖（src/server.js 的 /photo/:pid/cover 存 p.url），
+ * 不夾住會把 1024px 的大圖塞進 120px 的格子裡撐爆版面。
+ * 只加上限、不放大，小圖還是照原樣置中在 side_a.gif 的框裡。
+ */
+#ad_square td.side img { max-width: 120px; max-height: 120px; }
+
+/* --- 5. 大圖 -------------------------------------------------------------
+ * 原站 show.php 的大圖沒有任何寬度限制。本站大圖最長邊 1024（storage.js），
+ * 在窄視窗會撐出橫向捲軸，所以加一條上限。
+ */
+#DisplayImage { max-width: 96%; height: auto; }
+
+/* --- 6. 站主專用的工具區塊 ----------------------------------------------
+ * 「建立相簿 / 上傳照片 / 相簿設定 / 改說明」在無名是另一個服務
+ * （www.wretch.cc/admin/album/ 與 yuiuploader.php），爬蟲永遠是登出狀態，
+ * 所以存檔裡完全沒有這幾個畫面可以照抄。本站把它們放在同一頁的下方。
+ * 外觀只借版型既有的元素：700px 白底表格、#FFE8E8 標題條、#ccc 細線。
+ */
+.w2a-tools      { width: 700px; margin: 0 auto; background: #fff; }
+.w2a-tools h4   { margin: 0; padding: 5px 10px; background: #FFE8E8;
+                  border-top: 1px solid #ccc; border-bottom: 1px solid #ccc;
+                  font-family: "新細明體"; font-size: 12px; font-weight: bold; color: #A13636; }
+.w2a-tools .bd  { padding: 8px 10px; }
+.w2a-tools table { border-collapse: collapse; }
+.w2a-tools th   { padding: 3px 8px 3px 0; text-align: right; font-weight: normal;
+                  white-space: nowrap; vertical-align: top; line-height: 20px; color: #666; }
+.w2a-tools td   { padding: 3px 0; }
+.w2a-tools input[type=text],
+.w2a-tools input[type=password],
+.w2a-tools select,
+.w2a-tools textarea { font-family: "新細明體"; font-size: 12px;
+                      border: 1px solid #ccc; padding: 1px 3px; }
+.w2a-note       { color: #999; font-size: 11px; }
+.w2a-danger     { color: #A13636; }
+
+/* 空間用量條（無名的「相簿空間」）。原站在 admin 底下，沒有存檔可抄。 */
+.w2a-quota      { width: 240px; height: 10px; margin: 4px 0; background: #fff; border: 1px solid #ccc; }
+.w2a-quota i    { display: block; height: 10px; background: #A13636; }
+
+/* --- 7. 迴響區 -----------------------------------------------------------
+ * 舊版 show.php（本站照抄的這一版）沒有迴響功能——2012 年只有「新版相片頁」
+ * （assets_src2/html/album_show_teresagiol.html，CSS 是 album/css/wspp.css）才有，
+ * 而那是另一整套版面。本站的照片迴響沿用舊版頁面自己的語彙做：
+ * hr 分隔、.small-c 字級、700px 白底表格。
+ */
+.w2a-cmt        { width: 700px; margin: 0 auto; background: #fff;
+                  font-family: "新細明體"; font-size: 12px; }
+.w2a-cmt h4     { margin: 0; padding: 5px 10px; background: #FFE8E8;
+                  border-top: 1px solid #ccc; border-bottom: 1px solid #ccc;
+                  font-size: 12px; font-weight: bold; color: #A13636; }
+.w2a-cmt ol     { margin: 0; padding: 0; list-style: none; }
+.w2a-cmt li     { padding: 6px 10px; border-bottom: 1px dotted #ccc; }
+.w2a-cmt li:last-child { border-bottom: 0; }
+.w2a-cmt .who   { color: #A13636; font-weight: bold; }
+.w2a-cmt .when  { color: #999; font-size: 11px; }
+.w2a-cmt .body  { margin-top: 2px; word-wrap: break-word; word-break: break-all; }
+.w2a-cmt .bd    { padding: 8px 10px; }
+.w2a-cmt .empty { padding: 14px 10px; color: #999; }
+
+/* --- 8. 檢舉框 -----------------------------------------------------------
+ * 原站的「檢舉這張相片」是跳到 cc.wretch.cc/help/prosecute.php 另一頁；
+ * 本站是同頁展開的表單（POST /report），所以要自己給一個框。
+ */
+.w2a-report     { width: 680px; margin: 10px auto; padding: 10px; background: #fff;
+                  border: 1px dotted #ccc; text-align: left;
+                  font-family: "新細明體"; font-size: 12px; }
+.w2a-report textarea { width: 96%; }
+
+/* --- 9. 一頁瀏覽（One Page）---------------------------------------------
+ * 原站的 showall=1 是把整本相簿的大圖直接串下來，沒有額外樣式。
+ * 本站加一點間距，並夾住寬度（同第 5 條的理由）。
+ */
+.w2a-onepage        { padding: 10px 0; }
+.w2a-onepage img    { max-width: 96%; height: auto; }
+
+/* --- 10. 縮圖列上「目前這張」的標記 -------------------------------------
+ * 原站的 show.php 縮圖列沒有標出目前這張（只有 5 張、中間那張就是）。
+ * 本站的縮圖列可能超過 5 張，所以給目前這張一個外框。
+ */
+#ad_square td.side.w2a-cur { outline: 2px solid #A13636; }
+
+/* --- 12. 相簿總站 /albums ------------------------------------------------
+ * 這一頁載的是另一支 bundle（wretch2012-album-index.css ＝ index/album/css 的
+ * fix.css + index.css），本檔跟在它後面。下面三條只針對那一頁，
+ * 選擇器在個人相簿頁不會命中，所以兩頁共用同一支偏離層沒有副作用。
+ */
+/* fix.css 的 img{border:1px solid #666} 是給相簿封面用的，
+ * .grid 裡的「new」小圖示不該有框。 */
+.album_list .grid img { border: 0; }
+/* 登出必須是 POST（GET 不該改狀態），原站那顆是 <a>。外觀沿用 #access_link 的字級與色。 */
+.w2i-linkbtn { background: none; border: 0; padding: 0; margin: 0;
+               font: inherit; font-size: 11px; color: #c30; cursor: pointer; }
+.w2i-linkbtn:hover { color: #f50; text-decoration: underline; }
+/* flash 訊息（原站沒有，理由同 §2），寬度對齊 960px 版心 */
+.w2i-flash { width: 940px; margin: 0 auto 8px; padding: 6px 10px; text-align: left;
+             background: #FFFBE6; border: 1px solid #F0DFA0; color: #6B5A18;
+             font-size: 12px; line-height: 1.8; }
+
+/* --- 11. 密碼相簿頁 ------------------------------------------------------
+ * 無名的密碼相簿是輸入框直接長在相簿頁上，本站是獨立一頁（GET 會 render
+ * album_lock）。版面沿用同一張 700px 表格。
+ */
+.w2a-lock       { width: 700px; margin: 0 auto; padding: 30px 0; background: #fff;
+                  text-align: center; font-family: "新細明體"; font-size: 12px; }
+.w2a-lock .err  { color: #ff0000; }
