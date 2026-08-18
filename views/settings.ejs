@@ -37,7 +37,7 @@
           <li><div class="w2-h3">網誌樣式</div></li>
           <li><span>版面樣式</span>
             <span class="w2-themepick">
-              <% themes.forEach(t => { %><a href="#" data-theme="<%= t.id %>" class="<%= (u.theme||'')===t.id ? 'on' : '' %>"><span class="sw"><i style="background:<%= t.sw1 %>"></i><i style="background:<%= t.sw2 %>"></i></span><%= t.name %></a><% }) %>
+              <% themes.forEach(t => { %><a href="#" data-theme="<%= t.id %>" class="<%= (u.theme||'')===t.id ? 'on' : '' %>"><span class="sw"><i style="background:<%= t.swatch[0] %>"></i><i style="background:<%= t.swatch[1] %>"></i></span><%= t.name %></a><% }) %>
             </span>
             <input type="hidden" name="theme" value="<%= u.theme || '' %>">
           </li>

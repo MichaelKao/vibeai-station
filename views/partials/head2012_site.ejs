@@ -38,7 +38,8 @@
      收尾在 partials/foot2012_site.ejs（關 #bigcontainer / #hugewrapper、
      人氣頁尾、kukubar 底列）。 */
 
-  const w2Css     = locals.w2Css     || '/wretch2012-album.css';
+  // 版型：跟站主在設定裡選的走（src/skins.js）。呼叫端仍可用 w2Css 明確指定。
+  const w2Css     = locals.w2Css || (locals.skinCss ? skinCss('album') : '/wretch2012-album.css');
   const w2Service = locals.w2Service || 'Album';
   const w2Svc     = w2Service.toLowerCase();          // ul.dropdown 的 <svc>-service
   const w2BodyId  = locals.w2BodyId  || '';

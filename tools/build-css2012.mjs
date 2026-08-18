@@ -89,6 +89,25 @@ const BUNDLES = {
     ],
   },
 
+  // 相簿灰色版型：只換版型那一層，官方那幾支完全相同。
+  // 使用者在「相簿樣式」選灰色時載這支（見 src/skins.js）。
+  'wretch2012-album-188.css': {
+    title: '相簿頁（灰色版型 skin 1/188）',
+    note:
+      ' * 與 wretch2012-album.css 唯一的差別是版型那一層換成 skin 1/188，\n' +
+      ' * 它的檔頭同樣寫著「無名小站預設相簿樣式, 使用者可以亂改」，是另一套原廠配色。',
+    absolute: true,
+    parts: [
+      ['相簿版型 skin 1/188（灰）', 'css/album_default_skin188.css', 'skin188'],
+      ['album/css/font.css（字級）', 'css/album_font.css', 'album'],
+      ['album/css/newButton.css', 'css/album_newButton.css', 'album'],
+      ['album/css/newPanel.css', 'css/album_newPanel.css', 'album'],
+      ['album/css/photowall_overlay.css（照片牆）', 'css/album_photowall_overlay.css', 'album'],
+      ['common/css/sharing.css（pic.wretch.cc 版）', 'css/album_sharing.css', 'album'],
+      ['common/css/kukubar.css（內頁工具列）', 'css/chrome_kukubar.css', 'chrome'],
+    ],
+  },
+
   // 相簿總站 www.wretch.cc/album：album_service_index_20121211.html 的 <link> 順序
   //   fix.css（版面骨架）→ index.css（配色）。這頁沒有 kukubar——存檔裡整頁搜不到
   //   kukubar 三個字，它有自己的 #header（logo + 搜尋列）與 #footer。

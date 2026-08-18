@@ -10,6 +10,7 @@ import { UPLOAD_DIR } from './paths.js';
 import { render, EMOTES, safeCss } from './format.js';
 import { SITE_NAME, SITE_DESC, SITE_LOGO, CDN, CDN_VARS, THEME_FOR } from './config.js';
 import { ALBUM_TOPICS, BLOG_TOPICS, PLACES, MOODS, WEATHERS, ZODIACS, BLOODS, SEXES, CITIES, THEMES, isAlbumTopic, isBlogTopic, isPlace, isTheme } from './taxonomy.js';
+import { SKINS, isSkin, skinCss } from './skins.js';
 
 const app = express();
 
@@ -255,6 +256,9 @@ app.use('/:name',async (req,res,next)=>{
   if(RESERVED.has(req.params.name)) return next();
   const u=await one('SELECT * FROM users WHERE name=?',req.params.name); if(!u) return next();
   res.locals.u=u; res.locals.isOwner=res.locals.me?.id===u.id;
+  // 版型：無名的個人頁長相由站主選的版型決定（見 src/skins.js）。
+  // view 用 skinCss('album'|'blog'|'guestbook'|'user'|'friend') 取自己那一支。
+  res.locals.skinCss = service => skinCss(service, u.theme);
   res.locals.isFriend=res.locals.me?await isFriend(res.locals.me.id,u.id):false;
   site(req,res,next);
 });
@@ -307,11 +311,11 @@ site.get('/visitors',async (req,res)=>{
     friends:await all('SELECT u.name,u.nick FROM friends f JOIN users u ON u.id=f.friend_id WHERE f.user_id=? LIMIT 12',U(res).id)});
 });
 // 個人設定
-site.get('/settings',requireLogin,requireOwner,(req,res)=>res.render('settings',{nav:'user',themes:THEMES}));
+site.get('/settings',requireLogin,requireOwner,(req,res)=>res.render('settings',{nav:'user',themes:SKINS}));
 site.post('/settings',requireLogin,requireOwner,upload.single('avatar'),async(req,res)=>{
   const {nick,intro,music,css,pass,pass2}=req.body, u=U(res);
   let avatar=u.avatar; if(req.file){ const s=await save(req.file); avatar=s.thumb; await remove(u.avatar); }
-  await run('UPDATE users SET nick=?,intro=?,music=?,css=?,avatar=?,theme=? WHERE id=?',(nick||u.nick).trim().slice(0,20),(intro||'').slice(0,500),cleanMusic(music),(css||'').slice(0,20000),avatar,isTheme(req.body.theme)?req.body.theme:'',u.id);
+  await run('UPDATE users SET nick=?,intro=?,music=?,css=?,avatar=?,theme=? WHERE id=?',(nick||u.nick).trim().slice(0,20),(intro||'').slice(0,500),cleanMusic(music),(css||'').slice(0,20000),avatar,isSkin(req.body.theme)?(req.body.theme||''):'',u.id);
   if(pass){ if(pass!==pass2) {flash(req,'兩次密碼不一致，其他設定已儲存');return res.redirect(`/${u.name}/settings`);} const s=salt(); await run('UPDATE users SET pass=?,salt=? WHERE id=?',hash(pass,s),s,u.id); }
   flash(req,'設定已儲存'); res.redirect(`/${u.name}/settings`);
 });

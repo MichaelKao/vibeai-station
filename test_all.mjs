@@ -131,9 +131,14 @@ for(const [u,exp] of [['/album/alpha','/alpha/album'],['/blog/alpha','/alpha/blo
 }
 
 console.log('\n=== 樣式 / 設定 ===');
-const sf=new FormData(); sf.append('nick','阿發'); sf.append('theme','pink');
+// 版面樣式＝無名的「版型」：選了哪一套，站台就載那一支版型 CSS（src/skins.js）。
+// 不是 body class——那是我們 2005 版自創的機制，2012 原站沒有。
+const sf=new FormData(); sf.append('nick','阿發'); sf.append('theme','grey');
 await fetch(B+'/alpha/settings',{method:'POST',headers:{cookie:A},body:sf,redirect:'manual'});
-ok('版面樣式套用', (await text('/alpha')).includes('t-x-pink'));
+ok('版面樣式套用', (await text('/alpha/album')).includes('wretch2012-album-188.css'));
+const sfDefault=new FormData(); sfDefault.append('nick','阿發'); sfDefault.append('theme','');
+await fetch(B+'/alpha/settings',{method:'POST',headers:{cookie:A},body:sfDefault,redirect:'manual'});
+ok('版面樣式改回預設', (await text('/alpha/album')).includes('wretch2012-album.css'));
 const sf2=new FormData(); sf2.append('nick','阿發'); sf2.append('theme','<script>');
 await fetch(B+'/alpha/settings',{method:'POST',headers:{cookie:A},body:sf2,redirect:'manual'});
 ok('惡意樣式被擋', !(await text('/alpha')).includes('t-x-<script>'));

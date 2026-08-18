@@ -32,7 +32,11 @@
 <%# 官方 CSS（留言板 layout/namecard/overwrite、好友 fix/select、名片 font、kukubar） %>
 <link rel="stylesheet" href="/wretch2012-gb.css">
 <%# 這一頁的原廠預設版型 %>
-<% (locals.skin || []).forEach(function(href){ %><link rel="stylesheet" href="<%= href %>">
+<% /* 沒指定就依這一頁的服務，載站主選的版型（src/skins.js） */
+   const w2Page = locals.page || 'w2-gb';
+   const w2Svc = w2Page.includes('user') ? 'user' : w2Page.includes('friend') ? 'friend' : 'guestbook';
+   const w2Skins = locals.skin || (locals.skinCss ? [skinCss(w2Svc)] : []);
+   w2Skins.forEach(function(href){ %><link rel="stylesheet" href="<%= href %>">
 <% }) %><%# 本站刻意偏離之處，每條都附理由 %>
 <link rel="stylesheet" href="/wretch2012-in.css">
 <%# 原站的漸層是寫在頁面 inline <style> 裡的，不在 kukubar.css（chrome.md 第 2.1 節） %>
