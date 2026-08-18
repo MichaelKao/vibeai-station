@@ -27,7 +27,9 @@ import fs from 'node:fs';
 import path from 'node:path';
 import * as acorn from 'acorn';
 
-const FILE = path.resolve('src/server.js');
+// 預設處理 src/server.js，也可以指定別的檔（例如 tools/seed-demo.mjs）
+const args = process.argv.slice(2).filter(a => a !== '--check');
+const FILE = path.resolve(args[0] || 'src/server.js');
 const CHECK = process.argv.includes('--check');
 
 // 這些呼叫回傳 Promise：資料層本身，加上函式體內用到資料層的輔助函式。

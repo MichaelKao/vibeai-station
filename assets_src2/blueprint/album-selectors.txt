@@ -1,0 +1,8 @@
+// 2012 相簿列表頁的關鍵結構（原始檔 assets_src2/html/album_album_list.html）
+#kukubar-upper
+#bigcontainer
+#banner
+.sidetitle
+#MySpace
+#rss
+#ad_square
