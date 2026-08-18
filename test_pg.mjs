@@ -46,5 +46,19 @@ ok('1-featured 這種切換寫法不動',
   toPg('UPDATE albums SET featured=1-featured WHERE id=?'),
   'UPDATE albums SET featured=1-featured WHERE id=$1');
 
+
+// ── session store 的匯出形狀 ────────────────────────────────────────────────
+// 為什麼要測這個：src/cache.js 的 Redis 路徑在本機**永遠不會執行**
+// （沒有 REDIS_URL 就提早 return），所以 connect-redis 的匯出方式寫錯時
+// 本機完全測不出來，只會在正式環境炸 TypeError 讓整站起不來——實際發生過一次。
+{
+  const { RedisStore } = await import('connect-redis');
+  ok('connect-redis 匯出 RedisStore（具名，不是 default）', typeof RedisStore, 'function');
+  const fake = { get(){}, set(){}, del(){}, expire(){}, sendCommand(){} };
+  const store = new RedisStore({ client: fake, prefix: 'sess:' });
+  ok('RedisStore 可建構且具備 express-session 介面',
+    ['get','set','destroy','touch'].every(m => typeof store[m] === 'function'), true);
+}
+
 console.log(`\n===== ${pass} passed, ${fail} failed =====`);
 process.exit(fail ? 1 : 0);

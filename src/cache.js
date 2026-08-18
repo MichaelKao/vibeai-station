@@ -34,10 +34,26 @@ if (URL) {
 }
 
 // ===== 1. session store =====
+//
+// connect-redis 從 v7 起改成**具名匯出** `{ RedisStore }`，沒有 default。
+// 寫成 `const { default: RedisStore }` 會拿到 undefined，
+// 到 `new RedisStore(...)` 才炸成 TypeError——而且只會在正式環境炸：
+// 本機沒有 REDIS_URL，這個函式在第一行就 return 了，整段從來沒被執行過。
+//
+// 所以這裡除了修匯出方式，也加上防護：session store 建不起來就退回
+// MemoryStore 並記一筆錯誤。session 存哪裡是效能與體驗問題，
+// **不該讓整個站台起不來**。
 export async function sessionStore() {
   if (!redis) return undefined;                 // undefined = express-session 用預設 MemoryStore
-  const { default: RedisStore } = await import('connect-redis');
-  return new RedisStore({ client: redis, prefix: 'sess:' });
+  try {
+    const { RedisStore } = await import('connect-redis');
+    if (typeof RedisStore !== 'function')
+      throw new TypeError('connect-redis 沒有匯出 RedisStore，套件版本可能不相容');
+    return new RedisStore({ client: redis, prefix: 'sess:' });
+  } catch (e) {
+    console.error('[redis] session store 建立失敗，退回 MemoryStore：' + e.message);
+    return undefined;
+  }
 }
 
 // ===== 2. 人氣計數 write-behind =====
