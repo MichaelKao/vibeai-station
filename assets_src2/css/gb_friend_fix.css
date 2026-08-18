@@ -1,0 +1,404 @@
+
+/* general settin
+-------------------- */
+html, body {
+  padding: 0;
+  margin: 0;
+}
+body {
+  font-size: .8em;
+  font-family: arial, sans-serif;
+}
+form, input, h1, h2, h3, h4, h5, h6 {
+  padding: 0;
+  margin: 0;
+  font-size: 100%;
+  font-size: inherit;
+  font-family: inherit;
+}
+ol, ul {
+  margin: 0;
+  padding: 0;
+  list-style-type: none;
+}
+img {
+  border: 0;
+}
+.nohr {
+  display: none;
+}
+ul.inline li {
+  display: inline;
+}
+ul.inline li ul li {
+}
+
+.button
+{
+  height: 25px;
+}
+
+#menu {
+  margin-top: 20px;
+}
+#menu ul.inline {
+  height: 30px;
+}
+#menu ul.inline:after {
+/*
+  content: ".";
+  display: block;
+  clear: both;
+  height: 0;
+  overflow: hidden;
+  visibility: hidden;
+*/
+}
+#menu li.il {
+  display: block;
+  float: left;
+  display: inline;
+  margin-right: 10px;
+}
+
+/* container
+-------------------- */
+#container {
+  margin: 0 20px;
+}
+
+/* header
+-------------------- */
+#header #navigator {
+  text-align: right;
+}
+#header {
+  *height: 1%;
+}
+#header:after {
+  content: ".";
+  display: block;
+  clear: both;
+  height: 0;
+  overflow: hidden;
+  visibility: hidden;
+}
+#header h1 {
+  font-size: 3em;
+}
+#header .Pcover {
+  width: 200px;
+  height: 200px;
+  float: left;
+  background-color:#FFFFFF;
+}
+#header .Pcover img {
+}
+#header .Pcover span {
+  display: table-cell;
+  text-align: center;
+  vertical-align: middle;
+  width: 200px;
+  height: 200px;
+}
+#header .Pcover span * {
+  vertical-align: middle;
+}
+* html #header .Pcover span {
+  display: block;
+}
+* html #header .Pcover span cite {
+  display: inline-block;
+  height: 100%;
+}
+#header .Ptext {
+  margin-left: 210px;
+}
+#header .Ptext ul {
+  margin-left: 20px;
+  list-style-type: disc;
+}
+#header #menu {
+  margin-left: 210px;
+}
+#cateSelect {
+  width: 200px;
+}
+#filterSelect {
+  width: 130px;
+}
+
+
+/* content
+-------------------- */
+#content {
+  padding: 10px 15px;
+
+}
+
+
+#condition{
+    height:35px;
+    margin-bottom:-4px;
+    *margin-bottom:-2px;
+    text-align:center;
+    position:relative;/*fix ie*/
+    margin-top: 5px;
+}
+#condition li{
+    
+    float:left;
+    margin-right: 10px;
+    *height:1%
+}
+
+#condition li:after{
+  content: ".";
+  display: block;
+  clear: both;
+  height: 0;
+  overflow: hidden;
+  visibility: hidden;
+}
+#condition li a{
+    display:block;
+    height:25px;
+    background:#ccc;    
+    border:1px solid #999;
+    padding:5px 10px 0;
+    *padding:7px 10px 0;
+    width: 90px;
+}
+#condition li a:hover{
+    background:#fff;
+    border-bottom:1px solid #fff;
+}
+#condition li.current a{
+    background:#fff;
+    border-bottom:1px solid #fff;
+    color:#000;
+}
+
+#pagelink,
+#pagelink_1{
+    text-align:center;
+    padding: 2px 0;
+}
+#pagelink .prev{
+  padding-right: 5px;
+  font-size:1.2em;
+}
+#pagelink .next{
+  padding-left: 5px;
+  font-size: 1.2em;
+}
+#num_friends{
+    text-align:center;
+}
+#num_friends a{
+  text-decoration:underline;color:red;
+}
+
+
+/* friendListDiv
+------------------- */
+
+#friendListDiv{
+  *height: 1%;
+    background:#fff;
+    border:1px solid #999;
+    padding:10px;
+}
+#friendListDiv:after {
+  content: ".";
+  display: block;
+  clear: both;
+  height: 0;
+  overflow: hidden;
+  visibility: hidden;
+}
+
+#friendListDiv ol li {
+  display: inline;
+  width: 110px; /* friend list width */
+  height: 125px;
+  float: left;
+  text-align: center;
+  margin-right: 15px;
+  margin-bottom: 10px;
+  overflow: hidden;
+  background-color:#FFFFFF;
+}
+#friendListDiv ol li a {
+  display: block;
+  width: 108px; /* friend list width */
+  height: 123px;
+}
+#friendListDiv ol li a:hover {
+
+}
+#friendListDiv ol li a span.font_id {
+  font-size: 12px;
+  display: block;
+  text-align: left;
+  padding-left: 3px;
+  padding-top: 3px;
+  padding-bottom: 3px;
+}
+
+#friendListDiv ol li p span{display:block;}
+
+.back_friendlist{
+  display:block;
+  clear:both;
+}
+
+/*mini 
+-------------------- */
+
+#mini ul,ol{list-style-type:none;}
+#mini strong{color:#444}
+
+#mini{
+  width:382px;
+  background: url('http://l.yimg.com/e/serv/friend/img/mini-b.gif') no-repeat left bottom;
+  position: absolute;
+  visibility: hidden;
+  z-index: 100;
+}
+#mini a{
+  text-decoration:none;
+  color:#09c;
+}
+#mini a:hover{color:#9cf}
+#mini img{
+  border:0;
+  float:left;
+  width:150px;
+}
+#mini_content{
+  background:url('http://l.yimg.com/e/serv/friend/img/mini-t.gif') no-repeat left top;
+  margin-bottom:1px;
+  _height:1%;
+  padding:3px 1px 3px 3px;
+}
+#mini_content:after{
+  content:".";
+  height:0;
+  display:block;
+  clear:both;
+  visibility:hidden;
+}
+
+#mini h3{
+padding:0px 0 0 168px;
+}
+#mini h3 span.desc{
+  display:block;
+  width:192px;
+  height:1.2em;
+  overflow:hidden;
+  font-weight:normal;
+}
+#mini h3 span.cate{
+position:absolute;
+top:3px;right:12px;
+}
+#mini_service{
+  background:#fff;
+  margin:1px 0px 2px 0px;
+  border-bottom:1px solid #ddd;
+  *padding-top:2px;
+  float:left;
+  width:228px;
+}
+
+#mini_service li{
+float:left;
+margin-left:8px;
+display:inline;
+}
+
+#mini_update{
+  float:right;
+  width:205px;
+  padding-right:3px;
+  list-style-image:url('http://l.yimg.com/e/serv/friend/img/arrow.png');
+  _height:1%;
+}
+
+
+#mini_update span.date{
+  float:right;
+  color:#999;
+  padding-right:8px;
+  font-size:.9em
+}
+#mini_update a, #mini_update span.nonew{
+  display:block;
+  width:195px;
+  height:1.18em;
+  *height:1.25em;
+  overflow:hidden;
+}
+#mini_footer h4 a{
+  display:block;
+  height: 20px;
+  width: 90px;
+  outline:none;
+  position:relative;
+}
+#mini_footer > h4{
+  background:url('http://l.yimg.com/e/serv/friend/img/logo.png') no-repeat left top;
+  height:27px;
+}
+* html #mini_footer h4{
+  filter:progid:DXImageTransform.Microsoft.AlphaImageLoader(src='http://l.yimg.com/e/serv/friend/img/logo.png');
+  height:27px;
+}
+#mini_footer{
+  clear:both;
+  height:25px;
+  padding:2px 0 0 285px;
+  position:relative;
+}
+
+#mini_footer .add{
+  position:absolute;
+  left:60px;
+  bottom:1px;
+  color:#fe7519;
+  display:block;
+  background:url('http://l.yimg.com/e/serv/friend/img/addwhite.gif') no-repeat left top;
+  width:28px;
+  height:21px;
+  *height:19px;
+  padding:3px 0 0 13px;
+  *padding:5px 0 0 13px;
+}
+#mini_footer a.add:hover{color:#fe7519;text-decoration:underline;}
+
+#mini_footer .emp{
+  position:absolute;
+  left:60px;
+  bottom:1px;
+  color:#fe7519;
+  display:block;
+  background:url('http://l.yimg.com/e/serv/friend/img/emptywhite.gif') no-repeat left top;
+  width:41px;
+  height:21px;
+  padding:3px 0 0 0px;
+}
+
+#mini_footer .friend{
+  position:absolute;
+  left:10px;
+  bottom:1px;
+  color:#fe7519;
+  display:block;
+  background:url('http://l.yimg.com/e/serv/friend/img/emptywhite.gif') no-repeat left top;
+  width:41px;
+  height:21px;
+  padding:3px 0 0 0px;
+}
+

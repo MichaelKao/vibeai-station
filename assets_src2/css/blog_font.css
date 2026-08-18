@@ -1,0 +1,183 @@
+input { display:inline !important; }
+
+.normal-c { font-size: 16px; font-family: "新細明體" }
+.big-c {  font-family: "新細明體"; font-size: 32px}
+.small-c {  font-family: "新細明體"; font-size: 12px}
+.big-e { font-family: "Verdana", "Arial", "Helvetica", "sans-serif"; font-size: 32px }
+.normal-e { font-size: 20px; font-family: "Verdana", "Arial", "Helvetica", "sans-serif"}
+.small-e { font-family: "Verdana", "Arial", "Helvetica", "sans-serif"; font-size: 11px }
+
+.boxNewTrackback1 { word-wrap: break-word; }
+
+#boxMySpace ul 
+{
+	margin: 0px;
+	padding: 0px;
+	list-style: none;
+}
+
+#boxWho div#whowrapper  *{margin:0; padding:0}
+#boxWho div#whowrapper  img{height: 50px; width: 50px; border: 0px}
+#boxWho div#whowrapper {margin-bottom:1em;width: 166px; overflow:hidden}
+#boxWho div#whowrapper li{height:50px; width: 50px; display: inline; float: left; margin-top: 4px;  margin-left:4px; overflow:hidden}
+/*add for bidhead*/
+ul {list-style-type:none;padding:0;margin:0}
+
+.comments-body ul li{*display:inline;}
+/*.comments-body ul li.comments-word{display:block;float:left;}*/
+.comments-body ul .comments-post{*display:block;}
+
+.total-comments-div img{border:0}
+.comments-body ul li p{
+margin-top:0;
+margin-bottom:0;
+*height:1%;
+word-break : break-all;
+}
+
+.comments-body{
+margin-bottom:12px;
+border-bottom:1px dashed #666;
+padding:6px;
+}
+.trackbacks-post,
+.comments-post{
+display:block;
+clear:both;
+padding-top:3px;
+*height:1%;
+}
+.comments-author .comments-post{
+color:#888;
+}
+.comments-author .comments-post a{
+color:#000;
+text-decoration:underline;
+}
+.comments-author .comments-post a:hover{
+color:#999;
+text-decoration:underline;
+}
+.comments-author{
+margin:0px;
+padding:6px 6px 6px 24px;
+*height:1%;
+background:#fff;
+opacity:0.8;
+filter:alpha(opacity=80);
+color:#555;
+}
+
+.comments-body{}
+.comments-body span{
+margin-right:6px;
+float:left;
+text-align:center;
+}
+.comments-body span a{
+display:block;
+width:90px;
+height:90px;
+vertical-align:middle;
+}
+.comments-body  a *{vertical-align:middle}
+.comments-body span > a{display:table-cell}
+.comments-body span cite{
+	display:inline-block;
+	height:100%;
+}
+
+/*collect-2008.08.05*/
+#sort{text-align:right;}
+#sort li{display:inline;margin-left:20px;}
+#sort img{border:0}
+#collection p,#collection h3{margin:0}
+#collection li{padding-bottom:10px;border-bottom:1px dotted;}
+#collection li.more{border:0;text-align:right;}
+#collection .title{position:static !important}
+p.collect_date{text-align:right;opacity:0.7;filter:alpha(opacity=70);zoom:1}
+.collect_cate{
+border-left:10px solid;
+font-size:1.3em;
+font-weight:bold;
+padding-left:0.5em;}
+.collect_cate a{text-decoration:none;}
+#links #boxCollection p{
+  padding:0px;
+  margin:0px;
+}
+
+#links #boxCollection #collect_description{
+  border-bottom:1px dashed #666;
+  margin:0px 0px 5px 0px;
+}
+
+/*push-2008.0904*/
+.bookmark{
+padding-top:42px;
+}
+.bookmark a img{vertical-align:middle}
+#content #push{
+float:right;
+text-align:center;
+width:81px;
+height:59px;
+border:1px solid #999;
+background:url(http://tw.yimg.com/i/tw/wretch/blog/border.png) no-repeat 0 0;
+margin-bottom:3px;
+margin-left:3px;
+line-height:18px;
+font-size:12px;
+font-family:georgia;
+color:#4B4B4B;
+}
+
+#content #push span{display:block;font-weight:bold;font-size:16px;}
+
+html #push a{
+display:block;
+width:24px;
+height:19px;
+float:left;
+border:1px solid #aaa;
+text-decoration:none;
+color:#777;
+font-size:13px;
+margin:0 0 0 1px;
+padding:0 0 0 12px;
+}
+html #push a.push:hover{color:#09c;border-color:#1A84B7}
+html #push a.pull:hover{color:#f09;border-color:#e2669e}
+
+html #push a.push{background:url(http://tw.yimg.com/i/tw/wretch/blog/push.gif) no-repeat center;}
+html>body #push a.push{margin:0 0 0 2px;}
+html #push a.pull{background:url(http://tw.yimg.com/i/tw/wretch/blog/pull.gif) no-repeat center;}
+#reading{margin:0 7px 5px 0;text-align:right;}
+
+
+/*clearfix*/
+.clearfix:after {
+    content: ".";
+    display: block;
+    height: 0;
+    clear: both;
+    visibility: hidden;
+}
+.clearfix{display: inline-block;}
+
+/* Hides from IE-mac \*/
+* html .clearfix {height: 1%;}
+.clearfix {display: block;}
+/* End hide from IE-mac */
+
+#bigcontainer #container1 .extended span{padding-left:15px;}
+#bigcontainer #container1 .extended span a{display:inline;}
+
+.digu .profile{float:left}
+.digu .content{margin-left:70px;}
+.digu .profile img{border:none}
+
+/*hot today 20081103*/
+*html h3 a{vertical-align:middle}
+h3>a img{vertical-align:middle}
+h3 a img{padding-left:5px;border:0}

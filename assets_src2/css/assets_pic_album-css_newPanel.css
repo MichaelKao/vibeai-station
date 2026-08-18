@@ -1,0 +1,68 @@
+.panelRoot {
+    z-index: 9999999;
+    position:fixed;
+    _position:absolute;
+    height:0;
+    width:100%;
+    left:50%;
+    top:50%;
+    _top:0;
+    _left:0;
+}
+
+.yui3-panel {
+    outline:0;
+}
+.yui3-widget-mask {
+    background-color: black;
+    opacity: 0.7;
+    filter:Alpha(Opacity="70");
+}
+.yui3_confirm_hd {   
+    background: -webkit-gradient(linear, left top,left bottom, from(#363636),color-stop(0.3, #363636),to(#000000));
+    background: -moz-linear-gradient(0% 100% 90deg, #000000 30%, #363636 100%) repeat scroll 0 0 transparent;
+    background: -webkit-linear-gradient(0% 100% 90deg, #000000 30%, #363636 100%) repeat scroll 0 0 transparent;
+    background: -ms-linear-gradient(0% 100% 90deg, #000000 30%, #363636 100%) repeat scroll 0 0 transparent;
+    background: -o-linear-gradient(0% 100% 90deg, #000000 30%, #363636 100%) repeat scroll 0 0 transparent;
+    background: linear-gradient(0% 100% 90deg, #000000 30%, #363636 100%) repeat scroll 0 0 transparent;
+    filter:progid:DXImageTransform.Microsoft.gradient(startColorstr='#363636', endColorstr='#000000');
+    -ms-filter:progid:DXImageTransform.Microsoft.gradient(startColorstr='#363636', endColorstr='#000000');
+    color: white;
+    height:15px;
+    padding: 5px;
+}
+.panelFooter {
+    height:40px;
+    background-color:#fff;
+    border-top:1px solid #e5e5e5;
+}
+.panelFooter div{
+    top:auto !important;
+}
+.yui3-panel .confirm,
+.yui3-panel .alert {
+    background-color:#fff;
+    border:3px solid #000; 
+    padding:30px;    
+}
+.yui3-panel .loading{
+    background-color:#fff;
+    border:3px solid #fff;
+    padding:30px;
+    -moz-box-shadow:0 0 7px #666;
+    -webkit-box-shadow:0 0 7px #666;
+    box-shadow:0 0 7px #666;
+}
+.yui3-panel .confirmPanelCancel,
+.yui3-panel .alertPanelSure {
+    position: relative;
+    left:-23px;
+    *left:-43px;
+    margin-top:10px;
+}
+.yui3-panel .confirmPanelSure {
+    position: relative;
+    left:-43px;
+    *left:-63px;
+    margin:10px 15px 0 0;
+}

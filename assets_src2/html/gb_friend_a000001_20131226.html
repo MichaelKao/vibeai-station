@@ -1,0 +1,664 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+  <meta http-equiv="Content-Type" content="text/html;charset=utf-8" />
+  <link rel="shortcut icon" type="image/x-icon" href="http://l.yimg.com/e/serv/common/favicon.ico" />
+  <script type="text/javascript" src="http://yui.yahooapis.com/combo?2.5.2/build/yahoo-dom-event/yahoo-dom-event.js&2.5.2/build/get/get-min.js&2.5.2/build/json/json-min.js"></script>
+  <script language="JavaScript">
+    var ysmrubyctxtID = "wretch_tw_photo_ron_001";
+    var ysmrubyPartner = "wretch_tw_friend_ron_cm";
+    var userid        = 'a000001';
+    var coverSource   = 'http://cover.wretch.cc/a000001_150.jpg?245';
+    var category      = new Array();
+    var friendsCycle  = 6;
+    var friends       = new Array();
+    var friendArr     = new Array(Array);
+    var paginator     = '25';
+    var friend_param  = 0
+    var fetch_data_url            = 'http://www.wretch.cc/ajax/friend/fetch_latest_data.php';
+    var redirect_prefix           = 'http://tw.rd.yahoo.com/referurl/wretch/fn/mini/';
+    var service_links_html        = "";
+    var js_lang_friendlist        = escape("'så¥½ååè¡¨");
+    var js_lang_friendcover       = escape("'sCover Picture");
+    var js_lang_friendcategory    = 'Category';
+    var js_lang_friendlisttotal   = '-All-';
+    var js_lang_friendfiltertotal = '-All-';
+    var js_lang_male              = 'Male';
+    var js_lang_female            = 'Female';
+    var js_lang_unknown           = 'Unknown';
+    var js_lang_nowlist           = 'Now List';
+    var js_lang_category          = 'Category';
+    var js_lang_sex               = 'Gender';
+    var js_lang_search            = 'Search';
+    var js_lang_searchTip         = 'Search ID';
+    var jslang = {
+              hostname:  'http://www.wretch.cc/',
+              mypage:    'Mypage',
+                            join:      '揪團',
+              album:    'Album',
+              blog:     'Blog',
+              video:    'Video',
+              friend:     'Friend',
+              guestbook:'Guestbook',
+              lastInfo: 'LatestInfo',
+              noLastInfo: 'No Latest Info',
+              noSuchUser: 'NoSuchUser',
+              notStartYetUser: 'User Not Start Using Yet',
+              isClosed: 'Closed',
+              blog_closed: 'Blogis closed',
+              video_closed: 'Videois closed',
+              gbook_closed: 'Guestbookis closed',
+              prev_page: 'Prev',
+              next_page: 'Next',
+              viewer: ''
+              };
+  </script>
+
+  <title>a000001 的好友列表 - wretch</title>
+  <link rel="stylesheet" type="text/css" href="http://l.yimg.com/e/serv/friend/css/fix.css?17303" />
+
+
+  <link rel="stylesheet" href="http://f12.wretch.yimg.com/a000001/files/friend.css?1309761444" type="text/css"/>
+  <link rel="stylesheet" type="text/css" href="http://l.yimg.com/e/serv/friend/css/select.css?17139" />
+  <script type="text/javascript" src="http://l.yimg.com/e/combo2?common/js/swfobject.js?7679&friend/js/get.js?5031&friend/js/func.js?17139&friend/js/select.js?5031&user/js/func_user.js?17139"></script>
+  <script>
+    var vip_icon_url = '<img style="display:none;" />';
+
+    var group_id_to_display_order = Array();
+      var display_order_to_group_id = Array();
+        var friend_list_title = '';
+    var isClosedMSG = '';
+    var g_lia = new Array();
+    window.onload = init;
+  </script>
+  </head>
+<body>
+<!-- nv hugewrepper --><div id="hugewrapper"><input id="wretch-crumb" type="hidden" value="&.c=HzkyqUeGGFf&.t=1388099083">
+<input id="static-path" type="hidden" value="http://l.yimg.com/e/serv/common/">
+<link rel="stylesheet" href="http://l.yimg.com/e/serv/common/css/kukubar.css?20130903" type="text/css">
+<style>
+.kukubar-customized {
+    background:#EEEDDD; /* old browsers */
+    background: -moz-linear-gradient(top, #FFFFFF 0%, #EEEDDD 100%); /* firefox */
+    background: -webkit-gradient(linear, left top, left bottom, color-stop(0%,#FFFFFF), color-stop(100%,#EEEDDD)); /* webkit */
+
+}
+</style>
+<div id="kukubar-upper" class="font-black kukubar-customized kukubar-bar">
+    <div class="left-side">
+        <div id="wretch-logo" class="bar-block bar-block-click">
+        <h1><a class="bar-link" tabindex="1" href="http://tw.rd.yahoo.com/referurl/wretch/kk/u/haha/logo/*http://www.wretch.cc/">無名小站</a></h1>
+        </div>
+        <div id="wretch-service" class="bar-block bar-block-click">
+                        <a class="current-service bar-link theme" tabindex="2" href="http://tw.rd.yahoo.com/referurl/wretch/kk/u/haha/B_FP/*http://www.wretch.cc/blog"/>Blog</a>
+            <span class="bar-block-btn" tabindex="3">展開</span>
+            <ul class="dropdown blog-service">
+                <li class="album-index"><a class="bar-link" href="http://tw.rd.yahoo.com/referurl/wretch/kk/u/haha/A_FP/*http://www.wretch.cc/album">Album</a></li>
+                <li class="blog-index"><a class="bar-link" href="http://tw.rd.yahoo.com/referurl/wretch/kk/u/haha/B_FP/*http://www.wretch.cc/blog">Blog</a></li>
+                <li class="video-index"><a class="bar-link" href="http://tw.rd.yahoo.com/referurl/wretch/kk/u/haha/V_FP/*http://www.wretch.cc/video">Video</a></li>
+                <li class="digu-index"><a class="bar-link" href="http://tw.rd.yahoo.com/referurl/wretch/kk/u/haha/D_FP/*http://www.wretch.cc/digu">Digu</a></li>
+                <li class="join-index"><a class="bar-link" href="http://tw.rd.yahoo.com/referurl/wretch/kk/u/haha/J_FP/*http://www.wretch.cc/join">Join</a></li>
+                <li><a class="bar-link" href="http://tw.rd.yahoo.com/referurl/wretch/kk/u/haha/Y/*http://tw.yahoo.com/">Yahoo!</a></li>
+                <li><a class="bar-link" href="http://tw.rd.yahoo.com/referurl/wretch/kk/u/haha/help/*http://help.yahoo.com/kb/index?page=product&y=PROD_WRETCH&locale=zh_TW">Help</a></li>
+            </ul>
+        </div>
+        <div id="infozone">
+            <p class="announcement"><a href="http://www.wretch.cc/blog/WretchFAQ/13637135">無名小站已進入全站唯讀模式，12/26服務終止</a></p>
+             <ul>
+                            <li><a href="http://www.wretch.cc/?cid=2330" class="theme">今日主題：就愛毛小孩</a></li>
+                        </ul>
+        </div>
+    </div>
+    
+    
+    <div class="right-side">
+        <div id="wretch-search" class="bar-block">
+            <form method="get" action="http://tw.blog.search.yahoo.com/search" name="searchForm">
+                            <fieldset>
+                    <legend>Article<span>選擇服務</span></legend>
+                    <div class="service-list dropdown">
+                        <input type="radio" id="srch-blog" name="type" value="article" checked="checked" data="checked">
+                        <label for="srch-blog" _target="Article Search">Article</label>
+                        <input type="radio" id="srch-album" name="type" value="photo" checked="false" data="false">
+                        <label for="srch-album" _target="Album Search">Album</label>
+                        <input type="radio" id="srch-video" name="type" value="video" checked="false" data="false">
+                        <label for="srch-video" _target="Video Search">Video</label>
+                    </div>
+                    <div class="search-field">
+                        <label for="wretch-search-text" class="hidden">搜尋</label>
+                        <input id="wretch-search-text" type="text" name="p" title="Article Search" value="Article Search" class="blur">
+                        <input type="hidden" value="wretch" name="provider">
+                        <input type="hidden" value="cb-wretch" name="fr">
+                        <input id="wretch-search-btn" type="submit" value="送出">
+                    </div>
+                </fieldset>
+            </form>
+        </div>        
+                <div id="wretch-login" class="bar-block bar-block-click bar-link no-hover">
+                            <ul class="login-links">
+                <li class="link-item first"><a class="bar-link theme" href="http://tw.rd.yahoo.com/referurl/wretch/kk/u/haha/login/*http://www.wretch.cc/IDintegration/?ref=%2525252Ffriend%2525252Fa000001">Login</a></li>
+		            </ul>
+                        </div>
+        <div id="cam">
+        <a class="theme" href="http://tw.rd.yahoo.com/referurl/wretch/index/head/yahoo/*http://tw.yahoo.com">Yahoo!</a>
+        </div>
+    </div>
+</div>
+<div id="bigcontainer" style="position: relative !important; zoom:1 !important;" >
+
+<div id="mini" onmouseover="this.style.visibility='visible';" onmouseout="this.style.visibility='hidden'"></div>
+
+<div id="ad_banner" align="center">
+<script language="JavaScript" type="text/javascript" charset="big5" src="http://tw2.adserver.yahoo.com/a?f=2022137564&p=tw_kwretch&l=N&c=r"></script><noscript><iframe src="http://tw2.adserver.yahoo.com/a?f=2022137564&p=tw_kwretch&l=N&c=h&bg=white" width=728 height=90 marginwidth=0 marginheight=0 hspace=0 vspace=0 frameborder=0 scrolling=no></iframe></noscript></div>
+<div id="container">
+  <div id="header">
+
+
+    <div id="boxProfile">
+
+      
+      <div class="Pcover">
+          <span>
+          <cite></cite>
+          <img id="cover" src="http://cover.wretch.cc/a000001_150.jpg?245" alt="a000001 的好友列表" style="visibility: visible; display: inline;" onload="adjustImg();"/> 
+          </span>
+      </div>
+      
+      <div class="Ptext">
+          <h1><img style="display:none;" /> a000001 的好友列表</h1>
+          
+          <ul id="serviceList">
+            <li><a id="linkMypage" href="http://tw.rd.yahoo.com/referurl/wretch/index/mprd/*http://www.wretch.cc/">MyPage</a></li>
+            <li><a id="linkAlbum" href="/album/a000001">album</a></li>
+            <li><a id="linkBlog" href="/blog/a000001">blog</a></li>
+            <li><a id="linkGbook" href="/guestbook/a000001">guestbook</a></li>
+            <li><a id="linkUser" href="/user/a000001">User</a></li>
+            <li><a id="linkFriend" href="/friend/a000001">Friend</a></li>
+            <li><a id="linkVideo" href="/video/a000001">Video</a></li>
+          </ul>
+          
+          [<a href="/album/addfriend.php?uid=a000001">Add to Friend List</a>]
+          [<a href="http://tw.rd.yahoo.com/referurl/wretch/other/findfriend/evt=47759/*http://www.wretch.cc/svcs/findfriend/group.php?tab=findfriend">找朋友</a>]<br />
+      </div>
+                <div id="menu">
+            <form action="/friend/a000001" method="post" name="search_form">
+              <ul class="inline">
+                <li class="il">
+                <select class="selectBox" id="cateSelect" name="cateSelect">
+                                      <option value="5" >♥SID飯</option>
+                                      <option value="2" >♥三次元</option>
+                                      <option value="3" >♥二次元</option>
+                                      <option value="0" >Default group</option>
+                                      <option value="-1" selected>-All-</option>
+                                  </select>
+                </li>
+                
+                <li class="il">
+                  <input id="searchInput" name="search_id" type="text" value=""/>
+
+                </li>
+
+                <li class="il">
+                  <input type="submit" value="Search Friends">
+                </li>
+              </ul>
+            </form>                
+                <div id="msg"><strong>Now List: </strong>
+                    <span>Category: </span>
+                    <span id="msg0">-All-</span>, 
+                    <span>Search: </span>
+
+                    <span id="msg2"></span>
+                </div>
+        </div>
+            </div>
+
+  </div>
+
+  <hr class="nohr" />
+
+  <div id="content">
+
+
+<script>
+
+function MeetFriend(link, p)
+{
+var s = p.value;
+if(s)
+{
+var url = link + s;
+window.open(url, "_blank");
+}
+}
+
+</script>
+
+  <div id="relationship">
+          <p>You may have much friendship here, please<a href="http://www.wretch.cc/IDintegration/?ref=%2525252Ffriend%2525252Fa000001">Login</a>first to see your friends of friends.</p>
+            <p><a href="/friend/a000001&c=3">whose friends are also your friends, and some other people you could join with...</a></p>
+  </div>
+
+
+
+    <div id="condition">
+      <ul>
+        <li id="current_tag0" class="current"><a href="http://www.wretch.cc/friend/a000001">My Friends</a></li>
+        <li id="current_tag1" class=""><a href="http://www.wretch.cc/friend/a000001&c=1">I'm Friend Of</a></li>
+        <li id="current_tag2" class=""><a href="http://www.wretch.cc/friend/a000001&c=2">Friendship</a></li>
+                <li id="current_tag3" class=""><a href="http://www.wretch.cc/friend/a000001&c=3">Friend of Friend</a></li>
+              </ul>
+    </div>
+
+    <div id="friendListDiv">
+      <ol>
+        
+
+                  <li id="u_a7512128" style="opacity:1.0;filter:progid:DXImageTransform.Microsoft.Alpha(opacity=100);position:relative;" onmouseover='positiontip(this, event||window.event);  ddtip("a7512128","\u2606\u82b3","♥SID飯","http://cover.wretch.cc/a7512128_150.jpg?83","0", 0, 0, 0, event||window.event); ' onmouseout="hideddrivetip(event||window.event, 'a7512128')" class="5">
+           <a href="http://www.wretch.cc/friend/a7512128" target="_blank">
+              <span class="font_id">
+              a7512128              </span>
+              
+              <div class="font_img">
+              <img src="http://l.yimg.com/e/cover/a7512128_90.jpg?83" alt="a7512128"  onload="savewh(this,'0');" onerror="this.src='http://l.yimg.com/e/serv/friend/img/thumbs/tpic5.jpg'" />
+
+              
+              </div>
+            </a>
+          </li>       
+                  <li id="u_a879451992" style="opacity:1.0;filter:progid:DXImageTransform.Microsoft.Alpha(opacity=100);position:relative;" onmouseover='positiontip(this, event||window.event);  ddtip("a879451992","\u2606\u5c0f\u8972\u2606","♥二次元","http://cover.wretch.cc/a879451992_150.jpg?71","1", 0, 0, 0, event||window.event); ' onmouseout="hideddrivetip(event||window.event, 'a879451992')" class="3">
+           <a href="http://www.wretch.cc/friend/a879451992" target="_blank">
+              <span class="font_id">
+              a879451992              </span>
+              
+              <div class="font_img">
+              <img src="http://l.yimg.com/e/cover/a879451992_90.jpg?71" alt="a879451992"  onload="savewh(this,'1');" onerror="this.src='http://l.yimg.com/e/serv/friend/img/thumbs/tpic5.jpg'" />
+
+              
+              </div>
+            </a>
+          </li>       
+                  <li id="u_aa222666tw" style="opacity:1.0;filter:progid:DXImageTransform.Microsoft.Alpha(opacity=100);position:relative;" onmouseover='positiontip(this, event||window.event);  ddtip("aa222666tw","\u5728\u6069","♥三次元","http://cover.wretch.cc/aa222666tw_150.jpg?95","2", 0, 0, 0, event||window.event); ' onmouseout="hideddrivetip(event||window.event, 'aa222666tw')" class="2">
+           <a href="http://www.wretch.cc/friend/aa222666tw" target="_blank">
+              <span class="font_id">
+              aa222666tw              </span>
+              
+              <div class="font_img">
+              <img src="http://l.yimg.com/e/cover/aa222666tw_90.jpg?95" alt="aa222666tw"  onload="savewh(this,'2');" onerror="this.src='http://l.yimg.com/e/serv/friend/img/thumbs/tpic5.jpg'" />
+
+              
+              </div>
+            </a>
+          </li>       
+                  <li id="u_be841031" style="opacity:1.0;filter:progid:DXImageTransform.Microsoft.Alpha(opacity=100);position:relative;" onmouseover='positiontip(this, event||window.event);  ddtip("be841031","\u500d","♥三次元","http://cover.wretch.cc/be841031_150.jpg?11","3", 0, 0, 0, event||window.event); ' onmouseout="hideddrivetip(event||window.event, 'be841031')" class="2">
+           <a href="http://www.wretch.cc/friend/be841031" target="_blank">
+              <span class="font_id">
+              be841031              </span>
+              
+              <div class="font_img">
+              <img src="http://l.yimg.com/e/cover/be841031_90.jpg?11" alt="be841031"  onload="savewh(this,'3');" onerror="this.src='http://l.yimg.com/e/serv/friend/img/thumbs/tpic5.jpg'" />
+
+              
+              </div>
+            </a>
+          </li>       
+                  <li id="u_betty92300" style="opacity:1.0;filter:progid:DXImageTransform.Microsoft.Alpha(opacity=100);position:relative;" onmouseover='positiontip(this, event||window.event);  ddtip("betty92300","\u862d","♥二次元","http://cover.wretch.cc/betty92300_150.jpg?75","4", 0, 0, 0, event||window.event); ' onmouseout="hideddrivetip(event||window.event, 'betty92300')" class="3">
+           <a href="http://www.wretch.cc/friend/betty92300" target="_blank">
+              <span class="font_id">
+              betty92300              </span>
+              
+              <div class="font_img">
+              <img src="http://l.yimg.com/e/cover/betty92300_90.jpg?75" alt="betty92300"  onload="savewh(this,'4');" onerror="this.src='http://l.yimg.com/e/serv/friend/img/thumbs/tpic5.jpg'" />
+
+              
+              </div>
+            </a>
+          </li>       
+                  <li id="u_billy5605" style="opacity:1.0;filter:progid:DXImageTransform.Microsoft.Alpha(opacity=100);position:relative;" onmouseover='positiontip(this, event||window.event);  ddtip("billy5605","\u8272\u9f8d","♥三次元","http://cover.wretch.cc/billy5605_150.jpg?14","5", 0, 0, 0, event||window.event); ' onmouseout="hideddrivetip(event||window.event, 'billy5605')" class="2">
+           <a href="http://www.wretch.cc/friend/billy5605" target="_blank">
+              <span class="font_id">
+              billy5605              </span>
+              
+              <div class="font_img">
+              <img src="http://l.yimg.com/e/cover/billy5605_90.jpg?14" alt="billy5605"  onload="savewh(this,'5');" onerror="this.src='http://l.yimg.com/e/serv/friend/img/thumbs/tpic5.jpg'" />
+
+              
+              </div>
+            </a>
+          </li>       
+                  <li id="u_chunpopo" style="opacity:1.0;filter:progid:DXImageTransform.Microsoft.Alpha(opacity=100);position:relative;" onmouseover='positiontip(this, event||window.event);  ddtip("chunpopo","\u845b\u683c","♥二次元","http://cover.wretch.cc/chunpopo_150.jpg?9","6", 0, 0, 0, event||window.event); ' onmouseout="hideddrivetip(event||window.event, 'chunpopo')" class="3">
+           <a href="http://www.wretch.cc/friend/chunpopo" target="_blank">
+              <span class="font_id">
+              chunpopo              </span>
+              
+              <div class="font_img">
+              <img src="http://l.yimg.com/e/cover/chunpopo_90.jpg?9" alt="chunpopo"  onload="savewh(this,'6');" onerror="this.src='http://l.yimg.com/e/serv/friend/img/thumbs/tpic5.jpg'" />
+
+              
+              </div>
+            </a>
+          </li>       
+                  <li id="u_co4520" style="opacity:1.0;filter:progid:DXImageTransform.Microsoft.Alpha(opacity=100);position:relative;" onmouseover='positiontip(this, event||window.event);  ddtip("co4520","\u5c0f\u557e","♥二次元","http://cover.wretch.cc/co4520_150.jpg?11","7", 0, 0, 0, event||window.event); ' onmouseout="hideddrivetip(event||window.event, 'co4520')" class="3">
+           <a href="http://www.wretch.cc/friend/co4520" target="_blank">
+              <span class="font_id">
+              co4520              </span>
+              
+              <div class="font_img">
+              <img src="http://l.yimg.com/e/cover/co4520_90.jpg?11" alt="co4520"  onload="savewh(this,'7');" onerror="this.src='http://l.yimg.com/e/serv/friend/img/thumbs/tpic5.jpg'" />
+
+              
+              </div>
+            </a>
+          </li>       
+                  <li id="u_demi851102" style="opacity:1.0;filter:progid:DXImageTransform.Microsoft.Alpha(opacity=100);position:relative;" onmouseover='positiontip(this, event||window.event);  ddtip("demi851102","","♥三次元","http://cover.wretch.cc/demi851102_150.jpg?3","8", 0, 0, 0, event||window.event); ' onmouseout="hideddrivetip(event||window.event, 'demi851102')" class="2">
+           <a href="http://www.wretch.cc/friend/demi851102" target="_blank">
+              <span class="font_id">
+              demi851102              </span>
+              
+              <div class="font_img">
+              <img src="http://l.yimg.com/e/cover/demi851102_90.jpg?3" alt="demi851102"  onload="savewh(this,'8');" onerror="this.src='http://l.yimg.com/e/serv/friend/img/thumbs/tpic5.jpg'" />
+
+              
+              </div>
+            </a>
+          </li>       
+                  <li id="u_didy8379" style="opacity:1.0;filter:progid:DXImageTransform.Microsoft.Alpha(opacity=100);position:relative;" onmouseover='positiontip(this, event||window.event);  ddtip("didy8379","\u8fea","♥三次元","http://cover.wretch.cc/didy8379_150.jpg?6","9", 0, 0, 0, event||window.event); ' onmouseout="hideddrivetip(event||window.event, 'didy8379')" class="2">
+           <a href="http://www.wretch.cc/friend/didy8379" target="_blank">
+              <span class="font_id">
+              didy8379              </span>
+              
+              <div class="font_img">
+              <img src="http://l.yimg.com/e/cover/didy8379_90.jpg?6" alt="didy8379"  onload="savewh(this,'9');" onerror="this.src='http://l.yimg.com/e/serv/friend/img/thumbs/tpic5.jpg'" />
+
+              
+              </div>
+            </a>
+          </li>       
+                  <li id="u_dnquiqan123" style="opacity:1.0;filter:progid:DXImageTransform.Microsoft.Alpha(opacity=100);position:relative;" onmouseover='positiontip(this, event||window.event);  ddtip("dnquiqan123","\u51b7\u51bd\u541b","♥三次元","http://cover.wretch.cc/dnquiqan123_150.jpg?26","10", 0, 0, 0, event||window.event); ' onmouseout="hideddrivetip(event||window.event, 'dnquiqan123')" class="2">
+           <a href="http://www.wretch.cc/friend/dnquiqan123" target="_blank">
+              <span class="font_id">
+              dnquiqan123              </span>
+              
+              <div class="font_img">
+              <img src="http://l.yimg.com/e/cover/dnquiqan123_90.jpg?26" alt="dnquiqan123"  onload="savewh(this,'10');" onerror="this.src='http://l.yimg.com/e/serv/friend/img/thumbs/tpic5.jpg'" />
+
+              
+              </div>
+            </a>
+          </li>       
+                  <li id="u_drrrxxx92231" style="opacity:1.0;filter:progid:DXImageTransform.Microsoft.Alpha(opacity=100);position:relative;" onmouseover='positiontip(this, event||window.event);  ddtip("drrrxxx92231","","♥二次元","http://cover.wretch.cc/drrrxxx92231_150.jpg?13","11", 0, 0, 0, event||window.event); ' onmouseout="hideddrivetip(event||window.event, 'drrrxxx92231')" class="3">
+           <a href="http://www.wretch.cc/friend/drrrxxx92231" target="_blank">
+              <span class="font_id">
+              drrrxxx92231              </span>
+              
+              <div class="font_img">
+              <img src="http://l.yimg.com/e/cover/drrrxxx92231_90.jpg?13" alt="drrrxxx92231"  onload="savewh(this,'11');" onerror="this.src='http://l.yimg.com/e/serv/friend/img/thumbs/tpic5.jpg'" />
+
+              
+              </div>
+            </a>
+          </li>       
+                  <li id="u_gbanana2746" style="opacity:1.0;filter:progid:DXImageTransform.Microsoft.Alpha(opacity=100);position:relative;" onmouseover='positiontip(this, event||window.event);  ddtip("gbanana2746","\u9999\u8549","♥三次元","http://cover.wretch.cc/gbanana2746_150.jpg?10","12", 0, 0, 0, event||window.event); ' onmouseout="hideddrivetip(event||window.event, 'gbanana2746')" class="2">
+           <a href="http://www.wretch.cc/friend/gbanana2746" target="_blank">
+              <span class="font_id">
+              gbanana2746              </span>
+              
+              <div class="font_img">
+              <img src="http://l.yimg.com/e/cover/gbanana2746_90.jpg?10" alt="gbanana2746"  onload="savewh(this,'12');" onerror="this.src='http://l.yimg.com/e/serv/friend/img/thumbs/tpic5.jpg'" />
+
+              
+              </div>
+            </a>
+          </li>       
+                  <li id="u_h682287" style="opacity:1.0;filter:progid:DXImageTransform.Microsoft.Alpha(opacity=100);position:relative;" onmouseover='positiontip(this, event||window.event);  ddtip("h682287","J","♥三次元","http://cover.wretch.cc/h682287_150.jpg?113","13", 0, 0, 0, event||window.event); ' onmouseout="hideddrivetip(event||window.event, 'h682287')" class="2">
+           <a href="http://www.wretch.cc/friend/h682287" target="_blank">
+              <span class="font_id">
+              h682287              </span>
+              
+              <div class="font_img">
+              <img src="http://l.yimg.com/e/cover/h682287_90.jpg?113" alt="h682287"  onload="savewh(this,'13');" onerror="this.src='http://l.yimg.com/e/serv/friend/img/thumbs/tpic5.jpg'" />
+
+              
+              </div>
+            </a>
+          </li>       
+                  <li id="u_hine1256" style="opacity:1.0;filter:progid:DXImageTransform.Microsoft.Alpha(opacity=100);position:relative;" onmouseover='positiontip(this, event||window.event);  ddtip("hine1256","","♥二次元","http://cover.wretch.cc/hine1256_150.jpg?36","14", 0, 0, 0, event||window.event); ' onmouseout="hideddrivetip(event||window.event, 'hine1256')" class="3">
+           <a href="http://www.wretch.cc/friend/hine1256" target="_blank">
+              <span class="font_id">
+              hine1256              </span>
+              
+              <div class="font_img">
+              <img src="http://l.yimg.com/e/cover/hine1256_90.jpg?36" alt="hine1256"  onload="savewh(this,'14');" onerror="this.src='http://l.yimg.com/e/serv/friend/img/thumbs/tpic5.jpg'" />
+
+              
+              </div>
+            </a>
+          </li>       
+                  <li id="u_j80335" style="opacity:1.0;filter:progid:DXImageTransform.Microsoft.Alpha(opacity=100);position:relative;" onmouseover='positiontip(this, event||window.event);  ddtip("j80335","\u96e8\u5bae\u89aa","♥二次元","http://cover.wretch.cc/j80335_150.jpg?116","15", 0, 0, 0, event||window.event); ' onmouseout="hideddrivetip(event||window.event, 'j80335')" class="3">
+           <a href="http://www.wretch.cc/friend/j80335" target="_blank">
+              <span class="font_id">
+              j80335              </span>
+              
+              <div class="font_img">
+              <img src="http://l.yimg.com/e/cover/j80335_90.jpg?116" alt="j80335"  onload="savewh(this,'15');" onerror="this.src='http://l.yimg.com/e/serv/friend/img/thumbs/tpic5.jpg'" />
+
+              
+              </div>
+            </a>
+          </li>       
+                  <li id="u_jolin891" style="opacity:1.0;filter:progid:DXImageTransform.Microsoft.Alpha(opacity=100);position:relative;" onmouseover='positiontip(this, event||window.event);  ddtip("jolin891","\u5b78\u59b9","♥三次元","http://cover.wretch.cc/jolin891_150.jpg?21","16", 0, 0, 0, event||window.event); ' onmouseout="hideddrivetip(event||window.event, 'jolin891')" class="2">
+           <a href="http://www.wretch.cc/friend/jolin891" target="_blank">
+              <span class="font_id">
+              jolin891              </span>
+              
+              <div class="font_img">
+              <img src="http://l.yimg.com/e/cover/jolin891_90.jpg?21" alt="jolin891"  onload="savewh(this,'16');" onerror="this.src='http://l.yimg.com/e/serv/friend/img/thumbs/tpic5.jpg'" />
+
+              
+              </div>
+            </a>
+          </li>       
+                  <li id="u_kismileki131" style="opacity:1.0;filter:progid:DXImageTransform.Microsoft.Alpha(opacity=100);position:relative;" onmouseover='positiontip(this, event||window.event);  ddtip("kismileki131","\u7f8a\u8339","♥三次元","http://cover.wretch.cc/kismileki131_150.jpg?22","17", 0, 0, 0, event||window.event); ' onmouseout="hideddrivetip(event||window.event, 'kismileki131')" class="2">
+           <a href="http://www.wretch.cc/friend/kismileki131" target="_blank">
+              <span class="font_id">
+              kismileki131              </span>
+              
+              <div class="font_img">
+              <img src="http://l.yimg.com/e/cover/kismileki131_90.jpg?22" alt="kismileki131"  onload="savewh(this,'17');" onerror="this.src='http://l.yimg.com/e/serv/friend/img/thumbs/tpic5.jpg'" />
+
+              
+              </div>
+            </a>
+          </li>       
+                  <li id="u_lovesido" style="opacity:1.0;filter:progid:DXImageTransform.Microsoft.Alpha(opacity=100);position:relative;" onmouseover='positiontip(this, event||window.event);  ddtip("lovesido","\u81ea\u5df1","♥二次元","http://cover.wretch.cc/lovesido_150.jpg?3","18", 0, 0, 0, event||window.event); ' onmouseout="hideddrivetip(event||window.event, 'lovesido')" class="3">
+           <a href="http://www.wretch.cc/friend/lovesido" target="_blank">
+              <span class="font_id">
+              lovesido              </span>
+              
+              <div class="font_img">
+              <img src="http://l.yimg.com/e/cover/lovesido_90.jpg?3" alt="lovesido"  onload="savewh(this,'18');" onerror="this.src='http://l.yimg.com/e/serv/friend/img/thumbs/tpic5.jpg'" />
+
+              
+              </div>
+            </a>
+          </li>       
+                  <li id="u_micky840806" style="opacity:1.0;filter:progid:DXImageTransform.Microsoft.Alpha(opacity=100);position:relative;" onmouseover='positiontip(this, event||window.event);  ddtip("micky840806","\u9905\u4e7e*","♥二次元","http://cover.wretch.cc/micky840806_150.jpg?64","19", 0, 0, 0, event||window.event); ' onmouseout="hideddrivetip(event||window.event, 'micky840806')" class="3">
+           <a href="http://www.wretch.cc/friend/micky840806" target="_blank">
+              <span class="font_id">
+              micky840806              </span>
+              
+              <div class="font_img">
+              <img src="http://l.yimg.com/e/cover/micky840806_90.jpg?64" alt="micky840806"  onload="savewh(this,'19');" onerror="this.src='http://l.yimg.com/e/serv/friend/img/thumbs/tpic5.jpg'" />
+
+              
+              </div>
+            </a>
+          </li>       
+                  <li id="u_moe19970122" style="opacity:1.0;filter:progid:DXImageTransform.Microsoft.Alpha(opacity=100);position:relative;" onmouseover='positiontip(this, event||window.event);  ddtip("moe19970122","\u591c\u8c93-/-","♥SID飯","http://cover.wretch.cc/moe19970122_150.jpg?151","20", 0, 0, 0, event||window.event); ' onmouseout="hideddrivetip(event||window.event, 'moe19970122')" class="5">
+           <a href="http://www.wretch.cc/friend/moe19970122" target="_blank">
+              <span class="font_id">
+              moe19970122              </span>
+              
+              <div class="font_img">
+              <img src="http://l.yimg.com/e/cover/moe19970122_90.jpg?151" alt="moe19970122"  onload="savewh(this,'20');" onerror="this.src='http://l.yimg.com/e/serv/friend/img/thumbs/tpic5.jpg'" />
+
+              
+              </div>
+            </a>
+          </li>       
+                  <li id="u_mukuro69sm" style="opacity:1.0;filter:progid:DXImageTransform.Microsoft.Alpha(opacity=100);position:relative;" onmouseover='positiontip(this, event||window.event);  ddtip("mukuro69sm","\u862d\u9ab8","♥二次元","http://cover.wretch.cc/mukuro69sm_150.jpg?29","21", 0, 0, 0, event||window.event); ' onmouseout="hideddrivetip(event||window.event, 'mukuro69sm')" class="3">
+           <a href="http://www.wretch.cc/friend/mukuro69sm" target="_blank">
+              <span class="font_id">
+              mukuro69sm              </span>
+              
+              <div class="font_img">
+              <img src="http://l.yimg.com/e/cover/mukuro69sm_90.jpg?29" alt="mukuro69sm"  onload="savewh(this,'21');" onerror="this.src='http://l.yimg.com/e/serv/friend/img/thumbs/tpic5.jpg'" />
+
+              
+              </div>
+            </a>
+          </li>       
+                  <li id="u_nme456tw" style="opacity:1.0;filter:progid:DXImageTransform.Microsoft.Alpha(opacity=100);position:relative;" onmouseover='positiontip(this, event||window.event);  ddtip("nme456tw","\u9280\u6953","♥二次元","http://cover.wretch.cc/nme456tw_150.jpg?81","22", 0, 0, 0, event||window.event); ' onmouseout="hideddrivetip(event||window.event, 'nme456tw')" class="3">
+           <a href="http://www.wretch.cc/friend/nme456tw" target="_blank">
+              <span class="font_id">
+              nme456tw              </span>
+              
+              <div class="font_img">
+              <img src="http://l.yimg.com/e/cover/nme456tw_90.jpg?81" alt="nme456tw"  onload="savewh(this,'22');" onerror="this.src='http://l.yimg.com/e/serv/friend/img/thumbs/tpic5.jpg'" />
+
+              
+              </div>
+            </a>
+          </li>       
+                  <li id="u_oilna1218" style="opacity:1.0;filter:progid:DXImageTransform.Microsoft.Alpha(opacity=100);position:relative;" onmouseover='positiontip(this, event||window.event);  ddtip("oilna1218","\u6b7b\u795e\u8ff7\u5537O_\&lt;","♥二次元","http://cover.wretch.cc/oilna1218_150.jpg?21","23", 0, 0, 0, event||window.event); ' onmouseout="hideddrivetip(event||window.event, 'oilna1218')" class="3">
+           <a href="http://www.wretch.cc/friend/oilna1218" target="_blank">
+              <span class="font_id">
+              oilna1218              </span>
+              
+              <div class="font_img">
+              <img src="http://l.yimg.com/e/cover/oilna1218_90.jpg?21" alt="oilna1218"  onload="savewh(this,'23');" onerror="this.src='http://l.yimg.com/e/serv/friend/img/thumbs/tpic5.jpg'" />
+
+              
+              </div>
+            </a>
+          </li>       
+                  <li id="u_p40834" style="opacity:1.0;filter:progid:DXImageTransform.Microsoft.Alpha(opacity=100);position:relative;" onmouseover='positiontip(this, event||window.event);  ddtip("p40834","Bear","♥二次元","http://cover.wretch.cc/p40834_150.jpg?66","24", 0, 0, 0, event||window.event); ' onmouseout="hideddrivetip(event||window.event, 'p40834')" class="3">
+           <a href="http://www.wretch.cc/friend/p40834" target="_blank">
+              <span class="font_id">
+              p40834              </span>
+              
+              <div class="font_img">
+              <img src="http://l.yimg.com/e/cover/p40834_90.jpg?66" alt="p40834"  onload="savewh(this,'24');" onerror="this.src='http://l.yimg.com/e/serv/friend/img/thumbs/tpic5.jpg'" />
+
+              
+              </div>
+            </a>
+          </li>       
+              </ol>
+        <div class="common_friend_page_link"></div>
+<p>
+         <div class="clear" id="listBottom"></div>
+
+
+    </div>
+</p>
+    
+    <div id="pagelink_1">1 <a href="/friend/a000001&c=0&p=2">2</a> <a href="/friend/a000001&c=0&p=2"> &raquo;</a> </div>
+  
+  <div id="num_friends">
+      There are 31 friends &nbsp;
+        </div>
+  </div>
+
+  <hr class="nohr" />
+
+  <div id="footer">
+  </div>
+
+  <div id="extraDiv1"><span></span></div>
+
+  <div id="extraDiv2"><span></span></div>
+  <div id="extraDiv3"><span></span></div>
+  <div id="extraDiv4"><span></span></div>
+
+</div>
+
+<div id="extraDiv5"><span></span></div>
+<div id="extraDiv6"><span></span></div>
+<div id="extraDiv7"><span></span></div>
+<div id="extraDiv8"><span></span></div>
+
+
+
+<script type="text/javascript" src="http://l.yimg.com/e/serv/friend/js/desc_get.js?22300"></script>
+<script id="bcw" type="text/javascript">var random_num=Math.random();document.write("<img style=\"display:none;\" width=1 height=1 src=\"http://geo.yahoo.com/b?s=2022137564&make=yahoo&type=wretch&t="+random_num+"&r="+escape(document.referrer)+"\">");</script><script language="JavaScript" type="text/javascript" charset="big5" src="http://global.adserver.yahoo.com/a?f=2022137564&p=tw_kwretch&l=FOOT9&c=r"></script><noscript><iframe src="http://global.adserver.yahoo.com/a?f=2022137564&p=tw_kwretch&l=FOOT9&c=h&bg=white" width=1 height=1 marginwidth=0 marginheight=0 hspace=0 vspace=0 frameborder=0 scrolling=no></iframe></noscript>
+</div>
+
+</div><!-- nv hugewrepper --><div id="kukubar-lower" class="kukubar-bar  ">
+    <div class="login-request dropdown">
+        <div class="login-btn">
+            <a class="footer-ok-btn" href="http://tw.rd.yahoo.com/referurl/wretch/kk/u/PF/V_C/login/*http://www.wretch.cc/IDintegration/?ref=%2525252Ffriend%2525252Fa000001">登入</a>
+        </div>
+        <div class="login-msg login-msg-subscription">
+            登入無名小站瀏覽分類好文
+        </div>
+    </div>
+        <div class="left-side">
+        <div id="footer-feedback" class="bar-block">
+            <a class="" href="https://help.cc.tw.yahoo.com/feedback.html?id=7154" target="_blank">我有建議</a>
+        </div>
+        <div id="footer-subscription" class="bar-block bar-block-click">
+            <a class="footer-subscription-btn" href="#">分類好文<span class="bar-block-btn">展開</span></a>
+                <div id="scrb-panel" class="dropdown ">
+                <div class="hd panel-block">
+                </div>
+                <div class="bd panel-block">
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="right-side">
+                <div id="text-carousel">
+            <ul>
+                            <li><a href="http://www.wretch.cc/blog/benshee/16528558">首頁好文：髮質也是重點喔</a></li>
+                            <li><a href="http://www.wretch.cc/blog/millyQ/22978471">首頁好文：限量鞋款搶先看</a></li>
+                            <li><a href="http://www.wretch.cc/blog/ikai123/13204118">首頁好文：休閒採果最佳選擇</a></li>
+                            <li><a href="http://www.wretch.cc/blog/eggface0507/14303682">首頁好文：超綿密特色冰淇淋</a></li>
+                            <li><a href="http://www.wretch.cc/blog/starfang/3071709">首頁好文：誰說便宜沒好貨！</a></li>
+                            <li><a href="http://www.wretch.cc/blog/ssag/34481210">首頁好文：日本人師傅坐鎮！</a></li>
+                        </ul>
+        </div>
+                <ul id="footer-ugc-compose">
+            <li class="bar-block bar-block-click blog-service"><em>網誌</em>
+                <ul class="dropdown">
+                    <li><a class="bar-link" href="http://tw.rd.yahoo.com/referurl/wretch/kk/u/PF/sc/blog/post/*http://www.wretch.cc/blog/post.php?blog_id=">Post Article</a></li>
+                    <li><a class="bar-link" href="http://tw.rd.yahoo.com/referurl/wretch/kk/u/PF/sc/blog/css/*http://www.wretch.cc/admin/style/?func=template_new&source=B">Blog Style</a></li>
+                    <li class="last"><a class="bar-link" href="http://tw.rd.yahoo.com/referurl/wretch/kk/u/PF/sc/blog/mgr/*http://www.wretch.cc/admin/blog/">Blog Setting</a></li>
+                </ul>
+            </li>
+            <li class="bar-block bar-block-click album-service"><em>相簿</em>
+                <ul class="dropdown">
+                    <li><a class="bar-link" href="http://tw.rd.yahoo.com/referurl/wretch/kk/u/PF/sc/album/upload/*http://www.wretch.cc/album/yuiuploader.php">Upload Photo</a></li>
+                    <li><a class="bar-link" href="http://tw.rd.yahoo.com/referurl/wretch/kk/u/PF/sc/album/css/*http://www.wretch.cc/admin/style/?func=template_new&source=A">Album Style</a></li>
+                    <li class="last"><a class="bar-link" href="http://tw.rd.yahoo.com/referurl/wretch/kk/u/PF/sc/album/mgr/*http://www.wretch.cc/admin/album/">Album Setting</a></li>
+                </ul>
+            </li>
+            <li class="bar-block bar-block-click video-service"><em>影音</em>
+                <ul class="dropdown">
+                    <li><a class="bar-link" href="http://tw.rd.yahoo.com/referurl/wretch/kk/u/PF/sc/video/upload/*http://www.wretch.cc/video/yuiuploader.php">Upload Video</a></li>
+                    <li><a class="bar-link" href="http://tw.rd.yahoo.com/referurl/wretch/kk/u/PF/sc/video/css/*http://www.wretch.cc/admin/style/?func=template_new&source=V">Video Style</a></li>
+                    <li class="last"><a class="bar-link" href="http://tw.rd.yahoo.com/referurl/wretch/kk/u/PF/sc/video/mgr/*http://www.wretch.cc/video/_manage/?func=set">Video Setting</a></li>
+                </ul>
+            </li>
+        </ul>
+    </div>
+</div>
+
+<div id="footer-switch" class=" ">
+<button>關閉工具列</button>
+</div>
+<script src="http://yui.yahooapis.com/3.4.0/build/yui/yui-min.js"></script>    <script src="http://l.yimg.com/e/serv/common/js/kukubar.js?20130903"></script>
+    <link rel="stylesheet" href="http://l.yimg.com/e/serv/common/css/promotion.css" type="text/css" />
+<script src="http://l.yimg.com/e/serv/common/js/promotion.js"></script></body>
+</html>
+<!-- w201.wretch.tp2.yahoo.com uncompressed/chunked Fri Dec 27 07:04:43 CST 2013 -->

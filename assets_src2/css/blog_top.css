@@ -1,0 +1,9 @@
+.trackback_a { cursor: hand; }
+.mapwidth { width: 100%; height: 400px; }
+.calendar2{ height:240px; }
+.history{zoom:1;}
+.history:after {content: "."; display:block; height:0 ; clear:both; visibility:hidden}
+.history_title{float:left;}
+.history_articles{float:left}
+.cmt_floor_hide{color: blue; margin-bottom: .5em; display:none}
+.cmt_floor{float:right;}

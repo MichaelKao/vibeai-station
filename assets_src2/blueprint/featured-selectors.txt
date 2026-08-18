@@ -1,0 +1,8 @@
+// #wfp-featured 內部結構
+#wfp-featured
+#wfp-featured .hd
+#wfp-featured .hd h2
+#wfp-featured .bd
+#wfp-featured li.best
+#wfp-featured li.best img
+#wfp-featured .ft

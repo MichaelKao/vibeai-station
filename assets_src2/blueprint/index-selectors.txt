@@ -1,0 +1,23 @@
+// 2012 首頁：要比對幾何的關鍵選擇器（來自 assets_src2/spec/index.md 第 2 節骨架）
+#wrapper
+#uh-wrapper
+#wfp-universal-header
+#wfp-navigation
+#push-down-ad
+.bd.big-bd
+.bd.big-bd .main
+.bd.big-bd .side
+#wfp-archive
+#wfp-cover
+#wfp-inner-search
+#wfp-featured
+#wfp-my
+#wfp-announcement
+#wfp-today
+.belt
+#wfp-hybrid
+#lower-wrapper
+#wfp-celebrity
+#wfp-blog-entry
+#wfp_top_daily_blogs
+#wfp-footer

@@ -1,0 +1,89 @@
+/*
+select.css
+*/
+
+.selectBox {
+  width: 200px;
+}
+.selectBox h3 {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  font-size: inherit;
+  font-size: 1em;
+  font-weight: normal;
+  *background: url('http://www.wretch.cc/icon/htcmi/other/script/javascript/select/selectItem.gif') repeat-y right top;
+  background-color: white;
+}
+.selectBox h3 a {
+  display: block;
+  width: 100%;
+  border: 1px solid #CCC;
+  border-right: 0 none transparent;
+  padding-left: 5px;
+  padding-top: 3px;
+  height: 17px;
+  overflow: hidden;
+  text-decoration: none !important;
+  color: #888 !important;
+  background: white url('http://www.wretch.cc/icon/htcmi/other/script/javascript/select/def.gif') no-repeat right top;
+  cursor: default;
+}
+.selectBox h3 a.t,
+.selectBox h3 a:hover {
+  background: white url('http://www.wretch.cc/icon/htcmi/other/script/javascript/select/hover.gif') no-repeat right top;
+}
+.selectBox ul {
+  width: 100%;
+  margin: 0;
+  padding: 3px 2px 3px 3px;
+  list-style-type: none;
+  position: absolute;
+  top: -1px;
+  left: 0px;
+  border: 1px solid #ccc;
+  border-top: 0 none transparent;
+  border-right: 0 none transparent;
+  background: white url('http://www.wretch.cc/icon/htcmi/other/script/javascript/select/selectItem.gif') repeat-y right top;
+}
+.selectBox ul li {
+  display: block;
+  margin: 0;
+  padding: 0;
+  padding-right: 3px;
+}
+.selectBox ul li a {
+  text-decoration: none;
+  color: #555 !important;
+  padding: 2px;
+  display: block;
+  *height: 1%;
+}
+.selectBox ul li a:hover {
+  background: #eee;
+}
+/*avoid hiding ad-friend*/
+html body div#ad_banner
+{clip:rect(auto, auto, auto, auto) !important;
+display:block !important;
+height:auto !important;
+width:auto !important;
+opacity:1 !important;
+filter: alpha(opacity=100) !important;
+position:static !important;
+visibility:visible !important;}
+html body div#ad_banner a,
+html body div#ad_banner a img,
+html body div#ad_banner iframe,
+html body div#ad_banner object,
+html body div#ad_banner object embed
+{clip:rect(auto, auto, auto, auto) !important;
+display:inline !important;
+height:90px !important;
+width:728px !important;
+opacity:1 !important;
+filter: alpha(opacity=100) !important;
+position:static !important;
+visibility:visible !important;}
+
+

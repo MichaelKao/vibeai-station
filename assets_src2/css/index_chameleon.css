@@ -1,0 +1,165 @@
+/*default*/
+html body #wrapper,
+html body #lower-wrapper {
+background-image:none;
+*filter: progid:DXImageTransform.Microsoft.AlphaImageLoader(src="http://l.yimg.com/e/serv/index/index3/img/bg_wrapper.png", sizingMethod="scale");
+*background:#FFFFFF url(../img/bg_wrapper.png) repeat-y center center !important;
+*zoom:1;
+}
+
+html body #bg-wrapper #wrapper #wfp-navigation {
+margin-bottom:0!important;
+background-image: none\9;
+}
+html body #bg-wrapper {
+padding-bottom:10px;
+}
+
+html body #bg-wrapper #nav-corner-ad {
+display:block;
+xwidth:220px;
+width:240px;
+xheight:44px;
+height:60px;
+position:absolute;
+bottom:0;
+right:0;
+z-index:998;
+}
+
+html body #bg-wrapper #featured-corner-ad {
+display:block;
+xwidth:180px;
+width:200px;
+height:56px;
+top:-6px;
+right:0;
+position:absolute;
+}
+html body #bg-wrapper #today-corner-ad {
+display:block;
+xwidth:110px;
+width:140px;
+height:45px;
+position:absolute;
+top:-6px;
+right:0;
+}
+
+html body #bg-wrapper #celebrity-corner-ad {
+display:block;
+xwidth:130px;
+width:140px;
+height:56px;
+position:absolute;
+top:-6px;
+right:0;
+}
+
+html body #bg-wrapper #wfp-blog-entry {
+position:relative;
+overflow:visible;
+}
+
+html body #bg-wrapper #blog-entry-corner-ad {
+margin-top:0;
+display:block;
+width:340px;
+xheight:42px;
+height:48px;
+position:absolute;
+top:-6px;
+right:0;
+}
+
+html body #bg-wrapper #wfp-footer {
+padding-top:300px;
+background-repeat:no-repeat;
+}
+
+html body #bg-wrapper #wfp-footer #wfp-lang {
+top:310px;
+}
+html body #bg-wrapper #wfp-footer ul.nav{
+margin-top:10px;
+}
+.belt {
+width:970px;
+margin:0 auto;
+}
+
+html body #bg-wrapper #push-down-ad {
+left:-2px;
+height:300px;
+text-align:left;
+}
+
+html body #bg-wrapper #wrapper #wfp-universal-header .hd, html body #bg-wrapper #wrapper #wfp-navigation,html body #bg-wrapper #wfp-featured .hd,html body #bg-wrapper #wfp-today .hd,html body #bg-wrapper #wfp-celebrity .hd {
+position:relative;
+}
+
+body {
+/*padding-bottom:20px;*/
+}
+
+html #wfp-hybrid {
+background:#333 url(../img/bg_hugc_gray.png) repeat-x left 70px !important;
+-webkit-box-shadow:0 2px 5px #000;
+-moz-box-shadow:0 2px 5px #000;
+-o-box-shadow:0 2px 5px #000;
+}
+html #wfp-hybrid .belt-line {
+background: -webkit-gradient(linear, 0% 0%, 0% 20%, from(#707070), to(#464646)) !important;
+background-image:-moz-linear-gradient(-90deg, #707070 1px, #464646 2px) !important;
+}
+
+html.no-cssgradients #wfp-hybrid.first .belt-line {
+background:#464646;
+}
+
+html body #bg-wrapper #lower-wrapper,html body #bg-wrapper #wrapper {
+-webkit-box-shadow:0 0 5px #000;
+-moz-box-shadow:0 0 5px #000;
+-o-box-shadow:0 0 5px #000;
+}
+#bg-wrapper {
+  background-repeat:no-repeat;
+  _background-repeat:no-repeat;
+  -moz-padding-bottom: 5px;
+}
+html body #bg-wrapper #wfp-universal-header{
+  background-repeat:no-repeat;
+}
+html body #bg-wrapper #uh-wrapper{
+  background-repeat:no-repeat !important;
+  zoom:1;	
+}
+#wfp-archive .hd{
+	width:130px;
+	padding-top:295px;
+	background-repeat:repeat;
+	background-position:right bottom;
+	top:-305px;
+	right:0px;
+	position:absolute;
+}
+#wfp-archive .hd div{
+	float:right;
+    position:relative;
+	clear:both;
+	background-image:none;
+}
+#wfp-archive .hd h3{
+	float:right;
+	background-color:transparent;
+}
+#wfp-archive .bd {
+	top:87px;
+	overflow:hidden;
+    background-repeat:repeat;
+    background-position:center top;
+	position:relative;
+}
+
+/*fix NP2*/
+#lower-wrapper .side{position:relative;}

@@ -1,0 +1,357 @@
+body {
+background:#36bddf url(http://l.yimg.com/e/style/12/1220/body.jpg) no-repeat center top;
+color:#389db7;
+text-align:center;
+}
+a {
+color:#f63c7e;
+text-decoration:none;
+}
+a:hover {
+color:#ed0e3e;
+text-decoration:underline;
+}
+
+#bigcontainer {
+overflow:hidden;
+}
+
+#container {
+position:relative;
+margin:auto;
+width:950px;
+}
+
+
+/* header */
+#header {
+}
+h1 {
+font-size:15px;
+font-weight:bold;
+padding:20px 20px 5px 0;
+}
+h1 a {
+color:#fff;
+}
+
+#description {
+margin:0 20px 20px 0;
+width:930px;
+color:#0e6d95;
+}
+
+
+/* content */
+#content {
+width:605px;
+padding:0 10px 0 20px;
+}
+
+#main {
+position:relative;
+background:url(http://l.yimg.com/e/style/12/1220/main.gif) no-repeat left top;
+padding:50px 0px 0px;
+width:950px;
+}
+
+
+/* main_tab */
+#main_tab {
+position:absolute;
+left:20px;
+top:0px;
+}
+#main_tab a , 
+#main_tab li.hover a , 
+.message
+{
+display:block;
+width:90px;
+overflow:hidden;
+float:left;
+text-align:center;
+padding:8px 0px 0px !important;
+padding:11px 0px 0px;
+height:28px !important;
+height:36px;
+margin:0 5px 0 0;
+}
+#main_tab a {
+background:url(http://l.yimg.com/f/i/tw/wretch/hgusetbook_001/btn1.gif) no-repeat center top;
+}
+#main_tab li.hover a {
+color:#36bddf;
+background:url(http://l.yimg.com/f/i/tw/wretch/hgusetbook_001/btn1.gif) no-repeat left top;
+}
+.message {
+background:url(http://l.yimg.com/f/i/tw/wretch/hgusetbook_001/btn1.gif) no-repeat right top;
+position:absolute;
+top:0;
+left:515px;
+padding:8px 0px 0px !important;
+color:#fff;
+}
+
+/* mainSection */
+#mainSection {
+}
+
+
+/* search */
+#search {
+}
+#search input , 
+#search select
+{
+height:23px;
+overflow:hidden;
+float:left;
+margin:0 5px 0 0;
+}
+#search form {
+padding:10px 0;
+}
+
+.page_control {
+position:relative;
+height:20px;
+width:605px;
+color:#36bddf;
+font-weight:bold;
+background:url(http://l.yimg.com/e/style/12/1220/page_control.gif) no-repeat center bottom;
+margin:0 0 10px 0;
+}
+.page_control a {
+font-weight:normal;
+}
+.page_control a:hover {
+}
+
+
+/* msg_body */
+.msg_body {
+position:relative;
+padding:0 0 10px;
+margin:5px 0 0;
+width:605px;
+}
+
+
+/* 留言內容*/
+.msg_content {
+position:relative;
+background:url(http://l.yimg.com/e/style/12/1220/msg_content.jpg) no-repeat left top;
+}
+.reply_content {
+position:relative;
+padding:10px 0 0;
+margin:0px 20px;
+border-top:1px dotted #36bddf;
+}
+.comments-reply-edit form {
+padding:5px 20px 5px !important;
+padding:0 0 5px;
+}
+
+.msg_img {
+position:absolute;
+left:20px;
+top:20px;
+}
+.msg_man {
+position:absolute;
+left:135px;
+top:15px;
+z-index:1;
+}
+.msg_title {
+position:absolute;
+left:135px;
+top:35px;
+}
+.msg_date{
+position:absolute;
+left:135px;
+top:55px;
+}
+.msg_word {
+position:relative;
+padding:100px 20px 10px;
+}
+.msg_ip {
+padding:0 20px;
+}
+.msg_info {
+padding:0 20px;
+}
+
+.msg_man span , 
+.msg_title span , 
+.msg_datespan
+{
+display:none;
+}
+
+.msg_word span , 
+.reply_word span
+{
+display:block;
+color:#666666;
+}
+.reply_word strong {
+}
+.reply_date {
+text-align:right;
+color:#88d5e8;
+}
+
+.msg_control {
+position:relative;
+padding:15px !important;
+padding:0;
+}
+.msg_control a {
+color:#FFFFFF;
+background:url(http://l.yimg.com/e/style/12/1220/msg_control.gif) no-repeat left top;
+margin:0px 5px 0px 0px;
+
+
+padding:3px 12px 2px !important;
+padding:5px 0px 0px;
+
+overflow:hidden;
+height:21px;
+width:70px;
+position:relative;
+}
+
+
+
+/* sidebar */
+#sidebar {
+margin:0px 0px 10px;
+float:left;
+}
+
+li#mine {
+background:url(http://l.yimg.com/e/style/12/1220/mine.gif) no-repeat left top;
+padding:0 0 15px;
+overflow:hidden;
+}
+
+
+/* namecard */
+html #namecard {
+border:none;
+background:none;
+color:#389db7;
+}
+#myService li a {
+background:none;
+border-bottom:1px dotted #36bddf;
+}
+#myService li a:hover {
+background:none;
+border-bottom:1px dotted #36bddf;
+}
+.myId {
+}
+#myName {
+
+}
+.myDesc {
+width:110px;
+overflow:hidden;
+}
+#myImg {
+margin:10px 0 0 10px;
+border:1px solid #9d9d9d;
+}
+#myInfo {
+margin-left:108px;
+margin-top:10px;
+width:133px;
+}
+#myService {
+width:40px;
+right:10px;
+top:5px;
+}
+.myNick {
+color:#f63c7e;
+}
+
+.box {
+padding:5px 0;
+margin:5px 0;
+border-top:1px dotted #36bddf;
+}
+
+li#friendlist {
+}
+#friendlist select {
+width:300px;
+}
+
+#stats {
+padding:15px 15px 60px;
+margin:0;
+border-top:none;
+background:url(http://l.yimg.com/e/style/12/1220/stats.gif) no-repeat left top;
+}
+
+
+/* msg_added */
+#msg_added {
+width:605px;
+position:relative;
+margin:0 0 10px 0;
+}
+#msg_added .msg_body {
+background:url(http://l.yimg.com/e/style/12/1220/msg_added.jpg) no-repeat left 5px;
+}
+
+#msg_added li {
+padding:3px 0;
+}
+#msg_added h2 {
+padding:15px 15px 0;
+font-weight:bold;
+}
+#msg_added form {
+padding:15px;
+}
+#msg_added span {
+float:left;
+clear:left;
+width:155px;
+}
+
+#msg_added .add_img {
+height:70px;
+margin:0px 0px 10px;
+}
+#msg_added .add_img img {
+width:60px;
+}
+
+#msg_added .add_title {
+position:absolute;
+left:90px;
+top:15px;
+}
+
+#msg_added table {
+float:left;
+clear:right;
+}
+
+#content_data {
+width:400px;}
+
+#footer {
+background:url(http://l.yimg.com/e/style/12/1220/main.gif) no-repeat right top;
+height:50px;
+width:100%;
+}

@@ -1,0 +1,30 @@
+.clearfix:after{content:".";display:block;height:0;clear:both;visibility:hidden}
+.clearfix{*zoom:1}
+html{overflow-x:hidden}
+body{text-align:center}
+#wrapper{margin: 0 auto; width: 970px; font-family: 微软雅黑, 微軟雅黑, verdana, helvetica, 'helvetica neue'}
+.hd{margin-top: 40px; padding: 10px; border: 1px solid #000; line-height: 46px; text-align: left;
+background: rgb(255,255,255); /* Old browsers */
+background: -moz-linear-gradient(top,  rgba(255,255,255,1) 1%, rgba(204,204,204,1) 100%); /* FF3.6+ */
+background: -webkit-gradient(linear, left top, left bottom, color-stop(1%,rgba(255,255,255,1)), color-stop(100%,rgba(204,204,204,1))); /* Chrome,Safari4+ */
+background: -webkit-linear-gradient(top,  rgba(255,255,255,1) 1%,rgba(204,204,204,1) 100%); /* Chrome10+,Safari5.1+ */
+background: -o-linear-gradient(top,  rgba(255,255,255,1) 1%,rgba(204,204,204,1) 100%); /* Opera 11.10+ */
+background: -ms-linear-gradient(top,  rgba(255,255,255,1) 1%,rgba(204,204,204,1) 100%); /* IE10+ */
+background: linear-gradient(to bottom,  rgba(255,255,255,1) 1%,rgba(204,204,204,1) 100%); /* W3C */
+filter: progid:DXImageTransform.Microsoft.gradient( startColorstr='#ffffff', endColorstr='#cccccc',GradientType=0 ); /* IE6-9 */
+}
+.bd{margin-top: 15px; padding: 10px; border: 1px solid #ccc; text-align: left; font-size: 16px; line-height: 20px;}
+
+.hd .ex-icon{display: inline-block; vertical-align: top; height: 86px; width:86px; line-height: 86px; text-align: center; border: 3px solid #8D3936; background-color: #C24F4A; font-size:80px; font-family: helvetica; font-weight: 800; color: #fff;}
+.hd h1{display: inline-block; margin-left: 10px; font-size: 40px;}
+
+.bd h2{font-size: 30px; line-height: 40px; margin-bottom: 20px;}
+.bd p{margin-bottom: 20px;}
+.bd .redirect{text-align: center; margin-bottom: 40px; font-size: 25px; line-height: 30px;}
+.bd .redirect a, .bd .redirect a:visited{text-decoration: none; color: #000;}
+.bd .button{text-align: center;}
+.bd .button a{display: inline-block; line-height: 60px; width: 500px; background-color:#EEECE0;
+-webkit-border-radius: 20px;
+-moz-border-radius: 20px;
+border-radius: 20px;}
+.bd .button a, .bd .button a:visited{text-decoration: none; color: #000;}

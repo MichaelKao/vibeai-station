@@ -1,0 +1,56 @@
+<%
+  /* 2012 版頁尾（assets_src2/spec/index.md 第 6.14、7.14 節）
+     文案逐字照抄，連結改指本站的頁。版權年份用 © 2012（最後版）。
+
+     這支同時收掉 #lower-wrapper 與 #bg-wrapper——
+     #lower-wrapper 由 views/index.ejs 開啟，.ft 是它的第二個子節點。 */
+  const w2fPad = n => String(n).padStart(2, '0');
+  const w2fNow = new Date();
+  const w2fToday = w2fNow.getFullYear() + '-' + w2fPad(w2fNow.getMonth() + 1) + '-' + w2fPad(w2fNow.getDate());
+%>
+  <div class="ft">
+
+    <div id="wfp-footer">
+      <div id="wfp-lang">
+        <ul>
+          <li class="on"><a class="zh-tw" href="/">中文</a></li>
+          <li><a class="en" href="/">English</a></li>
+        </ul>
+      </div>
+      <footer>
+        <nav>
+          <ul class="nav">
+            <li class="first"><a href="/help">新首頁介紹</a></li>
+            <li><a href="/help">服務條款</a></li>
+            <li><a href="/help">隱私權政策</a></li>
+            <li><a href="/blogs">新聞中心</a></li>
+            <li><a href="/help">聯絡我們</a></li>
+            <li><a href="/help">網路行銷</a></li>
+            <li><a href="/help">招賢納士</a></li>
+          </ul>
+        </nav>
+        <div id="rss-bar">
+          <div class="inner">
+            <h5>RSS:</h5>
+            <ul>
+              <li><a href="/">今日主題</a></li>
+              <li><a href="/albums">熱門相簿</a></li>
+              <li><a href="/blogs">熱門內容</a></li>
+              <li><a href="/rank">名家專欄</a></li>
+              <li class="last"><a href="/blogs">熱門文章</a></li>
+            </ul>
+          </div>
+        </div>
+        <p><span><a href="/help">著作權侵權</a></span>本站設有管理員並依台灣網站內容分級規定處理</p>
+        <p>雅虎資訊 版權所有 © 2012 Yahoo! Taiwan All Rights Reserved.</p>
+      </footer>
+      <input type="hidden" id="today-date" name="today-date" value="<%= w2fToday %>">
+      <input type="hidden" id="anchor" name="anchor" value="">
+    </div>
+
+  </div>
+</div><!-- /#lower-wrapper -->
+
+</div><!-- /#bg-wrapper -->
+</body>
+</html>

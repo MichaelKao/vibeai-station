@@ -1,0 +1,276 @@
+body {
+	background: url(http://l.yimg.com/e/style/14/1417/body.jpg);
+	color: #824038;
+	text-align: center;
+}
+a {
+	color: #ffffff;
+	text-decoration: none;
+}
+a:hover {text-decoration: underline;}
+#bigcontainer {overflow: hidden;}
+#container {
+	position: relative;
+	margin: auto;
+	width: 950px;
+}
+h1 {
+	font-size: 15px;
+	font-weight: bold;
+	padding: 20px 20px 5px 0px;
+}
+h1 a {color: #686a6d;}
+#description {
+	color: #ffffff;
+	margin: 0px 0px 10px;
+	width: 930px;
+	height: auto !important;
+	min-height: 20px;
+	max-height: 72px;
+	height: 72px;
+	overflow: hidden;
+}
+#content {
+	width:625px;
+	background: #dd867c;
+	padding: 0 0 0 15px;
+}
+#main {
+	position: relative;
+	background: url(http://l.yimg.com/e/style/14/1417/main.gif) no-repeat left 36px;
+	padding: 46px 0px 0px;
+	width: 950px;
+	overflow: hidden;
+}
+#main_tab {
+	position: absolute;
+	left: 20px;
+	top: 0px;
+}
+#main_tab a ,
+#main_tab li.hover a ,
+.message {
+	display: block;
+	width: 90px;
+	overflow: hidden;
+	float: left;
+	text-align: center;	
+	padding: 8px 0px 0px !important; /* FF */
+	padding: 11px 0px 0px; /* IE */
+	height: 28px !important; /* FF */
+	height: 36px; /* IE */	
+	margin: 0px 5px 0px 0px;
+}
+#main_tab a {
+	color:#f1f1f1;
+	background: url(http://l.yimg.com/e/style/14/1417/main_tab2.gif) no-repeat left top;
+}
+#main_tab li.hover a {
+	color: #824038;
+	background: url(http://l.yimg.com/e/style/14/1417/main_tab1.gif) no-repeat left top;
+}
+.message {
+	color: #d0d2d7;
+	background: url(http://l.yimg.com/e/style/14/1417/main_tab3.gif) no-repeat left top;
+	position: absolute;
+	top: 0px;
+	left: 515px;
+}
+#search input ,
+#search select {
+	height: 23px;
+	overflow: hidden;
+	float: left;
+	margin: 0px 5px 0px 0px;
+}
+#search form {padding: 10px 0px;}
+.page_control {
+	color: #824038;
+	font-weight: bold;
+	position: relative;
+	height: 20px; /* IE */
+	width: 612px; /* IE */
+}
+.page_control a {font-weight: normal;}
+.msg_body {
+	position: relative;
+	padding: 0px 0px 15px;
+	margin: 5px 0px 0px ;
+	width: 612px;
+}
+.msg_content {
+	position: relative;
+	background: url(http://l.yimg.com/e/style/14/1417/msg_content.jpg) no-repeat left top;
+	color: #9b635c;
+}
+.reply_content {
+	position: relative;
+	padding: 10px 0px 0px;
+	margin: 0px 10px;
+}
+.comments-reply-edit form {
+	padding: 5px 20px 5px !important; /* FF */
+	padding: 0px 0px 5px; /* IE */
+}
+.msg_img {
+	position: absolute;
+	left: 20px;
+	top: 20px;
+}
+.msg_man {
+	position: absolute;
+	left: 135px;
+	top: 20px;
+	z-index: 1; /* FF */
+}
+.msg_title {
+	position: absolute;
+	left: 135px;
+	top: 40px;
+}
+.msg_date{
+	position: absolute;
+	left: 135px;
+	top: 60px;
+}
+.msg_word {
+	position: relative;
+	padding: 105px 20px 10px; /* FF */
+	background: url(http://l.yimg.com/e/style/14/1417/hr.gif) no-repeat left bottom;
+}
+.msg_ip {padding: 0px 20px;}
+.msg_info {padding: 0px 20px;}
+.msg_man span ,
+.msg_title span ,
+.msg_date span {display:none;}
+.msg_word span ,
+.reply_word span {
+	display: block;
+	color: #70747f;
+}
+.msg_word  strong {color: #824038;}
+.reply_word strong {color: #606060;}
+.reply_date {
+	text-align: right;
+	color: #70747f;
+}
+.msg_control {
+	position: relative;
+	padding: 15px !important;
+	padding: 0px;
+}
+.msg_control a {
+	color: #ffffff;
+	background: url(http://l.yimg.com/e/style/14/1417/msg_control.gif) no-repeat left top;
+	margin: 0px 5px 0px 0px;	
+	padding: 2px 10px 2px !important; /* FF */
+	padding: 5px 0px 0px; /* IE */
+	overflow: hidden;
+	height: 21px;
+	width: 70px;
+	position: relative;
+}
+#sidebar {
+	margin: 0px 10px 10px 0px;
+	float: right;
+}
+li#mine {
+	background: url(http://l.yimg.com/e/style/14/1417/mine.gif) no-repeat left top;
+	padding: 0px 0px 15px;
+	overflow: hidden;
+	height: 170px;
+}
+html #namecard {
+	border: none;
+	background: none;
+}
+#myService li a {
+	background: url(http://l.yimg.com/e/style/14/1417/myService.gif) repeat-x left bottom;
+	border-style: none;
+	padding-bottom: 1px;
+}
+#myService li a:hover {
+	background: url(http://l.yimg.com/e/style/14/1417/myService.gif) repeat-x left bottom;
+	border-style: none;
+}
+#myName {bottom: 25px;}
+.myDesc {
+	width: 110px;
+	overflow: hidden;
+	color: #824038;
+}
+#myImg {
+	margin: 10px 0px 0px 10px;
+	border: 1px solid #d67a70;
+}
+#myInfo {
+	margin-left: 108px;
+	margin-top: 10px;
+	width: 133px;
+}
+#myService {
+	width: 40px;
+	right: 10px;
+	top: 5px;
+}
+.myNick {color: #ffffff;}
+.box {
+	padding: 5px 0px;
+	margin: 5px 0px;
+	background: url(http://l.yimg.com/e/style/14/1417/hr.gif) repeat-x left bottom;
+}
+#friendlist select {width: 300px;}
+#stats {
+	padding: 15px 15px 40px;
+	margin: 0px;
+	border-top: none;
+	background: url(http://l.yimg.com/e/style/14/1417/stats.gif) no-repeat right bottom;
+}
+#msg_added {
+	width: 612px; /* IE */
+	position: relative;
+	margin: 0px 0px 10px 0px;
+}
+#msg_added .msg_body {
+	color: #9b635c;
+	background: url(http://l.yimg.com/e/style/14/1417/msg_added.jpg) no-repeat left 5px;
+}
+#msg_added li {padding: 3px 0px;}
+#msg_added h2 {
+	padding: 15px 15px 0px;
+	font-weight: bold;
+	color: #dadada;
+}
+#msg_added form {padding: 15px;}
+#msg_added span {
+	float: left;
+	clear: left;
+	width: 120px;
+	text-align: right;
+	padding-bottom: 3px !important; /* FF */
+	margin-right: 10px;
+	background: url(http://l.yimg.com/e/style/14/1417/hr.gif) no-repeat left bottom;
+}
+#msg_added .add_img {
+	height: 70px;
+	margin: 0px 0px 20px;
+}
+#msg_added .add_img img {width: 60px;}
+#msg_added .add_title {
+	position: absolute;
+	left: 90px;
+	top: 15px;
+}
+#msg_added table {
+	float: left;
+	clear: right;
+}
+#content_data {
+	margin-top: 5px;
+	width: 400px;
+}
+#footer {
+	background: url(http://l.yimg.com/e/style/14/1417/footer.gif) no-repeat left top;
+	height: 50px;
+	width: 100%;
+}

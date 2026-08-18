@@ -1,0 +1,148 @@
+#photowall {padding-left:10px;}
+#photowall, .vip_only{display:inline-block;}
+.vip_only {position:relative;overflow:hidden; *display: inline; *zoom: 1;}
+.vip_only:hover {overflow:visible;cursor:pointer;}
+.vip_only .tooltip {
+  text-align:center!important;
+  position:absolute;
+  z-index:99999;
+  -webkit-transition:top 0.4s, opacity 0.4s;
+  top:50px;
+  left:0px;
+  width:120px!important;
+  font-size:12px!important;
+  color:#999!important;
+  opacity:0;
+  padding:5px;
+  background:#fff;
+  border-radius:5px;
+  box-shadow:0 0 10px #000;
+  -moz-box-shadow:0 0 10px #000;
+  -webkit-box-shadow:0 0 10px #000;
+  -o-box-shadow:0 0 10px #000;
+  -khtml-box-shadow:0 0 20px #000;
+  -ms-box-shadow:0 0 10px #000;
+}
+/* FIXME: http://bug.corp.yahoo.com/show_bug.cgi?id=5386301 */
+.vip_only .tooltip:before {
+  position: absolute;
+  left: 50px;
+  top: -20px;
+  width: 0;
+  height: 0;
+  overflow: hidden;
+  content: ".";
+  border-top: 10px solid transparent;
+  border-left: 10px solid transparent;
+  border-right: 10px solid transparent;
+  border-bottom: 10px solid #DDD;
+  display: none;
+  display: block\9;
+  z-index: 99999;
+}
+.vip_only:hover .tooltip {
+  top:25px;
+  left:0px;
+  opacity:1;
+  border: 1px solid #DDD\9; /* FIXME: http://bug.corp.yahoo.com/show_bug.cgi?id=5386301 */ 
+}
+.vip_only .tooltip:after {
+  position:absolute;
+  left:50px;
+  top:-16px;
+  top:-18px\9; /* FIXME: http://bug.corp.yahoo.com/show_bug.cgi?id=5386301 */
+  width:0;
+  height:0;
+  overflow:hidden;
+  content:".";
+  border-top:10px solid transparent;
+  border-left:10px solid transparent;
+  border-right:10px solid transparent;
+  border-bottom:10px solid #fff;
+  display:block;
+  z-index:99999;
+}
+#photowall a, .vip_only {
+  position:relative;
+}
+/* FIXME: http://bug.corp.yahoo.com/show_bug.cgi?id=5386301 */
+#photowall a div.overlay:before {
+  position: absolute;
+  left: 20px;
+  top: -20px;
+  width: 0;
+  height: 0;
+  overflow: hidden;
+  content: ".";
+  border-top: 10px solid transparent;
+  border-left: 10px solid transparent;
+  border-right: 10px solid transparent;
+  border-bottom: 10px solid #DDD;
+  display: none;
+  display: block\9;
+  z-index: 99999;
+}
+#photowall a div.overlay{
+  z-index:99999;
+  position:absolute;
+  -webkit-transition:top 0.4s, opacity 0.4s;
+  top:50px;
+  left:0px;
+  opacity:0;
+  padding:5px;
+  background:#fff;
+  border-radius:5px;
+  box-shadow:0 0 10px #000;
+  -moz-box-shadow:0 0 10px #000;
+  -webkit-box-shadow:0 0 10px #000;
+  -o-box-shadow:0 0 10px #000;
+  -khtml-box-shadow:0 0 20px #000;
+  -ms-box-shadow:0 0 10px #000;
+  border: 1px solid #DDD\9; /* FIXME: http://bug.corp.yahoo.com/show_bug.cgi?id=5386301 */ 
+}
+#photowall a div.overlay:after {
+  position:absolute;
+  left:20px;
+  top:-16px;
+  top:-18px\9; /* FIXME: http://bug.corp.yahoo.com/show_bug.cgi?id=5386301 */
+  width:0;
+  height:0;
+  overflow:hidden;
+  content:".";
+  border-top:10px solid transparent;
+  border-left:10px solid transparent;
+  border-right:10px solid transparent;
+  border-bottom:10px solid #fff;
+  display:block;
+  z-index:99999;
+}
+#photowall a div.overlay img{
+  width:50px;
+  border:none!important;
+}
+#photowall a {overflow:hidden;display:inline-block;}
+#photowall a:hover {overflow:visible;}
+#photowall a:hover div.overlay{
+  top:25px;
+  left:0px;
+  opacity:1;
+}
+
+/* *
+ * Bug Fixing goes here 
+ **/
+/* Ticket: 5392337 */ 
+#photowall .yui3-panel-focused {
+  outline: none;
+} 
+/* Ticket: 5430766 */
+#photowall .vip_only a {
+  color: #999!important;
+  font-weight: normal!important;
+  text-decoration: underline!important;
+}
+#photowall .vip_only a:hover {
+  color: #999!important;
+  left: 0!important;
+  top: 0!important;
+}

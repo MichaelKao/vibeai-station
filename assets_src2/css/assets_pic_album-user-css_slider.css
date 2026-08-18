@@ -1,0 +1,113 @@
+
+/*reset.css*/
+html{color:#fff;background:#000;}body,div,dl,dt,dd,ul,ol,li,h1,h2,h3,h4,h5,h6,pre,code,form,fieldset,legend,input,textarea,p,blockquote,th,td{margin:0;padding:0;}table{border-collapse:collapse;border-spacing:0;}fieldset,img{border:0;}address,caption,cite,code,dfn,em,strong,th,var{font-style:normal;font-weight:normal;}li{list-style:none;}caption,th{text-align:left;}h1,h2,h3,h4,h5,h6{font-size:100%;font-weight:normal;}q:before,q:after{content:'';}abbr,acronym {border:0;font-variant:normal;}sup {vertical-align:text-top;}sub {vertical-align:text-bottom;}input,textarea,select{font-family:inherit;font-size:inherit;font-weight:inherit;}legend{color:#000;}
+/*slider.css*/
+body{
+	font-family: arial,helvetica,clean,sans-serif;
+}
+#slidewrap{
+    height:1024px;
+    width: 1024px;
+    position: relative;
+    margin-left:auto;
+    margin-right:auto;
+}
+.slideElement{
+    height: 1024px;
+    width: 100%;
+    display: block;
+    background-position: center top;
+    background-repeat: no-repeat;
+    position: absolute;
+    top: 0;
+    left: 0;
+}
+#slideinfo{
+	height: 40px;
+	width: 100%;
+	background:#333 none repeat scroll 0%;
+  border-top:1px solid #a1a1a1;
+	overflow: hidden;
+	opacity:0;
+	filter:alpha(opacity=0);
+  position: fixed;
+	_position: absolute; 
+	left: 0;
+	bottom: 0;
+}
+#slideinfo{
+	font-size: 0.8em;
+	color: #eee;
+	padding-bottom: 10px;
+}
+#slideinfo h2{
+	color: #f7f7f7;
+	margin: 7px 15px 1px;
+	font-weight: bold;
+}
+#slideinfo #desc{
+	margin-left: 15px;
+	display: inline; /* for IE double margin bug*/
+	float: left;
+}
+#slideinfo #operation{
+  margin-right:10px;
+  margin-top: -10px;
+	float: right;
+}
+#slideinfo span, #slideinfo img{
+	vertical-align: middle;
+	padding: 2px 5px;
+	cursor: pointer;
+}
+#slideinfo #intervalControl{
+	margin-right: 10px;
+}
+#booktitle{
+  position:relative;
+  z-index:222222;
+  font-size: 1.5em;
+  background:url(http://pic.wretch.cc/serv/album/user/img/wretch_ch.gif) left top no-repeat;
+  height:35px;
+  text-indent: 140px;
+  padding-top: .18em;
+  color: #ababab;
+}
+
+#paused, #loading{
+  z-index: 100000;
+	position: absolute;
+	top:10px;
+	font-family: Georgia, serif;
+	font-size: 1.5em;
+	letter-spacing: 1px;
+	color: #e7e7e7;
+	padding: 10px 20px;
+}
+#paused{right:10px;visibility: hidden;}
+#pauseBtn{visibility: hidden}
+#pauseBtn, #resumeBtn{
+  padding: 25px 10px 0;
+  font-size:1.6em; 
+  background: url(http://pic.wretch.cc/serv/album/user/img/btn.gif) no-repeat scroll center;
+}
+#loading{left:45%;}
+#prev, #next{
+	background-color:transparent;
+  border:none;
+	color: #e7e7e7;
+	cursor: pointer;
+	font-size: 2em;
+	font-family: verdana, sans-serif;
+	position: absolute;
+	top: 40%;
+	width: 100px;
+	height: 200px;
+	visibility:hidden;
+}
+#next{
+	right: 0;
+}
+#prev{
+	left: 0;
+}

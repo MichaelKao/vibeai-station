@@ -1,0 +1,239 @@
+a{
+	color:#164d77;
+  color:#c30;
+	text-decoration:none;
+}
+a:hover{
+	color:#f50;
+	text-decoration:underline;
+}
+
+#header{
+	color:#fff;
+}
+
+.wrapper label {color:white;}
+/*.wrapper .hover{ color:#999;color:#935E12;}*/
+.wrapper .hover.click{ color:white;}
+
+
+#search_keyword{
+	color:#666;
+	font-family:verdana,arial,helvetica,clean,sans-serif;
+	
+}
+
+#Hot_Keyword {	color:#fce070;}
+#Hot_Keyword a{  color:white;}
+#Hot_Keyword a:hover{  text-decoration:underline;}
+
+
+
+/* upper column */
+
+
+
+
+/* left column */
+.left_column h4{
+	color:white;
+	background-color:#cccc00;
+	background:url(h4_bg.jpg) no-repeat right top #b9d116;
+}
+.left_column ul{
+	background-color:#e7e7e7;
+}
+
+.left_column a{ 
+	background:url(condition_static.jpg) no-repeat;
+	color:#775416;
+}
+.left_column a:hover,.left_column .current a{	
+	color:#000;
+	text-decoration:none;
+	background:url(condition_hover.jpg) no-repeat;
+}
+
+#category a{
+	background:url(category_static.gif) no-repeat left center;
+}
+#category a:hover,#category .current a{
+	background:url(category_hover.jpg) no-repeat left center;
+}
+
+#celebrity h4{
+	background-color:#0066cc;
+	background:url(cyan.jpg) no-repeat right top #0077d0;
+}
+#celebrity a{
+	color:#515151;
+	background:url(cyan_static.jpg) no-repeat left center;
+}
+#celebrity a:hover,#celebrity .current a{
+	background:url(cyan_hover.jpg) no-repeat left center;
+	color:black;
+}
+#region_album h4{
+	background-color:#0066cc;
+	background:url(cyan.jpg) no-repeat right top #0077d0;
+}
+#region_album a{
+	color:#515151;
+	background:url(cyan_static.jpg) no-repeat left center;
+}
+#region_album a:hover,#region_album  .current a{
+	background:url(cyan_hover.jpg) no-repeat left center;
+	color:black;
+}
+
+
+/* middle column */
+.innercontent{
+	/*background-color:#eeeeee;*/
+}
+.grid p{
+	
+}
+#column {
+  border:1px solid #999;
+  background-color:#eeeeee;
+}
+.nav h2{
+	color:#77e6ff;
+}
+.nav li.hover > h2{	
+  background:url(service_tab_current.png) no-repeat;
+}
+* html .nav li.hover h2{
+	filter:progid:DXImageTransform.Microsoft.AlphaImageLoader(src='http://l.yimg.com/e/serv/album/index/css/service_tab_current.png',sizingMethod='crop');
+}
+.nav li.hover h2{
+	color:#666;
+}
+.nav li > h2{
+  background:url(blue_tab_static.png) no-repeat;
+}
+* html .nav h2{
+	filter:progid:DXImageTransform.Microsoft.AlphaImageLoader(src='http://l.yimg.com/e/serv/album/index/css/blue_tab_static.png',sizingMethod='crop');
+}
+
+.column_ad a{
+	color:#a27151;
+  text-decoration:none;
+}
+.column_ad a:hover{
+  color:#900;
+  text-decoration:underline;
+}
+.moreinfo{
+	font-weight:bold;
+  padding-left:10px;
+	background:url(arrow.gif) no-repeat left center ;
+}
+.moreinfo a{
+	color:#683b30;
+}
+
+
+
+#album{
+	border:1px solid #ccc;
+	background:url(album_list.jpg) no-repeat center top;
+}
+* html #album{
+  background-position:center 1px;
+}
+.mode_list #album {
+	background:url(album_list_mode_list.jpg) no-repeat center 1px;
+}
+#album h3{
+	color:white;
+}
+.page_control{
+  text-align:center;
+  color:#999;
+}
+.page_control li{
+  line-height:1.6em;
+  color:black;
+}
+.page_control span{
+  border:none;
+  font-weight:bold;
+}
+.page_control a{
+  border:1px solid #eaeaea;
+  color:#e63;
+}
+.page_control li a:hover{
+	color:white;
+  background:#e63;
+}
+#time_slider {
+  color:#999;
+}
+#time_slider cite{
+	font-style:normal;
+  color:#f50;
+  color:black;
+  font-weight:bold; 
+}
+
+.album_list {
+	margin-bottom:1em;
+}
+.album_list li{
+	background:url(grid.jpg) no-repeat;
+}
+.album_list .image_link a:hover img{
+	border-color:#000;
+}
+.album_list .grid strong{
+
+}
+.album_list .grid a{
+	color:#c30;
+}
+.album_list .grid a:hover{
+	color:#dd3366;
+}
+.album_list .grid p{
+	color:#7A7A7A;
+}
+.album_list .grid span{
+	color:#565656;
+}
+.album_list .grid strong{
+	/*color:#436496;*/
+	
+}
+
+
+
+/* sidebar */
+#sidebar h3{
+	color:white;
+	background-color:#666666;
+	background-color:#535353;
+	background:url(sidebar.jpg) no-repeat left center;
+	font:normal 1.1em/2em verdana,arial,helvetica,clean,sans-serif;
+}
+
+
+
+#ad_stamp h4 a{
+	color:#0A54AF;
+}
+
+
+#new_css h3
+{
+  color:white;
+  background-color:#666666;
+  background-color:#535353;
+  background:url(h4_bg_green.jpg) no-repeat left center;
+  font:normal 1.1em/2em verdana,arial,helvetica,clean,sans-serif;
+  overflow: hidden;
+  padding-left: 15px;
+}
+

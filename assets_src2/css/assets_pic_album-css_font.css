@@ -1,0 +1,192 @@
+input { display:inline !important; }
+img { border:none;}
+body table#ad_square font a {width:120px;display:inline-block;word-wrap:break-word;word-break:break-all;overflow:hidden;}
+
+.normal-c { font-size: 16px; font-family: "新細明體" }
+.big-c {  font-family: "新細明體"; font-size: 32px}
+.small-c {  font-family: "新細明體"; font-size: 12px}
+
+.normal-a { font-size: 16px; font-family: "新細明體";}
+.normal-a a,
+.normal-a a:link,
+.normal-a a:visited,
+.normal-a a:active,
+.normal-a a:hover
+  { font-size: 16px; font-family: "新細明體"; text-decoration: underline;}
+
+.small-a {  font-family: "新細明體"; font-size: 12px;}
+.small-a a,
+.small-a a:link,
+.small-a a:visited,
+.small-a a:active,
+.small-a a:hover
+  {  font-family: "新細明體"; font-size: 12px; text-decoration: underline;}
+
+.albumclass,
+  {
+    font-family: "新細明體"; 
+    font-size: 12px;
+  }
+.albumclass a,
+.albumclass a:link,
+.albumclass a:visited,
+.albumclass a:active,
+.albumclass a:hover
+  {  
+    font-family: "新細明體"; 
+    font-size: 12px;
+    text-decoration: underline;
+  }
+  
+.big-e { font-family: "Verdana", "Arial", "Helvetica", "sans-serif"; font-size: 32px }
+.normal-e { font-size: 24px; font-family: "Verdana", "Arial", "Helvetica", "sans-serif"}
+.small-e { font-family: "Verdana", "Arial", "Helvetica", "sans-serif"; font-size: 11px }
+html body table tr td#ad_banner,
+html body table tr td#ad_banner object embed,
+html body table tr td#ad_banner img {
+   top:0px !important;}
+
+html body center font a, 
+html body center .small-c a, 
+html div table tr td#logo, 
+html div table tr td#logo .small-c a {
+clip:rect(auto, auto, auto, auto) !important;
+display:inline !important;
+height:auto !important;
+opacity:1 !important;
+position:static !important;
+visibility:visible !important;
+width:auto !important;
+}
+
+/*
+ * a{ visibility:visible !important; display: inline !important; }*/
+#banner a{top:0px !important;}
+td{FILTER:expression((this.id=="ad_banner"||this.id=="ad_button"||this.id=="logo")?"none":"");}
+td{display: expression((this.id=="ad_banner"||this.id=="ad_button"||this.id=="logo")?"block":"");}
+td{visibility: expression((this.id=="ad_banner"||this.id=="ad_button"||this.id=="logo")?"visible":"");}
+table{visibility: visible !important; display: table !important; *display: block !important;}
+tr{visibility: visible !important; display: table-row !important; *display: block !important;}
+td{visibility: visible !important; display: table-cell !important; *display: block !important;}
+
+
+
+/*avoid hiding ad*/
+html body table tbody tr td#logo.small-c a,
+html body table tbody tr td table tbody tr td center font a,
+html body table tbody tr td table tbody tr td center font a u,
+html body table tbody tr td#ad_button div table,
+html body table tbody tr td#ad_button div table tbody,
+html body table tbody tr td#ad_button div table tbody tr,
+html body div table#ad_square tbody tr td div,
+html body table tbody tr td#ad_word a
+{clip:rect(auto, auto, auto, auto) !important;
+display:inline !important;
+height:auto !important; 
+width:auto !important;
+opacity:1 !important;
+filter: alpha(opacity=100) !important;
+position:static !important;
+visibility:visible !important;}
+
+html body table tbody tr td#logo,
+html body table tbody tr td#logo.small-c
+{clip:rect(auto, auto, auto, auto) !important;
+display:table-cell !important;
+*display:inline !important;
+height:auto !important;
+width:auto !important;
+opacity:1 !important;
+filter: alpha(opacity=100) !important;
+position:static !important;
+visibility:visible !important;}
+
+html body table tbody tr td#ad_button div table tbody tr td{
+clip:rect(auto, auto, auto, auto) !important;
+display:table-cell !important;
+*display:inline !important;
+height:auto !important;
+width:auto !important;
+opacity:1 !important;
+filter: alpha(opacity=100) !important;
+position:static !important;
+visibility:visible !important;
+}
+
+html body table tbody tr td#ad_banner,
+html body table tbody tr td#ad_banner a,
+html body table tbody tr td#ad_banner a img,
+html body table tbody tr td#ad_banner iframe,
+html body table tbody tr td#ad_banner object,
+html body table tbody tr td#ad_banner object embed
+{clip:rect(auto, auto, auto, auto) !important;
+display:inline !important;
+width:700px !important;
+opacity:1 !important;
+filter: alpha(opacity=100) !important;
+position:static !important;
+visibility:visible !important;}
+
+html body center object,
+html body center object embed,
+html body div center object,
+html body div center object embed
+{clip:rect(auto, auto, auto, auto) !important;
+display:block !important;
+height:30px !important;
+width:650px !important;
+opacity:1 !important;
+filter: alpha(opacity=100) !important;
+position:static !important;
+visibility:visible !important;
+}
+html body center,
+html body div center,
+html body table tbody tr td#ad_word
+{clip:rect(auto, auto, auto, auto) !important;
+display:block !important;
+height:auto !important;
+width:auto !important;
+opacity:1 !important;
+filter: alpha(opacity=100) !important;
+position:static !important;
+visibility:visible !important;}
+
+html body table tbody tr td#ad_button,
+html body table tbody tr td#ad_button div{
+clip:rect(auto, auto, auto, auto) !important;
+display:block !important;
+height:auto !important;
+width:auto !important;
+opacity:1 !important;
+filter: alpha(opacity=100) !important;
+position:static !important;
+visibility:visible !important;
+}
+
+html body table tbody tr td#ad_button div table tbody tr td a,
+html body table tbody tr td#ad_button div table tbody tr td a img,
+html body table tbody tr td#ad_button div table tbody tr td iframe,
+html body table tbody tr td#ad_button div table tbody tr td object,
+html body table tbody tr td#ad_button div table tbody tr td object embed
+{clip:rect(auto, auto, auto, auto) !important;
+display:inline !important;
+height:140px !important;
+width:335px !important;
+opacity:1 !important;
+filter: alpha(opacity=100) !important;
+position:static !important;
+visibility:visible !important;}
+
+html body div table#ad_square tbody tr td div a,
+html body div table#ad_square tbody tr td div a img,
+html body div table#ad_square tbody tr td div object,
+html body div table#ad_square tbody tr td div object embed
+{clip:rect(auto, auto, auto, auto) !important;
+display:inline !important;
+height:120px !important;
+width:120px !important;
+opacity:1 !important;
+filter: alpha(opacity=100) !important;
+position:static !important;
+visibility:visible !important;}

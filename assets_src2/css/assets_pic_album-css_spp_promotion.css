@@ -1,0 +1,152 @@
+.hidden{
+    display:none;
+}
+.remind {
+    width:762px;
+}
+.remindvers {
+    width:696px; 
+    position:relative;    
+}
+.remindvers a {
+    text-decoration:none;
+}
+.remindvers a:hover {
+    text-decoration:underline;
+}
+.remindvers .hd {
+    background:url(../img/bg_promotion.png);
+    height:270px;
+}
+.remindvers .hd ul,
+.remindvers .ft ul {
+    margin:0;
+    padding:0;
+    letter-spacing:-4px;
+}
+.remindvers .hd li,
+.remindvers .hd li a,
+.remindvers .ft li ,
+.remindvers .ft li span,
+.remindvers .ft div {
+    display:inline-block;
+    zoom:1;
+    *display:inline;
+    vertical-align:top;
+}
+.remindvers .hd li {
+    text-align:left;
+}
+.remindvers .hd li a {
+    color:#fff;
+    padding:8px;
+    letter-spacing:0;
+}
+.remindvers .hd li a.attnow {
+    background:url(../img/btn_trynow.png) no-repeat;
+    font-size:123.1%;
+    font-weight:bold;
+    width:80px;
+    text-align:center;
+    margin:0 20px 0 112px;
+    _margin:0 20px 0 107px;
+}
+.remindvers .hd li a.attnow:hover {
+    background:url(../img/btn_trynow_hover.png) no-repeat;
+}
+.remindvers .hd li a.attlater {
+    background:url(../img/ico_breadcrumb.png) no-repeat 0 -139px;
+    padding-left:10px;
+    height:15px;
+}
+.remindvers .bd {
+    border-bottom:1px solid #e5e5e5;
+    padding-bottom:8px;
+    margin:20px 0 30px;
+    text-align:left;
+}
+.remindvers .ft  li {
+    width:160px;
+    letter-spacing:0;
+    text-align:left;
+}
+.remindvers .ft  li.lt {
+    padding:0 40px 0 25px;
+}
+.remindvers .ft  li.md {
+    border-left:2px solid #e5e5e5;
+    padding:0 40px;
+}
+.remindvers .ft  li.rt {
+    padding:0 25px 0 40px;
+    border-left:2px solid #e5e5e5;
+}
+.remindvers .ft div.rese {
+    width:80px;
+    height:80px;
+    background:#e5e5e5;
+}
+.remindvers .ft .lt .rese {
+    background:url(../img/icon_comments.png) no-repeat;
+    _filter: progid:DXImageTransform.Microsoft.AlphaImageLoader(src=http://pic.wretch.cc/e/serv/album/img/icon_comments.png); 
+    _ background:none;
+}
+.remindvers .ft .md .rese {
+    background:url(../img/icon_social.png) no-repeat;
+    _filter: progid:DXImageTransform.Microsoft.AlphaImageLoader(src=http://pic.wretch.cc/e/serv/album/img/icon_social.png); 
+    _ background:none;
+}
+.remindvers .ft .rt .rese {
+    background:url(../img/icon_interface.png) no-repeat;
+    _filter: progid:DXImageTransform.Microsoft.AlphaImageLoader(src=http://pic.wretch.cc/e/serv/album/img/icon_interface.png); 
+    _ background:none;
+}
+.remindvers .ft  li span {
+    margin-top:15px;
+}
+.remindvers .promimg {
+    width:319px;
+    height:257px;
+    margin:12px 0 0 12px;
+    background:url(../img/switch_popup.png) no-repeat;
+    _filter: progid:DXImageTransform.Microsoft.AlphaImageLoader(src=http://pic.wretch.cc/e/serv/album/img/switch_popup.png); 
+    _ background:none;
+}
+.remindvers .promtxt {
+    width:291px;
+    height:154px;
+    margin:34px 48px 32px 25px;
+    background:url(http://pic.wretch.cc/e/serv/album/img/ico_promtxt.png) no-repeat;
+    _filter: progid:DXImageTransform.Microsoft.AlphaImageLoader(src=http://pic.wretch.cc/e/serv/album/img/ico_promtxt.png); 
+    _ background:none;
+}
+.remindvers .promtitl {
+    width:252px;
+    height:14px;
+    background:url(http://pic.wretch.cc/e/serv/album/img/ico_promtitl.png) no-repeat;
+    _filter: progid:DXImageTransform.Microsoft.AlphaImageLoader(src=http://pic.wretch.cc/e/serv/album/img/ico_promtitl.png); 
+    _ background:none;
+}
+.remindvers .ft div.promcom,
+.remindvers .ft div.promsoc,
+.remindvers .ft div.promint {
+    width:58px;
+    height:33px;
+    margin:23px 0 23px 15px;
+}
+.remindvers .ft div.promcom {
+    background:url(http://pic.wretch.cc/e/serv/album/img/ico_commen.png) no-repeat;
+    _filter: progid:DXImageTransform.Microsoft.AlphaImageLoader(src=http://pic.wretch.cc/e/serv/album/img/ico_commen.png); 
+    _ background:none;
+}
+.remindvers .ft div.promsoc {
+    background:url(http://pic.wretch.cc/e/serv/album/img/ico_social.png) no-repeat;
+    _filter: progid:DXImageTransform.Microsoft.AlphaImageLoader(src=http://pic.wretch.cc/e/serv/album/img/ico_social.png); 
+    _ background: none;
+}
+.remindvers .ft div.promint {
+    background:url(http://pic.wretch.cc/e/serv/album/img/ico_interf.png) no-repeat;
+    _filter: progid:DXImageTransform.Microsoft.AlphaImageLoader(src=http://pic.wretch.cc/e/serv/album/img/ico_interf.png);
+    _ background:none;
+}
+

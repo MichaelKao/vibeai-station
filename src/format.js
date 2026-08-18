@@ -16,6 +16,32 @@ export const EMOTES = [
   ['<3','❤'], ['*_*','😍'], ['zzz','😴'], ['orz','🙇'],
 ];
 
+// 使用者自訂 CSS 的過濾（無名的靈魂功能，不能拿掉，但要真的擋得住）。
+//
+// 這段內容會被原樣塞進 <style>…</style>，所以只要能讓瀏覽器提早結束樣式區塊，
+// 就等於任意 HTML 注入。
+//
+// 原本寫成 css.replace(/<\/style/gi,'') 是**錯的**：單次取代可以被繞過——
+//   輸入 `<</style/style>alert`  →  取代掉中間那段之後，剩下的字元重新拼成 `</style>`
+// 正確做法是不要玩「移除危險字串」的貓捉老鼠，直接讓 `<` `>` 不可能出現：
+// 合法的 CSS 幾乎用不到角括號，全部拿掉不影響正常使用者。
+//
+// 另外擋掉幾個會讓 CSS 變成執行入口的老東西：
+//   expression()  舊 IE 可以在 CSS 裡跑 JS
+//   javascript: / vbscript: / data:text/html   url() 裡的可執行協定
+//   behavior: / -moz-binding                   把外部檔案綁成行為
+//   @import                                    可以再拉一份不受控的樣式進來
+export function safeCss(css, max = 20000){
+  return String(css ?? '')
+    .slice(0, max)
+    .replace(/[<>]/g, '')                                   // 不可能提早關掉 <style>
+    .replace(/expression\s*\(/gi, 'blocked(')
+    .replace(/(javascript|vbscript|livescript)\s*:/gi, 'blocked:')
+    .replace(/data\s*:\s*text\/html/gi, 'blocked:')
+    .replace(/(behavior|-moz-binding)\s*:/gi, 'blocked:')
+    .replace(/@\s*import/gi, '@blocked');
+}
+
 export function render(body){
   let h = esc(body);
 

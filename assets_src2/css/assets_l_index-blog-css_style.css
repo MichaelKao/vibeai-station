@@ -1,0 +1,30 @@
+
+html>body #hd #logo{background:url(../img/logo_newlogo.png) no-repeat left top}
+#header{background:url(../img/header.jpg) no-repeat left bottom;height:62px;position:relative;}
+
+#nav td{background:#05909B url(../img/nav.gif) repeat-x left bottom;}
+#nav td a{background:url(../img/gap.gif) no-repeat right center;}
+#nav td.on a{background:none;}
+#nav td.on{
+background:#E5F9DE url(../img/nav_s.gif) repeat-x left top;
+}
+#subnav{background:#EDFBE7 url(../img/subnav.gif) repeat-x left top}
+#subnav li a{background:url(../img/dotted.gif) no-repeat right center;}
+#focus .txt span{background:url(../img/highlight.gif) no-repeat left center;text-indent:-5000px;}
+#column ul li .hd{background:url(../img/block.gif) no-repeat 0px center;padding-left:1.2em}
+
+
+
+.md .hd h2,
+.tabmd h2{background:#a1a1a1 url(../img/h2.png) no-repeat left top;zoom:1}
+
+/*fame*/
+.itemgroup h3{background:url(../img/block.gif) no-repeat 0px center;padding-left:1.4em}
+.narrow ul.citem li{background:url(../img/css-sprites.gif) no-repeat 1px 1px;}
+/*cate*/
+ul.citem li .lc{background:url(../img/css-sprites.gif) no-repeat 0 -100px;}
+
+/*hot*/
+#hotcat{background:#edfbe8 url(../img/hot_cate.png) no-repeat right top}
+.sitem li{background:#e6e6e6 url(../img/grid_hot.gif) repeat-x left top;}
+#ft{background:#fff url(../img/wretch.gif) no-repeat 96% 6px;}

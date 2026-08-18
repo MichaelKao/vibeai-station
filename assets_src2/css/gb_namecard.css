@@ -1,0 +1,78 @@
+/*fix namecard 2008.07.10*/
+html #namecard{
+width:298px;
+border:1px solid #aaa;
+font-size:13px;
+line-height:1.2;
+font-family:Arial;
+color:#333;
+background:#ccc;
+}
+#myImg{
+display:inline;
+text-align:center;
+float:left;
+margin:17px 0 0 10px;
+border: 2px solid #fff;
+}
+
+#myImg a{
+  display: block;
+  text-align:center;
+  vertical-align: middle;
+  height: 90px;
+  width: 90px;
+
+}
+#myImg a *{
+  vertical-align: middle;
+}
+#myImg>a{display:table-cell}
+/*\*//*/
+#myImg a{
+    display: block;
+}
+#myImg span {
+    display: inline-block;
+    height: 100%;
+    width: 1px;
+}
+/**/
+#myImg span {
+    +display: inline-block;
+    +height: 100%;
+}
+#myService{
+float:left;
+width:65px;
+text-align:center;
+position:absolute;
+right:0px;
+top:1px;
+*top:0px;
+}
+#myService li a{
+display:block;
+height:18px;
+padding-top:2px;
+*height:21px;
+*padding-top:3px;
+text-decoration:none;
+border-bottom:1px solid #aaa;
+background:#e3e3e3;
+zoom:1
+}
+
+#myService li a:hover{
+background:#ccc;
+border-bottom:0;
+border-bottom:1px solid #fff
+}
+#myName{position:absolute;left:10px;bottom:8px}
+#myInfo{margin-left:108px;margin-top:15px;width:123px;}
+.myNick{font-weight:bold;line-height:1.5;width:123px;height:1.5em;overflow:hidden}
+.myDesc{width:123px;height:68px;line-height:1.3;overflow:hidden}
+#myName img{vertical-align:bottom;}
+.myDigu .digu{display:block;width:123px;height:68px;line-height:1.3;overflow:hidden}
+.myDigu .digu_date{position:absolute;bottom:30px;left:110px;filter:alpha(opacity=80);opacity:0.8;font-size:0.8em;width:123px;height:1.25em;overflow:hidden;}
+/*2008.0917-fixed*/

@@ -1,14 +1,57 @@
-<!DOCTYPE html><html lang="zh-Hant"><head><meta charset="utf-8">
-<title><%= title %> - vibeai 小站</title><link rel="icon" href="/favicon.ico">
+<%
+  /* 版面外框（WRETCH_DOM.md 第 1、2、3 節）
+     layout = 'site'  個人小站頁：700px 置中 table
+              'index' 首頁：760px 兩欄 table
+              'blog'  網誌頁：原始的 #container1 > #main2 浮動兩欄
+     主題：個人頁跟站主選的 users.theme，其餘照 nav 決定綠／橘／藍 */
+  /* 注意：不能寫成 const layout = typeof layout ... —— EJS 用 with(locals)，
+     同名 const 會讓右邊的 layout 落進 TDZ，每一頁都會 500。改讀 locals.layout。 */
+  const pageLayout = locals.layout || (u ? 'site' : 'index');
+  const theme  = THEME_FOR(nav, u);   // 站台頁綠／個人頁跟 users.theme，見 src/config.js
+%><!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<title><%= title %> - <%= u ? u.nick + ' 的小站' : SITE_NAME %></title>
+<link rel="icon" href="/favicon.ico">
 <link rel="stylesheet" href="/style.css">
-<% if (u && u.css) { %><style><%- u.css.replace(/<\/style/gi,'') %></style><% } %></head>
-<%# 相簿頁走橘色主題、網誌頁走藍色主題，個人小站頁固定 700px（同無名） %>
-<body class="<%= u?'personal':'' %> <%= (u&&u.theme) ? ('t-x-'+u.theme) : (nav==='album'?'t-album':(nav==='blog'?'t-blog':'')) %>">
-<div id="topbar"><a href="/">vibeai 小站</a><a href="/albums">相簿</a><a href="/blogs">網誌</a><a href="/rank">排行榜</a><a href="/search">搜尋</a><a href="/help">服務說明</a>
-<span style="float:right"><% if (me) { %>您好，<a href="/<%= me.name %>"><b><%= me.nick %></b></a>！<a href="/<%= me.name %>/settings">個人設定</a><% if (me.admin) { %><a href="/admin">後台</a><% } %><form method="post" action="/logout" style="display:inline"><button class="lnk">登出</button></form><% } else { %>您還沒登入喔　<a href="/login">會員登入</a><a href="/register"><b class="orange">免費註冊</b></a><% } %></span></div>
-<div id="wrap">
-<div id="header"><a id="logo" href="/"><img src="/img/logo.png" alt="vibeai" style="height:40px;vertical-align:middle;margin-right:6px">vibeai <b>小站</b><small>相簿・網誌・留言板</small></a></div>
-<div id="nav"><a href="/" class="<%= nav==='home'?'on':'' %>">首頁</a><% if (u) { %><a href="/<%= u.name %>" class="<%= nav==='user'?'on':'' %>">MyPage</a><a href="/<%= u.name %>/album" class="<%= nav==='album'?'on':'' %>">相簿</a><a href="/<%= u.name %>/blog" class="<%= nav==='blog'?'on':'' %>">網誌</a><a href="/<%= u.name %>/guestbook" class="<%= nav==='gb'?'on':'' %>">留言板</a><a href="/<%= u.name %>/card" class="<%= nav==='card'?'on':'' %>">名片</a><a href="/<%= u.name %>/friends" class="<%= nav==='friend'?'on':'' %>">好友</a><% } else { %><a href="/albums">相簿</a><a href="/blogs">網誌</a><a href="/rank">熱門排行</a><a href="/register">加入小站</a><% } %>
-<form id="search" action="/search"><input name="q" placeholder="找相簿 / 找文章 / 找朋友"> <input type="submit" value="搜尋" class="btn"></form></div>
-<% if (u) { %><div id="sitenav">[ <b><%= u.nick %></b> 的 <a href="/<%= u.name %>">MyPage</a> | <a href="/<%= u.name %>/album">相簿</a> | <a href="/<%= u.name %>/blog">網誌</a> | <a href="/<%= u.name %>/guestbook">留言板</a> | <a href="/<%= u.name %>/card">名片</a> | <a href="/<%= u.name %>/friends">好友</a> ]</div><% } %>
+<%# style.css 裡的底圖預設指向本機 /img/wretch/；正式站在這裡整組覆寫成 R2 位置 %>
+<%- CDN_VARS %>
+<%# 使用者自訂 CSS 一定放最後，才蓋得過主題——這是無名的靈魂功能 %>
+<% if (u && u.css) { %><style><%- safeCss(u.css) %></style><% } %>
+</head>
+<%# 無名預設關閉右鍵／拖曳／選取 %>
+<body class="<%= theme %> layout-<%= pageLayout %>" onDragStart="return false" onContextmenu="return false" onSelectStart="return false">
+
+<div id="Wretch-haha-spacer"></div>
+<div id="Wretch-haha">
+  <table align="right" cellpadding="0" cellspacing="0"><tr>
+    <td><a href="/"><%= SITE_NAME %></a></td>
+    <td>|</td>
+    <td><a href="/albums">相簿</a></td>
+    <td>|</td>
+    <td><a href="/blogs">網誌</a></td>
+    <td>|</td>
+    <td><a href="/rank">排行榜</a></td>
+    <td>|</td>
+    <td><a href="/help">服務說明</a></td>
+    <td>|</td>
+    <% if (me) { %>
+      <td><a href="/<%= me.name %>"><%= me.nick %></a></td>
+      <td>|</td>
+      <td><a href="/<%= me.name %>/settings">個人設定</a></td>
+      <td>|</td>
+      <% if (me.admin) { %><td><a href="/admin">後台</a></td><td>|</td><% } %>
+      <td><form method="post" action="/logout"><button class="lnk">登出</button></form></td>
+    <% } else { %>
+      <td>您還沒登入喔</td>
+      <td>|</td>
+      <td><a href="/login">會員登入</a></td>
+      <td>|</td>
+      <td><a href="/register">免費註冊</a></td>
+    <% } %>
+    <td>&nbsp;</td>
+  </tr></table>
+</div>
+
 <% if (flash) { %><div class="flash"><%= flash %></div><% } %>

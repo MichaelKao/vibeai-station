@@ -1,0 +1,5 @@
+#HiddenTrackback.hide-list{display:none;}
+.comments-head a{clear:both;overflow:hidden;zoom:1;display:block;}
+.comments-head a span{*float:left;}
+#trackback-switch{color:black;cursor:pointer;width:13px;height:13px;display:inline-block;background-image:url(../img/ico_trackback_expand.jpg);margin-left:5px;*display:block;*margin-top:5px;}
+#trackback-switch.hide{background-image:url(../img/ico_trackback_hide.jpg);}

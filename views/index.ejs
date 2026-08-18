@@ -1,100 +1,706 @@
-<%- include('partials/head',{title:'首頁',nav:'home'}) %>
-<div class="marquee">★ <% if(notices.length){ %><%= notices[0].body %><% } else { %>vibeai 小站開站囉！完全免費，歡迎申請帳號～<% } %>
-　目前共 <%= stats.users %> 位站友、<%= stats.photos %> 張照片、<%= stats.posts %> 篇網誌。</div>
+<%- include('partials/head2012', { title: '無名小站' }) %>
+<%
+  /* 無名小站 2012 最後版首頁（www.wretch.cc/）1:1 復刻
+     ─────────────────────────────────────────────────────────────
+     骨架、id、class 一字不差照 assets_src2/spec/index.md 第 2、6 節
+     與原始檔 assets_src2/html/index_20120610082113.html。
+     樣式全部吃 public/wretch2012.css（原站原始 CSS），這裡不寫任何新 CSS。
 
-<table id="main"><tr>
-<%# 左欄 505px（同 2005 無名首頁） %>
-<td class="main-col">
+     版面 1:1，內容接本站真實資料（WRETCH_2012.md 第 1-A 節）：
 
-<% if(featAlbums.length||featPosts.length){ %>
-<div class="box"><h3>vibeai 精選</h3><div class="in">
-<% if(featAlbums.length){ %><table class="grid3"><tr>
-<% featAlbums.forEach((a,i)=>{ %><% if(i>0 && i%3===0){ %></tr><tr><% } %>
-<td><a href="/<%= a.uname %>/album/<%= a.id %>"><img src="<%= a.cover %>" width="120" height="120" alt=""></a>
-<div class="cap3"><a href="/<%= a.uname %>"><%= a.nick %></a><br><a href="/<%= a.uname %>/album/<%= a.id %>"><%= a.title %></a></div></td>
-<% }) %></tr></table><% } %>
-<% if(featPosts.length){ %><ul class="list">
-<% featPosts.forEach(p=>{ %><li><a href="/<%= p.uname %>/blog/<%= p.id %>"><%= p.title %></a> <span class="gray">— <%= p.nick %></span></li><% }) %>
-</ul><% } %>
-</div></div>
-<% } %>
-<div class="box"><h3>熱門相簿 <span><a href="/albums">更多相簿..</a></span></h3><div class="in">
-<% if(!hotAlbums.length){ %><span class="gray">還沒有公開相簿，快來上傳第一張照片！</span><% } %>
-<table class="grid3"><tr>
-<% hotAlbums.slice(0,6).forEach((a,i)=>{ %>
-  <% if(i>0 && i%3===0){ %></tr><tr><% } %>
-  <td><a href="/<%= a.uname %>/album/<%= a.id %>"><img src="<%= a.cover %>" width="120" height="120" alt=""></a>
-  <div class="cap3"><a href="/<%= a.uname %>"><%= a.nick %></a><br>
-  <a href="/<%= a.uname %>/album/<%= a.id %>"><%= a.title %></a><br>
-  <span class="gray"><%= a.views %> 人次</span></div></td>
-<% }) %>
-</tr></table>
-</div></div>
+       #wfp-cover          今日主題      ← notices[0]
+       #wfp-inner-search   站內搜尋      → GET /search?q=
+       #wfp-featured       熱門相簿      ← hotAlbums + newPhotos
+       #wfp-my             我的          ← me
+       #wfp-announcement   公告          ← notices
+       #wfp-today          最新熱門活動  ← notices 第 2 則以後
+       #wfp-hybrid         熱門內容腰帶  ← featPosts + hotPosts
+       #wfp-celebrity      名家專欄      ← rank（分頁籤＝站內分類）
+       #wfp-blog-entry     官方部落格    → 站內分類連結
+       #wfp_top_daily_blogs 投稿精選     ← featPosts / newUsers
 
-<div class="box"><h3>熱門網誌 <span><a href="/blogs">更多網誌..</a></span></h3><div class="in">
-<% if(!hotPosts.length){ %><span class="gray">尚無文章</span><% } %>
-<% hotPosts.forEach(p=>{ %>
-<div class="hotblog">
-  <a href="/<%= p.uname %>/blog/<%= p.id %>"><img src="<%= p.pthumb || '/img/empty.png' %>" width="120" height="120" alt=""></a>
-  <div class="hb-text">
-    <a href="/<%= p.uname %>"><b><%= p.nick %></b></a><br>
-    <a href="/<%= p.uname %>/blog/<%= p.id %>" class="hb-title"><%= p.title %></a>
-    <div class="hb-sum"><%= p.body.length>90 ? p.body.slice(0,90)+'…' : p.body %>
-      <a href="/<%= p.uname %>/blog/<%= p.id %>">(繼續閱讀)</a></div>
-    <div class="hb-pt">得點: <%= p.views*10 + p.likes*50 %></div>
+     沒資料一律走空狀態，不塞原站的照片或文章。
+
+     原站有 JS 在跑（堆疊照片排序、分頁切換、日曆展開），復刻版沒有 JS，
+     所以把 JS 會加上的 class（first-block/second-block/third-block、
+     pagination 的 on、archive-relative）直接寫死在 HTML 裡，
+     靜態畫面才會跟原版一致。
+
+     注意：EJS 用 with(locals)，不能宣告和 local 同名的 const。
+     這裡的輔助變數一律加 w2 前綴避開。 */
+
+  /* 內文純文字化：拿掉 [img]…[/img] 整段，其餘 [tag] 只去標記，壓空白後截斷 */
+  const w2Cap = (s, n) => {
+    const t = String(s || '')
+      .replace(/\[img\][\s\S]*?\[\/img\]/gi, '')
+      .replace(/\[[^\[\]\n]{1,40}\]/g, '')
+      .replace(/\s+/g, ' ').trim();
+    return t.length > n ? t.slice(0, n) + '…' : t;
+  };
+  const w2Pic  = p => p.thumb || p.url;                    // 照片縮圖，沒有就用原圖
+  const w2Cover = p => p && p.pthumb ? p.pthumb : CDN + '/icon/user_cover.gif';
+  /* 某位站友能拿來當縮圖的圖：先找他公開的相簿封面，再找他的照片，
+     都沒有就用無名的「沒有封面」預設圖。首頁 route 沒有給每位站友的代表圖，
+     只能從已經拿到的 hotAlbums / newPhotos 裡挑。 */
+  const w2UserPic = uname => {
+    const a = (featAlbums.concat(hotAlbums)).find(x => x.uname === uname && x.cover);
+    if (a) return a.cover;
+    const p = newPhotos.find(x => x.uname === uname);
+    if (p) return w2Pic(p);
+    return CDN + '/icon/user_cover.gif';
+  };
+
+  /* 日期／日曆（#wfp-archive）：原站是 11 格，今天 selected，往前推 10 天 */
+  const w2Months = ['一月','二月','三月','四月','五月','六月','七月','八月','九月','十月','十一月','十二月'];
+  const w2Pad = n => String(n).padStart(2, '0');
+  const w2Now = new Date();
+  const w2Ymd = d => d.getFullYear() + '-' + w2Pad(d.getMonth() + 1) + '-' + w2Pad(d.getDate());
+  const w2Days = [];
+  for (let i = 0; i < 11; i++) {
+    const d = new Date(w2Now.getFullYear(), w2Now.getMonth(), w2Now.getDate() - i);
+    w2Days.push(d);
+  }
+
+  /* 站內分類（src/taxonomy.js 的 ALBUM_TOPICS / BLOG_TOPICS，首頁 route 沒有傳進來，
+     這裡取用到的前幾項；連結對得上 /albums?topic= 與 /blogs?topic=） */
+  const w2AlbumTopics = ['國內旅遊','國外旅遊','美食記錄','流行時尚',
+                         '圖像創作','專業攝影','心肝寵物','學園生活'];
+  const w2BlogTopics  = ['創作','旅遊','生活','運動','娛樂'];
+
+  /* 腰帶四個分頁＝四個網誌分類（原站是編輯部的四個企劃頻道） */
+  const w2Belt = [
+    { name:'創作', desc:'畫圖、寫字、手作，通通貼上來' },
+    { name:'旅遊', desc:'走走看看，記錄一路上的風景' },
+    { name:'生活', desc:'日常的小事最耐看' },
+    { name:'流行', desc:'穿搭、彩妝、最新話題' },
+  ];
+
+  const w2Notice0 = notices[0] || null;
+%>
+  <div class="bd big-bd clearfix archive-relative">
+    <div class="main">
+
+      <%# ④ 左側浮出的日期／日曆小工具（絕對定位在 #wrapper 左外側） %>
+      <div id="wfp-archive" class="collapse">
+        <div class="hd">
+          <h3><a href="/">今天</a></h3>
+          <div>
+            <p id="wfp-archive-today"><span class="month"><%= w2Months[w2Now.getMonth()] %></span><span class="day"><%= w2Pad(w2Now.getDate()) %></span></p>
+            <a id="wfp-archive-switcher" href="#"><span>展開/收合</span></a>
+          </div>
+        </div>
+        <div class="bd">
+          <a id="wfp-archive-forward" href="#">未來</a>
+          <ul id="wfp-archive-calendar">
+            <% w2Days.forEach((d, i) => { %>
+            <li class="date <%= i === 0 ? 'selected' : 'normal' %>">
+              <a href="/?date=<%= w2Ymd(d) %>"><%= w2Pad(d.getDate()) %></a>
+            </li>
+            <% }) %>
+          </ul>
+          <a id="wfp-archive-backward" href="#">過去</a>
+        </div>
+        <% w2Months.forEach(m => { %><input type="hidden" name="monthUnit" value="<%= m %>">
+        <% }) %><input type="hidden" name="todayTopic" value="今日主題">
+      </div>
+
+      <%# ⑤ 今日主題：站方公告當主題文案，堆疊照片用站上最新的照片 %>
+      <div id="wfp-cover" class="mod stack-layout bright bright-stack-layout">
+        <input type="hidden" id="cover-type" value="stack">
+        <input type="hidden" id="cover-sub-type" value="">
+        <input type="hidden" id="cover-auto" value="">
+        <div class="bd stack ">
+          <div class="title">
+            <article class="article">
+              <header class="header">
+                <span>今日主題</span>
+                <% if (w2Notice0) { %>
+                <h2 data-title="<%= w2Cap(w2Notice0.body, 24) %>"><a href="/help"><%= w2Cap(w2Notice0.body, 24) %></a></h2>
+                <% } else { %>
+                <h2 data-title="歡迎光臨"><a href="/help">歡迎光臨</a></h2>
+                <% } %>
+              </header>
+              <p>
+                <% if (w2Notice0) { %><%= w2Notice0.created.slice(0, 10) %><br><% } %>
+                <% if (notices.length > 1) { notices.slice(1, 4).forEach(n => { %><%= w2Cap(n.body, 16) %><br><% }) } %>
+                <% if (!w2Notice0) { %>站長還沒發佈公告<br>先四處逛逛吧<% } %>
+              </p>
+            </article>
+          </div>
+          <div class="gallery clearfix">
+            <% newPhotos.slice(0, 3).forEach((p, i) => {
+                 const w2BlockClass = ['first-block', 'second-block', 'third-block'][i];
+                 const w2Title = p.caption ? w2Cap(p.caption, 30) : p.atitle; %>
+            <div class="block <%= w2BlockClass %>" data-title="<%= w2Title %>">
+              <a title="<%= w2Title %>" href="/<%= p.uname %>/photo/<%= p.id %>">
+                <img src="<%= w2Pic(p) %>" width="418" height="274" alt="<%= w2Title %>">
+              </a>
+              <div class="inner-block">
+                <h3 class="inner-title"><a title="<%= w2Title %>" href="/<%= p.uname %>/photo/<%= p.id %>"><%= w2Title %></a></h3>
+                <p class="inner-caption"></p>
+              </div>
+            </div>
+            <% }) %>
+          </div>
+          <div class="pagination">
+            <ol>
+              <% newPhotos.slice(0, 3).forEach((p, i) => { %>
+              <li><span title="<%= p.caption ? w2Cap(p.caption, 30) : p.atitle %>" class="pagi<%= i === 0 ? ' on' : '' %>" target="<%= i + 1 %>"></span></li>
+              <% }) %>
+            </ol>
+          </div>
+        </div>
+      </div>
+
+      <%# ⑥ 站內深色搜尋條 → GET /search?q= %>
+      <div id="wfp-inner-search">
+        <form action="/search" method="GET">
+          <fieldset>
+            <legend class="title-hide">Wretch Search</legend>
+            <div class="search-type">
+              <span class="title-hide">目前搜尋類別：</span><span id="inner-search-type">文章搜尋</span>
+              <dl>
+                <dt>變更搜尋類別：</dt>
+                <dd>
+                  <ul>
+                    <li>
+                      <input type="radio" name="type" id="inner-search-article" value="article" checked="checked"><label for="inner-search-article">文章搜尋</label>
+                    </li>
+                    <li>
+                      <input type="radio" name="type" id="inner-search-photo" value="photo"><label for="inner-search-photo">相簿搜尋</label>
+                    </li>
+                    <li>
+                      <input type="radio" name="type" id="inner-search-video" value="video"><label for="inner-search-video">影音搜尋</label>
+                    </li>
+                  </ul>
+                </dd>
+              </dl>
+            </div>
+            <div class="search-input">
+              <label for="inner-search-input" class="title-hide">輸入搜尋字串：</label>
+              <span><input type="text" placeholder="搜尋無名小站文章" autocomplete="off" id="inner-search-input" name="q"></span>
+              <button value="搜尋" type="submit">搜尋</button>
+            </div>
+            <div class="suggestMenu">
+            </div>
+          </fieldset>
+        </form>
+        <input type="hidden" id="wfp-inner-search-article" value="搜尋無名小站文章">
+        <input type="hidden" id="wfp-inner-search-photo" value="搜尋無名小站相簿">
+        <input type="hidden" id="wfp-inner-search-video" value="搜尋無名小站影音">
+      </div>
+
+      <%# ⑦ 熱門相簿：1 大（人氣第一的相簿封面）+ 6 小（站上最新照片） %>
+      <div id="wfp-featured" class="mod">
+        <div class="hd">
+          <h2>熱門相簿</h2>
+          <div class="tab">
+            <ul class="skin-tab">
+              <li class="on first"><a href="/albums">人氣相簿</a></li>
+              <li class=""><a href="/albums?topic=<%= encodeURIComponent('女生個人') %>">站內分類</a></li>
+            </ul>
+          </div>
+        </div>
+        <div class="bd">
+          <div class="featured-photos" id="featured_selected">
+            <% if (!hotAlbums.length && !newPhotos.length) { %>
+            <p>還沒有公開相簿，快來上傳第一張照片！</p>
+            <% } %>
+            <ul class="clearfix">
+              <% if (hotAlbums.length) { const w2Best = hotAlbums[0]; %>
+              <li class="best">
+                <a href="/<%= w2Best.uname %>/album/<%= w2Best.id %>" title="<%= w2Best.title %>">
+                  <img src="<%= w2Best.cover %>" alt="<%= w2Best.title %>">
+                </a>
+                <span class="featured-medal">本日最熱門</span>
+                <div class="panel best-panel">
+                  <div class="panel-text">
+                    <h5 class="model-name">
+                      <a href="/<%= w2Best.uname %>" title="<%= w2Best.nick %>"><%= w2Best.nick %></a>
+                    </h5>
+                    <p><a href="/<%= w2Best.uname %>/album/<%= w2Best.id %>" title="<%= w2Best.title %>"><%= w2Best.title %></a></p>
+                  </div>
+                </div>
+              </li>
+              <% } %>
+              <% newPhotos.slice(0, 6).forEach(p => { const w2C = p.caption ? w2Cap(p.caption, 20) : p.atitle; %>
+              <li class="normal normal-six">
+                <a href="/<%= p.uname %>/photo/<%= p.id %>" title="<%= w2C %>">
+                  <img src="<%= w2Pic(p) %>" width="156" height="96" alt="<%= w2C %>">
+                </a>
+                <div class="panel normal-six">
+                  <div class="panel-text">
+                    <h5 class="model-name">
+                      <a href="/<%= p.uname %>" title="<%= p.uname %>"><%= p.uname %></a>
+                    </h5>
+                    <p><a href="/<%= p.uname %>/photo/<%= p.id %>" title="<%= w2C %>"><%= w2C %></a></p>
+                  </div>
+                </div>
+              </li>
+              <% }) %>
+            </ul>
+          </div>
+        </div>
+        <div class="ft">
+          <a id="featured-more" href="/albums" title="看更多熱門相簿">看更多熱門相簿</a>
+        </div>
+        <div id="featured-corner-ad"></div>
+      </div>
+
+    </div>
+    <div class="side">
+
+      <%# ⑧ 我的：未登入＝登入卡，已登入＝服務清單 %>
+      <div id="wfp-my">
+        <div class="wfp-my">
+          <% if (me) { %>
+          <div class="hd">
+            <p>你好<a href="/<%= me.name %>"><%= me.nick %></a></p>
+            <ul>
+              <li><a href="/<%= me.name %>/settings">個人設定</a></li>
+              <li class="logout"><form method="post" action="/logout" style="display:inline"><button type="submit" style="border:0;background:none;padding:0;font:inherit;color:#999;cursor:pointer">登出</button></form></li>
+            </ul>
+          </div>
+          <div class="bd">
+            <ul class="my-promotion">
+              <li><a class="skin-main-link-hover" href="/<%= me.name %>">我的家</a></li>
+            </ul>
+            <h3 class="block-title">個人服務</h3>
+            <div class="my-messages">
+              <ul>
+                <li class="join-vip"><a href="/<%= me.name %>/blog/new">發表文章</a></li>
+                <li class="join-in"><a href="/<%= me.name %>/album">我的相簿</a></li>
+              </ul>
+            </div>
+            <h3 class="block-title">個人設定</h3>
+          </div>
+          <div class="ft">
+            <h2>我的<i></i></h2>
+            <ul class="my-services ft-service4">
+              <li><a class="skin-main-link-hover" href="/<%= me.name %>/blog">網誌</a></li>
+              <li><a class="skin-main-link-hover" href="/<%= me.name %>/album">相簿</a></li>
+              <li><a class="skin-main-link-hover" href="/<%= me.name %>/guestbook">留言</a></li>
+              <li><a class="skin-main-link-hover" href="/<%= me.name %>/card">名片</a></li>
+              <li><a class="skin-main-link-hover" href="/<%= me.name %>/friend">好友</a></li>
+              <li><a class="skin-main-link-hover" href="/<%= me.name %>/feed">好友動態</a></li>
+              <li><a class="skin-main-link-hover" href="/<%= me.name %>/visitors">誰來我家</a></li>
+              <li><a class="skin-main-link-hover" href="/<%= me.name %>/settings">個人設定</a></li>
+              <li><a class="skin-main-link-hover" href="/rank">排行榜</a></li>
+            </ul>
+            <ul class="my-services ft-service8">
+              <li><a class="skin-main-link-hover" href="/<%= me.name %>/blog">網誌</a></li>
+              <li><a class="skin-main-link-hover" href="/<%= me.name %>/album">相簿</a></li>
+              <li><a class="skin-main-link-hover" href="/<%= me.name %>/guestbook">留言</a></li>
+              <li><a class="skin-main-link-hover" href="/<%= me.name %>/card">名片</a></li>
+              <li><a class="skin-main-link-hover" href="/<%= me.name %>/friend">好友</a></li>
+              <li><a class="skin-main-link-hover" href="/<%= me.name %>/feed">好友動態</a></li>
+              <li><a class="skin-main-link-hover" href="/<%= me.name %>/visitors">誰來我家</a></li>
+              <li><a class="skin-main-link-hover" href="/<%= me.name %>/settings">個人設定</a></li>
+              <li><a class="skin-main-link-hover" href="/rank">排行榜</a></li>
+            </ul>
+            <span>my</span>
+          </div>
+          <% } else { %>
+          <div class="hd">
+            <p>您還沒登入喔</p>
+          </div>
+          <div class="bd">
+            <ul class="my-promotion">
+              <li><a class="skin-main-link-hover" href="/login">會員登入</a></li>
+            </ul>
+            <h3 class="block-title">個人服務</h3>
+            <div class="my-messages">
+              <ul>
+                <li class="join-vip"><a href="/register">免費註冊</a></li>
+                <li class="join-in"><a href="/help">新手上路</a></li>
+              </ul>
+            </div>
+            <h3 class="block-title">個人設定</h3>
+          </div>
+          <div class="ft">
+            <h2>我的<i></i></h2>
+            <ul class="my-services ft-service4">
+              <li><a class="skin-main-link-hover" href="/blogs">網誌</a></li>
+              <li><a class="skin-main-link-hover" href="/albums">相簿</a></li>
+              <li><a class="skin-main-link-hover" href="/rank">排行榜</a></li>
+              <li><a class="skin-main-link-hover" href="/search">搜尋</a></li>
+              <li><a class="skin-main-link-hover" href="/help">服務說明</a></li>
+              <li><a class="skin-main-link-hover" href="/login">會員登入</a></li>
+              <li><a class="skin-main-link-hover" href="/register">免費註冊</a></li>
+            </ul>
+            <ul class="my-services ft-service8">
+              <li><a class="skin-main-link-hover" href="/blogs">網誌</a></li>
+              <li><a class="skin-main-link-hover" href="/albums">相簿</a></li>
+              <li><a class="skin-main-link-hover" href="/rank">排行榜</a></li>
+              <li><a class="skin-main-link-hover" href="/search">搜尋</a></li>
+              <li><a class="skin-main-link-hover" href="/help">服務說明</a></li>
+              <li><a class="skin-main-link-hover" href="/login">會員登入</a></li>
+              <li><a class="skin-main-link-hover" href="/register">免費註冊</a></li>
+            </ul>
+            <span>my</span>
+          </div>
+          <% } %>
+        </div>
+      </div>
+
+      <%# ⑨ 站方公告：原站的 3 張 85×60 小廣告位改放站上人氣相簿封面 %>
+      <div id="wfp-announcement">
+        <% const w2Ads = hotAlbums.slice(1, 4); %>
+        <%# 三張 85×60 剛好填滿 279px（85 + 97 + 97），p 之間不能有空白字元，
+            不然 inline-block 的字距會把第三張擠到第二行被 overflow 切掉 %>
+        <% if (w2Ads.length) { %>
+        <div class="annoad3"><% w2Ads.forEach((a, i) => { %><p class="<%= i === 0 ? 'firstad' : '' %>"><a href="/<%= a.uname %>/album/<%= a.id %>" title="<%= a.title %>"><img src="<%= a.cover %>" width="85" height="60" alt="<%= a.title %>"></a></p><% }) %></div>
+        <% } %>
+        <ul>
+          <% if (!notices.length) { %>
+          <li><a href="/help">[公告]目前沒有站方公告</a></li>
+          <% } %>
+          <% notices.slice(0, 3).forEach(n => { %>
+          <li><a href="/help"><%= w2Cap(n.body, 22) %></a></li>
+          <% }) %>
+        </ul>
+        <p><a href="/help">更多站方公告</a></p>
+      </div>
+
+      <%# ⑩ 最新熱門活動：站方公告第 2 則以後 %>
+      <div id="wfp-today" class="mod">
+        <div class="hd">
+          <header class="header">
+            <h2>最新熱門活動</h2>
+          </header>
+          <div id="today-corner-ad"></div>
+        </div>
+        <div class="bd">
+          <ol class="skin-order">
+            <% const w2Today = notices.slice(1, 4);
+               const w2TodayKind = ['activity', 'talk', 'vote last']; %>
+            <% if (!w2Today.length) { %>
+            <li class="clearfix activity last">
+              <article>
+                <header><h3 data-order="1"><span class="skin-side-title"><a href="/help">目前沒有進行中的活動</a></span></h3></header>
+                <div class="content">
+                  <p class="description"><a href="/help">站長發佈新的活動之後，就會出現在這裡。</a></p>
+                  <p class="more"><a href="/help">更多站方公告</a></p>
+                </div>
+              </article>
+            </li>
+            <% } %>
+            <% w2Today.forEach((n, i) => { const w2Th = newPhotos[i + 3] || newPhotos[i] || null; %>
+            <li class="clearfix <%= w2TodayKind[i] || 'activity' %>">
+              <article>
+                <header>
+                  <h3 data-order="<%= i + 1 %>">
+                    <span class="skin-side-title">
+                    <a href="/help"><%= w2Cap(n.body, 12) %></a>
+                    </span>
+                  </h3>
+                </header>
+                <% if (w2Th) { %>
+                <a class="thumbnail" href="/<%= w2Th.uname %>/photo/<%= w2Th.id %>"><img src="<%= w2Pic(w2Th) %>" width="100" height="75" alt=""></a>
+                <% } %>
+                <div class="content">
+                  <p class="description">
+                    <a href="/help"><%= w2Cap(n.body, 46) %></a>
+                  </p>
+                  <p class="more"><a href="/help">更多站方公告</a></p>
+                </div>
+              </article>
+            </li>
+            <% }) %>
+          </ol>
+        </div>
+      </div>
+
+    </div>
   </div>
-  <div class="clear"></div>
+</div><!-- /#wrapper -->
+
+<%# ⑪ 熱門內容腰帶：跨滿版的深色帶，是 #bg-wrapper 的兄弟節點 %>
+<div class="belt">
+
+  <div id="wfp-hybrid" class="mod second">
+    <div class="hd">
+      <div class="tabs">
+        <ul class="tabs-list clearfix">
+          <% w2Belt.forEach((t, i) => { const w2Bc = hotAlbums[i]; %>
+          <li class="tabs-cell <%= i === 1 ? 'on ' : '' %>" data-order="<%= i + 1 %>">
+            <div class="tabs-content">
+              <% if (w2Bc) { %><img src="<%= w2Bc.cover %>" alt="<%= t.name %>"><% } %>
+              <h4><%= t.name %></h4>
+              <span class="desc break"><%= t.desc %></span>
+            </div>
+          </li>
+          <% }) %>
+        </ul>
+      </div>
+    </div>
+    <div class="belt-line"></div>
+    <div class="bd clearfix">
+      <div class="main-content clearfix">
+        <% if (hotPosts.length) { const w2P0 = hotPosts[0]; %>
+        <div class="image-wrapper ugc-block">
+          <a href="/<%= w2P0.uname %>/blog/<%= w2P0.id %>" title="<%= w2P0.title %>" class="no-line">
+            <img alt="<%= w2P0.title %>" src="<%= w2Cover(w2P0) %>" width="217" height="217">
+          </a>
+        </div>
+        <div class="article-wrapper ugc-block">
+          <span>熱門網誌</span>
+          <div class="mix-article">
+            <h5>
+              <a href="/<%= w2P0.uname %>/blog/<%= w2P0.id %>" title="<%= w2P0.title %>">
+                <%= w2P0.title %>
+              </a>
+            </h5>
+            <p>
+              <%= w2Cap(w2P0.body, 70) %>
+            </p>
+          </div>
+          <div class="recommended-links">
+            <span>站長精選</span>
+            <ul>
+              <% (featPosts.length ? featPosts : hotPosts.slice(1)).slice(0, 3).forEach(p => { %>
+              <li>
+                <a href="/<%= p.uname %>/blog/<%= p.id %>" title="<%= p.title %>">
+                  <%= p.title %>
+                </a>
+              </li>
+              <% }) %>
+            </ul>
+          </div>
+        </div>
+        <% } else { %>
+        <div class="article-wrapper ugc-block">
+          <span>熱門網誌</span>
+          <div class="mix-article">
+            <h5><a href="/blogs">還沒有人發表文章</a></h5>
+            <p>站上的第一篇網誌，等你來寫。</p>
+          </div>
+        </div>
+        <% } %>
+      </div>
+      <a class="more-recommended main-more" title="更多" href="/blogs">更多</a>
+
+      <div class="sub-content clearfix">
+        <% const w2P1 = hotPosts[1], w2P2 = hotPosts[2], w2P3 = hotPosts[3]; %>
+        <div class="mix-wrapper ugc-block pic-text-2 clearfix">
+          <span>人氣文章</span>
+          <% if (w2P1) { %>
+          <div class="mix-item ugc-block clearfix">
+            <a href="/<%= w2P1.uname %>/blog/<%= w2P1.id %>" class="ugc-block image" title="<%= w2P1.title %>">
+              <img src="<%= w2Cover(w2P1) %>" width="207" height="155" class="mix-img" alt="<%= w2P1.title %>">
+            </a>
+            <div class="mix-article">
+              <h6>
+                <a href="/<%= w2P1.uname %>/blog/<%= w2P1.id %>" title="<%= w2P1.title %>">
+                  <%= w2P1.title %>
+                </a>
+              </h6>
+              <p>
+                <%= w2Cap(w2P1.body, 34) %>
+              </p>
+            </div>
+          </div>
+          <% } %>
+        </div>
+        <div class="mix-wrapper ugc-block pic-text-2 clearfix last normal">
+          <span>大家都在看</span>
+          <% if (w2P2) { %>
+          <div class="mix-item ugc-block clearfix">
+            <a href="/<%= w2P2.uname %>/blog/<%= w2P2.id %>" class="ugc-block" title="<%= w2P2.title %>"><img src="<%= w2Cover(w2P2) %>" width="207" height="155" class="mix-img image" alt="<%= w2P2.title %>"></a>
+            <div class="mix-article">
+              <h5>
+                <a href="/<%= w2P2.uname %>/blog/<%= w2P2.id %>" title="<%= w2P2.title %>">
+                  <%= w2P2.title %>
+                </a>
+              </h5>
+              <p>
+                <%= w2Cap(w2P2.body, 34) %>
+              </p>
+            </div>
+            <% if (w2P3) { %>
+            <div class="recommended-links">
+              <div class="mix-article">
+                <h6>
+                  <a href="/<%= w2P3.uname %>/blog/<%= w2P3.id %>" title="<%= w2P3.title %>">
+                    <%= w2P3.title %>
+                  </a>
+                </h6>
+                <p>
+                  <%= w2Cap(w2P3.body, 34) %>
+                </p>
+              </div>
+            </div>
+            <% } %>
+          </div>
+          <% } %>
+        </div>
+      </div>
+    </div>
+    <div class="hybrid-decoration-line"></div>
+  </div>
+
 </div>
-<% }) %>
-<div style="text-align:right"><a href="/blogs">更多網誌..</a></div>
-</div></div>
 
-<div class="box"><h3>最新照片</h3><div class="in">
-<% if(!newPhotos.length){ %><span class="gray">尚無照片</span><% } %>
-<% newPhotos.forEach(p=>{ %><div class="thumb"><a href="/<%= p.uname %>/photo/<%= p.id %>"><img src="<%= p.thumb||p.url %>" alt=""></a>
-<div class="cap"><span class="gray"><%= p.atitle %></span></div></div><% }) %>
-<div class="clear"></div></div></div>
+<div id="lower-wrapper" class="clearfix">
+  <div class="bd clearfix">
+    <div class="main">
 
-</td>
+      <%# ⑫ 名家專欄：人氣排行榜，分頁籤改成站內分類 %>
+      <div id="wfp-celebrity">
+        <div class="hd">
+          <header>
+            <h2>名家專欄</h2>
+          </header>
+          <div class="nav">
+            <ul class="skin-tab">
+              <% w2BlogTopics.forEach((t, i) => { %>
+              <li id="celebrity_<%= i %>" class="<%= i === 0 ? 'first on' : '' %>"><a href="/blogs?topic=<%= encodeURIComponent(t) %>"><%= t %></a></li>
+              <% }) %>
+            </ul>
+          </div>
+        </div>
+        <div class="bd">
+          <% if (!rank.length) { %><p>還沒有站友，快來申請第一個帳號！</p><% } %>
+          <ul>
+            <% rank.slice(0, 3).forEach((r, i) => { %>
+            <li class="<%= i === 0 ? 'first' : (i === 2 ? 'last' : '') %>">
+              <a href="/<%= r.name %>" class="thumbnail"><img src="<%= w2UserPic(r.name) %>" alt="<%= r.nick %>"></a>
+              <header>
+                <hgroup>
+                  <h4><a href="/<%= r.name %>"><%= r.nick %></a></h4>
+                  <h3><a class="skin-main-link" href="/<%= r.name %>"><%= r.name %> 的小站</a></h3>
+                </hgroup>
+              </header>
+              <% if (i === 0) { %>
+              <p>累積人氣 <%= r.visits %>，目前站上人氣第一名。到他的小站看看相簿與網誌吧。</p>
+              <% } %>
+            </li>
+            <% }) %>
+          </ul>
+        </div>
+        <div class="ft">
+          <p class="more"><a href="/rank">更多排行</a></p>
+        </div>
+        <div id="celebrity-corner-ad"></div>
+      </div>
 
-<%# 右欄 160px %>
-<td class="side">
-<% if (!me) { %>
-<div class="box"><h3>會員登入</h3><div class="in"><form method="post" action="/login"><table class="pf">
-<tr><td>帳號:</td><td><input name="name" size="10"></td></tr>
-<tr><td>密碼:</td><td><input name="pass" size="10" type="password"></td></tr>
-<tr><td colspan="2"><input type="submit" value="登入" class="btn"> <a href="#" onclick="alert('請聯絡站長重設密碼');return false;" style="font-size:11px">忘記密碼</a></td></tr>
-</table></form></div></div>
-<div class="box"><h3>一個帳號，多項功能</h3><div class="in">
-<ul class="list"><li>個人相簿</li><li>個人網誌 (BLOG,部落格)</li><li>個人留言板</li><li>名片與好友</li></ul>
-<div style="text-align:center;margin-top:4px"><a href="/register"><b class="orange">» 免費申請帳號 «</b></a></div></div></div>
-<% } else { %>
-<div class="box"><h3>我的小站</h3><div class="in"><ul class="list">
-<li><a href="/<%= me.name %>">回我的家</a></li>
-<li><a href="/<%= me.name %>/album">我的相簿</a></li>
-<li><a href="/<%= me.name %>/blog/new">發表網誌</a></li>
-<li><a href="/<%= me.name %>/guestbook">我的留言板</a></li>
-<li><a href="/<%= me.name %>/card">我的名片</a></li>
-<li><a href="/<%= me.name %>/feed">好友動態</a></li>
-</ul></div></div>
-<% } %>
+      <%# ⑬ 官方部落格位置改放站內分類連結 %>
+      <div id="wfp-blog-entry" class="clearfix mod">
+        <h2>站內分類</h2>
+        <nav class="blog-navigation">
+          <%# 原站一列 5 個（辦公室／愛正妹…都是 3 個字），
+              本站的分類是 4 個字，一列排 4 個才不會在 296px 裡折行 %>
+          <div class="emphatic">
+            <ul class="first">
+              <% w2AlbumTopics.slice(0, 4).forEach(t => { %>
+              <li><a class="skin-main-link" href="/albums?topic=<%= encodeURIComponent(t) %>"><%= t %></a></li>
+              <% }) %>
+            </ul>
+            <ul>
+              <% w2AlbumTopics.slice(4, 8).forEach(t => { %>
+              <li><a class="skin-main-link" href="/albums?topic=<%= encodeURIComponent(t) %>"><%= t %></a></li>
+              <% }) %>
+            </ul>
+          </div>
+          <div class="normal">
+            <ul class="first">
+              <% w2BlogTopics.slice(0, 2).forEach(t => { %>
+              <li><a href="/blogs?topic=<%= encodeURIComponent(t) %>"><%= t %></a></li>
+              <% }) %>
+            </ul>
+            <ul>
+              <% w2BlogTopics.slice(2, 5).forEach(t => { %>
+              <li><a href="/blogs?topic=<%= encodeURIComponent(t) %>"><%= t %></a></li>
+              <% }) %>
+            </ul>
+          </div>
+        </nav>
+        <div id="blog-entry-corner-ad"></div>
+      </div>
 
-<div class="box"><h3>人氣排行 <span><a href="/rank">完整</a></span></h3><div class="in"><ol class="hot">
-<% rank.forEach((r,i)=>{ %><li><i><%= i+1 %></i><a href="/<%= r.name %>"><%= r.nick %></a> <span class="gray"><%= r.visits %></span></li><% }) %>
-<% if(!rank.length){ %><li class="gray">尚無資料</li><% } %>
-</ol></div></div>
+    </div>
+    <div class="side">
 
-<div class="box"><h3>新加入站友</h3><div class="in">
-<% newUsers.forEach(x=>{ %><a href="/<%= x.name %>"><%= x.nick %></a>　<% }) %>
-<% if(!newUsers.length){ %><span class="gray">尚無站友</span><% } %></div></div>
+      <%# ⑭ 投稿精選：推薦＝站長精選網誌，隨機＝新加入的站友 %>
+      <div id="wfp_top_daily_blogs" class="mod">
+        <div class="hd">
+          <header class="header">
+            <h2>投稿精選</h2>
+          </header>
+          <ul class="nav skin-tab">
+            <li class="top_daily_blogs-recommend on">
+              <a href="/blogs">推薦</a>
+            </li>
+            <li class="top_daily_blogs-random">
+              <a href="/rank">隨機</a>
+            </li>
+          </ul>
+        </div>
+        <div class="bd top_daily_blogs-recommend">
+          <ol id="top_daily_blogs-recommend" class="top_daily_blogs-recommend skin-order">
+            <% if (!featPosts.length) { %>
+            <li>
+              <article class="article">
+                <header class="header">
+                  <h3 data-order="1"><a class="skin-side-title" href="/blogs">站長還沒挑選精選文章</a></h3>
+                </header>
+                <div class="content">
+                  <p class="description">被站長選中的文章會出現在這裡。</p>
+                </div>
+              </article>
+            </li>
+            <% } %>
+            <% featPosts.slice(0, 2).forEach((p, i) => { %>
+            <li class="<%= i === 1 ? 'last' : '' %>">
+              <article class="article">
+                <header class="header">
+                  <h3 data-order="<%= i + 1 %>">
+                  <a class="skin-side-title" href="/<%= p.uname %>/blog/<%= p.id %>"><%= p.title %></a>
+                  </h3>
+                </header>
+                <a class="thumbnail" href="/<%= p.uname %>/blog/<%= p.id %>"><img src="<%= w2UserPic(p.uname) %>" width="80" height="80" alt=""></a>
+                <div class="content">
+                  <a href="/<%= p.uname %>/blog/<%= p.id %>">
+                  <p class="description"><%= w2Cap(p.body, 52) %></p>
+                  </a>
+                </div>
+              </article>
+            </li>
+            <% }) %>
+          </ol>
+          <ol id="top_daily_blogs-random" class="top_daily_blogs-random skin-order">
+            <% newUsers.slice(0, 2).forEach((x, i) => { %>
+            <li class="<%= i === 1 ? 'last' : '' %>">
+              <article class="article">
+                <header class="header">
+                  <h3 data-order="<%= i + 1 %>">
+                  <a class="skin-side-title" href="/<%= x.name %>"><%= x.nick %></a>
+                  </h3>
+                </header>
+                <a class="thumbnail" href="/<%= x.name %>"><img src="<%= w2UserPic(x.name) %>" width="80" height="80" alt=""></a>
+                <div class="content">
+                  <a href="/<%= x.name %>">
+                  <p class="description">新加入的站友 <%= x.name %>，去他的小站打聲招呼吧。</p>
+                  </a>
+                </div>
+              </article>
+            </li>
+            <% }) %>
+          </ol>
+        </div>
 
-<div class="box"><h3>站方公告</h3><div class="in gray">
-<% if(!notices.length){ %>（無）<% } %>
-<% notices.forEach(n=>{ %><div><%= n.created.slice(0,10) %><br><%= n.body %></div><% }) %></div></div>
+        <div class="ft top_daily_blogs-recommend">
+          <p class="more top_daily_blogs-recommend">
+            <a href="/blogs">
+            更多推薦</a>
+          </p>
+          <p class="more top_daily_blogs-random">
+            <a href="/rank">
+            更多推薦</a>
+          </p>
+        </div>
+      </div>
 
-<div class="box"><h3>vibeai 小站</h3><div class="in"><ul class="list">
-<li><a href="/help">服務說明</a></li><li><a href="/albums">相簿總站</a></li>
-<li><a href="/blogs">網誌總站</a></li><li><a href="/rank">排行榜</a></li>
-</ul></div></div>
-</td></tr></table>
-<%- include('partials/foot') %>
+    </div>
+  </div>
+<%- include('partials/foot2012') %>

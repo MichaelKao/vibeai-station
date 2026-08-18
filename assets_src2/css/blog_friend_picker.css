@@ -1,0 +1,32 @@
+#collection_comments{position:absolute; top:0; border:5px solid #DFE8F6; background-color:#fff; padding:1em; z-index:500;color:#444}
+
+#collection_comments .icon{position:absolute; top:5px; right:5px; cursor:pointer}
+
+#friend-picker{font-size:11px; font-family:arial, sans-serif; color:#666; width:405px; position:relative; background:#fff;  border:1px solid #DFE8F6; position:absolute;top:0;z-index:100;visibility:hidden}
+#friend-picker-container{border:5px solid #DFE8F6; *zoom:1}
+#friend-picker a{color:#1A84B7; text-decoration:none}
+#friend-picker img{border:none}
+#friend-picker-bd{padding-left:7px}
+#friend-picker-bd:after, #friend-picker-pagination:after{content:"."; display:block; height:0; clear:both; visibility:hidden}
+.friend-picker-cell{border:2px solid #fff; margin: 0 3px 7px 0; float:left; width:70px;height:80px;  text-align:center; overflow:hidden; cursor:pointer}
+#friend-picker #friend-picker-bd div.friend-picker-cell:hover{border:2px solid #B0CCEF; -moz-border-radius:5px; -webkit-border-radius:5px; border-raidus:5px}
+*html #friend-picker #friend-picker-bd .on{border:2px solid #67A7E3}
+.friend-picker-cell p{margin:5px auto 0; width:60px; height:60px}
+#label{ cursor:pointer; display: table-cell; text-align:center; vertical-align: middle; height: 60px; width: 60px; }
+#label *{ vertical-align: middle; }
+/*\*//*/
+#label { display: block; }
+#label span { display: inline-block; height: 100%; width: 1px; }
+#/**/
+#label span { +display: inline-block; +height: 100%; }
+#friend-picker #friend-picker-pagination {text-align:center; margin:7px 0pt 7px -9px; clear:both; font-size:13px}
+#friend-picker #friend-picker-pagination a{ background-color:#FFFFFF; border:1px solid #CCCCCC; margin-right:4px; outline-color:invert; outline-style:none; outline-width:medium; padding:2px 7px; text-align:center; cursor:pointer}
+
+#friend-picker #friend-picker-pagination a.more{border:none}
+#friend-picker #friend-picker-pagination a.on{ background-color:#fff; border-color:#fff}
+#friend-picker #friend-picker-closebtn{ text-decoration:none; cursor:pointer; position:absolute; top:5px; right:5px}
+#loading{position:absolute; top:4px; right:25px; display:none}
+#friend-picker #friend-picker-hd{ background-color:#F8FBFC; height:18px}
+#friend-picker #friend-picker-hd{ text-indent:7px}
+#friend-picker #friend-picker-hd .on{background-color:#666 !important; color:#efefef !important}
+

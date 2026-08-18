@@ -1,0 +1,42 @@
+.adPanel,
+.mod_ad {
+    width:425px;
+    height:300px;
+}
+.mod_ad {
+}
+.mod_ad {
+    position:relative;
+    display:none;
+}
+.adPanel .mod_ad {
+    display:block;
+    overflow:visible;
+}
+.mod_ad a.close {
+    display:block;
+    color:#fff;
+    position:absolute;
+    top:-27px;
+    right:0;
+    padding:4px 5px 4px 20px;
+    margin-bottom:2px;
+    background:#000 url("../img/ico_monad.png") no-repeat 5px center;
+    -moz-border-radius-topleft:2px;
+    -moz-border-radius-topright:2px;
+    -webkit-border-top-left-radius:2px;
+    -webkit-border-top-right-radius:2px;
+    border-top-left-radius:2px;
+    border-top-right-radius:2px;
+}
+.mod_ad  a.close:hover {
+    background-color:#808080;
+    text-decoration:none;
+}
+.yui3-panel .adPanel .confirm {
+    padding:0;
+    border:none;
+}
+.single_photo .mod_ad a.close {
+	_top:-47px;
+}

@@ -1,0 +1,80 @@
+html		{SCROLLBAR-FACE-COLOR: #ffbbbb; SCROLLBAR-HIGHLIGHT-COLOR: #ffbbbb; SCROLLBAR-SHADOW-COLOR: #ffbbbb;
+		SCROLLBAR-3DLIGHT-COLOR: #854300; SCROLLBAR-ARROW-COLOR:#FFD196; SCROLLBAR-TRACK-COLOR: #ffbbbb;
+		SCROLLBAR-DARKSHADOW-COLOR:#854300;}
+BODY		{BACKGROUND: url(img/bga_01.gif?1) #a1d344 50% 0%; font: 12px Arial; MARGIN: 0px; COLOR: #314b01;}
+A		{COLOR: #774004; TEXT-DECORATION: none;}
+A:hover		{TEXT-DECORATION: underline}
+TD		{font: 12px Arial; COLOR: #894500;}
+IMG		{border: 0px;}
+.description	{FONT-WEIGHT: bold; FONT-SIZE: 12px; COLOR: #ffffff}
+#content	{BACKGROUND: #ffd196; FLOAT: left; MARGIN-BOTTOM: 20px; PADDING-BOTTOM: 15px;
+		BORDER-LEFT: #ffffff 5px solid; WIDTH: 69.5%; PADDING-TOP: 15px;
+		BORDER-BOTTOM: #ffffff 5px solid; POSITION: relative; TEXT-ALIGN: center}
+.album_title,
+.album_title A,
+.album_title A:link,
+.album_title A:visited,
+.album_title A:active,
+.album_title A:hover
+		{FONT-WEIGHT: bolder; FONT-SIZE: 12px; 
+		BACKGROUND: url(img/album_title.gif?1) no-repeat 50% 0%; WIDTH: 320px; COLOR: #ffffff;
+		PADDING-TOP: 19px; FONT-FAMILY: Arial; LETTER-SPACING: 3px; HEIGHT: 40px; TEXT-ALIGN: center}
+
+.blog_title,
+.blog_title A,
+.blog_title A:link,
+.blog_title A:visited,
+.blog_title A:active,
+.blog_title A:hover
+		{FONT-WEIGHT: bolder; FONT-SIZE: 12px;
+		BACKGROUND: url(img/blog_title.gif?1) no-repeat 50% 0%; WIDTH: 320px; COLOR: #ffffff;
+		PADDING-TOP: 19px; FONT-FAMILY: Arial; LETTER-SPACING: 3px; HEIGHT: 40px; TEXT-ALIGN: center}
+.user_grid	{BACKGROUND: url(img/user_grid.gif?1) no-repeat; TEXT-ALIGN: center}
+.user_grid1	{}
+.album_grid	{BACKGROUND: url(img/album_grid.gif?1) no-repeat; TEXT-ALIGN: center}
+.album_grid1	{BACKGROUND: url(img/album_grid1.gif?1) no-repeat}
+.album_font_id	{FONT-WEIGHT: bold; COLOR: #ffffff; FONT-FAMILY: Arial}
+.album_font_desc{COLOR: #bbbbff; FONT-FAMILY: Arial}
+.album_font_title {FONT-WEIGHT: bold; COLOR: #ffbbbb; FONT-FAMILY: Arial}
+.blog_grid	{BACKGROUND: url(img/blog_grid.gif?1) no-repeat; TEXT-ALIGN: center}
+.blog_grid1	{BACKGROUND: url(img/blog_grid1.gif?1) no-repeat 100% 0%; TEXT-ALIGN: left; padding-right: 10px;}
+
+.blog_font_id	{FONT: bold large Arial; color: #ffffff;}
+.blog_font_id A	{FONT: bold large; color: #ffffff; BORDER-TOP-STYLE: none; FONT-FAMILY: Arial; BORDER-RIGHT-STYLE: none; BORDER-LEFT-STYLE: none; TEXT-DECORATION: none; BORDER-BOTTOM-STYLE: none}
+.blog_font_id A:link	{FONT-WEIGHT: bold; FONT-SIZE: large; COLOR: #ffffff; BORDER-TOP-STYLE: none; FONT-FAMILY: Arial; BORDER-RIGHT-STYLE: none; BORDER-LEFT-STYLE: none; TEXT-DECORATION: none; BORDER-BOTTOM-STYLE: none}
+.blog_font_id A:visited	{FONT-WEIGHT: bold; FONT-SIZE: large; COLOR: #ffffff; BORDER-TOP-STYLE: none; FONT-FAMILY: Arial; BORDER-RIGHT-STYLE: none; BORDER-LEFT-STYLE: none; TEXT-DECORATION: none; BORDER-BOTTOM-STYLE: none}
+.blog_font_id A:active	{FONT-WEIGHT: bold; FONT-SIZE: large; COLOR: #ffffff; BORDER-TOP-STYLE: none; FONT-FAMILY: Arial; BORDER-RIGHT-STYLE: none; BORDER-LEFT-STYLE: none; TEXT-DECORATION: none; BORDER-BOTTOM-STYLE: none}
+.blog_font_id A:hover	{COLOR: #ffffff; TEXT-DECORATION: underline}
+
+.blog_font_title	{FONT-WEIGHT: bold; FONT-SIZE: small; COLOR: #d9e7fa; FONT-FAMILY: Arial;}
+.blog_font_title A	{FONT-WEIGHT: bold; FONT-SIZE: small; COLOR: #d9e7fa; FONT-FAMILY: Arial; TEXT-DECORATION: underline}
+.blog_font_title A:link	{FONT-WEIGHT: bold; FONT-SIZE: small; COLOR: #d9e7fa; FONT-FAMILY: Arial; TEXT-DECORATION: underline}
+.blog_font_title A:visited{FONT-WEIGHT: bold; FONT-SIZE: small; COLOR: #d9e7fa; FONT-FAMILY: Arial; TEXT-DECORATION: underline}
+.blog_font_title A:active{FONT-WEIGHT: bold; FONT-SIZE: small; COLOR: #d9e7fa; FONT-FAMILY: Arial; TEXT-DECORATION: underline}
+.blog_font_title A:hover{FONT-WEIGHT: bold; FONT-SIZE: small; COLOR: #d9e7fa; FONT-FAMILY: Arial; TEXT-DECORATION: underline}
+
+.blog_font_count	{FONT-SIZE: small; COLOR: #b6d3f7; FONT-FAMILY: Arial}
+.blog_font_desc		{FONT-SIZE: 12px; COLOR: #ffbbbb; FONT-FAMILY: Arial}
+.blog_font_desc A	{COLOR: #bbbbff;}
+.blog_font_desc A:hover	{COLOR: #bbbbff;}
+.blog_point_title	{COLOR: #ffbbbb; FONT-FAMILY: Arial;}
+.blog_point_grade	{COLOR: #bbbbff; FONT-FAMILY: Arial}
+.blog_font_arttitle A	{FONT-WEIGHT: bold; COLOR: #EF7676; TEXT-DECORATION: underline}
+.side		{PADDING-RIGHT: 10px; PADDING-LEFT: 10px; FONT-SIZE: 10pt; PADDING-BOTTOM: 10px; COLOR: #314b01; LINE-HEIGHT: 140%; PADDING-TOP: 10px; FONT-FAMILY: Arial}
+.side A		{TEXT-DECORATION: underline}
+.sidetitle	{FONT-WEIGHT: bold; FONT-SIZE: 12px; COLOR: #ffffff; FONT-FAMILY: Arial; LETTER-SPACING: 3px; 
+		BACKGROUND: url(img/sidetitle.gif?1) no-repeat 50% 0%; MARGIN-BOTTOM: 0px; PADDING-BOTTOM: 9px;
+		PADDING-TOP: 11px; TEXT-ALIGN: center;}
+INPUT		{BORDER-RIGHT: #222222 1px solid; BORDER-TOP: #222222 1px solid; FONT-SIZE: 12px; BORDER-LEFT: #222222 1px solid; COLOR: #222222; BORDER-BOTTOM: #222222 1px solid; FONT-FAMILY: Arial; BACKGROUND-COLOR: #ffffff}
+.bigtab		{}
+.side1		{BACKGROUND-COLOR: #ffffff}
+.side2		{BACKGROUND-COLOR: #ffffff}
+#banner1	{BACKGROUND: url(img/bannerbg.gif?1) #CB3939 no-repeat;}
+.banner2	{BACKGROUND: url(img/cycle01_03.gif?1) no-repeat 0% 100%}
+.banner3	{BACKGROUND: url(img/cycle01_04.gif?1) no-repeat 100% 100%}
+#content1	{BACKGROUND: #ffbbbb;}
+.content2	{BACKGROUND: url(img/cycle01_01.gif?1) no-repeat}
+.content3	{BACKGROUND: url(img/cycle01_02.gif?1) no-repeat 100% 0%}
+.album_content	{}
+.blog_content	{}
+

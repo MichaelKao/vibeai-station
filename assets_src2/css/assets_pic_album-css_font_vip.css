@@ -1,0 +1,46 @@
+html>body .vip_icon{vertical-align:top}
+
+input { display:inline !important; }
+body table#ad_square font a {width:120px;display:inline-block;word-wrap:break-word;word-break:break-all;overflow:hidden;}
+
+.normal-c { font-size: 16px; font-family: "新細明體" }
+.big-c {  font-family: "新細明體"; font-size: 32px}
+.small-c {  font-family: "新細明體"; font-size: 12px}
+
+.normal-a { font-size: 16px; font-family: "新細明體";}
+.normal-a a,
+.normal-a a:link,
+.normal-a a:visited,
+.normal-a a:active,
+.normal-a a:hover
+    { font-size: 16px; font-family: "新細明體"; text-decoration: underline;}
+
+.small-a {  font-family: "新細明體"; font-size: 12px;}
+.small-a a,
+.small-a a:link,
+.small-a a:visited,
+.small-a a:active,
+.small-a a:hover
+    {  font-family: "新細明體"; font-size: 12px; text-decoration: underline;}
+
+.albumclass,
+    {
+        font-family: "新細明體";
+        font-size: 12px;
+    }
+.albumclass a,
+.albumclass a:link,
+.albumclass a:visited,
+.albumclass a:active,
+.albumclass a:hover
+    {
+        font-family: "新細明體";
+        font-size: 12px;
+        text-decoration: underline;
+    }
+.big-e { font-family: "Verdana", "Arial", "Helvetica", "sans-serif"; font-size: 32px }
+.normal-e { font-size: 24px; font-family: "Verdana", "Arial", "Helvetica", "sans-serif"}
+.small-e { font-family: "Verdana", "Arial", "Helvetica", "sans-serif"; font-size: 11px }
+table{visibility: visible !important; display: table !important; *display: block !important;}
+tr{visibility: visible !important; display: table-row !important; *display: block !important;}
+td{visibility: visible !important; display: table-cell !important; *display: block !important;}

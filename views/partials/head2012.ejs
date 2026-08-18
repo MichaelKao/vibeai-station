@@ -1,0 +1,90 @@
+<%
+  /* 無名小站 2012 最後版首頁外框（assets_src2/spec/index.md 第 2、6.1、6.2 節）
+     ─────────────────────────────────────────────────────────────
+     這支只負責「<head> + <body> 開頭」，也就是骨架的前半段：
+
+       body > #bg-wrapper > #wrapper.clearfix
+                              ├ .hd#uh-wrapper > #wfp-universal-header + #wfp-navigation
+                              └ #push-down-ad
+
+     #wrapper 由 views/index.ejs 自己收掉（因為 .belt 與 #lower-wrapper 是
+     #bg-wrapper 的兄弟節點，不能包在 #wrapper 裡——深色腰帶要跨出白色容器）。
+     收尾（.ft > #wfp-footer 與 </body>）在 partials/foot2012.ejs。
+
+     樣式全部來自 public/wretch2012.css（原站原始 CSS，素材路徑改指
+     /img/wretch2012/）。這裡不寫任何一條新的 CSS 規則。
+
+     品牌：這一輪刻意保留原版 logo 與「無名小站」字樣，
+     站名替換是最後一輪才做（WRETCH_2012.md 第 4 節第 1 條）。
+
+     注意：EJS 用 with(locals)，不能宣告和 local 同名的 const，
+     要讀非必定存在的變數一律走 locals.xxx。 */
+%><!DOCTYPE HTML>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<title><%= locals.title || '無名小站' %></title>
+<meta name="description" content="無名小站 － 相簿、網誌、留言板">
+<link rel="icon" href="/favicon.ico">
+<link rel="stylesheet" href="/wretch2012.css">
+<%# 本站刻意偏離原站之處（收掉廣告保留位等），每條都附理由 %>
+<link rel="stylesheet" href="/wretch2012-site.css">
+<%# 使用者自訂 CSS 一定放最後，才蓋得過主題——這是無名的靈魂功能 %>
+<% if (u && u.css) { %><style><%- safeCss(u.css) %></style><% } %>
+</head>
+<body>
+<div id="bg-wrapper">
+
+<div id="wrapper" class="clearfix">
+  <div class="hd" id="uh-wrapper">
+
+    <div id="wfp-universal-header">
+      <header>
+        <div class="hd">
+          <!--campaign starts-->
+          <ul>
+            <li><a href="/rank" style="position:absolute;top:10px;left:45%;text-decoration:undeline;color:#8080BF;"><% if (locals.stats) { %>目前共 <%= stats.users %> 位站友、<%= stats.photos %> 張照片、<%= stats.posts %> 篇網誌<% } %></a></li>
+          </ul>
+          <!--campaign ends-->
+          <ul class="nav">
+            <li class="yahoo-home"><a href="/">Yahoo!奇摩</a></li>
+            <li class="service-guide"><a href="/help">服務說明</a></li>
+          </ul>
+        </div>
+        <div class="bd">
+          <h1 class="logo"><a href="/" title="無名小站"><img src="/img/wretch2012/index/logo_wretch.png" alt="無名小站" title="無名小站"></a></h1>
+          <div class="search">
+            <%# 站內搜尋：src/server.js 的 app.get('/search') 只讀 q %>
+            <form action="/search" method="GET">
+              <fieldset>
+                <legend>Yahoo! Search</legend>
+                <label for="search-input">搜尋：</label>
+                <input type="text" id="search-input" name="q" placeholder="搜尋" autocomplete="off">
+                <button type="submit" value="搜尋網頁">搜尋網頁</button>
+              </fieldset>
+            </form>
+          </div>
+        </div>
+      </header>
+    </div>
+
+    <div id="wfp-navigation">
+      <nav class="blog-nav">
+        <ul>
+          <li class="blog first"><a href="/blogs">網誌</a></li>
+          <li class="album"><a href="/albums">相簿</a></li>
+          <li class="video"><a href="/help">影音</a></li>
+          <li class="join"><a href="/help">揪團</a></li>
+          <li class="digu"><a href="/help">嘀咕</a></li>
+          <li class="mobile last new"><a href="/help">手機<span>(NEW)</span></a></li>
+        </ul>
+      </nav>
+      <div id="nav-corner-ad"></div>
+    </div>
+  </div>
+
+  <%# 原站的下推式廣告位（存檔時是空的，chameleon.css 給它 300px 高）。
+      本站不放廣告，就拿來擺 flash 訊息。 %>
+  <div id="push-down-ad">
+    <% if (flash) { %><p><%= flash %></p><% } %>
+  </div>

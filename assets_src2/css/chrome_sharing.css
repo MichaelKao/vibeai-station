@@ -1,0 +1,225 @@
+/* Base
+--------------------------------------- */
+
+.social-wrapper {
+  height: 32px;
+  width: auto;
+  margin-bottom: 5px;}
+.social-wrapper .fixinline {
+  *display: inline;
+}
+#main2, #content {
+  zoom: 1;
+}
+
+/* Social Widget
+--------------------------------------- */
+
+.social-widget {
+  height: 30px;
+  text-align: center;
+  display: inline-block;
+  *display: inline;
+  vertical-align: middle;
+  text-align: left;
+  zoom: 1;
+  margin: auto;
+}
+
+.social-widget .bd {
+  margin: 0 auto!important;
+  overflow: hidden;
+  float: left;
+  height: 30px;
+}
+
+.social-widget .bd a {
+  width: 30px;
+  height: 28px;
+  border: 1px solid #e3e3e3;
+  background-color: #fff;
+  background-repeat: no-repeat;
+  background-position: 7px 6px;
+  float: left;
+  margin-left: -1px;
+  display: inline-block;
+  text-indent: -9999px;
+}
+
+.social-widget .bd a:hover {
+  border: 1px solid #bfbfbf;
+  position: relative;
+  z-index: 100;
+  background-color: #f8f8f8;
+}
+
+.social-widget .bd .fb {
+  background-image: url(../img/ico_facebook.png);
+  margin-left: 0;
+  border-radius: 3px 0 0 3px;
+}
+.social-widget .bd .plurk {
+  background-image: url(../img/ico_plurk.png);
+}
+.social-widget .bd .yim {
+  background-image: url(../img/ico_yim_png8.png);
+  background-position: 6px 5px;
+}
+
+/* Reblog
+--------------------------------------- */
+
+.wretch-reblog {
+  display: inline-block;
+  height: 30px;
+  vertical-align: middle;
+  margin-left: -4px;
+  *margin-left: -1px;
+}
+.wretch-reblog .bd {
+  float: left;
+  height: 30px;
+}
+.wretch-reblog .bd a.wretch {
+  height: 28px;
+  line-height: 28px;
+  display: inline-block;
+  font-family: arial;
+  font-size: 12px;
+  padding-left: 24px;
+  text-decoration: none;
+  margin: 0px;
+  float: left;
+  color: #666!important;
+  text-decoration: none;
+  border: 1px solid #e3e3e3;
+  border-radius: 0 3px 3px 0;
+  background: url(../img/ico_wretch.png) no-repeat 7px 8px;
+  background-color: #fff;
+  vertical-align: top;
+}
+.wretch-reblog .bd a.wretch:hover {
+  border: 1px solid #bfbfbf;
+  background-color: #f8f8f8;
+}
+.wretch-reblog .bd span.bubble {
+  display: inline-block;
+  position: relative;
+  margin: 6px 7px 0 8px;
+  *margin: -4px 6px 0 8px;
+  _margin: 2px 6px 0 8px;
+  *left: 8px;
+  *top: 3px;
+  border: 1px solid #a3a0a1;
+  border-radius: 2px;
+  font-size: 11px;
+  padding: 1px 3px 2px 4px;
+  line-height: 12px;
+}
+.wretch-reblog .bubble-none .wretch {
+  line-height: 28px;
+  height: 28px;
+  vertical-align: middle;
+  padding-right: 5px;
+}
+.wretch-reblog .bd span.bubble span {
+  display: none;
+  *display: block;
+  display: block \9;
+  background: url(../img/ico_reblog_arrow.png) no-repeat;
+  width: 3px;
+  height: 5px;
+  position: absolute;
+  top: 5px;
+  left: -3px;
+}
+.wretch-reblog .bd span.bubble:after {
+  content: '';
+  position: absolute;
+  display: inline-block;
+  *display: none;
+  display: none\9;
+  top: 5px;
+  left: -2px;
+  border: 2px solid white;
+  border-color: white transparent transparent white;
+  -moz-transform: rotate(-45deg);
+  -o-transform: rotate(-45deg);
+  -webkit-transform: rotate(-45deg);
+  -ms-transform: rotate(-45deg);
+}
+.wretch-reblog .bd span.bubble:before {
+  content: '';
+  position: absolute;
+  display: inline-block;
+  *display: none;
+  display: none\9;
+  top: 4px;
+  left: -3px;
+  border: 3px solid #a3a0a1;
+  border-color: #a3a0a1 transparent transparent #a3a0a1;
+  -moz-transform: rotate(-45deg);
+  -o-transform: rotate(-45deg);
+  -webkit-transform: rotate(-45deg);
+  -ms-transform: rotate(-45deg);
+}
+.bubble-gradient{
+  background: #ffffff; /* Old browsers */
+  background: -moz-linear-gradient(top, #ffffff 0%, #f7eff7 100%); /* FF3.6+ */
+  background: -webkit-gradient(linear, left top, left bottom, color-stop(0%,#ffffff), color-stop(100%,#f7eff7)); /* Chrome,Safari4+ */
+  background: -webkit-linear-gradient(top, #ffffff 0%,#f7eff7 100%); /* Chrome10+,Safari5.1+ */
+}
+
+/* Knowledge Plus
+--------------------------------------- */
+
+.kplizer {
+  display: inline-block;
+  margin: 0px 10px;
+  width: 82px;
+  vertical-align: top;
+}
+.kplizer a.kplizer-btn {
+  display: block;
+  text-indent: -9999px;
+  text-align: left;
+  background: url(../img/ico_kplizer.png) no-repeat !important;
+  width: 82px;
+  height: 27px;
+  padding: 0px;
+}
+.kplizer a.kplizer-btn:hover {
+  cursor: pointer;
+  background: url(../img/ico_kplizer_hover.png) no-repeat !important;
+}
+
+.social-wrapper iframe {
+  vertical-align: top;
+  margin-top: 5px;
+  margin-left: 5px;
+  display: inline-block;
+}
+.plus-wrapper{
+  display: inline-block;
+  *display: inline;
+  *zoom: 1;  
+  overflow: hidden;
+  height: 30px;
+  vertical-align: middle;
+	zoom:1;
+}
+.social-wrapper .social-gpluson {
+  zoom: 1;
+  padding: 5px 0 0 5px;
+  display: inline-block;
+  *display: inline;
+  height: 24px;
+}
+
+.social-gpluson div{
+  overflow: hidden;
+  float: left;
+  vertical-align: middle !important;
+}
+
+/* Taylor is a genius :) */

@@ -2,3 +2,10 @@ node_modules
 data/
 *.png.tmp
 seed_demo.mjs
+.shots/
+assets_src2/shots/
+.seedcache/
+
+# 測繪過程的暫存與中繼檔（規格書、原始 CSS/HTML/圖片與截圖有進版控，這兩個目錄不用）
+assets_src2/scratch/
+assets_src2/cdx/

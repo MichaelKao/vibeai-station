@@ -1,0 +1,37 @@
+<%# 個人小站頁頂：700px 置中橫幅 + 導覽行（WRETCH_DOM.md 第 3 節）
+    開啟 #bigcontainer，由 partials/sitefoot.ejs 關閉。 %>
+<div id="bigcontainer">
+
+<table width="700" border="0" cellpadding="0" cellspacing="0" align="center"><tr>
+  <td class="side1"></td>
+  <td id="banner1">
+    <div id="banner">
+      <a href="/"><img id="sitelogo" src="<%= SITE_LOGO %>" alt="<%= SITE_NAME %>"></a>
+      <div id="pageheader">
+        <h1><a href="/<%= u.name %>"><%= u.nick %> 的小站</a></h1>
+        <span class="description"><%= u.intro ? u.intro.split('\n')[0].slice(0,60) : SITE_DESC %></span>
+      </div>
+    </div>
+  </td>
+  <td class="side2"></td>
+</tr></table>
+
+<table width="700" border="0" cellpadding="0" cellspacing="0" align="center"><tr>
+  <td class="side1"></td>
+  <td id="content1">
+    <div class="small-c" id="MySpace">
+      [ <b><%= u.nick %></b> 的
+      <a href="/<%= u.name %>">MyPage</a> |
+      <a href="/<%= u.name %>/album">相簿</a> |
+      <a href="/<%= u.name %>/blog">網誌</a> |
+      <a href="/<%= u.name %>/guestbook">留言板</a> |
+      <a href="/<%= u.name %>/card">名片</a> |
+      <a href="/<%= u.name %>/friends">好友</a> ]
+    </div>
+    <div id="rss" class="small-c" align="right">
+      <div class="syndicate"><a href="/<%= u.name %>/blog/rss">RSS</a>
+        ( <a href="/help#rss">RSS HOWTO</a> )</div>
+    </div>
+  </td>
+  <td class="side2"></td>
+</tr></table>

@@ -1,0 +1,791 @@
+﻿<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+	<meta name="keywords" content="photoalbum, album, blog, blogger, photography, digital photography, cameraphones, camera, hobby photography, photo, photos, digital camera"/>
+	<title>WRETCH</title>
+	<link rel="stylesheet" href="http://l.yimg.com/wretch.yimg.com/photos/serv/index/css/fix.css" type="text/css" />
+	<link rel="stylesheet" href="http://l.yimg.com/wretch.yimg.com/photos/serv/index/css/index.css" type="text/css" />
+  <style type="text/css">
+    .yzq_x{
+      display:none;
+    }
+  </style>
+	<script type="text/javascript" src="http://l.yimg.com/wretch.yimg.com/photos/serv/base/js/prototype/prototype.js"></script>
+  <script type="text/javascript" src="http://l.yimg.com/wretch.yimg.com/photos/serv/base/js/prototype/prototype.wretch.js"></script>
+	<script type="text/javascript" src="http://tw.yimg.com/i/tw/ysm/wretch/wrechhptab.js"></script>
+	<script type="text/javascript" src="http://l.yimg.com/wretch.yimg.com/photos/js/swfobject.js"></script>
+	<script type="text/javascript" src="http://l.yimg.com/wretch.yimg.com/photos/serv/index/js/index.js"></script>
+  <script src="http://l.yimg.com/wretch.yimg.com/js/test_cookie.js" type="text/javascript"></script>
+	<!--
+	-->
+	<script type="text/javascript">
+	<!--//
+		var labels,service_arr,topic_arr, si, arrNow, hoverNow;
+		var services = ['blog','album','video'];
+    var url_search_1 = 'http://tw.search.yahoo.com/search/wretch';
+    var url_search_2 = 'http://tw.search.yahoo.com/search/';
+		var topics = ['topic_0','topic_1','topic_2','topic_3','topic_4'];
+		var celebrities = ['artist','model','athletes','writer','politician'];
+		var this_service = 1;
+		var this_topic= 4;
+		var this_celebrity = 0;
+		var topic_imgArr = [ 
+     [
+        {img:'http://pic.wretch.cc/photos/serv/dynamic/index_page/topic/topic_1_1487.jpg', url:'http://tw.rd.yahoo.com/referurl/wretch/index/ugc/1/1/2/*http://www.wretch.cc/blog/wretchtalk',text:'<font color="deeppink">你相信算命嗎？</font>'}, 
+        {img:'http://pic.wretch.cc/photos/serv/dynamic/index_page/topic/topic_1_1488.jpg', url:'http://tw.rd.yahoo.com/referurl/wretch/index/ugc/1/2/2/*http://www.wretch.cc/blog/wretchtalk',text:'<font color="black">當你懷有不安全感或是必須做下重大</font>'}, 
+        {img:'http://pic.wretch.cc/photos/serv/dynamic/index_page/topic/topic_1_1489.jpg', url:'http://tw.rd.yahoo.com/referurl/wretch/index/ugc/1/3/2/*http://www.wretch.cc/blog/wretchtalk',text:'<font color="black">決定時算命或許是部份人的選擇！</font>'}, 
+        {img:'http://pic.wretch.cc/photos/serv/dynamic/index_page/topic/topic_1_1490.jpg', url:'http://tw.rd.yahoo.com/referurl/wretch/index/ugc/1/4/2/*http://www.wretch.cc/blog/HitomiStory&article_id=9670567',text:'<font color="black">一項好功能不需要太複雜的操作</font>'}, 
+        {img:'http://pic.wretch.cc/photos/serv/dynamic/index_page/topic/topic_1_1491.jpg', url:'http://tw.rd.yahoo.com/referurl/wretch/index/ugc/1/5/2/*http://www.wretch.cc/blog/a4258237&article_id=23962298',text:'<font color="black">話題性十足的功能”誰來我家”</font>'} 
+      ], 
+     [
+        {img:'http://pic.wretch.cc/photos/serv/dynamic/index_page/topic/topic_2_1469.jpg', url:'http://tw.rd.yahoo.com/referurl/wretch/index/ugc/2/1/2/*http://www.wretch.cc/blog/rickson&article_id=2393784',text:'<font color="deeppink">鵝肝醬的真正吃法</font>'}, 
+        {img:'http://pic.wretch.cc/photos/serv/dynamic/index_page/topic/topic_2_1470.jpg', url:'http://tw.rd.yahoo.com/referurl/wretch/index/ugc/2/2/2/*http://www.wretch.cc/blog/rickson&article_id=2393784',text:'<font color="black">要配上有點酸甜，香氣不強的果醬，</font>'}, 
+        {img:'http://pic.wretch.cc/photos/serv/dynamic/index_page/topic/topic_2_1471.jpg', url:'http://tw.rd.yahoo.com/referurl/wretch/index/ugc/2/3/2/*http://www.wretch.cc/blog/rickson&article_id=2393784',text:'<font color="black">沒這樣吃過無法瞭解鵝肝醬的美味</font>'}, 
+        {img:'http://pic.wretch.cc/photos/serv/dynamic/index_page/topic/topic_2_1472.jpg', url:'http://tw.rd.yahoo.com/referurl/wretch/index/ugc/2/4/2/*http://www.wretch.cc/blog/sanantonio&article_id=23850519',text:'<font color="black">品嚐法式經典美味</font>'}, 
+        {img:'http://pic.wretch.cc/photos/serv/dynamic/index_page/topic/topic_2_1473.jpg', url:'http://tw.rd.yahoo.com/referurl/wretch/index/ugc/2/5/2/*http://www.wretch.cc/blog/gamasay&article_id=7005065',text:'<font color="black">鵝肝醬貝果 - 奢華的早餐</font>'} 
+      ], 
+     [
+        {img:'http://pic.wretch.cc/photos/serv/dynamic/index_page/topic/topic_3_1477.jpg', url:'http://tw.rd.yahoo.com/referurl/wretch/index/ugc/3/1/2/*http://www.wretch.cc/blog/a923069&article_id=22319980',text:'<font color="deeppink">品味生活從吸塵器開始</font>'}, 
+        {img:'http://pic.wretch.cc/photos/serv/dynamic/index_page/topic/topic_3_1478.jpg', url:'http://tw.rd.yahoo.com/referurl/wretch/index/ugc/3/2/2/*http://www.wretch.cc/blog/a923069&article_id=22319980',text:'<font color="black">造型獨特不只是裝飾品專利，高質感</font>'}, 
+        {img:'http://pic.wretch.cc/photos/serv/dynamic/index_page/topic/topic_3_1479.jpg', url:'http://tw.rd.yahoo.com/referurl/wretch/index/ugc/3/3/2/*http://www.wretch.cc/blog/a923069&article_id=22319980',text:'<font color="black">時尚配備從清潔用品入手</font>'}, 
+        {img:'http://pic.wretch.cc/photos/serv/dynamic/index_page/topic/topic_3_1476.jpg', url:'http://tw.rd.yahoo.com/referurl/wretch/index/ugc/3/4/2/*http://www.wretch.cc/blog/peterkai&article_id=12936709',text:'<font color="black">超夢幻新顏色PSP</font>'}, 
+        {img:'http://pic.wretch.cc/photos/serv/dynamic/index_page/topic/topic_3_1480.jpg', url:'http://tw.rd.yahoo.com/referurl/wretch/index/ugc/3/5/2/*http://www.wretch.cc/blog/cjy20549&article_id=17675918',text:'<font color="black">科技新品，超薄滑鼠</font>'} 
+      ], 
+     [
+        {img:'http://pic.wretch.cc/photos/serv/dynamic/index_page/topic/topic_4_1481.jpg', url:'http://tw.rd.yahoo.com/referurl/wretch/index/ugc/4/1/2/*http://www.wretch.cc/blog/kim0521&article_id=11236782',text:'<font color="deeppink">2008春夏流行髮型</font>'}, 
+        {img:'http://pic.wretch.cc/photos/serv/dynamic/index_page/topic/topic_4_1482.jpg', url:'http://tw.rd.yahoo.com/referurl/wretch/index/ugc/4/2/2/*http://www.wretch.cc/blog/kim0521&article_id=11236782',text:'<font color="black">染燙之前要跟設計師討論一下，依您</font>'}, 
+        {img:'http://pic.wretch.cc/photos/serv/dynamic/index_page/topic/topic_4_1486.jpg', url:'http://tw.rd.yahoo.com/referurl/wretch/index/ugc/4/3/2/*http://www.wretch.cc/blog/kim0521&article_id=11236782',text:'<font color="black">的膚色再染燙出美麗時尚的髮型</font>'}, 
+        {img:'http://pic.wretch.cc/photos/serv/dynamic/index_page/topic/topic_4_1484.jpg', url:'http://tw.rd.yahoo.com/referurl/wretch/index/ugc/4/4/2/*http://www.wretch.cc/blog/mix961129&article_id=20865838',text:'<font color="black">捲捲包柏最可愛!流行漫延到明年</font>'}, 
+        {img:'http://pic.wretch.cc/photos/serv/dynamic/index_page/topic/topic_4_1485.jpg', url:'http://tw.rd.yahoo.com/referurl/wretch/index/ugc/4/5/2/*http://www.wretch.cc/blog/jesse791027&article_id=13869069',text:'<font color="black">極簡華麗帶出浪漫且搖滾的調性</font>'} 
+      ], 
+     [
+        {img:'http://pic.wretch.cc/photos/serv/dynamic/index_page/topic/topic_5_1445.jpg', url:'http://tw.rd.yahoo.com/referurl/wretch/index/ugc/5/1/2/*http://www.wretch.cc/blog/wretchmovie&article_id=9179048',text:'<font color="deeppink">冠希成了公廁小天使？</font>'}, 
+        {img:'http://pic.wretch.cc/photos/serv/dynamic/index_page/topic/topic_5_1443.jpg', url:'http://tw.rd.yahoo.com/referurl/wretch/index/ugc/5/2/2/*http://www.wretch.cc/blog/wretchmovie&article_id=9179048',text:'<font color="black">每當他去公共廁所時，都會順道清理</font>'}, 
+        {img:'http://pic.wretch.cc/photos/serv/dynamic/index_page/topic/topic_5_1444.jpg', url:'http://tw.rd.yahoo.com/referurl/wretch/index/ugc/5/3/2/*http://www.wretch.cc/blog/wretchmovie&article_id=9179048',text:'<font color="black">是所有洗手間的清潔工人的天使</font>'}, 
+        {img:'http://pic.wretch.cc/photos/serv/dynamic/index_page/topic/topic_5_1474.jpg', url:'http://tw.rd.yahoo.com/referurl/wretch/index/ugc/5/4/2/*http://www.wretch.cc/blog/shiptosophia&article_id=25665483',text:'<font color="black">十六歲的朱諾與男友初嚐禁果</font>'}, 
+        {img:'http://pic.wretch.cc/photos/serv/dynamic/index_page/topic/topic_5_1475.jpg', url:'http://tw.rd.yahoo.com/referurl/wretch/index/ugc/5/5/2/*http://www.wretch.cc/blog/pocato&article_id=12932575',text:'<font color="black">演員陣容不減反增讓我更期待</font>'} 
+      ] 
+													];
+
+		
+		var vote_imgArr = [	
+        {img:'http://pic.wretch.cc/photos/serv/dynamic/vote/icon/vote150.jpeg?1204248602', url:'http://tw.rd.yahoo.com/referurl/wretch/index/vote/1/2/*http://vote.wretch.cc/?func=vote&id=150',text:'你跟你的另一半是怎麼認識的呢？...'}, 
+        {img:'http://pic.wretch.cc/photos/serv/dynamic/vote/icon/vote149.jpeg?1204248602', url:'http://tw.rd.yahoo.com/referurl/wretch/index/vote/2/2/*http://vote.wretch.cc/?func=vote&id=149',text:'誰來我家新功能意見調查...'}, 
+        {img:'http://pic.wretch.cc/photos/serv/dynamic/vote/icon/vote151.jpeg?1204248602', url:'http://tw.rd.yahoo.com/referurl/wretch/index/vote/3/2/*http://vote.wretch.cc/?func=vote&id=151',text:'你覺得男生要不要修眉毛？...'} 
+											];
+		var js_lang_pleaseInputKeyword = '請輸入關鍵字 ...';
+		var js_lang_album = '相簿';
+		var js_lang_blog =  '網誌';
+		var js_lang_web =  '網頁';
+		var js_lang_video = '影音'; 
+		var js_lang_search = '搜尋';
+	//-->
+	</script>
+  <script>                                                                       
+    var ysmrubyctxtID = 'wretch_tw_photo_ron_001';                       
+  </script>
+</head>
+<body class="en">
+<script language="JavaScript" type="text/javascript" src="http://tw2.adserver.yahoo.com/a?f=2022137079&p=tw_kwretch&l=TEST&c=r">
+</script>
+<noscript>
+<iframe src="http://tw2.adserver.yahoo.com/a?f=2022137079&p=tw_kwretch&l=TEST&c=h&bg=FFFFFF" width=1 height=1 marginwidth=0 marginheight=0 hspace=0 vspace=0 frameborder=0 scrolling=no>
+</iframe>
+</noscript>
+<!--div id="container1"-->
+<div id="container1" class="chameleon">
+	<div id="container2">
+		<div id="header">
+			<h1><a href="/"></a></h1>
+      <ul id="access_link">
+				<li><a href="http://www.wretch.cc/">make Wretch my Homepage&nbsp;</a></li>
+        <li><a href="http://tw.rd.yahoo.com/referurl/wretch/index/head/faq/*http://tw.help.cc.yahoo.com/help_cp.html?product=53">Help&nbsp;</a></li>
+        <li><a href="http://tw.rd.yahoo.com/referurl/wretch/index/head/yahoo/*http://tw.yahoo.com">Yahoo!</font>&nbsp;</a></li>
+		        <li><a href="http://tw.rd.yahoo.com/referurl/wretch/index/head/newsflash/*http://surveylink.yahoo.com/wix/p3827712.aspx"></a>&nbsp;</li>
+
+				<!--li><a href="/testing/redir.php?k=12128&d=http://www.wretch.cc/blog/FrankCTHsieh"><font color="red">MILLIONSTAR</font>&nbsp;</a></li-->
+			</ul>
+       <div id="chameleon_flash"><!-- SpaceID=0 robot -->
+</div>
+           <DIV id="banner_link"></div>
+      <DIV id="banner_linkII"></DIV>
+      <DIV id="banner_linkIII"></DIV>
+			<div id="banner_language">
+				<!--<span>Select Language:</span>-->
+				<select name="language" id="language">
+					<option value="">-- Auto Detect --</option>
+					<option value='zh-tw'>中文(臺灣)</option>
+					<option value='zh-hk'>中文(香港)</option>
+					<option value='zh-cn'>中文(简体)</option>
+					<option value='en' selected="selected">English</option>
+				</select>
+			</div>
+			<form id="searchForm" name="searchForm" action="http://tw.search.yahoo.com/search/" method="get">
+				<fieldset>
+					<legend>Search</legend>
+					<div class="wrapper" id="search_tab">
+						<input type="radio" name="searchtype" id="searchType_album" value="photo" />
+						<label for="searchType_album" title="Album Search(Hotkey：A）" class="Aclick" accesskey="A">Album<cite></cite></label>
+						<input type="radio" name="searchtype" id="searchType_blog" value="article" checked="checked" />
+						<label for="searchType_blog" title="Blog Search(Hotkey：B）" accesskey="B">Blog<cite></cite></label>
+						<input type="radio" name="searchtype" id="searchType_video" value="video" />
+            <label for="searchType_video" title="Video" accesskey="S">Video<cite></cite></label>
+						<input type="radio" name="searchtype" id="searchType_web" value="web" />
+						<label for="searchType_web" title="Web Search(Hotkey：W）" accesskey="W">Web<cite></cite></label>
+					</div>
+					<div class="search_control">
+						<input type="text" name="q" id="search_keyword" size="40" accesskey="S" value="請輸入關鍵字 ..." title="Input Keyword（Hotkey：S）" />
+            <input type="submit" name="submit" id="search_submit" value="Search" />
+            <input name="f" type="hidden" />
+            <input name="ei" type="hidden" value="UTF-8" />
+            <input name="fr" type="hidden" value="cb-wretch" />
+					</div>
+					<div id="Hot_Keyword">
+						<span>Hot Keyword:</span>
+            <a href="http://tw.rd.yahoo.com/referurl/wretch/index/srckw/01/*http://tw.search.yahoo.com/search/wretch?searchtype=video&q=%E7%9B%A3%E7%8D%84%E5%85%94&f=&ei=UTF-8&fr=cb-wretch">監獄兔</a>
+            、<a href="http://tw.rd.yahoo.com/referurl/wretch/index/srckw/02/*http://tw.search.yahoo.com/search/wretch?searchtype=video&q=%E6%96%B0%E7%8E%A9%E5%85%B7&f=&ei=UTF-8&fr=cb-wretch">新玩具</a>
+            、<a href="http://tw.rd.yahoo.com/referurl/wretch/index/srckw/03/*http://tw.search.yahoo.com/search/wretch?searchtype=video&q=%E4%B8%8B%E9%9B%AA&f=&ei=UTF-8&fr=cb-wretch">下雪</a>
+            、<a href="http://tw.rd.yahoo.com/referurl/wretch/index/srckw/04/*http://tw.search.yahoo.com/search/wretch?searchtype=video&q=%E5%AF%A6%E7%BF%92&f=&ei=UTF-8&fr=cb-wretch">實習</a>
+            、<a href="http://tw.rd.yahoo.com/referurl/wretch/index/srckw/05/*http://tw.search.yahoo.com/search/wretch?searchtype=video&q=%E9%99%BD%E5%85%89&f=&ei=UTF-8&fr=cb-wretch">陽光</a>
+            、<a href="http://tw.rd.yahoo.com/referurl/wretch/index/srckw/06/*http://tw.search.yahoo.com/search/wretch?searchtype=video&q=%E6%83%A1%E6%90%9E%E7%89%88&f=&ei=UTF-8&fr=cb-wretch">惡搞版</a>
+            、<a href="http://tw.rd.yahoo.com/referurl/wretch/index/srckw/07/*http://tw.search.yahoo.com/search/wretch?searchtype=video&q=%E8%87%AA%E7%B7%A8&f=&ei=UTF-8&fr=cb-wretch">自編</a>
+					</div>
+				</fieldset>
+			</form>
+		</div>
+
+		<div id="main">
+			<div id="main2">
+				<dl id="navigation" class="upper_column">
+					<dt class="service_link">Service</dt>
+					<dd class="service_link">
+						<ul>
+              <li><a href="http://tw.rd.yahoo.com/referurl/wretch/index/me/album/*http://www.wretch.cc/album/">Album</a></li>
+              <li><a href="http://tw.rd.yahoo.com/referurl/wretch/index/me/blog/*http://www.wretch.cc/blog/">Blog</a></li>
+              <li>
+                <a class="focus" href="http://tw.rd.yahoo.com/referurl/wretch/index/me/video/*http://www.wretch.cc/video/">Video</a>
+                <img src="http://l.yimg.com/wretch.yimg.com/photos/serv/index/icon/new.gif" />
+              </li>
+              <li><a href="http://tw.rd.yahoo.com/referurl/wretch/index/me/hala/*http://www.wretch.cc/hala/">Forum</a></li>
+              <li><a href="http://tw.rd.yahoo.com/referurl/wretch/index/me/activity/*http://service.wretch.cc/Activity/">Activity</a></li>
+              <li id="star3"><a href="http://tw.rd.yahoo.com/referurl/wretch/index/me/superstar3/*http://superstar3.wretch.cc/" target="_blank">Star3</a></li>
+							<!--<li><a href="/game">戲谷</a></li>-->
+						</ul>
+					</dd>
+					<dt class="channel_link">Hot</dt>
+					<dd class="channel_link">
+						<ul>
+              <li class="channel_album"><a href="http://tw.rd.yahoo.com/referurl/wretch/index/me/girl/*http://www.wretch.cc/album/?func=hot&hid=0&class_id=9">Girl</a></li>
+              <li class="channel_album"><a href="http://tw.rd.yahoo.com/referurl/wretch/index/me/photo/*http://www.wretch.cc/album/?func=hot&hid=0&class_id=5">Photo</a></li>
+              <li class="channel_blog"><a href="http://tw.rd.yahoo.com/referurl/wretch/index/me/food/*http://www.wretch.cc/blog/?func=hot&hid=0&class_id=22">Food</a></li>
+              <li class="channel_blog"><a href="http://tw.rd.yahoo.com/referurl/wretch/index/me/travel/*http://www.wretch.cc/blog/?func=hot&hid=0&class_id=25">Travel</a></li>
+              <li class="channel_video"><a href="http://tw.rd.yahoo.com/referurl/wretch/index/me/funny/*http://www.wretch.cc/video/index.php?func=hot&hid=0&class_id=16">Funny</a></li>
+              <li class="channel_video"><a href="http://tw.rd.yahoo.com/referurl/wretch/index/me/showbiz/*http://www.wretch.cc/video/index.php?func=hot&hid=0&class_id=14">ShowBiz</a></li>
+						</ul>
+					</dd>
+				</dl>
+				
+				<ul id="announcement" class="left_column">
+					<li id="bulletin">
+						<h4>WRETCH Notice</h4>
+						<div class="side">
+							<div class="sideII">
+								<ul>
+                  <li><a class="hover" href="http://tw.rd.yahoo.com/referurl/wretch/index/ann/1/*http://www.wretch.cc/blog/WretchFAQ&article_id=9179347" target="_blank">無法修改CSS的人請看</a></li>
+                  <li><a class="hover" href="http://tw.rd.yahoo.com/referurl/wretch/index/ann/2/*http://www.wretch.cc/blog/WretchFAQ&article_id=9179049" target="_blank">「誰來我家」關閉功能更新</a></li>
+                  <li><a  href="http://tw.rd.yahoo.com/referurl/wretch/index/ann/3/*http://www.wretch.cc/blog/WretchFAQ&article_id=9179091" target="_blank">請勿上傳酒類品牌相關內容</a></li>
+                  <li><a  href="http://tw.rd.yahoo.com/referurl/wretch/index/ann/4/*http://www.wretch.cc/blog/WretchFAQ&article_id=9179136" target="_blank">注意:CSS語法相關限制</a></li>
+                  <li><a  href="http://tw.rd.yahoo.com/referurl/wretch/index/ann/5/*http://www.wretch.cc/blog/WretchFAQ&article_id=9178936" target="_blank">影片播放器2/21更新</a></li>
+                  <li><a  href="http://tw.rd.yahoo.com/referurl/wretch/index/ann/6/*http://www.wretch.cc/blog/WretchFAQ&article_id=9178814" target="_blank">請勿上傳公然猥褻影像</a></li>
+                  <li><a  href="http://tw.rd.yahoo.com/referurl/wretch/index/ann/7/*http://www.wretch.cc/wizard/wretch_agent.php" target="_blank">不知哪裡下載小幫手點這裡</a></li>
+								</ul>
+                <div class="moreinfo"><a href="http://tw.rd.yahoo.com/referurl/wretch/index/ann/a/*http://www.wretch.cc/blog/WretchFAQ">more</a></div>
+							</div>
+						</div>
+					</li>
+					<li id="blogclass">
+						<a href="http://tw.rd.yahoo.com/referurl/wretch/index/pccenter/*http://tw.yimg.com/i/tw/wretch/service/blogclass.html"></a>
+					</li>
+					
+					<li id="activity">
+						<h4>Activity</h4>
+						<div class="side">
+							<div class="sideII">
+                <a href="http://tw.rd.yahoo.com/referurl/wretch/index/activity/2/2/*http://service.wretch.cc/Activity/index.php?id=155&amp;wretchcc&orderby=votes&desc=DESC&page=1" target="_blank"><img src="http://pic.wretch.cc/photos/serv/dynamic/service/icon/banner155.gif?1204248602" alt="第六屆新光三越美少女選拔賽" /></a>
+                <p><a href="http://tw.rd.yahoo.com/referurl/wretch/index/activity/2/1/*http://service.wretch.cc/Activity/index.php?id=155&amp;wretchcc&orderby=votes&desc=DESC&page=1" target="_blank">第六屆新光三越美少女選拔賽</a></p>
+                <div class="moreinfo"><a href="http://tw.rd.yahoo.com/referurl/wretch/index/activity/a/*http://service.wretch.cc/Activity/" target="_blank">more</a></div>
+							</div>
+						</div>
+					</li>
+					
+					<li id="hot_News">
+						<h4>Hot News</h4>
+						<div class="side">
+							<div class="sideII">
+                <script type="text/javascript" src="http://tw.yimg.com/i/tw/ysm/wretch/wrechhpron.js"></script>
+							</div>
+						</div>
+					</li>
+
+          <li id="square">
+            <!-- SpaceID=0 robot -->
+          </li>
+          <li id="square2">
+            <!-- SpaceID=0 robot -->
+          </li>
+				</ul>
+				
+				<div id="main_content" class="middle_column">
+					<div id="service">
+						<ul>
+							<li id="blog">
+                <h2>無名精選網誌</h2><cite></cite>
+              </li>
+							<li id="album" class="hover">
+                <h2>無名精選相簿</h2><cite></cite>
+              </li>
+							<li id="video">
+                <h2>無名精選影音</h2><cite></cite>
+              </li>
+						</ul>
+						<div class="innercontent" id="blog_content" style="display:none;">
+							<!--<div class="topic">【主題】 <a href="#">無名精選網誌</a></div>-->
+							<ol>
+								<li>
+									<div class="image_link">
+                    <a href="http://tw.rd.yahoo.com/referurl/wretch/index/hot/blog/1/1/*http://www.wretch.cc/blog/vicanosia&article_id=4567611" target="_blank"><img src="http://f8.wretch.yimg.com/vicanosia/1/thumbs/t1095515651.jpg" alt="放棄純愛毒咒？" /><cite></cite></a>
+									</div>
+									<div class="grid">
+                    <strong><a href="http://tw.rd.yahoo.com/referurl/wretch/index/hot/blog/1/2/*http://www.wretch.cc/blog/vicanosia&article_id=4567611" target="_blank">vicanosia</a></strong>
+                    <a class="blog_title" href="http://tw.rd.yahoo.com/referurl/wretch/index/hot/blog/1/3/*http://www.wretch.cc/blog/vicanosia&article_id=4567611" target="_blank">放棄純愛毒咒？</a>
+										<!--<span>69articles</span>-->
+										<p>但拋開信仰比穿了一件難看的衣服上街還難過</p>
+									</div>
+								</li>
+								<li>
+									<div class="image_link">
+                    <a href="http://tw.rd.yahoo.com/referurl/wretch/index/hot/blog/7/1/*http://www.wretch.cc/blog/greatcoffee&article_id=7158522" target="_blank"><img src="http://f5.wretch.yimg.com/greatcoffee/2/thumbs/t1075660092.jpg" alt="沒有肉慾的戀情" /><cite></cite></a>
+									</div>
+									<div class="grid">
+                    <strong><a href="http://tw.rd.yahoo.com/referurl/wretch/index/hot/blog/7/2/*http://www.wretch.cc/blog/greatcoffee&article_id=7158522" target="_blank">greatcoffee</a></strong>
+                    <a class="blog_title" href="http://tw.rd.yahoo.com/referurl/wretch/index/hot/blog/7/3/*http://www.wretch.cc/blog/greatcoffee&article_id=7158522" target="_blank">沒有肉慾的戀情</a>
+										<!--<span>74articles</span>-->
+										<p>雖不符現實，卻是大家共同的成長經驗</p>
+									</div>
+								</li>
+								<li>
+									<div class="image_link">
+                    <a href="http://tw.rd.yahoo.com/referurl/wretch/index/hot/blog/8/1/*http://www.wretch.cc/blog/cindyya2002&article_id=13242077" target="_blank"><img src="http://f8.wretch.yimg.com/cindyya2002/11/thumbs/t1829673946.jpg" alt="長澤雅美還是可愛" /><cite></cite></a>
+									</div>
+									<div class="grid">
+                    <strong><a href="http://tw.rd.yahoo.com/referurl/wretch/index/hot/blog/8/2/*http://www.wretch.cc/blog/cindyya2002&article_id=13242077" target="_blank">cindyya2002</a></strong>
+                    <a class="blog_title" href="http://tw.rd.yahoo.com/referurl/wretch/index/hot/blog/8/3/*http://www.wretch.cc/blog/cindyya2002&article_id=13242077" target="_blank">長澤雅美還是可愛</a>
+										<!--<span>215articles</span>-->
+										<p>有時真的很佩服她細微表情中所帶出的演技</p>
+									</div>
+								</li>
+								<li>
+									<div class="image_link">
+                    <a href="http://tw.rd.yahoo.com/referurl/wretch/index/hot/blog/3/1/*http://www.wretch.cc/blog/andreac&article_id=3240357" target="_blank"><img src="http://f4.wretch.yimg.com/andreac/6/thumbs/t1131771348.jpg" alt="鵝肝醬男人" /><cite></cite></a>
+									</div>
+									<div class="grid">
+                    <strong><a href="http://tw.rd.yahoo.com/referurl/wretch/index/hot/blog/3/2/*http://www.wretch.cc/blog/andreac&article_id=3240357" target="_blank">andreac</a></strong>
+                    <a class="blog_title" href="http://tw.rd.yahoo.com/referurl/wretch/index/hot/blog/3/3/*http://www.wretch.cc/blog/andreac&article_id=3240357" target="_blank">鵝肝醬男人</a>
+										<!--<span>126articles</span>-->
+										<p>從來沒有人這樣溫柔對我，就像鵝肝醬配上三分熟牛排</p>
+									</div>
+								</li>
+							</ol>
+              <div class="moreinfo"><a href="http://tw.rd.yahoo.com/referurl/wretch/index/hot/blog/a/*http://www.wretch.cc/blog/?func=hot&hid=10" target="_blank">more 無名精選網誌</a></div>
+						</div>
+						<div class="innercontent" id="album_content">
+							<!--<div class="topic">【主題】 <a href="#">無名精選相簿</a></div> -->
+							<ol>
+								<li>
+									<div class="image_link">
+                    <a href="http://tw.rd.yahoo.com/referurl/wretch/index/hot/album/1/1/*http://www.wretch.cc/album/album.php?id=albeemomoko&book=64" target="_blank"><img src="http://f7.wretch.yimg.com/albeemomoko/64/thumbs/t1554893210.jpg" alt="數到二就動手" /><cite></cite></a>
+									</div>
+									<div class="grid">
+                    <strong><a href="http://tw.rd.yahoo.com/referurl/wretch/index/hot/album/1/2/*http://www.wretch.cc/album/album.php?id=albeemomoko&book=64" target="_blank">albeemomoko</a></strong>
+                    <p><a href="http://tw.rd.yahoo.com/referurl/wretch/index/hot/album/1/3/*http://www.wretch.cc/album/album.php?id=albeemomoko&book=64" target="_blank">數到二就動手</a></p>
+										<span>231pictures</span>
+									</div>
+								</li>
+								<li>
+									<div class="image_link">
+                    <a href="http://tw.rd.yahoo.com/referurl/wretch/index/hot/album/9/1/*http://www.wretch.cc/album/album.php?id=yyyuikklgf&book=18" target="_blank"><img src="http://f8.wretch.yimg.com/yyyuikklgf/18/thumbs/t1163290832.jpg" alt="清秀短髮女孩" /><cite></cite></a>
+									</div>
+									<div class="grid">
+                    <strong><a href="http://tw.rd.yahoo.com/referurl/wretch/index/hot/album/9/2/*http://www.wretch.cc/album/album.php?id=yyyuikklgf&book=18" target="_blank">yyyuikklgf</a></strong>
+                    <p><a href="http://tw.rd.yahoo.com/referurl/wretch/index/hot/album/9/3/*http://www.wretch.cc/album/album.php?id=yyyuikklgf&book=18" target="_blank">清秀短髮女孩</a></p>
+										<span>5pictures</span>
+									</div>
+								</li>
+								<li>
+									<div class="image_link">
+                    <a href="http://tw.rd.yahoo.com/referurl/wretch/index/hot/album/8/1/*http://www.wretch.cc/album/album.php?id=minipei1004&book=22" target="_blank"><img src="http://f6.wretch.yimg.com/minipei1004/22/thumbs/t1779010308.jpg" alt="這才是制服趴" /><cite></cite></a>
+									</div>
+									<div class="grid">
+                    <strong><a href="http://tw.rd.yahoo.com/referurl/wretch/index/hot/album/8/2/*http://www.wretch.cc/album/album.php?id=minipei1004&book=22" target="_blank">minipei1004</a></strong>
+                    <p><a href="http://tw.rd.yahoo.com/referurl/wretch/index/hot/album/8/3/*http://www.wretch.cc/album/album.php?id=minipei1004&book=22" target="_blank">這才是制服趴</a></p>
+										<span>45pictures</span>
+									</div>
+								</li>
+								<li>
+									<div class="image_link">
+                    <a href="http://tw.rd.yahoo.com/referurl/wretch/index/hot/album/3/1/*http://www.wretch.cc/album/album.php?id=angel9906&book=35" target="_blank"><img src="http://f4.wretch.yimg.com/angel9906/35/thumbs/t1889122629.jpg" alt="猜我額頭有多高" /><cite></cite></a>
+									</div>
+									<div class="grid">
+                    <strong><a href="http://tw.rd.yahoo.com/referurl/wretch/index/hot/album/3/2/*http://www.wretch.cc/album/album.php?id=angel9906&book=35" target="_blank">angel9906</a></strong>
+                    <p><a href="http://tw.rd.yahoo.com/referurl/wretch/index/hot/album/3/3/*http://www.wretch.cc/album/album.php?id=angel9906&book=35" target="_blank">猜我額頭有多高</a></p>
+										<span>37pictures</span>
+									</div>
+								</li>
+							</ol>
+              <div class="moreinfo"><a href="http://tw.rd.yahoo.com/referurl/wretch/index/hot/album/a/*http://www.wretch.cc/album/?func=hot&hid=4" target="_blank">more 無名精選相簿</a></div>
+							<div class="marquee_ad">
+								<!--<a href="">【免費】 </a>-->
+								<!-- SpaceID=0 robot -->
+<!-- SpaceID=0 robot -->
+							</div>
+						</div>
+						<div class="innercontent" id="video_content" style="display:none;">
+							<!--<div class="topic">【主題】 <a href="#">無名精選影音</a></div>-->
+							<ol>
+								<li>
+									<div class="image_link">
+                    <a href="http://tw.rd.yahoo.com/referurl/wretch/index/hot/video/6/1/*http://www.wretch.cc/video/EternaLBox&func=single&vid=4143092&p=0" target="_blank"><img src="http://f4.wretch.yimg.com/eternalbox/16/thumbs/t1182470853.jpg" alt="護士很忙" /><cite></cite></a>
+									</div>
+									<div class="grid">
+                    <strong><a href="http://tw.rd.yahoo.com/referurl/wretch/index/hot/video/6/2/*http://www.wretch.cc/video/EternaLBox&func=single&vid=4143092&p=0" target="_blank">eternalbox</a></strong>
+                    <p><a href="http://tw.rd.yahoo.com/referurl/wretch/index/hot/video/6/3/*http://www.wretch.cc/video/EternaLBox&func=single&vid=4143092&p=0" target="_blank">護士很忙</a></p>
+										<span>1videos</span>
+									</div>
+								</li>
+								<li>
+									<div class="image_link">
+                    <a href="http://tw.rd.yahoo.com/referurl/wretch/index/hot/video/3/1/*http://www.wretch.cc/video/bearcatman&func=single&vid=3827891&o=time_d&p=1" target="_blank"><img src="http://f8.wretch.yimg.com/bearcatman/2/thumbs/t1084855120.jpg" alt="阿宅快一點" /><cite></cite></a>
+									</div>
+									<div class="grid">
+                    <strong><a href="http://tw.rd.yahoo.com/referurl/wretch/index/hot/video/3/2/*http://www.wretch.cc/video/bearcatman&func=single&vid=3827891&o=time_d&p=1" target="_blank">bearcatman</a></strong>
+                    <p><a href="http://tw.rd.yahoo.com/referurl/wretch/index/hot/video/3/3/*http://www.wretch.cc/video/bearcatman&func=single&vid=3827891&o=time_d&p=1" target="_blank">阿宅快一點</a></p>
+										<span>16videos</span>
+									</div>
+								</li>
+								<li>
+									<div class="image_link">
+                    <a href="http://tw.rd.yahoo.com/referurl/wretch/index/hot/video/7/1/*http://www.wretch.cc/video/kof8702310&func=single&vid=3839652&p=4" target="_blank"><img src="http://f9.wretch.yimg.com/kof8702310/1/thumbs/t1012434146.jpg" alt="靜茹臉有點圓" /><cite></cite></a>
+									</div>
+									<div class="grid">
+                    <strong><a href="http://tw.rd.yahoo.com/referurl/wretch/index/hot/video/7/2/*http://www.wretch.cc/video/kof8702310&func=single&vid=3839652&p=4" target="_blank">kof8702310</a></strong>
+                    <p><a href="http://tw.rd.yahoo.com/referurl/wretch/index/hot/video/7/3/*http://www.wretch.cc/video/kof8702310&func=single&vid=3839652&p=4" target="_blank">靜茹臉有點圓</a></p>
+										<span>6videos</span>
+									</div>
+								</li>
+								<li>
+									<div class="image_link">
+                    <a href="http://tw.rd.yahoo.com/referurl/wretch/index/hot/video/5/1/*http://www.wretch.cc/video/katie1024&func=single&vid=3693734&o=time_d&p=1&cid=21578" target="_blank"><img src="http://f4.wretch.yimg.com/katie1024/12/thumbs/t1948201055.jpg" alt="超浪漫愛情大集合" /><cite></cite></a>
+									</div>
+									<div class="grid">
+                    <strong><a href="http://tw.rd.yahoo.com/referurl/wretch/index/hot/video/5/2/*http://www.wretch.cc/video/katie1024&func=single&vid=3693734&o=time_d&p=1&cid=21578" target="_blank">katie1024</a></strong>
+                    <p><a href="http://tw.rd.yahoo.com/referurl/wretch/index/hot/video/5/3/*http://www.wretch.cc/video/katie1024&func=single&vid=3693734&o=time_d&p=1&cid=21578" target="_blank">超浪漫愛情大集合</a></p>
+										<span>25videos</span>
+									</div>
+								</li>
+							</ol>
+              <div class="moreinfo"><a href="http://tw.rd.yahoo.com/referurl/wretch/index/hot/video/a/*http://www.wretch.cc/video/?func=hot&hid=0" target="_blank">more 無名精選影音</a></div>
+							<div class="marquee_ad">
+								<!--<a href="">【流行】 </a>-->
+								<!-- SpaceID=0 robot -->
+<!-- SpaceID=0 robot -->
+							</div>
+						</div>
+					</div>
+					
+					<div id="stepstone">
+            <!-- SpaceID=0 robot -->
+          </div>
+
+					<div id="channel">
+						<ul>
+							<li id="topic_0">
+                <h2>癮用</h2><cite></cite>
+							</li>
+							<li id="topic_1">
+                <h2>美食</h2><cite></cite>
+							</li>
+							<li id="topic_2">
+                <h2>3C</h2><cite></cite>
+							</li>
+							<li id="topic_3">
+                <h2>流行</h2><cite></cite>
+							</li>
+							<li id="topic_4" class="hover">
+                <h2>電影</h2><cite></cite>
+							</li>
+						</ul>
+						<div class="innercontent" id="topic_0_content" style="display:none;">
+							<div class="channel_cover image_link">
+                <a href="http://tw.rd.yahoo.com/referurl/wretch/index/ugc/1/1/2/*http://www.wretch.cc/blog/wretchtalk" target="_blank"><img id="topic_cover_0" src="http://pic.wretch.cc/photos/serv/dynamic/index_page/topic/topic_1_1487.jpg" alt="你相信算命嗎？" /><cite></cite></a>
+							</div>
+							<ol>
+								<li>
+                  <a class="ugc_title" href="http://tw.rd.yahoo.com/referurl/wretch/index/ugc/1/1/1/*http://www.wretch.cc/blog/wretchtalk" target="_blank"><font color="deeppink">你相信算命嗎？</font></a>
+								</li>
+								<li class="ugc_inner">
+                  <font color="black">當你懷有不安全感或是必須做下重大</font>								</li>
+								<li class="ugc_inner">
+                  <font color="black">決定時算命或許是部份人的選擇！</font>								</li>
+                                <li>
+                  <a class="ugc_bottom" href="http://tw.rd.yahoo.com/referurl/wretch/index/ugc/1/4/1/*http://www.wretch.cc/blog/HitomiStory&article_id=9670567" target="_blank"><font color="black">一項好功能不需要太複雜的操作</font></a>
+								</li>
+								<li>
+                  <a class="ugc_bottom" href="http://tw.rd.yahoo.com/referurl/wretch/index/ugc/1/5/1/*http://www.wretch.cc/blog/a4258237&article_id=23962298" target="_blank"><font color="black">話題性十足的功能”誰來我家”</font></a>
+								</li>
+							</ol>
+              <div class="moreinfo"><a href="http://tw.rd.yahoo.com/referurl/wretch/index/ugc/1/a/*http://www.wretch.cc/blog/wretchtalk" target="_blank">更多癮用</a></div>
+						</div>
+						<div class="innercontent" id="topic_1_content" style="display:none;">
+							<div class="channel_cover image_link">
+                <a href="http://tw.rd.yahoo.com/referurl/wretch/index/ugc/2/1/2/*http://www.wretch.cc/blog/rickson&article_id=2393784" target="_blank"><img id="topic_cover_1" src="http://pic.wretch.cc/photos/serv/dynamic/index_page/topic/topic_2_1469.jpg" alt="鵝肝醬的真正吃法" /><cite></cite></a>
+							</div>
+							<ol>
+								<li>
+                  <a class="ugc_title" href="http://tw.rd.yahoo.com/referurl/wretch/index/ugc/2/1/1/*http://www.wretch.cc/blog/rickson&article_id=2393784" target="_blank"><font color="deeppink">鵝肝醬的真正吃法</font></a>
+								</li>
+								<li class="ugc_inner">
+                  <font color="black">要配上有點酸甜，香氣不強的果醬，</font>								</li>
+								<li class="ugc_inner">
+                  <font color="black">沒這樣吃過無法瞭解鵝肝醬的美味</font>								</li>
+                                <li>
+                  <a class="ugc_bottom" href="http://tw.rd.yahoo.com/referurl/wretch/index/ugc/2/4/1/*http://www.wretch.cc/blog/sanantonio&article_id=23850519" target="_blank"><font color="black">品嚐法式經典美味</font></a>
+								</li>
+								<li>
+                  <a class="ugc_bottom" href="http://tw.rd.yahoo.com/referurl/wretch/index/ugc/2/5/1/*http://www.wretch.cc/blog/gamasay&article_id=7005065" target="_blank"><font color="black">鵝肝醬貝果 - 奢華的早餐</font></a>
+								</li>
+							</ol>
+              <div class="moreinfo"><a href="http://tw.rd.yahoo.com/referurl/wretch/index/ugc/2/a/*http://www.wretch.cc/blog/?func=hot&hid=0&class_id=22" target="_blank">更多美食</a></div>
+						</div>
+						<div class="innercontent" id="topic_2_content" style="display:none;">
+							<div class="channel_cover image_link">
+                <a href="http://tw.rd.yahoo.com/referurl/wretch/index/ugc/3/1/2/*http://www.wretch.cc/blog/a923069&article_id=22319980" target="_blank"><img id="topic_cover_2" src="http://pic.wretch.cc/photos/serv/dynamic/index_page/topic/topic_3_1477.jpg" alt="品味生活從吸塵器開始" /><cite></cite></a>
+							</div>
+							<ol>
+								<li>
+                  <a class="ugc_title" href="http://tw.rd.yahoo.com/referurl/wretch/index/ugc/3/1/1/*http://www.wretch.cc/blog/a923069&article_id=22319980" target="_blank"><font color="deeppink">品味生活從吸塵器開始</font></a>
+								</li>
+								<li class="ugc_inner">
+                  <font color="black">造型獨特不只是裝飾品專利，高質感</font>								</li>
+								<li class="ugc_inner">
+                  <font color="black">時尚配備從清潔用品入手</font>								</li>
+                                <li>
+                  <a class="ugc_bottom" href="http://tw.rd.yahoo.com/referurl/wretch/index/ugc/3/4/1/*http://www.wretch.cc/blog/peterkai&article_id=12936709" target="_blank"><font color="black">超夢幻新顏色PSP</font></a>
+								</li>
+								<li>
+                  <a class="ugc_bottom" href="http://tw.rd.yahoo.com/referurl/wretch/index/ugc/3/5/1/*http://www.wretch.cc/blog/cjy20549&article_id=17675918" target="_blank"><font color="black">科技新品，超薄滑鼠</font></a>
+								</li>
+							</ol>
+              <div class="moreinfo"><a href="http://tw.rd.yahoo.com/referurl/wretch/index/ugc/3/a/*http://www.wretch.cc/blog/?func=hot&hid=0&class_id=2" target="_blank">更多3C</a></div>
+						</div>
+						<div class="innercontent" id="topic_3_content" style="display:none;">
+							<div class="channel_cover image_link">
+                <a href="http://tw.rd.yahoo.com/referurl/wretch/index/ugc/4/1/2/*http://www.wretch.cc/blog/kim0521&article_id=11236782" target="_blank"><img id="topic_cover_3" src="http://pic.wretch.cc/photos/serv/dynamic/index_page/topic/topic_4_1481.jpg" alt="2008春夏流行髮型" /><cite></cite></a>
+							</div>
+							<ol>
+								<li>
+                  <a class="ugc_title" href="http://tw.rd.yahoo.com/referurl/wretch/index/ugc/4/1/1/*http://www.wretch.cc/blog/kim0521&article_id=11236782" target="_blank"><font color="deeppink">2008春夏流行髮型</font></a>
+								</li>
+								<li class="ugc_inner">
+                  <font color="black">染燙之前要跟設計師討論一下，依您</font>								</li>
+								<li class="ugc_inner">
+                  <font color="black">的膚色再染燙出美麗時尚的髮型</font>								</li>
+                                <li>
+                  <a class="ugc_bottom" href="http://tw.rd.yahoo.com/referurl/wretch/index/ugc/4/4/1/*http://www.wretch.cc/blog/mix961129&article_id=20865838" target="_blank"><font color="black">捲捲包柏最可愛!流行漫延到明年</font></a>
+								</li>
+								<li>
+                  <a class="ugc_bottom" href="http://tw.rd.yahoo.com/referurl/wretch/index/ugc/4/5/1/*http://www.wretch.cc/blog/jesse791027&article_id=13869069" target="_blank"><font color="black">極簡華麗帶出浪漫且搖滾的調性</font></a>
+								</li>
+							</ol>
+              <div class="moreinfo"><a href="http://tw.rd.yahoo.com/referurl/wretch/index/ugc/4/a/*http://www.wretch.cc/blog/?func=hot&hid=0&class_id=14" target="_blank">更多流行</a></div>
+						</div>
+						<div class="innercontent" id="topic_4_content">
+							<div class="channel_cover image_link">
+                <a href="http://tw.rd.yahoo.com/referurl/wretch/index/ugc/5/1/2/*http://www.wretch.cc/blog/wretchmovie&article_id=9179048" target="_blank"><img id="topic_cover_4" src="http://pic.wretch.cc/photos/serv/dynamic/index_page/topic/topic_5_1445.jpg" alt="冠希成了公廁小天使？" /><cite></cite></a>
+							</div>
+							<ol>
+								<li>
+                  <a class="ugc_title" href="http://tw.rd.yahoo.com/referurl/wretch/index/ugc/5/1/1/*http://www.wretch.cc/blog/wretchmovie&article_id=9179048" target="_blank"><font color="deeppink">冠希成了公廁小天使？</font></a>
+								</li>
+								<li class="ugc_inner">
+                  <font color="black">每當他去公共廁所時，都會順道清理</font>								</li>
+								<li class="ugc_inner">
+                  <font color="black">是所有洗手間的清潔工人的天使</font>								</li>
+                                <li>
+                  <a class="ugc_bottom" href="http://tw.rd.yahoo.com/referurl/wretch/index/ugc/5/4/1/*http://www.wretch.cc/blog/shiptosophia&article_id=25665483" target="_blank"><font color="black">十六歲的朱諾與男友初嚐禁果</font></a>
+								</li>
+								<li>
+                  <a class="ugc_bottom" href="http://tw.rd.yahoo.com/referurl/wretch/index/ugc/5/5/1/*http://www.wretch.cc/blog/pocato&article_id=12932575" target="_blank"><font color="black">演員陣容不減反增讓我更期待</font></a>
+								</li>
+							</ol>
+              <div class="moreinfo"><a href="http://tw.rd.yahoo.com/referurl/wretch/index/ugc/5/a/*http://www.wretch.cc/blog/?func=hot&hid=0&class_id=4" target="_blank">更多電影</a></div>
+						</div>
+					</div>
+					<div id="celebrity">
+						<ul>
+							<li id="artist" class="hover">
+								<h2>藝人</h2><cite></cite>
+							</li>
+							<li id="model">
+								<h2>模特兒</h2><cite></cite>
+							</li>
+							<li id="athletes">
+								<h2>運動明星</h2><cite></cite>
+							</li>
+							<li id="writer">
+								<h2>作家</h2><cite></cite>
+							</li>
+							<li id="politician">
+								<h2>政治人物</h2><cite></cite>
+							</li>
+						</ul>
+						<div class="innercontent" id="artist_content">
+							<div class="news">
+                <a class="news_img_link" href="http://tw.rd.yahoo.com/referurl/wretch/index/cele/artist/h/2/*http://www.wretch.cc/blog/fxxkleo&article_id=9156311" target="_blank"><img src="http://srp207.wretch.cc/520/f/fxxkleo/files/Cover_90.jpg" alt="感謝你們給我的搖滾夢" /></a>
+                <h4><a href="http://tw.rd.yahoo.com/referurl/wretch/index/cele/artist/h/1/*http://www.wretch.cc/blog/fxxkleo&article_id=9156311" target="_blank">感謝你們給我的搖滾夢</a></h4>
+                <p>謝謝你們又陪我完成了一個夢想，完成了一個我從小時候就一直期待的夢想，完成了一個這輩子最重要的夢想”(By CIRCUS Leo）
+ <a class="continue" href="http://tw.rd.yahoo.com/referurl/wretch/index/cele/artist/h/3/*http://www.wretch.cc/blog/fxxkleo&article_id=9156311" target="_blank">more</a></p>
+                <div class="moreinfo"><a href="http://tw.rd.yahoo.com/referurl/wretch/index/cele/artist/a/*http://www.wretch.cc/blog/index.php?func=artists" target="_blank">更多無名藝人</a></div>
+							</div>
+							<ol class="newslist">
+                <li><a href="http://tw.rd.yahoo.com/referurl/wretch/index/cele/artist/1/*http://www.wretch.cc/blog/meganlai" target="_blank"><font color=black>賴雅妍坦然說再見</font></a></li>
+                <li><a href="http://tw.rd.yahoo.com/referurl/wretch/index/cele/artist/2/*http://www.wretch.cc/blog/alien3647&article_id=21692356" target="_blank"><font color=red>小鬼在醫院大哭了?</font></a></li>
+                <li><a href="http://tw.rd.yahoo.com/referurl/wretch/index/cele/artist/3/*http://www.wretch.cc/blog/HUANGMICKEY&article_id=9660604" target="_blank"><font color=green>黃子佼說潮流無關私事</font></a></li>
+                <li><a href="http://tw.rd.yahoo.com/referurl/wretch/index/cele/artist/4/*http://www.wretch.cc/blog/riva0913&article_id=11281183" target="_blank"><font color=black>小甜甜與好友們的聚會</font></a></li>
+                <li><a href="http://tw.rd.yahoo.com/referurl/wretch/index/cele/artist/5/*http://www.wretch.cc/blog/TingChu&article_id=20230032" target="_blank"><font color=purple>思想造就一切，掌握在你</font></a></li>
+                <li><a href="http://tw.rd.yahoo.com/referurl/wretch/index/cele/artist/6/*http://www.wretch.cc/blog/anancrown&article_id=21691447" target="_blank"><font color=deeppink>許安安大方秀第一次</font></a></li>
+                <li><a href="http://tw.rd.yahoo.com/referurl/wretch/index/cele/artist/7/*http://www.wretch.cc/blog/afalean&article_id=21691916" target="_blank"><font color=black>朋友是盧學叡放鬆的來源</font></a></li>
+                <li><a href="http://tw.rd.yahoo.com/referurl/wretch/index/cele/artist/8/*http://www.wretch.cc/blog/mcphiliphung&article_id=20440129" target="_blank"><font color=blue>靠一張臉，特權無阻</font></a></li>
+                <li><a href="http://tw.rd.yahoo.com/referurl/wretch/index/cele/artist/9/*http://www.wretch.cc/blog/andyisaw&article_id=21690427" target="_blank"><font color=black>日本彩虹樂團來台演唱會</font></a></li>
+                <li><a href="http://tw.rd.yahoo.com/referurl/wretch/index/cele/artist/10/*http://www.wretch.cc/blog/kangkk528&article_id=11626709" target="_blank"><font color=black>康康有雙重人格的出現</font></a></li>
+							</ol>
+						</div>
+						<div class="innercontent" id="model_content" style="display:none;">
+							<div class="news">
+                <a class="news_img_link" href="http://tw.rd.yahoo.com/referurl/wretch/index/cele/model/h/2/*http://www.wretch.cc/blog/cutiecherry&article_id=16655650" target="_blank"><img src="http://srp206.wretch.cc/715/c/cutiecherry/files/Cover_90.jpg" alt="Cherry要結婚了？" /></a>
+                <h4><a href="http://tw.rd.yahoo.com/referurl/wretch/index/cele/model/h/1/*http://www.wretch.cc/blog/cutiecherry&article_id=16655650" target="_blank">Cherry要結婚了？</a></h4>
+                <p>喵先生的心機真重！趁著最近第一次跟我一起工作的時機
+，竟然攏絡我的好友們做起密探，在2008/2/19滿八年的今天
+，給了我一個超大驚喜（By Cherry） <a class="continue" href="http://tw.rd.yahoo.com/referurl/wretch/index/cele/model/h/3/*http://www.wretch.cc/blog/cutiecherry&article_id=16655650" target="_blank">more</a></p>
+                <div class="moreinfo"><a href="http://tw.rd.yahoo.com/referurl/wretch/index/cele/model/a/*http://www.wretch.cc/blog/index.php?func=models" target="_blank">更多無名模特兒</a></div>
+							</div>
+							<ol class="newslist">
+                <li><a href="http://tw.rd.yahoo.com/referurl/wretch/index/cele/model/1/*http://www.wretch.cc/blog/maomaocute&article_id=20478604" target="_blank"><font color=blue>毛毛今年只剩下一個人</font></a></li>
+                <li><a href="http://tw.rd.yahoo.com/referurl/wretch/index/cele/model/2/*http://www.wretch.cc/blog/MIKULU613&article_id=20440467" target="_blank"><font color=green>為了愛，我想把過去刪除</font></a></li>
+                <li><a href="http://tw.rd.yahoo.com/referurl/wretch/index/cele/model/3/*http://www.wretch.cc/blog/rainwan&article_id=11180858" target="_blank"><font color=black>男人的最愛，難以抵抗</font></a></li>
+                <li><a href="http://tw.rd.yahoo.com/referurl/wretch/index/cele/model/4/*http://www.wretch.cc/blog/viviennelee&article_id=6243911" target="_blank"><font color=black>甜美名模的秘密心事</font></a></li>
+                <li><a href="http://tw.rd.yahoo.com/referurl/wretch/index/cele/model/5/*http://www.wretch.cc/blog/gracetw&article_id=7105821" target="_blank"><font color=black>GRACE陷入低潮再振作</font></a></li>
+                <li><a href="http://tw.rd.yahoo.com/referurl/wretch/index/cele/model/6/*http://www.wretch.cc/blog/http://www.wretch.cc/blog/keiko740511&article_id=11525718&article_id=11525718" target="_blank"><font color=black>隨時隨地都要美美的</font></a></li>
+                <li><a href="http://tw.rd.yahoo.com/referurl/wretch/index/cele/model/7/*http://www.wretch.cc/blog/candywang&article_id=16655841" target="_blank"><font color=red>糖果王裝可愛有點難？</font></a></li>
+                <li><a href="http://tw.rd.yahoo.com/referurl/wretch/index/cele/model/8/*http://www.wretch.cc/blog/shiang35&article_id=25693715" target="_blank"><font color=deeppink>不要輕易測試愛情</font></a></li>
+                <li><a href="http://tw.rd.yahoo.com/referurl/wretch/index/cele/model/9/*http://www.wretch.cc/blog/chennini&article_id=17670086" target="_blank"><font color=purple>當模特兒槓上新聞主播</font></a></li>
+                <li><a href="http://tw.rd.yahoo.com/referurl/wretch/index/cele/model/10/*http://www.wretch.cc/blog/jeaninechin&article_id=13496049" target="_blank"><font color=gray>中性粗眉，今年當道</font></a></li>
+							</ol>
+						</div>
+						<div class="innercontent" id="athletes_content" style="display:none;">
+							<div class="news">
+                <a class="news_img_link" href="http://tw.rd.yahoo.com/referurl/wretch/index/cele/athletes/h/2/*http://www.wretch.cc/blog/tienhk&article_id=20231987" target="_blank"><img src="http://srp213.wretch.cc/419/j/jack03062002/files/Cover_90.jpg" alt="想要不同的明星賽？" /></a>
+                <h4><a href="http://tw.rd.yahoo.com/referurl/wretch/index/cele/athletes/h/1/*http://www.wretch.cc/blog/tienhk&article_id=20231987" target="_blank">想要不同的明星賽？</a></h4>
+                <p>即使是哈林籃球，耍多了，都會讓觀眾感到膩...因為耍球的橋段就是那幾招，球場上的角色，就是球員跟裁判，頂多再耍耍旁邊的球迷（BY 田鴻魁） <a class="continue" href="http://tw.rd.yahoo.com/referurl/wretch/index/cele/athletes/h/3/*http://www.wretch.cc/blog/tienhk&article_id=20231987" target="_blank">more</a></p>
+                <div class="moreinfo"><a href="http://tw.rd.yahoo.com/referurl/wretch/index/cele/athletes/a/*http://www.wretch.cc/blog/index.php?func=athletes" target="_blank">更多無名運動明星</a></div>
+							</div>
+							<ol class="newslist">
+                <li><a href="http://tw.rd.yahoo.com/referurl/wretch/index/cele/athletes/1/*http://www.wretch.cc/blog/vsjameswang&article_id=6238872" target="_blank"><font color=purple>遠行訪問台灣之光王建民</font></a></li>
+                <li><a href="http://tw.rd.yahoo.com/referurl/wretch/index/cele/athletes/2/*http://www.wretch.cc/blog/etbasketball&article_id=11511849" target="_blank"><font color=orange>裝瞎還可以拿冠軍？</font></a></li>
+                <li><a href="http://tw.rd.yahoo.com/referurl/wretch/index/cele/athletes/3/*http://www.wretch.cc/blog/tzujung10&article_id=20228121" target="_blank"><font color=blue>男人不該對女人做的事情</font></a></li>
+                <li><a href="http://tw.rd.yahoo.com/referurl/wretch/index/cele/athletes/4/*http://www.wretch.cc/blog/dtwu4&article_id=8771715" target="_blank"><font color=black>球星上節目不談運動？</font></a></li>
+                <li><a href="http://tw.rd.yahoo.com/referurl/wretch/index/cele/athletes/5/*http://www.wretch.cc/blog/blue925&article_id=11726064" target="_blank"><font color=black>接受失敗，絕不接受放棄</font></a></li>
+                <li><a href="http://tw.rd.yahoo.com/referurl/wretch/index/cele/athletes/6/*http://www.wretch.cc/blog/jack03062002&article_id=13518232" target="_blank"><font color=black>第一次打先發，感謝各位</font></a></li>
+                <li><a href="http://tw.rd.yahoo.com/referurl/wretch/index/cele/athletes/7/*http://www.wretch.cc/blog/jerrylin1119&article_id=13515274" target="_blank"><font color=green>明星賽票房冷是職籃警訊？</font></a></li>
+                <li><a href="http://tw.rd.yahoo.com/referurl/wretch/index/cele/athletes/8/*http://www.wretch.cc/blog/A721314&article_id=22130544" target="_blank"><font color=blue>愛情的甜蜜時光，消失了</font></a></li>
+                <li><a href="http://tw.rd.yahoo.com/referurl/wretch/index/cele/athletes/9/*http://www.wretch.cc/blog/drewstw&article_id=8771956" target="_blank"><font color=deeppink>主播看籃球明星賽事</font></a></li>
+                <li><a href="http://tw.rd.yahoo.com/referurl/wretch/index/cele/athletes/10/*http://www.wretch.cc/blog/ESPN&article_id=11065374" target="_blank"><font color=red>SBL請您助弱勢家庭兒童</font></a></li>
+							</ol>
+						</div>
+						<div class="innercontent" id="writer_content" style="display:none;">
+							<div class="news">
+                <a class="news_img_link" href="http://tw.rd.yahoo.com/referurl/wretch/index/cele/writer/h/2/*http://www.wretch.cc/blog/illyqueen&article_id=12131270" target="_blank"><img src="http://srp203.wretch.cc/420/i/illyqueen/files/Cover_90.jpg" alt="那是同情，不是愛情" /></a>
+                <h4><a href="http://tw.rd.yahoo.com/referurl/wretch/index/cele/writer/h/1/*http://www.wretch.cc/blog/illyqueen&article_id=12131270" target="_blank">那是同情，不是愛情</a></h4>
+                <p>或許分手是對方的錯，但是分手後是你自甘墮落。你可以怪別人害你摔跤，但是你躺在地上死賴著不起來，只是為了絆倒別人的人生，這跟裝殘障的乞丐有什麼差別？！(BY 女王) <a class="continue" href="http://tw.rd.yahoo.com/referurl/wretch/index/cele/writer/h/3/*http://www.wretch.cc/blog/illyqueen&article_id=12131270" target="_blank">more</a></p>
+                <div class="moreinfo"><a href="http://tw.rd.yahoo.com/referurl/wretch/index/cele/writer/a/*http://www.wretch.cc/blog/index.php?func=writers" target="_blank">更多無名作家</a></div>
+							</div>
+							<ol class="newslist">
+                <li><a href="http://tw.rd.yahoo.com/referurl/wretch/index/cele/writer/1/*http://www.wretch.cc/blog/sana217&article_id=25693462" target="_blank"><font color=blue>SANA的簽書會好熱鬧</font></a></li>
+                <li><a href="http://tw.rd.yahoo.com/referurl/wretch/index/cele/writer/2/*http://www.wretch.cc/blog/ilovebukuly&article_id=12135140" target="_blank"><font color=red>孤單與寂寞有什麼不一樣？</font></a></li>
+                <li><a href="http://tw.rd.yahoo.com/referurl/wretch/index/cele/writer/3/*http://www.wretch.cc/blog/tsu3355&article_id=20231032" target="_blank"><font color=green>羊羽也爆被抄襲作品?</font></a></li>
+                <li><a href="http://tw.rd.yahoo.com/referurl/wretch/index/cele/writer/4/*http://www.wretch.cc/blog/omqcomics&article_id=5336440" target="_blank"><font color=black>這才是正港的鬼臉</font></a></li>
+                <li><a href="http://tw.rd.yahoo.com/referurl/wretch/index/cele/writer/5/*http://www.wretch.cc/blog/DrPickup&article_id=8771953" target="_blank"><font color=black>搭訕教主要你活出自我</font></a></li>
+                <li><a href="http://tw.rd.yahoo.com/referurl/wretch/index/cele/writer/6/*http://www.wretch.cc/blog/lishiyen&article_id=20366892" target="_blank"><font color=orange>安全感讓我們留在錯誤中</font></a></li>
+                <li><a href="http://tw.rd.yahoo.com/referurl/wretch/index/cele/writer/7/*http://www.wretch.cc/blog/off60&article_id=5359996" target="_blank"><font color=black>簽書會讓四小折傻了眼</font></a></li>
+                <li><a href="http://tw.rd.yahoo.com/referurl/wretch/index/cele/writer/8/*http://www.wretch.cc/blog/Giddens&article_id=7106045" target="_blank"><font color=black>九把刀撞邪似的非常不爽</font></a></li>
+                <li><a href="http://tw.rd.yahoo.com/referurl/wretch/index/cele/writer/9/*http://www.wretch.cc/blog/higashiyume&article_id=9904262" target="_blank"><font color=deeppink>回想起百感交集的初夜</font></a></li>
+                <li><a href="http://tw.rd.yahoo.com/referurl/wretch/index/cele/writer/10/*http://www.wretch.cc/blog/spyorange&article_id=17479795" target="_blank"><font color=black>橘子書中人給你命名</font></a></li>
+							</ol>
+						</div>
+						<div class="innercontent" id="politician_content" style="display:none;">
+							<div class="news">
+                <a class="news_img_link" href="http://tw.rd.yahoo.com/referurl/wretch/index/cele/politician/h/2/*http://www.wretch.cc/blog/apiao0825&article_id=22579689" target="_blank"><img src="http://srp202.wretch.cc/714/a/apiao0825/files/Cover_90.jpg" alt="阿標的內心話" /></a>
+                <h4><a href="http://tw.rd.yahoo.com/referurl/wretch/index/cele/politician/h/1/*http://www.wretch.cc/blog/apiao0825&article_id=22579689" target="_blank">阿標的內心話</a></h4>
+                <p>政治人物的愛台灣不能只是口號，阿標的想法其實很單純，就是怎樣能讓我們鄉親過更好的生活，有優良的生活品質，有充份的就業機會，這就是愛台灣的表現。(By顏清標)
+
+ <a class="continue" href="http://tw.rd.yahoo.com/referurl/wretch/index/cele/politician/h/3/*http://www.wretch.cc/blog/apiao0825&article_id=22579689" target="_blank">more</a></p>
+                <div class="moreinfo"><a href="http://tw.rd.yahoo.com/referurl/wretch/index/cele/politician/a/*http://www.wretch.cc/blog/index.php?func=politics" target="_blank">更多無名政治人物</a></div>
+							</div>
+							<ol class="newslist">
+                <li><a href="http://tw.rd.yahoo.com/referurl/wretch/index/cele/politician/1/*http://www.wretch.cc/blog/pinkpink0910&article_id=13045254" target="_blank"><font color=black>被卡債壓死死？打這支電話</font></a></li>
+                <li><a href="http://tw.rd.yahoo.com/referurl/wretch/index/cele/politician/2/*http://www.wretch.cc/blog/lee531002&article_id=20966654" target="_blank"><font color=gray>用竹筒傳出愛</font></a></li>
+                <li><a href="http://tw.rd.yahoo.com/referurl/wretch/index/cele/politician/3/*http://www.wretch.cc/blog/chou440120&article_id=16975669" target="_blank"><font color=black>小馬老蕭屏東手牽手？</font></a></li>
+                <li><a href="http://tw.rd.yahoo.com/referurl/wretch/index/cele/politician/4/*http://www.wretch.cc/blog/FrankCTHsieh&article_id=9154689" target="_blank"><font color=deeppink>謝長廷珍藏的秘密照片？</font></a></li>
+                <li><a href="http://tw.rd.yahoo.com/referurl/wretch/index/cele/politician/5/*http://www.wretch.cc/blog/a24922281&article_id=22576674" target="_blank"><font color=green>受不了小姨子的誘惑</font></a></li>
+                <li><a href="http://tw.rd.yahoo.com/referurl/wretch/index/cele/politician/6/*http://www.wretch.cc/blog/jhongsheng&article_id=13737291" target="_blank"><font color=black>中小企業帶動台中縣繁榮</font></a></li>
+                <li><a href="http://tw.rd.yahoo.com/referurl/wretch/index/cele/politician/7/*http://www.wretch.cc/blog/einn0601&article_id=11163229" target="_blank"><font color=black>高鐵完工，改善林邊環境</font></a></li>
+                <li><a href="http://tw.rd.yahoo.com/referurl/wretch/index/cele/politician/8/*http://www.wretch.cc/blog/aprilyao&article_id=21691705" target="_blank"><font color=black>炸寒單爺，慶元宵</font></a></li>
+                <li><a href="http://tw.rd.yahoo.com/referurl/wretch/index/cele/politician/9/*http://www.wretch.cc/video/ma19for2008&func=single&vid=4339187&o=time_d&p=6" target="_blank"><font color=purple>馬英九與網友相見歡</font></a></li>
+                <li><a href="http://tw.rd.yahoo.com/referurl/wretch/index/cele/politician/10/*http://www.wretch.cc/blog/Jichu&article_id=13514037" target="_blank"><font color=blue>李紀珠徵求國會助理</font></a></li>
+							</ol>
+						</div>
+					</div>
+				</div>
+			</div>
+			
+			<ul id="sidebar" class="right_column">
+				<li id="unlogin">
+                    <h3>
+            <p>Hi ! </p>
+          </h3>
+					<div class="side">
+						<div class="sideII">
+          
+                            <p id="promotion">
+                <a id="member_login" href="http://tw.rd.yahoo.com/referurl/wretch/index/turf/in/*http://www.wretch.cc/IDintegration/">Sign In</a>
+                <a id="free_signup" href="http://tw.rd.yahoo.com/referurl/wretch/index/turf/up/*http://www.wretch.cc/IDintegration/new_signup.php">Free Sign Up</a>
+              </p>
+              <ul id="my_services">
+                <li id="icon_user"><a href="http://tw.rd.yahoo.com/referurl/wretch/index/turf/un/mypage/*http://www.wretch.cc/IDintegration/?refdest=/mypage/">Mypage</a></li>
+                <li id="icon_album"><a href="http://tw.rd.yahoo.com/referurl/wretch/index/turf/un/album/*http://www.wretch.cc/IDintegration/?refdest=/album/">My Album</a></li>
+                <li id="icon_blog"><a href="http://tw.rd.yahoo.com/referurl/wretch/index/turf/un/blog/*http://www.wretch.cc/IDintegration/?refdest=/blog/">My Blog</a></li>
+                <li id="icon_gbook"><a href="http://tw.rd.yahoo.com/referurl/wretch/index/turf/un/guestbook/*http://www.wretch.cc/IDintegration/?refdest=/guestbook/">My GBook</a></li>
+                <li id="icon_video"><a href="http://tw.rd.yahoo.com/referurl/wretch/index/turf/un/video/*http://www.wretch.cc/IDintegration/?refdest=/video/">My Video</a></li>
+                <li id="icon_friend"><a href="http://tw.rd.yahoo.com/referurl/wretch/index/turf/un/fn/*http://www.wretch.cc/IDintegration/?refdest=/friend/">My Friend</a></li>
+							</ul>
+						</div>
+          </div>
+          <div>
+            <a class="add_vip" href="http://tw.rd.yahoo.com/referurl/wretch/index/turf/un/vip/*http://www.wretch.cc/blog/WretchFAQ&article_id=6614002">Join VIP</a>
+          </div>
+        </li>
+				<li id="ad_morten">
+          <div class="side">
+            <div class="sideII"><!-- SpaceID=0 robot -->
+</div>
+          </div>
+				</li>
+ 				<li id="ad_stamp">
+					<h3>Wretch News</h3>
+          <div class="side">
+            <div class="sideII">
+              <ul>
+                <li><!-- SpaceID=0 robot -->
+</li>
+                <li><!-- SpaceID=0 robot -->
+</li>
+              </ul>
+            </div>
+          </div>
+
+				</li>         
+				<li id="vote">
+					<h3>Wretch Promotion</h3>
+					<div class="side">
+						<div class="sideII">
+              <ul>
+                <li id="force">
+							    <div class="image_link">
+								    <a href="http://vote.wretch.cc/?func=vote&id=150" target="_blank"><img id="vote_cover" src="http://pic.wretch.cc/photos/serv/dynamic/vote/icon/vote150.jpeg?1204248602" alt="你跟你的另一半是怎麼認識的呢？..." /><cite></cite></a>
+							    </div>
+							    <ul>
+								    <li><a href="http://vote.wretch.cc/?func=vote&id=150" target="_blank">你跟你的另一半是怎麼認識的呢？...</a></li>
+								    <li><a href="http://vote.wretch.cc/?func=vote&id=149" target="_blank">誰來我家新功能意見調查...</a></li>
+								    <li><a href="http://vote.wretch.cc/?func=vote&id=151" target="_blank">你覺得男生要不要修眉毛？...</a></li>
+							    </ul>
+                  <div class="moreinfo"><a href="http://vote.wretch.cc/" target="_blank">more</a></div>
+                </li>
+                <li id="commonweal">
+                  <!-- SpaceID=0 robot -->
+                  <div class="moreinfo"><a href="http://tw.charity.yahoo.com/blog/" target="_blank"></a></div>
+                </li>
+              </ul>
+						</div>
+					</div>
+
+				</li>
+				<li id="hothala">
+					<h3>Hot Topic</h3>
+					<div class="side">
+						<div class="sideII">
+							<ul>
+                              <li>【<font color=orange>相信命運</font>】<a href="http://tw.rd.yahoo.com/referurl/wretch/index/hala/1/*http://www.wretch.cc/blog/wretchtalk" target="_blank"><font color=orange>你相信算命說的　未來　嗎？</font></a></li>
+                              <li>【<font color=purple>會員升級</font>】<a href="http://tw.rd.yahoo.com/referurl/wretch/index/hala/2/*http://www.wretch.cc/blog/WretchFAQ&article_id=6614002" target="_blank"><font color=purple>想了解金卡、銀卡的差別?看這裡!</font></a></li>
+                              <li>【<font color=green>上傳幫手</font>】<a href="http://tw.rd.yahoo.com/referurl/wretch/index/hala/3/*http://www.wretch.cc/wizard/wretch_agent.php" target="_blank"><font color=green>想要下載上傳小幫手?點這裡!</font></a></li>
+                              <li>【<font color=black>後悔不及</font>】<a href="http://tw.rd.yahoo.com/referurl/wretch/index/hala/4/*http://www.wretch.cc/hala/viewtopic.php?t=615310" target="_blank"><font color=black>不想公開目前的戀情，心態是什麼?</font></a></li>
+                              <li>【<font color=black>天生的啦</font>】<a href="http://tw.rd.yahoo.com/referurl/wretch/index/hala/5/*http://www.wretch.cc/hala/viewtopic.php?t=611976" target="_blank"><font color=black>聲音低沉無變化，不適合說笑話</font></a></li>
+                              <li>【<font color=black>何謂真愛</font>】<a href="http://tw.rd.yahoo.com/referurl/wretch/index/hala/6/*http://www.wretch.cc/hala/viewtopic.php?t=607441" target="_blank"><font color=black>只要能讓她永遠展露出幸福笑容就是真愛</font></a></li>
+                              <li>【<font color=black>懶得逛嘛</font>】<a href="http://tw.rd.yahoo.com/referurl/wretch/index/hala/7/*http://www.wretch.cc/hala/viewtopic.php?t=600286" target="_blank"><font color=black>這年頭，不逛街的女生就是異類喲!</font></a></li>
+                              <li>【<font color=black>分得乾淨</font>】<a href="http://tw.rd.yahoo.com/referurl/wretch/index/hala/8/*http://www.wretch.cc/hala/viewtopic.php?t=615481" target="_blank"><font color=black>既然已分手，還可以繼續當朋友嗎?</font></a></li>
+                              <li>【<font color=black>重友輕色</font>】<a href="http://tw.rd.yahoo.com/referurl/wretch/index/hala/9/*http://www.wretch.cc/hala/viewtopic.php?t=613063" target="_blank"><font color=black>另一伴對朋友比對自己好，不開心算任性</font></a></li>
+                              <li>【<font color=black>愛騙人啦</font>】<a href="http://tw.rd.yahoo.com/referurl/wretch/index/hala/10/*http://www.wretch.cc/hala/viewtopic.php?t=608436" target="_blank"><font color=black>小時候爸媽常說自己是撿來的?你也是嗎?</font></a></li>
+              							</ul>
+						</div>
+					</div>
+				</li>
+			</ul>
+		</div>
+
+﻿
+<ul id="footer">
+  <li><a href="http://tw.rd.yahoo.com/referurl/wretch/index/f/intro/*http://pic.wretch.cc/photos/serv/hp_intro/index.html">Take A Homepage Tour</a></li>
+  <li><a href="http://tw.rd.yahoo.com/referurl/wretch/index/f/tos/*http://tw.info.yahoo.com/legal/utos.html">Terms of Service</a></li>
+  <li><a href="http://tw.rd.yahoo.com/referurl/wretch/index/f/pri/*http://info.yahoo.com/privacy/tw/yahoo/">Privacy Policy</a></li>
+  <li><a href="http://tw.rd.yahoo.com/referurl/wretch/index/f/press/*http://www.wretch.cc/etc/press.html">Company Info</a></li>
+  <li><a href="http://tw.rd.yahoo.com/referurl/wretch/index/f/contact/*http://www.wretch.cc/common/contact">Contact us</a></li>
+  <li><a href="http://tw.rd.yahoo.com/referurl/wretch/index/f/ads/*http://www.wretch.cc/blog/MktBlog&amp;article_id=17943117">Ad with us</a></li>
+  <li><a href="http://tw.rd.yahoo.com/referurl/wretch/index/f/mkt/*http://www.wretch.cc/blog/MktBlog">eMarketing</a></li>
+  <li><a href="http://tw.rd.yahoo.com/referurl/wretch/index/f/hire/*http://tw.info.yahoo.com/careers">Jobs</a></li>
+  <li class="webmaster"><a href="http://tw.rd.yahoo.com/referurl/wretch/index/f/cy/*http://tw.info.yahoo.com/copyright/">Copyright/IP Policy</a>&nbsp&nbsp[This website has managers] accords with Taiwan Internet Content Rating Regulations.  <span>Copyright &copy; 2008 Yahoo! Taiwan All Rights Reserved.</span></li>
+</ul>
+		<div id="extraDiv1"></div>
+		<div id="extraDiv2"></div>
+	</div>
+		<div id="extraDiv3"></div>
+		<div id="extraDiv4"></div>
+</div>
+<div id="extraDiv5"></div>
+<div id="extraDiv6"></div>
+<div id="currentSize"></div>
+<script type="text/javascript"><!--//
+wretch_init();
+
+
+
+	
+					
+
+//--></script>
+
+
+
+
+
+<script>var random_num=Math.random();document.write("<img style=\"display:none;\" width=1 height=1 src=http://bcw1.mining.vip.tp2.yahoo.com/b?s=2022137079&make=yahoo&type=wretch&t="+random_num+">");</script></body>
+</html>
+<!-- w35.wretch.tp2.yahoo.net uncompressed Fri Feb 29 09:41:49 CST 2008 -->

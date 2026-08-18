@@ -1,0 +1,102 @@
+#promotion {
+    letter-spacing:0!important;
+    background-color:#fff;
+    width:630px;
+    border:3px solid #000;
+}
+#promotion .hd_link {
+    margin:30px 30px 25px; 
+}
+#promotion .hd_link h1, #promotion .hd_link h2 {
+    margin:15px!important; 
+    text-align:left!important;
+    color:#666!important;
+    font-family:arial!important;
+    font-size:16px!important;
+    font-weight:bold!important;
+    padding:0!important;
+    letter-spacing:0!important;
+    background:#fff!important;
+}
+#promotion .hd_link h2 {
+    color:#999!important;
+    font-weight:normal!important;
+}
+#promotion .bd_link {
+    height:280px;
+    background:url(../img/bg_promotion24.png) no-repeat center 0;
+    _background:url(../img/bg_promotion8.png) no-repeat center 0;
+}
+#promotion .ft_link {
+    height:48px;
+    margin:25px 0 30px;
+    text-align:center!important;
+}
+#promotion .ft_link a {
+    letter-spacing:0!important;
+    display:inline-block;
+    height:48px;
+    _height:48px;
+    margin:0 15px;
+    padding-right:15px;
+    color:#fff;
+    vertical-align:middle;
+    line-height:48px;
+    font-family:arial;
+    font-size:12px;
+    text-decoration:none;
+    font-weight:bold;
+    border-radius:4px;
+}
+#promotion a.ie {
+    background:url(../img/bg_promotion24.png) no-repeat -347px -281px;
+    _background:url(../img/bg_promotion8.png) no-repeat -347px -292px;
+}
+#promotion .ie span {
+    position:relative;
+    top:17px;
+    _top:15px;
+    *left:8px;
+    display:inline-block;
+    width:49px;
+    height:48px;
+    margin:-33px 5px 0 8px;
+    _margin:-25px 5px 0 8px;
+    background:url(../img/bg_promotion24.png) no-repeat 0 -329px;
+    _background:url(../img/bg_promotion8.png) no-repeat 0 -329px;
+}
+#promotion a.firefox {
+   background:url(../img/bg_promotion24.png) no-repeat  -347px -281px;
+   _background:url(../img/bg_promotion8.png) no-repeat  -347px -292px;
+}
+#promotion a.firefox span {
+    position:relative;
+    top:15px;
+    _top:12px;
+    *left:8px;
+    display:inline-block;
+    width:42px;
+    height:40px;
+    margin:-25px 10px 0 8px;
+    _margin:-17px 10px 0 8px;
+    background:url(../img/bg_promotion24.png) no-repeat 0 -378px;
+    _background:url(../img/bg_promotion8.png) no-repeat 0 -378px;
+}
+#promotion a.ie:hover,
+#promotion a.firefox:hover {
+    background:url(../img/button_hover_img.png) no-repeat left 11px;
+    _background:url(../img/button_hover_img.png) no-repeat left top;
+}
+#promotion a.later, #promotion a.later:hover {
+   color:#91b93f;
+   background:none!important;
+}
+#promotion .later span {
+    display:inline-block;
+    width:5px;
+    height:10px;
+    margin-right:5px;
+    _margin-top:10px;
+    background:url(../img/bg_promotion24.png) no-repeat 0 -419px;
+    _background:url(../img/bg_promotion8.png) no-repeat 0 -419px;
+}
