@@ -115,16 +115,23 @@ export const close = impl.close;
 
 // ===== 建表 =====
 // 兩邊共用一份定義，只有主鍵與大小寫不敏感欄位的寫法不同。
-const PK = driver === 'postgres' ? 'INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY' : 'INTEGER PRIMARY KEY';
-const NOW = driver === 'postgres' ? NOW_TPE : "(datetime('now','localtime'))";
-const CI = driver === 'postgres' ? 'TEXT' : 'TEXT COLLATE NOCASE';   // PG 用 lower() 唯一索引達成
+// 建表 SQL 依「指定的」driver 產生，而不是綁定當前 driver——
+// 搬移工具需要在站台還跑在 SQLite 的時候，對 Postgres 產生正確的 DDL。
+const dialect = d => ({
+  PK:  d === 'postgres' ? 'INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY' : 'INTEGER PRIMARY KEY',
+  NOW: d === 'postgres' ? NOW_TPE : "(datetime('now','localtime'))",
+  CI:  d === 'postgres' ? 'TEXT' : 'TEXT COLLATE NOCASE',   // PG 用 lower() 唯一索引達成
+});
 
-export async function migrate() {
+// 回傳建表與建索引的 SQL（不執行）。exec 由呼叫端決定要打去哪個資料庫。
+export function schemaSql(forDriver = driver) {
+  const { PK, NOW, CI } = dialect(forDriver);
   const T = (name, cols) => `CREATE TABLE IF NOT EXISTS ${name}(${cols});`;
   const created = `created TEXT DEFAULT ${NOW}`;
   const fkUser = 'user_id INTEGER REFERENCES users(id) ON DELETE CASCADE';
 
-  await exec([
+  const stmts = [];
+  stmts.push([
     T('users', `id ${PK}, name ${CI} UNIQUE, pass TEXT, salt TEXT, nick TEXT,
       intro TEXT DEFAULT '', avatar TEXT DEFAULT '/img/avatar.png', css TEXT DEFAULT '',
       music TEXT DEFAULT '', visits INTEGER DEFAULT 0, admin INTEGER DEFAULT 0,
@@ -166,11 +173,11 @@ export async function migrate() {
   ].join('\n'));
 
   // 帳號大小寫不敏感：SQLite 靠 COLLATE NOCASE，PG 靠 lower() 唯一索引
-  if (driver === 'postgres')
-    await exec('CREATE UNIQUE INDEX IF NOT EXISTS idx_users_name_lower ON users(lower(name));');
+  if (forDriver === 'postgres')
+    stmts.push('CREATE UNIQUE INDEX IF NOT EXISTS idx_users_name_lower ON users(lower(name));');
 
   // 站上每一頁幾乎都是「某人的東西，依 id 倒序」，沒有索引在資料變多後會全表掃描
-  await exec(`
+  stmts.push(`
     CREATE INDEX IF NOT EXISTS idx_albums_user   ON albums(user_id, id DESC);
     CREATE INDEX IF NOT EXISTS idx_albums_views  ON albums(views DESC);
     CREATE INDEX IF NOT EXISTS idx_photos_album  ON photos(album_id, id);
@@ -186,4 +193,12 @@ export async function migrate() {
     CREATE INDEX IF NOT EXISTS idx_acts_user     ON acts(user_id, id DESC);
     CREATE INDEX IF NOT EXISTS idx_sysmsg_user   ON sysmsg(user_id, id DESC);
   `);
+
+  return stmts;
+}
+
+// 對目前這個資料庫建表。搬移工具要對「另一個」資料庫建表時，
+// 自己拿 schemaSql('postgres') 去打。
+export async function migrate() {
+  for (const sql of schemaSql(driver)) await exec(sql);
 }

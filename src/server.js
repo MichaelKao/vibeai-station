@@ -587,6 +587,19 @@ app.use((err,req,res,next)=>{ console.error(err); res.status(500).render('msg',{
 // ===== 啟動 =====
 await migrate();
 
+// 一次性把 SQLite 的資料搬到 Postgres（見 src/migrate-pg.js 的用法說明）。
+// 只有明確設 MIGRATE_SQLITE_TO_PG=1 才會跑，而且目標表非空就自動跳過。
+// 搬移失敗不讓站台起不來——先把站撐住，再看日誌處理。
+if (process.env.MIGRATE_SQLITE_TO_PG === '1' && process.env.DATABASE_URL) {
+  try {
+    const { migrateSqliteToPg } = await import('./migrate-pg.js');
+    const { DB_PATH } = await import('./paths.js');
+    await migrateSqliteToPg({ sqlitePath: DB_PATH, pgUrl: process.env.DATABASE_URL });
+  } catch (e) {
+    console.error('[migrate] 搬移過程出錯，站台照常啟動：', e.message);
+  }
+}
+
 // 人氣計數 write-behind：bumpHits() 只在 Redis 累加，這裡每 30 秒把增量寫回資料庫。
 // 原本每次瀏覽都 UPDATE 一次，是全站最頻繁的寫入；批次之後 N 次寫入壓成 1 次。
 // 沒有 Redis 時 bumpHits() 會回傳 true，由它自己直接寫，這個排程等於空轉。
