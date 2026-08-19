@@ -29,7 +29,8 @@ pnpm dev                             # http://localhost:3000
 | 相簿／網誌／留言板／名片／好友 | 完成，五套**原廠預設版型**（skin 117 / 189 / 1911 / 577 / 名片純 CSS） |
 | 登入／註冊 | 完成。原站沒有這兩頁（導去 Yahoo），用 2012 元件語言自製 |
 | 版型切換 | 完成。照原站做法：選版型 → 載那支版型 CSS，不是 body class |
-| 資料層 | **正式站已跑 Postgres**（新加坡）+ **Redis**（新加坡）+ R2 |
+| 資料層 | **正式站已跑 Postgres**（新加坡）+ **Redis**（新加坡）+ R2，**示範資料已灌**（2026-08-19） |
+| 影音／嘀咕／揪團總站 | 完成。導覽列那三顆之前都指到 /help，現在是 `/video` `/digu` `/join`。這三頁原站沒有存檔，是自製的（WRETCH_2012.md §3-A） |
 | 影音／相片牆／嘀咕 | 完成。原站有、我們原本沒有的三個功能，版面 1:1 ＋ 最小可用實作 |
 | 廣告版位 | 版位 DOM／id／尺寸照原版，內容換成站方公告與站內連結（`partials/adslot2012.ejs`） |
 | 回歸測試 | **119 項全綠**（`node test_all.mjs`） |
@@ -133,16 +134,30 @@ Facebook 頁面貼進文章帶進來的 class（`.MsoNormal` `.uiInfoTable` `.da
 但注意：目前**多處 view 直接寫死「無名小站」與 `logo_wretch.png`**（這是刻意的），
 換的時候要一起處理。用 `grep -rn "無名小站" views/` 找。
 
-### D. 線上示範資料
+### D. ~~線上示範資料~~ — **2026-08-19 灌完了**
 
-正式站的 Postgres 目前是**空的**。使用者已同意灌示範資料。
-本機的種子資料已經重灌過（2026-08-19），162 張都是真的台灣照片。
-要灌的話需要在能連到 Postgres 的環境跑 `tools/seed-demo.mjs`
-（Railway 的 PG 只有內網位址，本機連不到；可考慮加一個 `SEED_DEMO=1` 的啟動旗標，
-做法比照 `src/migrate-pg.js`）。
+正式站現在有：39 位站友、63 本相簿、298 張真實照片（存在 R2）、64 篇網誌、
+10 個揪團，以及留言／影音／嘀咕／收藏／系統訊息／檢舉。
 
-**照片一定要走 `storage.save()`**，它會在有 R2 時上傳 R2。
-種子腳本原本自己寫本機磁碟，已修正。
+做法是 `SEED_DEMO` 啟動旗標（`src/seed-demo.js`），因為 Railway 的 Postgres
+只有內網位址、本機根本連不到，照片又要用容器裡那組 R2 憑證：
+
+```bash
+railway variables --service station --set SEED_DEMO=force   # 灌
+railway logs                                                 # 追進度，約 20 分鐘
+railway variables --service station --set SEED_DEMO=0        # 灌完關掉
+```
+
+- `SEED_DEMO=1`　站上沒有內容才灌
+- `SEED_DEMO=force`　已經有一點內容也照樣疊加（**不刪任何既有資料**）
+
+種子腳本**是可以重跑的**：每一塊都先查再插，重跑只會補上缺的。
+實測正式站第二次跑時，照片迴響／系統訊息／檢舉／好友動態全部跳過、
+照片一張都沒有重抓，只補上新的揪團。
+
+> 加新的種子區塊時**一定要照這個寫法**（先查再插或「補到 N 筆」）。
+> 無條件插入的話，正式站重跑一次資料就變兩倍——本機曾經被跑成
+> photo_comments 894 筆（正確是 298）。
 
 ---
 
@@ -178,7 +193,7 @@ Facebook 頁面貼進文章帶進來的 class（`.MsoNormal` `.uiInfoTable` `.da
 | `tools/build-assets.mjs` | 2005 版素材管線（已停用，`attic/` 那批才用得到） |
 | `tools/seed-demo.mjs [--reset]` | 示範資料（台灣照片，走 R2） |
 | `tools/codemod-await.mjs <檔>` | 同步→非同步轉換（acorn，含自我驗證） |
-| `test_all.mjs` / `test_pg.mjs` | 回歸測試 119 項／SQL 方言 23 項（`test_all` 要對乾淨的 DB 跑，見第 1 節） |
+| `test_all.mjs` / `test_pg.mjs` | 回歸測試 128 項／SQL 方言 29 項（`test_all` 要對乾淨的 DB 跑，見第 1 節） |
 | `tools/fidelity.mjs --page <名稱>` | 只量一頁，開發時用 |
 | `tools/fidelity.mjs --all --json out.json` | 機器可讀的明細 |
 
