@@ -844,9 +844,12 @@ app.listen(PORT,()=>{
   // 一定要在 listen 之後才做：抓 ~300 張照片要十幾分鐘，
   // 放在啟動流程裡會讓平台的健康檢查一直失敗，最後被判定部署失敗。
   // users 表非空就會自己跳過，所以留著這段不會有副作用。
-  if (process.env.SEED_DEMO === '1') {
+  // SEED_DEMO=1     站上沒有內容才灌
+  // SEED_DEMO=force 站上已經有一點內容也照樣把示範資料疊加上去（不刪任何東西）
+  const seedMode = process.env.SEED_DEMO;
+  if (seedMode === '1' || seedMode === 'force') {
     import('./seed-demo.js')
-      .then(m => m.seedDemoIfEmpty())
+      .then(m => m.seedDemoIfEmpty({ force: seedMode === 'force' }))
       .catch(e => console.error('[seed] 出錯，站台照常運作：', e.message));
   }
 });
