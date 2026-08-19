@@ -68,7 +68,15 @@
 <%# 本站刻意偏離的那幾條（§12 專門給這一頁） %>
 <link rel="stylesheet" href="/wretch2012-album-in.css" type="text/css" />
 </head>
-<body class="cn">
+<%# body 上不要掛語系 class。sprite_fplink.png（429×115）左右並排三塊：
+    0 = 繁體「服務列表／無名相簿・無名網誌・無名影音・無名揪團」（無 class 時的預設）
+    -143px = 簡體「服务列表／无名相册・无名网志…」（.cn）
+    -286px = 英文「Services / Album Blog Video Join」（.en）
+    #header h1 的 logo 也是同一組三選一（logo_album / _cn / _en）。
+    原本寫 class="cn"，整站是繁體中文卻印出簡體的服務鈕與「无名相册」標題。
+    我們照抄的那份存檔是 <body class="en">（爬蟲抓到英文版），
+    但本站是繁體站，要的是預設那一塊，所以 class 直接拿掉。 %>
+<body>
 <% if (flash) { %><div class="w2i-flash"><%= flash %></div><% } %>
 <div id="container1" class="chameleon">
   <div id="container2">

@@ -388,6 +388,12 @@ app.use('/:name',async (req,res,next)=>{
   // 是因為側欄在個人站每一頁都會出現：只在留言板送的話，誰來我家會印足跡數、
   // 我的收藏會印 0，標籤卻都寫著「留言」。
   res.locals.gbCount=(await one('SELECT count(*) c FROM guestbook WHERE user_id=?',u.id)).c;
+  // 「- Friends' Album -」「- Friends' Guestbook -」這種好友下拉，在相簿、照片、
+  // 名片、留言板每一頁都會出現。之前只有名片與留言板那兩條 route 各自查，
+  // 相簿與照片頁沒送，下拉就永遠只有佔位那一行。放這裡查一次，全部都有。
+  res.locals.gbFriends=await all(
+    "SELECT u2.name,u2.nick,COALESCE(NULLIF(f.grp,''),'好友') grp FROM friends f "
+    + "JOIN users u2 ON u2.id=f.friend_id WHERE f.user_id=? ORDER BY grp, u2.name LIMIT 300", u.id);
   site(req,res,next);
 });
 const U=res=>res.locals.u;
@@ -441,9 +447,9 @@ site.get('/visitors',async (req,res)=>{
 // 個人設定
 site.get('/settings',requireLogin,requireOwner,(req,res)=>res.render('settings',{nav:'user',themes:SKINS}));
 site.post('/settings',requireLogin,requireOwner,upload.single('avatar'),async(req,res)=>{
-  const {nick,intro,music,css,pass,pass2}=req.body, u=U(res);
+  const {nick,intro,music,css,css_blog,pass,pass2}=req.body, u=U(res);
   let avatar=u.avatar; if(req.file){ const s=await save(req.file); avatar=s.thumb; await remove(u.avatar); }
-  await run('UPDATE users SET nick=?,intro=?,music=?,css=?,avatar=?,theme=? WHERE id=?',(nick||u.nick).trim().slice(0,20),(intro||'').slice(0,500),cleanMusic(music),(css||'').slice(0,20000),avatar,isSkin(req.body.theme)?(req.body.theme||''):'',u.id);
+  await run('UPDATE users SET nick=?,intro=?,music=?,css=?,css_blog=?,avatar=?,theme=? WHERE id=?',(nick||u.nick).trim().slice(0,20),(intro||'').slice(0,500),cleanMusic(music),(css||'').slice(0,20000),(css_blog||'').slice(0,20000),avatar,isSkin(req.body.theme)?(req.body.theme||''):'',u.id);
   if(pass){ if(pass!==pass2) {flash(req,'兩次密碼不一致，其他設定已儲存');return res.redirect(`/${u.name}/settings`);} const s=salt(); await run('UPDATE users SET pass=?,salt=? WHERE id=?',hash(pass,s),s,u.id); }
   flash(req,'設定已儲存'); res.redirect(`/${u.name}/settings`);
 });

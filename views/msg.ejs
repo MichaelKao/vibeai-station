@@ -1,74 +1,56 @@
-<%- include('partials/head',{title}) %>
 <%
-  /* 通用訊息頁：找不到頁面／沒有權限／好友限定／空間不足／已送出檢舉。
-     從 /:name/… 進來時 res.locals.u 有值 → 700px 個人小站外框（WRETCH_DOM.md 第 3 節）；
-     從站台層（404、500、/report）進來時 u 為 null → 760px 首頁綠外框（第 7 節）。 */
-  /* 「回上一頁」的落點。路由多半會帶 back 進來；沒帶的時候（例如
-     src/auth.js 的 requireOwner 只給 title/msg）本來一律回首頁，
-     但使用者是在別人的小站上被擋下來的，把他丟回站台首頁等於要他重走一遍。
-     所以有 u 就退回那個小站的門口，只有站台層的訊息才回 /。 */
+  /* 通用訊息頁：找不到頁面／沒有權限／好友限定／空間不足／已送出檢舉／人數已滿。
+     ─────────────────────────────────────────────────────────────
+     ⚠ 這一頁本來還掛在 **2005 版的外框**（partials/head + sitetop + sitefoot + foot），
+     所以只要被擋一次——好友限定 403、空間不足、非站主、404——整站就從 2012 的皮
+     跳回 2005 的綠色 table 版，一眼就看得出是兩個時代的東西拼起來的。
+     全站早就統一 2012（WRETCH_2012.md §1-B），這頁是漏網的。
+
+     改成跟登入／註冊同一組站台外框（partials/head2012 + foot2012），
+     並沿用 wretch2012.css 的 .mod / .main / .side 模組語言，不自創視覺。
+
+     為什麼不用個人小站的外框（head2012in）：被擋下來的人**不一定看得到那個小站**
+     （好友限定就是最典型的），套上人家的版型與側欄反而奇怪。站台外框最中性。
+
+     「回上一頁」的落點：路由多半會帶 back 進來；沒帶的時候（例如 src/auth.js 的
+     requireOwner）有 u 就退回那個小站的門口——使用者是在別人的小站上被擋的，
+     丟回站台首頁等於要他重走一遍。 */
   const backUrl = (typeof back !== 'undefined' && back) ? back
-                : (u ? '/' + u.name : '/');
+                : (locals.u ? '/' + u.name : '/');
 %>
-<% if (u) { %>
-<%- include('partials/sitetop') %>
-<table width="700" border="0" cellpadding="0" cellspacing="0" align="center"><tr>
-  <td class="side1"></td>
-  <td id="content1">
-    <table width="100%" border="0" cellpadding="0" cellspacing="0"><tr>
-      <td align="center" valign="top">
-<% } else { %>
-<table id="bigtab" width="760" border="0" cellpadding="0" cellspacing="0" align="center">
-<tr>
-	<td rowspan="2" width="5" class="side1"></td>
+<%- include('partials/head2012', { title: title + ' - ' + SITE_NAME }) %>
 
-	<td width="750" height="100" id="banner1">
-		<div id="banner">
-			<a href="/"><img id="sitelogo" src="<%= SITE_LOGO %>" alt="<%= SITE_NAME %>"></a>
-			<div id="pageheader">
-				<h1><a href="/"><%= SITE_NAME %></a></h1>
-				<span class="description"><%= SITE_DESC %></span>
-			</div>
-		</div>
-	</td>
+  <div class="bd big-bd clearfix">
+    <div class="main">
 
-	<td rowspan="2" width="5" class="side1"></td>
-</tr>
+      <div class="mod w2-auth">
+        <div class="hd"><h2><%= title %></h2></div>
+        <div class="bd">
+          <p class="w2-msg"><%= msg %></p>
+          <p class="w2-msg-back"><a href="<%= backUrl %>">回上一頁</a>
+            <% if (locals.u) { %>　<a href="/<%= u.name %>"><%= u.nick %> 的小站</a><% } %>
+            　<a href="/">回首頁</a></p>
+        </div>
+      </div>
 
-<tr>
-	<td id="content1" height="100%">
-		<table border="0" cellpadding="0" cellspacing="0" width="100%">
-		<tr>
-			<td width="20" height="20" class="content2">&nbsp;</td>
-			<td></td>
-			<td width="20" height="20" class="content3">&nbsp;</td>
-		</tr>
-		<tr>
-			<td colspan="3" align="center" valign="top">
-<% } %>
+    </div>
+    <div class="side">
+      <div class="mod w2-auth-side">
+        <div class="hd"><h2>逛逛別的</h2></div>
+        <div class="bd">
+          <ul>
+            <li><a href="/albums">相簿總站</a></li>
+            <li><a href="/blogs">網誌總站</a></li>
+            <li><a href="/rank">人氣排行榜</a></li>
+            <li><a href="/help">服務說明</a></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
 
-	<table width="320" border="0" cellpadding="0" cellspacing="0" align="center"><tr><td>
-		<div class="title"><%= title %></div>
-		<div class="side" align="center">
-			<%= msg %><br><br>
-			<a href="<%= backUrl %>">回上一頁</a>
-		</div>
-	</td></tr></table>
+</div><!-- /#wrapper -->
 
-<% if (u) { %>
-      </td>
-    </tr></table>
-  </td>
-  <td class="side2"></td>
-</tr></table>
-<%- include('partials/sitefoot') %>
-<% } else { %>
-			</td>
-		</tr>
-		<tr><td colspan="3" height="20"></td></tr>
-		</table>
-	</td>
-</tr>
-</table>
-<% } %>
-<%- include('partials/foot') %>
+<div id="lower-wrapper" class="clearfix">
+  <div class="bd clearfix"></div>
+<%- include('partials/foot2012') %>

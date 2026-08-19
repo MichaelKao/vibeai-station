@@ -34,16 +34,27 @@
             　再輸入一次 <input class="small-c" type="password" name="pass2" size="12">
             <span class="w2-sub">不改請留空</span></li>
 
-          <li><div class="w2-h3">網誌樣式</div></li>
-          <li><span>版面樣式</span>
+          <%# ⚠ 這裡本來寫「網誌樣式／版面樣式」，但那兩個色票（粉紅／灰白）
+              **只定義了相簿的 CSS**（src/skins.js 的 css:{album:...}）——
+              網誌、留言板、名片、好友各自吃自己的原廠版型，不會跟著變。
+              第一個真實使用者一打開就發現「明明寫粉紅是預設，畫面卻是灰藍色」。
+              標籤說謊比少一個功能更糟，所以照它實際控制的東西改名。 %>
+          <li><div class="w2-h3">相簿樣式</div></li>
+          <li><span>相簿版型</span>
             <span class="w2-themepick">
               <% themes.forEach(t => { %><a href="#" data-theme="<%= t.id %>" class="<%= (u.theme||'')===t.id ? 'on' : '' %>"><span class="sw"><i style="background:<%= t.swatch[0] %>"></i><i style="background:<%= t.swatch[1] %>"></i></span><%= t.name %></a><% }) %>
             </span>
             <input type="hidden" name="theme" value="<%= u.theme || '' %>">
           </li>
-          <li><span>自訂樣式</span>
-            <textarea class="small-c" name="css" cols="60" rows="8" maxlength="20000" placeholder="/* 你的小站專屬 CSS，例如 */&#10;body{background:#000}&#10;#content{background:#333}"><%= u.css %></textarea></li>
-          <li><span>&nbsp;</span><span class="w2-sub">會套在你的每一頁上，蓋得過預設版型。玩壞了清空即可復原。</span></li>
+          <li><span>&nbsp;</span><span class="w2-sub">只換<a href="/<%= u.name %>/album">相簿</a>的版型。網誌、留言板、名片、好友各有自己的原廠版型，要改請用下面的自訂樣式。</span></li>
+          <li><span>相簿自訂樣式</span>
+            <textarea class="small-c" name="css" cols="60" rows="8" maxlength="20000" placeholder="/* 相簿與其餘頁面的專屬 CSS，例如 */&#10;body{background:#000}&#10;#content{background:#333}"><%= u.css %></textarea></li>
+          <li><span>&nbsp;</span><span class="w2-sub">套在相簿與其餘頁面上，蓋得過預設版型。玩壞了清空即可復原。</span></li>
+
+          <li><div class="w2-h3">網誌樣式</div></li>
+          <li><span>網誌自訂樣式</span>
+            <textarea class="small-c" name="css_blog" cols="60" rows="8" maxlength="20000" placeholder="/* 只套在網誌上的 CSS */&#10;.title a{color:#c8508c}"><%= locals.u.css_blog || '' %></textarea></li>
+          <li><span>&nbsp;</span><span class="w2-sub">原站的自訂樣式本來就是兩份（album.css 與 blog.css），網誌可以跟相簿長得完全不一樣。留空的話沿用上面那份。</span></li>
 
           <li><div class="w2-h3">相簿設定</div></li>
           <li><span>音樂盒</span>

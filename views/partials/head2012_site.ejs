@@ -50,7 +50,10 @@
   /* 「- Friends' Album -」下拉：原站是 MeetFriend() 讀好友清單。
      內頁 route 沒有好友這份 local，能湊的只有 home/friends 兩頁才有的 friends，
      所以這裡容許沒有——沒有就只印那一個 optgroup 標題行（原站也是這樣）。 */
-  const w2Friends = locals.friends || [];
+  /* 好友下拉的資料。gbFriends 是個人站共用 middleware 查好的（每一頁都有），
+     locals.friends 是名片頁那條 route 自己送的舊名，兩個都接住。
+     只讀 locals.friends 的話，相簿與照片頁的「- Friends' Album -」永遠只有佔位那行。 */
+  const w2Friends = locals.gbFriends || locals.friends || [];
   /* #wretch-crumb：原站是 Yahoo 的 CSRF token（&.c=…&.t=…）。本站靠 cookie 的
      SameSite=lax 擋 CSRF，沒有那套 token，所以自己發一組同格式的；
      後端把真正的 session token 放進 res.locals.crumb 之後這裡自動改用它。
@@ -246,7 +249,10 @@
 <% if (w2Head === 'list') { %>
         <div id="rss" class="small-c" align="right">
           <div class="syndicate">
-            <a href="/<%= w2Owner.name %>/blog/rss"><img border="0" src="/img/wretch2012/blog/rss.gif" alt="" /></a>
+            <%# 這個外框是相簿家族在用的，RSS 當然要指相簿那支
+                （原站是 album/album_rss.php）。之前指到 /blog/rss，
+                在相簿頁按 RSS 會拿到網誌的 feed。 %>
+            <a href="/<%= w2Owner.name %>/album/rss"><img border="0" src="/img/wretch2012/blog/rss.gif" alt="" /></a>
       (<a target="_blank" href="/help#rss">RSS HOWTO</a>)
           </div>
         </div>

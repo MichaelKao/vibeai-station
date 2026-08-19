@@ -254,6 +254,11 @@ const ADD_COLUMNS = [
   // 我們原本只存 author 文字，連不回帳號，那三個東西就都做不出來。
   // 可為 NULL——訪客不登入也能留言，那種就沒有連結、沒有認證章。
   ['guestbook', 'author_id', 'INTEGER'],
+  // 原站的自訂 CSS 是**兩份**：f10.wretch.yimg.com/<帳號>/files/album.css 與 blog.css
+  // （WRETCH_SPEC.md §6 最後兩行）。我們原本只有一份 users.css 套在每一頁上，
+  // 想把相簿弄成一個樣、網誌弄成另一個樣的人做不到——那正是當年大家在玩的事。
+  // users.css 保留原意＝相簿那份，網誌另存一份。
+  ['users', 'css_blog', "TEXT DEFAULT ''"],
 ];
 
 export async function addColumns(forDriver = driver) {

@@ -37,7 +37,11 @@
                 <td class="w2-card-v"><%= j.created.slice(0, 16) %></td></tr>
           </table>
 
-          <p class="w2-joinbtn">
+          <%# 這裡一定要是 <div> 不能是 <p>：裡面有一個 <form>，而 HTML 的解析規則
+              會在遇到 <form> 時自動把 <p> 收掉，實測結果是
+              p.w2-joinbtn 高度 0、表單被丟到外面變成 div.bd 的子節點，
+              .w2-joinbtn 這個 class 等於完全沒作用（連 margin 都吃不到）。 %>
+          <div class="w2-joinbtn">
             <% if (!me) { %>
               <a href="/login?next=<%= encodeURIComponent('/join/' + j.id) %>">登入之後就可以參加</a>
             <% } else if (String(j.user_id) === String(me.id)) { %>
@@ -55,7 +59,7 @@
               </form>
               <% } %>
             <% } %>
-          </p>
+          </div>
 
           <div class="w2-h3">參加的人（<%= members.length %>）</div>
           <% if (!members.length) { %><p>還沒有人參加，當第一個吧。</p><% } %>

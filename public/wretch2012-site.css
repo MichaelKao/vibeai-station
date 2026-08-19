@@ -219,3 +219,9 @@ html body #bg-wrapper #wfp-footer #wfp-lang { top: 24px; }   /* 跟著上移，�
 .w2-helplist li     { padding: 3px 0 3px 12px; line-height: 1.8;
                       background: url(/img/wretch2012/index/ico_fp_dot.png) no-repeat 0 11px; }
 .w2-help p          { margin: 0 0 8px; line-height: 1.8; }
+
+/* 通用訊息頁（views/msg.ejs）。這一頁本來掛 2005 版外框，被擋一次整站就跳版，
+   改成 2012 站台外框之後只需要這幾條把文字排開。 */
+.w2-msg      { padding: 18px 12px; font-size: 14px; line-height: 1.9; }
+.w2-msg-back { padding: 0 12px 18px; }
+.w2-msg-back a { margin-right: 4px; }
