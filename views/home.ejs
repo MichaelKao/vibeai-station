@@ -9,6 +9,20 @@
   // 7 天內建立的相簿掛 new_album.gif（WRETCH_DOM.md 第 8 節第 7 條）
   const isNew = c => { const t = Date.parse(String(c||'').replace(' ','T'));
                        return !!t && (Date.now() - t) < 7*864e5; };
+
+  // 「最新留言」跟留言板同一批資料，就要用同一套顯示規則。
+  // 留言板的表情圖存進資料庫是 [img]名稱[/img] 這種 token，src/format.js 的
+  // render() 只認得「網址」型的 [img]，認不出名稱，所以 token 會原封不動印出來——
+  // MyPage 上真的看得到「訪客留言內容[img]happy[/img]」這種東西。
+  // 名單與 views/guestbook.ejs 的 GB_SMILEYS 相同；共用的話要動 partials/，
+  // 那不是這一輪能改的檔，所以就地複製一份並在兩邊互相標註。
+  const HOME_SMILEYS = ['angry','biggrin','bighug','blushing','broken_heart','confused','crying',
+    'happy','laughing','lovestruck','notalking','phbbbbt','sad','shameonyou','straightface',
+    'surprise','tongue','waiting','winking','worried'];
+  const HOME_SMILEY_RE = new RegExp('\\[img\\](' + HOME_SMILEYS.join('|') + ')\\[\\/img\\]', 'g');
+  // render() 已經把使用者輸入整串逸出，這裡換掉的只是白名單裡的固定字串
+  const gbBody = s => render(s).replace(HOME_SMILEY_RE,
+    (m, n) => '<img class="smiley" src="/img/wretch2012/gb/Smileys/' + n + '.gif" width="18" height="18" alt="' + n + '">');
 %>
 <%- include('partials/head2012in', {
       title: u.nick + '的小站 - 無名小站',

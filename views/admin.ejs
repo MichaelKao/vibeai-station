@@ -1,141 +1,212 @@
-<%- include('partials/head',{title:'站長後台',layout:'index'}) %>
+<%
+  /* 站長後台 /admin
+     ═══════════════════════════════════════════════════════════════════════
+     原站沒有公開後台，所以整頁都是刻意偏離（WRETCH_2012.md §3-A）。
 
-<%# 站長後台：原站沒有公開後台，這裡沿用首頁綠版的外框與 class，
-    讓外觀跟站上其他頁一致（WRETCH_DOM.md 第 7 節） %>
-<table width="760" border="0" cellpadding="0" cellspacing="0" align="center"><tr>
-  <td class="side1"></td>
-  <td id="banner1">
-    <div id="banner">
-      <a href="/"><img id="sitelogo" src="<%= SITE_LOGO %>" alt="<%= SITE_NAME %>"></a>
-      <div id="pageheader">
-        <h1><a href="/"><%= SITE_NAME %></a></h1>
-        <span class="description">站長後台</span>
+     ⚠ 這一頁本來掛在 **2005 版的外框**（partials/head + partials/foot，
+        760px 綠色 table 版）。全站 38 個 view 只剩它還是舊版，站長從 2012 的
+        導覽列點進後台，畫面會整個換成另一個年代的東西——違反 §1-B（整站統一 2012）。
+        改成跟 msg / login / register 同一組站台外框（head2012 + foot2012），
+        內容一律用既有的 .mod / .main / .side / .w2-* 元件語言，不自創視覺。
+
+     為什麼用站台外框而不是個人小站外框（head2012in）：後台是站台層級的功能，
+     不屬於任何一個人的小站，套上某個人的版型與側欄沒有道理。
+
+     版面：站友清單欄位多（8 欄），塞進 640px 的 .main 會擠爆，
+     所以它自己佔一整條 .bd（970px），其餘功能才走 .main / .side 雙欄。
+
+     ⚠ 表單的 action / method / 欄位 name 一個字都沒有動（WRETCH_2012.md §4）：
+        /admin/user/:id/vip、/admin/user/:id/admin、/admin/user/:id/del、
+        /admin/report/:id/done、/admin/report/:id/del、/admin/broadcast、
+        /admin/notice、/admin/notice/:id/del、/admin/feature/:kind/:id。 */
+%>
+<%- include('partials/head2012', { title: '站長後台 - ' + SITE_NAME }) %>
+
+<%# 這幾條規則本來該進 public/wretch2012-site.css 的「刻意偏離」段落，
+    但那支這一輪有別的 agent 在改，兩邊同時寫會撞在一起，先放在本頁。
+    用的是既有的顏色與尺規（框線 #F0F0F0、次要文字 #666、說明 #999），
+    沒有新的視覺語言；等 site.css 收斂完再整段搬過去。 %>
+<style>
+.w2-admin-rows            { width: 100%; border-collapse: collapse; font-size: 93%; }
+.w2-admin-rows th         { padding: 6px 8px; text-align: left; color: #666;
+                            font-weight: normal; border-bottom: 1px solid #E5E5E5;
+                            white-space: nowrap; }
+.w2-admin-rows td         { padding: 6px 8px; border-bottom: 1px solid #F0F0F0;
+                            vertical-align: middle; }
+.w2-admin-rows tr:last-child td { border-bottom: 0; }
+.w2-admin-rows form       { display: inline; }
+.w2-admin-rows .num       { text-align: right; color: #666; }
+.w2-admin-item            { padding: 8px 0; border-bottom: 1px solid #F0F0F0; }
+.w2-admin-item:last-child { border-bottom: 0; }
+.w2-admin-item.done       { opacity: .5; }
+.w2-admin-item form       { display: inline; }
+.w2-admin-lnk             { border: 0; padding: 0 4px; background: none; cursor: pointer;
+                            color: #43883F; font-size: inherit; }
+.w2-admin-lnk:hover       { text-decoration: underline; }
+.w2-admin-red             { color: #A94442; }
+.w2-admin-form p          { margin: 0 0 8px; }
+.w2-admin-form input[type=text],
+.w2-admin-form textarea   { max-width: 100%; box-sizing: border-box; padding: 3px 6px;
+                            border: 1px solid #CECBCE; background: #FFF; border-radius: 3px; }
+.w2-admin-form textarea   { width: 100%; resize: vertical; }
+</style>
+
+  <div class="bd big-bd clearfix">
+    <div class="mod w2-auth" id="users">
+      <div class="hd"><h2>站友 (<%= users.length %>)</h2></div>
+      <div class="bd">
+        <table class="w2-admin-rows">
+          <tr>
+            <th>ID</th><th>帳號</th><th>暱稱</th><th class="num">人氣</th>
+            <th class="num">照片</th><th>加入</th><th>認證徽章</th><th>管理</th>
+          </tr>
+          <% users.forEach(x=>{
+               /* 認證徽章（.vip_icon）：值域與 src/server.js 相同——0 無／1 銀／2 金／3 白金。
+                  /admin 的 users 查詢已經有撈 u.vip，所以下拉可以正確回填目前等級。 */
+               const vipNow = Number(x.vip || 0);
+          %>
+          <tr>
+            <td><%= x.id %></td>
+            <td><a href="/<%= x.name %>"><%= x.name %></a><%= x.admin ? ' ★' : '' %></td>
+            <td><%= x.nick %></td>
+            <td class="num"><%= x.visits %></td>
+            <td class="num"><%= (x.bytes/1024/1024).toFixed(1) %>M</td>
+            <td><%= x.created.slice(0,10) %></td>
+            <td>
+              <form method="post" action="/admin/user/<%= x.id %>/vip">
+                <select name="vip">
+                  <option value="0"<%= vipNow===0?' selected':'' %>>無</option>
+                  <option value="1"<%= vipNow===1?' selected':'' %>>銀</option>
+                  <option value="2"<%= vipNow===2?' selected':'' %>>金</option>
+                  <option value="3"<%= vipNow===3?' selected':'' %>>白金</option>
+                </select><button class="w2-admin-lnk">設定</button>
+              </form>
+            </td>
+            <td><% if(x.id!==me.id){ %>
+              <form method="post" action="/admin/user/<%= x.id %>/admin"><button class="w2-admin-lnk"><%= x.admin?'取消站長':'設為站長' %></button></form>
+              <form method="post" action="/admin/user/<%= x.id %>/del" onsubmit="return confirm('刪除 <%= x.name %> 及其所有內容（含照片）？')"><button class="w2-admin-lnk w2-admin-red">刪除</button></form>
+            <% } else { %><span class="w2-note">（自己）</span><% } %></td>
+          </tr>
+          <% }) %>
+        </table>
       </div>
     </div>
-  </td>
-  <td class="side2"></td>
-</tr></table>
+  </div>
 
-<table id="bigtab" width="760" border="0" cellspacing="0" cellpadding="0" align="center"><tr>
-  <td class="side1"></td>
-  <td width="750" valign="top" class="album_content">
+  <div class="bd clearfix">
+    <div class="main">
 
-    <a name="users" id="users"></a>
-    <div class="album_title">站友 (<%= users.length %>)</div>
-    <div class="side">
-      <table class="data" width="100%">
-        <tr><th>ID</th><th>帳號</th><th>暱稱</th><th>人氣</th><th>照片</th><th>加入</th><th>認證徽章</th><th></th></tr>
-        <% users.forEach(x=>{
-             /* 認證徽章（.vip_icon）：後端已經有 POST /admin/user/:id/vip，
-                但後台一直沒有對應的介面，等於這個功能只能用 curl 打——所以補上。
-                值域與 src/server.js 相同：0 無／1 銀／2 金／3 白金。
-                ⚠ /admin 的 users 查詢目前沒有撈 u.vip，所以現在每一列都會顯示「無」，
-                改了之後看不出來現在掛的是哪一級。要等 src/server.js 把 u.vip
-                加進那句 SELECT，下面的 selected 判斷就會自己正確（見交接報告）。 */
-             const vipNow = Number(x.vip || 0);
-        %>
-        <tr>
-          <td><%= x.id %></td>
-          <td><a href="/<%= x.name %>"><%= x.name %></a><%= x.admin?' ★':'' %></td>
-          <td><%= x.nick %></td>
-          <td><span class="point_grade"><%= x.visits %></span></td>
-          <td><%= (x.bytes/1024/1024).toFixed(1) %>M</td>
-          <td><%= x.created.slice(0,10) %></td>
-          <td>
-            <form method="post" action="/admin/user/<%= x.id %>/vip" style="display:inline">
-              <select name="vip">
-                <option value="0"<%= vipNow===0?' selected':'' %>>無</option>
-                <option value="1"<%= vipNow===1?' selected':'' %>>銀</option>
-                <option value="2"<%= vipNow===2?' selected':'' %>>金</option>
-                <option value="3"<%= vipNow===3?' selected':'' %>>白金</option>
-              </select><button class="btn">設定</button>
-            </form>
-          </td>
-          <td><% if(x.id!==me.id){ %>
-            <form method="post" action="/admin/user/<%= x.id %>/admin" style="display:inline"><button class="btn"><%= x.admin?'取消站長':'設為站長' %></button></form>
-            <form method="post" action="/admin/user/<%= x.id %>/del" style="display:inline" onsubmit="return confirm('刪除 <%= x.name %> 及其所有內容（含照片）？')"><button class="btn red">刪除</button></form>
-          <% } %></td>
-        </tr>
-        <% }) %>
-      </table>
-    </div>
-
-    <a name="reports" id="reports"></a>
-    <div class="album_title">檢舉處理</div>
-    <div class="side">
-      待處理 <span class="point_grade"><%= reports.filter(r=>!r.done).length %></span> 件
-      <% if(!reports.length){ %>　<span class="gray">目前沒有檢舉</span><% } %>
-      <% reports.forEach(r=>{ %>
-      <div class="gbitem" style="<%= r.done?'opacity:.5':'' %>">
-        <div>項目：<b><%= r.kind %>#<%= r.target_id %></b>　時間：<%= r.created.slice(5,16) %>　來自：<%= r.reporter %></div>
-        <div>內容：<%= r.reason %></div>
-        <div>
-          <%# 只渲染站內相對路徑，舊資料若含 javascript: 一律不變成連結 %>
-          <% if(r.url && r.url.startsWith('/') && !r.url.startsWith('//')){ %><a href="<%= r.url %>">前往查看</a>　<% } else if(r.url){ %><%= r.url %>　<% } %>
-          <% if(!r.done){ %><form method="post" action="/admin/report/<%= r.id %>/done" style="display:inline"><button class="lnk">標記已處理</button></form>　<% } %>
-          <form method="post" action="/admin/report/<%= r.id %>/del" style="display:inline"><button class="lnk">刪除</button></form>
+      <div class="mod w2-auth" id="reports">
+        <div class="hd"><h2>檢舉處理</h2></div>
+        <div class="bd">
+          <p>待處理 <b><%= reports.filter(r=>!r.done).length %></b> 件<% if(!reports.length){ %>　<span class="w2-note">目前沒有檢舉</span><% } %></p>
+          <% reports.forEach(r=>{ %>
+          <div class="w2-admin-item<%= r.done ? ' done' : '' %>">
+            <div>項目：<b><%= r.kind %>#<%= r.target_id %></b>　時間：<%= r.created.slice(5,16) %>　來自：<%= r.reporter %></div>
+            <div><%= r.reason %></div>
+            <div>
+              <%# 只把站內相對路徑變成連結，舊資料若含 javascript: 一律當純文字印出來 %>
+              <% if(r.url && r.url.startsWith('/') && !r.url.startsWith('//')){ %><a href="<%= r.url %>">前往查看</a>　<% } else if(r.url){ %><span class="w2-note"><%= r.url %></span>　<% } %>
+              <% if(!r.done){ %><form method="post" action="/admin/report/<%= r.id %>/done"><button class="w2-admin-lnk">標記已處理</button></form>　<% } %>
+              <form method="post" action="/admin/report/<%= r.id %>/del"><button class="w2-admin-lnk w2-admin-red">刪除</button></form>
+            </div>
+          </div>
+          <% }) %>
         </div>
       </div>
-      <% }) %>
-    </div>
 
-    <a name="broadcast" id="broadcast"></a>
-    <div class="blog_title">群發系統訊息</div>
-    <div class="side">
-      <form method="post" action="/admin/broadcast">
-        標題：<input name="title" size="40" maxlength="60" required><br>
-        內容：<br><textarea name="body" cols="60" rows="4" maxlength="1000" required></textarea><br>
-        <button class="btn">送給所有站友</button>
-      </form>
-      <span class="gray">會進到每個人留言板的「系統訊息」頁籤。</span>
-    </div>
-
-    <a name="notices" id="notices"></a>
-    <div class="album_title">站內公告</div>
-    <div class="side">
-      <form method="post" action="/admin/notice">
-        <input name="body" size="60" maxlength="200" required>
-        <input type="submit" class="btn" value="發布">
-      </form>
-      <% if(!notices.length){ %><span class="gray">目前沒有公告</span><% } %>
-      <% notices.forEach(n=>{ %>
-      <div class="gbitem">
-        <%= n.created.slice(0,10) %>　<%= n.body %>
-        <form method="post" action="/admin/notice/<%= n.id %>/del" style="display:inline"><button class="lnk">刪除</button></form>
+      <div class="mod w2-auth" id="broadcast">
+        <div class="hd"><h2>群發系統訊息</h2></div>
+        <div class="bd">
+          <form class="w2-admin-form" method="post" action="/admin/broadcast">
+            <p><label for="w2-bc-title">標題</label><br>
+               <input type="text" id="w2-bc-title" name="title" size="40" maxlength="60" required></p>
+            <p><label for="w2-bc-body">內容</label><br>
+               <textarea id="w2-bc-body" name="body" cols="60" rows="4" maxlength="1000" required></textarea></p>
+            <p><button type="submit" class="w2-btn">送給所有站友</button></p>
+          </form>
+          <p class="w2-note">會進到每個人留言板的「系統訊息」頁籤。</p>
+        </div>
       </div>
-      <% }) %>
+
+      <div class="mod w2-auth" id="notices">
+        <div class="hd"><h2>站內公告</h2></div>
+        <div class="bd">
+          <form class="w2-admin-form" method="post" action="/admin/notice">
+            <p><label for="w2-nt-body">公告內容</label><br>
+               <input type="text" id="w2-nt-body" name="body" size="60" maxlength="200" required></p>
+            <p><input type="submit" class="w2-btn" value="發布"></p>
+          </form>
+          <% if(!notices.length){ %><p class="w2-note">目前沒有公告</p><% } %>
+          <% notices.forEach(n=>{ %>
+          <div class="w2-admin-item">
+            <%= n.created.slice(0,10) %>　<%= n.body %>
+            <form method="post" action="/admin/notice/<%= n.id %>/del"><button class="w2-admin-lnk w2-admin-red">刪除</button></form>
+          </div>
+          <% }) %>
+        </div>
+      </div>
+
+      <div class="mod w2-auth" id="feature">
+        <div class="hd"><h2>精選</h2></div>
+        <div class="bd">
+          <p class="w2-note">精選的相簿與文章會出現在首頁的精選區。編號就是網址結尾的數字
+            （例如 /someone/album/<b>12</b>、/someone/blog/<b>34</b>），再按一次就取消精選。</p>
+          <%# action 先寫死一個合法值，送出前由 onsubmit 換成真正的 kind 與編號。
+              required + pattern 是必要的：少了它們，沒填或填非數字時 onsubmit 只會
+              return false，畫面上不會有任何反應，看起來像按鈕壞掉。 %>
+          <form class="w2-admin-form" method="post" action="/admin/feature/album/0"
+                onsubmit="var i=(this.pid.value||'').replace(/[^0-9]/g,''); if(!i){return false;} this.action='/admin/feature/'+this.kind.value+'/'+i; return true;">
+            <p>
+              <select name="kind"><option value="album">相簿</option><option value="post">文章</option></select>
+              編號 <input type="text" name="pid" size="6" required pattern="[0-9]+" inputmode="numeric" title="請填數字編號">
+              <input type="hidden" name="back" value="/admin">
+              <input type="submit" class="w2-btn" value="切換精選">
+            </p>
+          </form>
+        </div>
+      </div>
+
     </div>
 
-    <a name="feature" id="feature"></a>
-    <div class="blog_title">精選</div>
     <div class="side">
-      <span class="gray">精選的相簿與文章會出現在首頁的精選區。編號就是網址結尾的數字
-      （例如 /someone/album/<b>12</b>、/someone/blog/<b>34</b>），再按一次就取消精選。</span>
-      <form method="post" action="/admin/feature/album/0"
-            onsubmit="var i=(this.pid.value||'').replace(/[^0-9]/g,''); if(!i){return false;} this.action='/admin/feature/'+this.kind.value+'/'+i; return true;">
-        <select name="kind"><option value="album">相簿</option><option value="post">文章</option></select>
-        <%# required + pattern：沒填或填了非數字時，onsubmit 只會 return false，
-            畫面上不會有任何反應，看起來像按鈕壞掉。交給瀏覽器原生驗證講話。 %>
-        編號 <input name="pid" size="6" required pattern="[0-9]+" inputmode="numeric" title="請填數字編號">
-        <input type="hidden" name="back" value="/admin">
-        <input type="submit" class="btn" value="切換精選">
-      </form>
+
+      <div class="mod w2-auth-side" id="storage">
+        <div class="hd"><h2>儲存空間</h2></div>
+        <div class="bd">
+          <table class="w2-card">
+            <tr><td class="w2-card-k">照片總量</td><td class="w2-card-v"><b><%= storage.mb(storage.total) %> MB</b></td></tr>
+            <tr><td class="w2-card-k">儲存方式</td><td class="w2-card-v"><%= storage.r2 ? 'Cloudflare R2（不佔伺服器硬碟）' : '伺服器 Volume' %></td></tr>
+            <% if(!storage.r2){ %>
+            <tr><td class="w2-card-k">磁碟可用</td><td class="w2-card-v"><b class="<%= storage.free < 2*1024*1024*1024 ? 'w2-admin-red' : '' %>"><%= storage.mb(storage.free) %> MB</b></td></tr>
+            <% } %>
+            <tr><td class="w2-card-k">每人配額</td><td class="w2-card-v"><%= storage.mb(storage.quota) %> MB <span class="w2-note">(USER_QUOTA_MB)</span></td></tr>
+          </table>
+          <% if(!storage.r2){ %>
+          <p class="w2-note">低於保留水位時會自動停止上傳，保護資料庫。</p>
+          <% } %>
+        </div>
+      </div>
+
+      <div class="mod w2-auth-side">
+        <div class="hd"><h2>後台導覽</h2></div>
+        <div class="bd">
+          <ul>
+            <li><a href="#users">站友管理</a></li>
+            <li><a href="#reports">檢舉處理</a></li>
+            <li><a href="#broadcast">群發系統訊息</a></li>
+            <li><a href="#notices">站內公告</a></li>
+            <li><a href="#feature">精選</a></li>
+            <li><a href="/rank">人氣排行榜</a></li>
+          </ul>
+        </div>
+      </div>
+
     </div>
+  </div>
 
-    <a name="storage" id="storage"></a>
-    <div class="album_title">儲存空間</div>
-    <div class="side">
-      照片總量：<b><%= storage.mb(storage.total) %> MB</b><br>
-      儲存方式：<%= storage.r2?'Cloudflare R2（不佔伺服器硬碟）':'伺服器 Volume' %><br>
-      <% if(!storage.r2){ %>
-      磁碟可用：<b class="<%= storage.free<2*1024*1024*1024?'red':'' %>"><%= storage.mb(storage.free) %> MB</b><br>
-      <span class="gray">低於保留水位時會自動停止上傳，保護資料庫。</span><br>
-      <% } %>
-      每人配額：<%= storage.mb(storage.quota) %> MB <span class="gray">（USER_QUOTA_MB）</span>
-    </div>
+</div><!-- /#wrapper -->
 
-  </td>
-  <td class="side2"></td>
-</tr></table>
-
-<%- include('partials/foot') %>
+<div id="lower-wrapper" class="clearfix">
+  <div class="bd clearfix"></div>
+<%- include('partials/foot2012') %>

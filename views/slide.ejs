@@ -60,6 +60,20 @@
    ⚠ 寫在這裡不寫進 public/wretch2012-slider.css：那支是
      tools/build-css2012.mjs 產生的原檔，不能手改。 */
 #slideinfo, #prev, #next { z-index: 1; }
+
+/* 【刻意偏離】窄視窗把 #slidewrap 放開。
+   原檔 slider.css 把 #slidewrap 寫死 1024×1024，下面那段 inline script 還會在
+   screen.width>=1280 時再設一次 inline width:1024px（原站的 slider.php 就是這樣寫的，
+   我們照抄了）。結果 375px 與 768px 的視窗各溢出 649px 與 256px——
+   而且 screen.width 量的是螢幕不是視窗，所以桌機把視窗拉窄一樣中招。
+   JS 那行維持原樣不動（那是還原的一部分），改用 CSS 在窄視窗蓋掉；
+   要 !important 才贏得過 JS 寫的 inline style。
+   斷點 999px 與 public/wretch2012-rwd.css 一致。
+   照片改成 contain：寬度縮了還用 background-position:center top 的話會被裁掉兩側。 */
+@media (max-width: 999px) {
+  #slidewrap   { width: auto !important; max-width: 100%; height: 70vh; }
+  .slideElement { height: 100%; background-size: contain; background-position: center center; }
+}
 </style>
 </head>
 <body>

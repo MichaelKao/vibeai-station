@@ -1,6 +1,6 @@
 # 交接：接下來要做什麼
 
-> 最後更新：2026-08-19。換機器接手時先讀這份，再讀 `WRETCH_2012.md`（復刻契約）。
+> 最後更新：2026-08-19（傍晚）。換機器接手時先讀這份，再讀 `WRETCH_2012.md`（復刻契約）。
 
 ---
 
@@ -33,12 +33,17 @@ pnpm dev                             # http://localhost:3000
 | 影音／嘀咕／揪團總站 | 完成。導覽列那三顆之前都指到 /help，現在是 `/video` `/digu` `/join`。這三頁原站沒有存檔，是自製的（WRETCH_2012.md §3-A） |
 | 影音／相片牆／嘀咕 | 完成。原站有、我們原本沒有的三個功能，版面 1:1 ＋ 最小可用實作 |
 | 廣告版位 | 版位 DOM／id／尺寸照原版，內容換成站方公告與站內連結（`partials/adslot2012.ejs`） |
-| 回歸測試 | **119 項全綠**（`node test_all.mjs`） |
-| SQL 方言測試 | **23 項全綠**（`node test_pg.mjs`） |
+| 影音／嘀咕／揪團／哈啦／愛正妹 | 完成。導覽列與頁尾都接得到，原站網址 `/hala/viewtopic.php?t=` 也通 |
+| 送禮物 | 完成。原站在付費網域，我們不接金流但功能照做，一律免費 |
+| 四種 RSS | 網誌／相簿／留言板／迴響，悄悄話與上鎖內容都不外流 |
+| RWD | **桌機零影響**（1000px 以上一條規則都不生效），窄螢幕還沒收乾淨，見待辦 A |
+| 回歸測試 | **141 項全綠**（`node tools/runtests.mjs`，會自己開乾淨資料庫） |
+| SQL 方言測試 | **29 項全綠** |
 
 > ⚠ `test_all.mjs` **要對一個乾淨的資料庫跑**（它第一步就是註冊 alpha/bravo/charlie，
-> 帳號已存在就會整串連鎖失敗）。做法：
-> `DATA_DIR=/tmp/x PORT=3002 node src/server.js` 再 `BASE=http://localhost:3002 node test_all.mjs`。
+> 帳號已存在就會整串連鎖失敗，看起來像「剛改壞了 28 項」）。
+> **直接用 `node tools/runtests.mjs`**——它會自己關掉佔埠的 server、開乾淨的 DATA_DIR、
+> 跑完兩支測試再收工。這個坑我在同一天踩了三次才固化成腳本。
 
 ### 示範資料的量（2026-08-19 重灌）
 
@@ -90,26 +95,46 @@ Facebook 頁面貼進文章帶進來的 class（`.MsoNormal` `.uiInfoTable` `.da
 
 ## 2. 待辦（依優先序）
 
-### A. ~~補結構缺漏~~ — **2026-08-19 做完了，八頁都 100%**
+### A. RWD 收尾 —— **下一個接手的人從這裡開始**
 
-使用者當時的三個決定（往後同類問題照這個走）：
+`public/wretch2012-rwd.css` 是**刻意加的響應式圖層**（原站沒有 RWD，2012 是 970px 固定寬，
+導覽列那顆「手機(NEW)」連的是另一個獨立的行動版活動頁）。整支包在
+`@media (max-width:999px)` 裡，**1000px 以上一條都不生效**，桌機逐像素不變。
 
-| 題目 | 決定 | 落在哪 |
-|---|---|---|
-| 廣告版位 | **保留版位，放自家內容**——DOM／id／尺寸照原版，裡面換成站方公告與站內連結 | `partials/adslot2012.ejs` |
-| 我們沒有的功能（影音／VIP 相片牆／嘀咕） | **版面照做＋最小功能**，不做空殼 | `/:user/video`、`/:user/album/:id/wall`、`/:user/digu` |
-| 社群外掛 | **能用的做真的**（FB／Twitter／Plurk 純 `<a href>`，不載 SDK）；**死掉的留外觀**（Google+／Yahoo IM 只留 class 與圖，不連外） | `partials/socialshare2012.ejs`、`wfpsharing2012.ejs` |
+實測狀態（`MSYS_NO_PATHCONV=1 VW=<寬> node tools/uicheck.mjs <網址…>`）：
 
-> 上一版這一節寫的「不該補／該補」分類**有幾條是錯的**，別再照抄：
-> - `#wretch-crumb` **不是麵包屑**，是 `#hugewrapper` 裡的 hidden input（CSRF token），
->   旁邊是 `#static-path`。而且 `blog2012_head.ejs` 當時早就有了，不是「每一頁都缺」。
-> - `#first` / `#prev` **根本沒缺**，是量測工具永遠抓相簿第一張造成的誤判。
-> - `.blogbody` 那一整組**當時就都有了**，缺的只有 `.extended`，而且原因是種子文章太短
->   沒觸發「繼續閱讀」，不是 markup 沒寫。
+| 寬度 | 結果 |
+|---|---|
+| 1280 / 1440 | **16 頁全部零問題** ✅ |
+| 768 | `/albums` 溢出 192px、留言板 190px |
+| 375 | 首頁 266px、`/albums` 585px、個人相簿 195px、個人網誌 375px |
 
-**還沒做完的只剩一件事**：`.vip_icon` 那套認證章的**後台介面**。
-欄位（`users.vip`，0 無／1 銀／2 金／3 白金）與畫面都好了，
-但目前只能靠 `tools/seed-demo.mjs` 或直接改資料庫來設定，`/admin` 沒有對應的操作。
+已知根因（就從這幾個下手）：
+- `/albums` **根本沒吃到 `wretch2012-rwd.css`**（它走自己的 head），這個最好修也最有效
+- skin 版型的 `hr{width:700px}`（產生檔，要在 rwd 那層蓋掉）
+- `table[width]` 縮不到 min-content 以下
+- `#ad_square` 690px
+
+> ⚠ **不准用 `overflow-x:hidden` 把問題藏起來**。那只會讓量測工具量不到，
+> 版面還是壞的而且內容會被裁掉。我一開始就是這樣偷懶，已經改掉了。
+
+### A-2. 2005 殘留清除（做到一半）
+
+全站已經**沒有任何頁面**載入 2005 的樣式或素材（實測 10 頁，2005 素材載入次數 0），
+`admin.ejs` 也已經改成 2012 外框。剩下的是**程式碼裡的殘骸**，不影響畫面但遲早有人踩到：
+
+| 要清的 | 現況 |
+|---|---|
+| `views/partials/head.ejs` `foot.ejs` `sitetop.ejs` `sitefoot.ejs` `pager.ejs` | **0 引用**，可直接刪 |
+| `public/style.css` | 2005 主樣式，0 頁面載入（只被 `partials/head.ejs` 引用） |
+| `public/img/wretch/`（166K） | 2005 素材集 |
+| `src/taxonomy.js` 的 `THEMES` / `isTheme` | 2005 的 `t-x-*` body class 換色機制，已被真正的版型切換取代，0 引用 |
+| `src/config.js` 的 `THEME_FOR` | 只有 `partials/head.ejs` 在呼叫 |
+| `views/home.ejs:44`、`views/index.ejs:70,91` | 回退路徑指向 `CDN + '/icon/user_cover.gif'`＝**2005 素材**。目前沒觸發（每個人都有大頭貼），是定時炸彈，要改指 2012 的圖 |
+| `attic/wretch-2005/`（286K） | 2005 版成果，使用者說不需要退到更舊 |
+
+**順序**：先改那三個回退路徑 → 再刪 partials → 再刪 style.css 與 img/wretch → 最後清死碼。
+刪之前一定要再跑一次 `grep -rn` 確認 0 引用（我留下的計數是 2026-08-19 當下的）。
 
 ### B. 補更多原廠版型
 
@@ -173,6 +198,11 @@ railway variables --service station --set SEED_DEMO=0        # 灌完關掉
 | **手寫 parser 做 codemod 必錯** | 我踩了三次（視窗太短、把 `...` 誤判成成員存取、字串遮罩失步，漏 47 處）。`tools/codemod-await.mjs` 已改用 acorn，並會自己再解析一次驗證 |
 | **測試不要綁 class 名稱** | 復刻不同年代時 class 一定會變，綁 class 會在功能沒壞時誤報。要驗行為 |
 | **原版用詞** | 2012 是「回上一層」，「回頂端」是 2005 的說法 |
+| **EJS 註解裡不能寫出 EJS 的標記符號** | 會被當成標記提早結束，整頁 500。**同一天踩了三次**：把註解塞進 include 的參數物件、註解裡寫 `width=100` 加百分號加大於號、註解裡寫未逸出輸出的寫法。要提到就用文字描述，不要寫符號 |
+| **樣板字串裡的 `\d` 會被吃掉** | `` new RegExp(`/x/(\d+)`) `` 組出來是 `(d+)`，永遠比不到。用一般字串相接，或直接寫 `[0-9]` |
+| **Windows 上不能照行程名殺 server** | `node src/server.js` 那些行程命令列一模一樣（DATA_DIR 是環境變數，命令列上看不到），照名字殺會把別人的 server 一起殺掉——我就這樣把五個 agent 的 server 全關了。要照 port 找 PID（`Get-NetTCPConnection -LocalPort <埠>`） |
+| **種子資料的值一定要對得上白名單** | 名片的性別／居住地／星座、網誌的 topic 都有白名單過濾，對不上就存空字串或變成騙人的連結，而且**畫面不會報錯**。踩過兩次 |
+| **不要憑 grep 次數下結論** | 我曾拿「心情」grep 原版存檔中了 5 次就斷定列表頁有這個欄位，實際上那 5 次全是文章標題裡的「小心情」。要看上下文 |
 | **量測工具本身會錯，先驗工具再驗版面** | 這次八頁裡有三頁的「缺漏」是工具的 bug（頁面配錯、永遠抓第一張、沒剝 script），照著補會做出原版不存在的東西。看到「缺很多」先去讀那一頁的原始檔確認它真的是同一頁 |
 | **`test_all.mjs` 不是冪等的** | 第一步就註冊 alpha/bravo/charlie，對已經跑過的 DB 再跑一次會整串連鎖失敗，看起來像「改壞了 14 項」。一定要開一個 `DATA_DIR` 全新的 server 來跑 |
 | **EJS 標記不能巢狀** | `<%# 註解 %>` 塞進 `<%- include(...) %>` 的參數物件裡會 500（`Could not find matching close tag`）。要在 include 參數裡寫註解就用 JS 的 `/* */` |
@@ -186,6 +216,8 @@ railway variables --service station --set SEED_DEMO=0        # 灌完關掉
 | 工具 | 用途 |
 |---|---|
 | `tools/fidelity.mjs --all` | **還原度量測**（離線，不靠 archive.org） |
+| `tools/uicheck.mjs` | **真的用瀏覽器檢查**：playwright-core 開系統 Chrome 把頁面畫出來，量橫向溢出（跑版）、超寬元素、壞圖、文字被切、JS 錯誤、失敗請求。`--click` 把站內連結全點一次；`--dead` **真的按下去**找「看起來能按、點了沒反應」的死控制項（按完看網址／DOM／請求有沒有變，三個都沒有才算死）。`VW=375` 之類可換視窗寬 |
+| `tools/runtests.mjs` | **跑測試就用這支**：自己關掉佔埠的 server、開乾淨的 DATA_DIR、跑 test_all 與 test_pg |
 | `tools/emptycheck.mjs` | **空頁檢查**：掃全站每一頁（含 24 個相簿分類、12 個網誌分類），找出還印著「還沒有…」的模組、沒有照片的頁、以及純色色塊假照片。還原度 100% 不代表看起來不空，這兩支要一起跑 |
 | `tools/shot.mjs geo <原版> <我們> <選擇器清單>` | 幾何比對（要連 archive.org，會被限流） |
 | `tools/shot.mjs shot/pair/tree/measure` | 截圖／像素 diff／版面藍圖／元素量測 |

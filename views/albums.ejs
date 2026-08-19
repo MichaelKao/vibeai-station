@@ -67,6 +67,11 @@
 <link rel="stylesheet" href="/wretch2012-album-index.css" type="text/css" />
 <%# 本站刻意偏離的那幾條（§12 專門給這一頁） %>
 <link rel="stylesheet" href="/wretch2012-album-in.css" type="text/css" />
+<%# 響應式圖層。這一頁有自己的 head（不走 partials/head2012），
+    之前整站只有這一頁漏載這支，於是 #container1 的 960px 寫死寬度沒人蓋得掉——
+    實測 768px 視窗橫向溢出 192px、375px 溢出 585px，是站台層唯一會跑版的頁。
+    一定要排在最後：它靠載入順序蓋過上面兩支的固定寬度。 %>
+<link rel="stylesheet" href="/wretch2012-rwd.css" type="text/css" />
 </head>
 <%# body 上不要掛語系 class。sprite_fplink.png（429×115）左右並排三塊：
     0 = 繁體「服務列表／無名相簿・無名網誌・無名影音・無名揪團」（無 class 時的預設）
@@ -136,6 +141,12 @@
           </dd>
         </dl>
 
+        <%# 左欄 Conditions／Categories／Locations 的「目前選到哪一項」。
+            下面那幾行的 class 屬性片段一定要用「不跳脫」的輸出標記，不能用會跳脫的那個：
+            會跳脫的那個把整串 HTML 變成 class=&#34;current&#34;，屬性根本沒生效，
+            結果是不管點哪一個分類，左欄都沒有任何一項被標起來
+            （原站是把選到的那一項標成 current，這是這一欄唯一的狀態提示）。
+            這幾個字串是模板裡的常數不是使用者輸入，所以不違反 WRETCH_2012.md 第 4-4 條。 %>
         <ul id="browse_album" class="left_column">
           <li id="condition">
             <h4>Conditions</h4>
@@ -152,8 +163,8 @@
             <div class="side">
               <div class="sideII">
                 <ul>
-                    <li<%= topic ? '' : ' class="current"' %>><a href="<%= asQ({ topic: '' }) %>">All</a></li>
-<% topics.forEach(t => { %>                      <li<%= topic === t ? ' class="current"' : '' %>><a href="<%= asQ({ topic: t }) %>"><%= t %></a></li>
+                    <li<%- topic ? '' : ' class="current"' %>><a href="<%= asQ({ topic: '' }) %>">All</a></li>
+<% topics.forEach(t => { %>                      <li<%- topic === t ? ' class="current"' : '' %>><a href="<%= asQ({ topic: t }) %>"><%= t %></a></li>
 <% }) %>                    </ul>
               </div>
             </div>
@@ -163,8 +174,8 @@
             <div class="side">
               <div class="sideII">
                 <ul>
-                  <li<%= place ? '' : ' class="current"' %>><a href="<%= asQ({ place: '' }) %>">全部</a></li>
-<% places.forEach(pl => { %>                  <li<%= place === pl ? ' class="current"' : '' %>><a href="<%= asQ({ place: pl }) %>"><%= pl %></a></li>
+                  <li<%- place ? '' : ' class="current"' %>><a href="<%= asQ({ place: '' }) %>">全部</a></li>
+<% places.forEach(pl => { %>                  <li<%- place === pl ? ' class="current"' : '' %>><a href="<%= asQ({ place: pl }) %>"><%= pl %></a></li>
 <% }) %>                </ul>
               </div>
             </div>

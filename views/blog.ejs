@@ -102,26 +102,33 @@
         <div class="blogbody2">
             <div class="articletext">
             <a name="<%= p.id %>"></a>
-            <h3 class="title"><% if (p.pass) { %><img src="/img/wretch2012/blog/lock.gif" width="21" height="16" border="0" align="absmiddle" alt="[鎖]"><% } %><a href="/<%= u.name %>/blog/<%= p.id %>"><%= p.title %></a><% if (p.featured) { %><a href="/blogs" target="_blank"><img src="/img/wretch2012/blog/hot.png" border="0" alt=""></a><% } %></h3>
+            <%# 標題在列表頁是**純文字、不是連結**——afuuu／AndreaCorlen／treehouse16
+                三份存檔的 h3.title 裡一律只有文字（外加精選的 hot.png），
+                進文章一律走下面 .extended 那顆「繼續閱讀」。
+                包成 <a> 會讓標題吃到 #content a 的青色，跟原版的黑色粗體不一樣。 %>
+            <h3 class="title"><% if (p.pass) { %><img src="/img/wretch2012/blog/lock.gif" width="21" height="16" border="0" align="absmiddle" alt="[鎖]"><% } %><%= p.title %><% if (p.featured) { %><a href="/blogs" target="_blank"><img src="/img/wretch2012/blog/hot.png" border="0" alt=""></a><% } %></h3>
             <%# shTb 給數字才會印 span.bubble（「已被轉貼幾次」的泡泡）。
                 原版列表頁與文章頁都有這顆，之前傳 null 是因為列表沒查轉貼數。 %>
             <%- include('partials/blogshare', { shPost: p, shOwner: u.name, shTb: p.tb, shCan: !!(me && !isOwner) }) %>
 
             <div class="innertext"><% if (locked) { %>＊ 這篇文章已上鎖，需要密碼才能觀看 ＊<% } else { %><%- render(cut ? lead + '…' : p.body) %><% } %></div>
 
-            <% if (locked || cut) { %>
+            <%# 原版列表頁**每一篇**都有這顆（存檔裡的 (More......) 一篇不漏），
+                因為它的列表一律截斷；標題已經不是連結了，這是唯一的進文章入口，
+                所以不再用 locked/cut 判斷，一律印出來。 %>
             <div class="extended"><a href="/<%= u.name %>/blog/<%= p.id %>">(繼續閱讀)</a></div>
-            <% } %>
               <br clear="all" />
             </div> <!-- end of articletext -->
 
+            <%# 列表頁的 .posted 原版只有三項：Reply(N) | Trackback(N) | prosecute
+                （afuuu 存檔逐篇都是這樣；Collection(N) 只出現在**單篇文章頁**）。
+                原本這裡多印了「收藏」（而且只是連回文章，按了不會收藏）與
+                分類／心情／天氣——那三樣原版擺在單篇頁的 .extended，列表頁沒有。
+                引用少了數字：p.tb 後端早就查了（server.js 的列表 SQL），只是沒印。 %>
             <div class="posted">
             <a href="/<%= u.name %>/blog"><%= u.name %></a> at <a href="/blogs">無名小站</a> at <%= wTime(p.created) %> post            | <a href="/<%= u.name %>/blog/<%= p.id %>#postComments">回應(<%= p.nc %>)</a>
-            | <a href="/<%= u.name %>/blog/<%= p.id %>#trackbacks">引用</a>
-            | <a href="/<%= u.name %>/blog/<%= p.id %>">收藏</a>
+            | <a href="/<%= u.name %>/blog/<%= p.id %>#trackbacks">引用(<%= p.tb %>)</a>
             | <a href="/<%= u.name %>/blog/<%= p.id %>">檢舉</a>
-            | 分類：<a href="/<%= u.name %>/blog?cat=<%= encodeURIComponent(p.category) %>"><%= p.category %></a>
-            <% if (p.mood) { %>| 心情：<%= p.mood %> <% } %><% if (p.weather) { %>| 天氣：<%= p.weather %><% } %>
                       </div>
 
         </div> <!-- end of blogbody2 -->

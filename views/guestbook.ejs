@@ -7,11 +7,23 @@
                                         > li.msg_title  <span>主題：</span><strong>…</strong><cite>鎖頭</cite>
                                         > li.msg_date   <span>時間：</span>… ＋ 檢舉
                                         > li.msg_word   <span>內容：</span><strong>…</strong>
-                                        > li.msg_info   <span>通知：</span>
                   > li.reply_content > ul > li.reply_word <span>板主回覆：</span>
 
     鎖頭在**主題後面**的 <cite> 裡（原始檔就是這樣寫的，不是放在主題前面）。
-    悄悄話：secret=1 且看的人不是站主時，暱稱／主題／內容三處全部顯示「悄悄話」。
+
+    ⚠ 2026-08-19 拿掉了 li.msg_info（「通知：」）。原因：那一格在原版**只有訪客
+    留了 Email 時才出現**，裡面是一顆 mailto 的信封圖
+    （gb_gbook_page2_a050907_20110816.html 十則訪客留言都是這樣；
+      gb_guestbook_a000000010_20131226.html 整份 0 次）。本站的留言表單根本沒有
+    Email 欄位，所以那一格永遠是空的，而版型給了它
+    `.msg_info{border-bottom:1px dotted #a9a9a9;padding:5px 0}`——
+    每一則留言底下都會多一條 27px 的空虛線，實測就是這樣（shot.mjs measure）。
+
+    悄悄話：secret=1 且看的人不是站主時，暱稱／主題／內容三處全部顯示「悄悄話」，
+    而且**整格 li.msg_img 不輸出**、板主回覆也一樣蓋成「悄悄話」——
+    原版就是這樣做的（上面那份存檔裡的 Sealed 留言沒有 li.msg_img，
+    但 li.reply_content 還在、內容是 Sealed）。看的人知道「有回覆但看不到」，
+    而不是整塊消失。
 
     頁籤：留言板 / 系統訊息（只有站主看得到）；「我要留言」在原站是右邊那顆
     a.message 按鈕（message.gif 120×39），不是第三個頁籤——這裡照原樣。
@@ -67,7 +79,6 @@
         <li class="msg_title"><span>主題：</span><strong><%= m.title || '無標題' %></strong><cite></cite></li>
         <li class="msg_date"><span>時間：</span><%= m.created %></li>
         <li class="msg_word"><span>內容：</span><strong><%- gbBody(m.body) %></strong></li>
-        <li class="msg_info"><span>通知：</span></li>
       </ul>
     </li>
   </ul>
@@ -150,7 +161,6 @@ document.addEventListener('click', function(e){
         <li class="msg_title"><span>主題：</span><strong><%= m.title %></strong><cite></cite></li>
         <li class="msg_date"><span>時間：</span><%= m.created %></li>
         <li class="msg_word"><span>內容：</span><strong><%- gbBody(m.body) %></strong></li>
-        <li class="msg_info"><span>通知：</span></li>
       </ul>
     </li>
   </ul>
@@ -174,18 +184,22 @@ document.addEventListener('click', function(e){
         <%# 原版這兩格：大頭貼與暱稱都是連回留言者的小站，暱稱前面掛認證章
             （gb_guestbook_a000000010_20131226.html:12441）。
             訪客留言（author_id 是 NULL）就沒有帳號可以連，退回純文字＋預設頭像。 %>
-        <li class="msg_img"><% if (!hide && m.a_name) { %><a href="/<%= m.a_name %>/guestbook" target="_blank"><img src="<%= m.a_avatar %>" width="60" height="60" alt="<%= m.a_nick %>"></a><% } else { %><img src="/img/avatar.png" width="60" height="60" alt=""><% } %></li>
+        <%# 悄悄話對外人**整格不輸出**（原版的 Sealed 留言就沒有這一格）；
+            訪客留言沒有帳號可以連，原版是一張 No_Login_60.gif，我們用預設頭像。 %>
+        <% if (!hide) { %><li class="msg_img"><% if (m.a_name) { %><a href="/<%= m.a_name %>/guestbook" target="_blank"><img src="<%= m.a_avatar %>" width="60" height="60" alt="<%= m.a_nick %>"></a><% } else { %><img src="/img/avatar.png" width="60" height="60" alt=""><% } %></li><% } %>
         <li class="msg_man"><span>暱稱：</span><% if (hide) { %>悄悄話<% } else { %><%- include('partials/vipicon2012', { viUser: { vip: m.a_vip }, viStyle: 'auth' }) %><% if (m.a_name) { %><a href="/<%= m.a_name %>/guestbook" target="_blank"><%= m.author %></a><% } else { %><%= m.author %><% } %><% } %></li>
         <li class="msg_title"><span>主題：</span><strong><%= hide ? '悄悄話' : (m.subject || '無標題') %></strong><cite><% if (m.secret) { %><img src="/img/wretch2012/gb/lock.gif" width="21" height="16" alt="悄悄話"><% } %></cite></li>
         <li class="msg_date"><span>時間：</span><%= m.created %>
           &nbsp;<a href="#" class="reportlink" data-kind="guestbook" data-id="<%= m.id %>">檢舉</a></li>
         <li class="msg_word"><span>內容：</span><strong><% if (hide) { %>悄悄話<% } else { %><%- gbBody(m.body) %><% } %></strong></li>
-        <li class="msg_info"><span>通知：</span></li>
       </ul>
     </li>
-    <% if (m.reply && !hide) { %>
+    <%# 悄悄話的回覆一樣蓋成「悄悄話」，但這一格照樣輸出——
+        原版就是這樣（Sealed 留言底下還是有 li.reply_content，內容也是 Sealed），
+        外人才看得出來「板主回過了，只是我看不到」。 %>
+    <% if (m.reply) { %>
     <li class="reply_content">
-      <ul><li class="reply_word"><span>板主回覆：</span><strong><%- gbBody(m.reply) %></strong></li></ul>
+      <ul><li class="reply_word"><span>板主回覆：</span><strong><% if (hide) { %>悄悄話<% } else { %><%- gbBody(m.reply) %><% } %></strong></li></ul>
     </li>
     <% } %>
     <% if (isOwner) { %>

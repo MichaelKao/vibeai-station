@@ -38,6 +38,30 @@
     return t.length > n ? t.slice(0, n) + '…' : t;
   };
   const w2Pic  = p => p.thumb || p.url;                    // 照片縮圖，沒有就用原圖
+
+  /* 大格子專用的「別放縮圖」。
+     ─────────────────────────────────────────────────────────────
+     為什麼要有這個：src/storage.js 的 save() 只產兩種尺寸——大圖最長邊 1024、
+     縮圖固定 90×90 置中裁切。首頁有一半的格子比 90px 大很多
+     （今日主題堆疊 418×274、熱門相簿冠軍格 298×298、腰帶 217×217 與 207×155、
+     名家專欄 217×148），全部餵 90×90 的縮圖等於放大 2.3～4.9 倍，
+     實測整個首頁糊成一片，跟原版銳利的照片牆完全不像。
+     原站不會有這個問題——它的圖庫對每個版位各存一張裁好的檔
+     （l.yimg.com/…_156.jpg、_298.jpg…），我們沒有那套派生檔。
+
+     縮圖與大圖的檔名只差 _t：save() 的 base 一樣，大圖是 base + 副檔名、
+     縮圖是 base + '_t.jpg'，所以能直接推回去。實測站上 298 張照片
+     推導結果與 photos.url 逐筆相同，0 例外。
+
+     唯一推不回去的是 GIF：save() 對 GIF 不轉檔（url 是 .gif）卻仍產 .jpg 縮圖，
+     推出來的 .jpg 不存在。那種情況下 onerror 會把 src 換回原本的縮圖，
+     寧可糊也不要破圖。 */
+  const w2Big = src => /_t\.jpg$/.test(String(src || ''))
+    ? String(src).replace(/_t\.jpg$/, '.jpg') : src;
+  /* 推導失敗時退回縮圖用的 onerror。寫成一次性字串，避免每個版位各抄一份。
+     this.onerror=null 是必要的：不清掉的話退回去的那張若也載不出來會無限迴圈。 */
+  const w2Fallback = src =>
+    `this.onerror=null;this.src='${String(src).replace(/'/g, '&#39;')}'`;
   /* 文章的代表圖：先用作者最新一張公開照片（pthumb），沒有就用作者的大頭貼，
      都沒有才落到無名那張「沒有封面」的卡通圖。原版這一格放的就是作者的封面圖，
      整排卡通圖示會讓首頁看起來像沒載入完。 */
@@ -67,16 +91,54 @@
     return CDN + '/icon/user_cover.gif';
   };
 
-  /* 日期／日曆（#wfp-archive）：原站是 11 格，今天 selected，往前推 10 天 */
+  /* 日期／日曆（#wfp-archive）：原站是 11 格，基準日 selected，往前推 10 天。
+     ═══════════════════════════════════════════════════════════════════
+     這一整組是「補回原站有、我們漏掉的行為」，不是新增功能。
+     原站的展開／收合、未來／過去、選取狀態全部由 wfp-js 那支 JS 驅動，
+     我們照抄了 DOM 卻沒有那段 JS，於是三顆按鈕按下去完全沒反應
+     （tools/uicheck.mjs --dead 掃出來的死控制項全站就只有這三顆）。
+
+     ── 為什麼改用真連結而不是補 JS ──────────────────────────────────
+     整站沒有任何 JS，為了三顆按鈕引進一支腳本不划算；
+     而且做成連結還多兩個原站沒有的好處：可以加書籤、可以按上一頁。
+     DOM 結構完全不動（id、class、節點順序都跟原版一樣），只有 href 從
+     死的 "#" 換成真的網址——原站那個 "#" 本來就只是 JS 的掛勾點。
+
+     ── 狀態怎麼帶 ────────────────────────────────────────────────────
+     只靠 src/server.js 已經在吃的 ?date= 一個參數，不需要新的參數：
+       沒有 date → 日曆收合，看的是「今天」
+       有   date → 日曆展開，看的是那一天
+     所以「展開」＝連到 ?date=<今天>（內容與 / 完全相同，只是把日曆打開），
+     「收合」＝連回 /。這樣一顆按鈕就能雙向切換，而且切換結果可以加書籤。 */
   const w2Months = ['一月','二月','三月','四月','五月','六月','七月','八月','九月','十月','十一月','十二月'];
   const w2Pad = n => String(n).padStart(2, '0');
   const w2Now = new Date();
   const w2Ymd = d => d.getFullYear() + '-' + w2Pad(d.getMonth() + 1) + '-' + w2Pad(d.getDate());
+  /* 今天的零點。跟基準日比大小時一定要用零點，否則「今天」永遠大於基準日，
+     「未來」那顆就永遠是可以按的，可以一直往後翻到沒有內容的日期。 */
+  const w2Today0 = new Date(w2Now.getFullYear(), w2Now.getMonth(), w2Now.getDate());
+  const w2TodayYmd = w2Ymd(w2Today0);
+  /* 基準日。locals.day 由 src/server.js 驗過格式（只收 YYYY-MM-DD）才傳進來。
+     用 'T00:00:00' 而不是直接 new Date('2026-08-19')：後者會被當成 UTC，
+     在台灣時區會倒退成前一天，日曆會整排偏移一格。 */
+  const w2Day = locals.day || null;
+  const w2Base = w2Day ? new Date(w2Day + 'T00:00:00') : w2Today0;
+  const w2SelYmd = w2Day || w2TodayYmd;
   const w2Days = [];
   for (let i = 0; i < 11; i++) {
-    const d = new Date(w2Now.getFullYear(), w2Now.getMonth(), w2Now.getDate() - i);
+    const d = new Date(w2Base.getFullYear(), w2Base.getMonth(), w2Base.getDate() - i);
     w2Days.push(d);
   }
+  /* 往前／往後挪一整個視窗（11 天）。「未來」不能超過今天——
+     再往後就是還沒發生的日期，站上不可能有內容。 */
+  const w2Shift = n => {
+    const d = new Date(w2Base.getFullYear(), w2Base.getMonth(), w2Base.getDate() + n);
+    return d > w2Today0 ? w2Today0 : d;
+  };
+  const w2BackYmd = w2Ymd(w2Shift(-11));
+  const w2CanFwd  = w2Base < w2Today0;
+  const w2FwdYmd  = w2CanFwd ? w2Ymd(w2Shift(11)) : null;
+  const w2CalOpen = !!w2Day;
 
   /* 站內分類（src/taxonomy.js 的 ALBUM_TOPICS / BLOG_TOPICS，首頁 route 沒有傳進來，
      這裡取用到的前幾項；連結對得上 /albums?topic= 與 /blogs?topic=） */
@@ -108,29 +170,59 @@
   <div class="bd big-bd clearfix archive-relative">
     <div class="main">
 
-      <%# ④ 左側浮出的日期／日曆小工具（絕對定位在 #wrapper 左外側） %>
-      <div id="wfp-archive" class="collapse">
+      <%# ④ 左側浮出的日期／日曆小工具（絕對定位在 #wrapper 左外側）。
+          class 是 expand／collapse 二選一，原站的 CSS 本來就寫好了這兩個狀態
+          （wretch2012.css：.collapse .bd 隱藏、.expand .bd 高 267px），
+          我們只是把「誰來決定掛哪一個」從 JS 換成 ?date= 有沒有帶。 %>
+      <div id="wfp-archive" class="<%= w2CalOpen ? 'expand' : 'collapse' %>">
         <div class="hd">
           <h3><a href="/">今天</a></h3>
           <div>
-            <p id="wfp-archive-today"><span class="month"><%= w2Months[w2Now.getMonth()] %></span><span class="day"><%= w2Pad(w2Now.getDate()) %></span></p>
-            <a id="wfp-archive-switcher" href="#"><span>展開/收合</span></a>
+            <%# 顯示的是「目前看的那一天」，不是永遠印今天——
+                否則挑了 8/03 之後這裡還寫 8/19，使用者不知道自己在看哪一天。 %>
+            <p id="wfp-archive-today"><span class="month"><%= w2Months[w2Base.getMonth()] %></span><span class="day"><%= w2Pad(w2Base.getDate()) %></span></p>
+            <%# 展開／收合。開著就連回 /（收合），關著就連到今天（展開）。
+                ?date=<今天> 撈出來的內容跟 / 一模一樣，所以純粹只是開關日曆。 %>
+            <a id="wfp-archive-switcher" href="<%= w2CalOpen ? '/' : '/?date=' + w2TodayYmd %>" title="<%= w2CalOpen ? '收合日曆' : '展開日曆' %>"><span>展開/收合</span></a>
           </div>
         </div>
         <div class="bd">
-          <a id="wfp-archive-forward" href="#">未來</a>
+          <%# 未來：基準日已經是今天就沒有「更未來」可以去，這時**不給 href**。
+              原站這個狀態是掛 .unactived（CSS 有 cursor:default 與另一組灰色圖示）。
+              不寫 href 而不是寫 href="#"，是因為 href="#" 按下去什麼都不會發生，
+              那正是 tools/uicheck.mjs --dead 要抓的死控制項。 %>
+          <% if (w2CanFwd) { %>
+          <a id="wfp-archive-forward" href="/?date=<%= w2FwdYmd %>" title="往後 11 天">未來</a>
+          <% } else { %>
+          <a id="wfp-archive-forward" class="unactived" title="已經是今天了">未來</a>
+          <% } %>
           <ul id="wfp-archive-calendar">
-            <% w2Days.forEach((d, i) => { %>
-            <li class="date <%= i === 0 ? 'selected' : 'normal' %>">
-              <a href="/?date=<%= w2Ymd(d) %>"><%= w2Pad(d.getDate()) %></a>
+            <%# 跨月時插一列月份標籤。原站那 12 個 name="monthUnit" 的隱藏欄位
+                就是餵給 JS 做這件事的，CSS 也早就有 li.month 這條規則。 %>
+            <% let w2PrevMonth = null; %>
+            <% w2Days.forEach(d => { %>
+            <% if (w2PrevMonth !== null && d.getMonth() !== w2PrevMonth) { %>
+            <li class="month"><%= w2Months[d.getMonth()] %></li>
+            <% } %>
+            <% w2PrevMonth = d.getMonth(); %>
+            <li class="date <%= w2Ymd(d) === w2SelYmd ? 'selected' : 'normal' %>">
+              <a href="/?date=<%= w2Ymd(d) %>" title="<%= w2Ymd(d) %>"><%= w2Pad(d.getDate()) %></a>
             </li>
             <% }) %>
           </ul>
-          <a id="wfp-archive-backward" href="#">過去</a>
+          <%# 過去：往更早的日期永遠可以走，站上最早的資料是 2024 年 %>
+          <a id="wfp-archive-backward" href="/?date=<%= w2BackYmd %>" title="往前 11 天">過去</a>
         </div>
         <% w2Months.forEach(m => { %><input type="hidden" name="monthUnit" value="<%= m %>">
         <% }) %><input type="hidden" name="todayTopic" value="今日主題">
       </div>
+
+      <%# 「你正在看某一天」的提示條。只在挑了日期時出現，
+          原站沒有這一條——那個 56px 的小日曆貼在版面左外側太容易被忽略，
+          挑了日期之後首頁內容變了卻看不出原因。給一個明確的回今天出口。 %>
+      <% if (w2Day) { %>
+      <p class="w2-archive-note">你正在看 <b><%= w2Day %></b> 的首頁<a href="/">回到今天</a></p>
+      <% } %>
 
       <%# ⑤ 今日主題：站方公告當主題文案，堆疊照片用站上最新的照片 %>
       <div id="wfp-cover" class="mod stack-layout bright bright-stack-layout">
@@ -161,7 +253,8 @@
                  const w2Title = p.caption ? w2Cap(p.caption, 30) : p.atitle; %>
             <div class="block <%= w2BlockClass %>" data-title="<%= w2Title %>">
               <a title="<%= w2Title %>" href="/<%= p.uname %>/photo/<%= p.id %>">
-                <img src="<%= w2Pic(p) %>" width="418" height="274" alt="<%= w2Title %>">
+                <%# 418×274 的格子：newPhotos 是 SELECT p.*，手上就有大圖網址，直接用 %>
+                <img src="<%= p.url || w2Pic(p) %>" width="418" height="274" alt="<%= w2Title %>">
               </a>
               <div class="inner-block">
                 <h3 class="inner-title"><a title="<%= w2Title %>" href="/<%= p.uname %>/photo/<%= p.id %>"><%= w2Title %></a></h3>
@@ -243,7 +336,8 @@
               <% if (hotAlbums.length) { const w2Best = hotAlbums[0]; %>
               <li class="best">
                 <a href="/<%= w2Best.uname %>/album/<%= w2Best.id %>" title="<%= w2Best.title %>">
-                  <img src="<%= w2Best.cover %>" alt="<%= w2Best.title %>">
+                  <%# 冠軍格 298×298。albums.cover 存的是縮圖網址，要推回大圖才不會糊 %>
+                  <img src="<%= w2Big(w2Best.cover) %>" onerror="<%= w2Fallback(w2Best.cover) %>" alt="<%= w2Best.title %>">
                 </a>
                 <span class="featured-medal">本日最熱門</span>
                 <div class="panel best-panel">
@@ -264,7 +358,8 @@
               <% newPhotos.slice(0, 6).forEach(p => { const w2C = p.caption ? w2Cap(p.caption, 20) : p.atitle; %>
               <li class="normal normal-six">
                 <a href="/<%= p.uname %>/photo/<%= p.id %>" title="<%= w2C %>">
-                  <img src="<%= w2Pic(p) %>" width="156" height="96" alt="<%= w2C %>">
+                  <%# 156×96 的格子仍比 90×90 縮圖大，一樣走大圖 %>
+                  <img src="<%= p.url || w2Pic(p) %>" width="156" height="96" alt="<%= w2C %>">
                 </a>
                 <div class="panel normal-six">
                   <div class="panel-text">
@@ -517,7 +612,7 @@
         <% if (hotPosts.length) { const w2P0 = hotPosts[0]; %>
         <div class="image-wrapper ugc-block">
           <a href="/<%= w2P0.uname %>/blog/<%= w2P0.id %>" title="<%= w2P0.title %>" class="no-line">
-            <img alt="<%= w2P0.title %>" src="<%= w2Cover(w2P0) %>" width="217" height="217">
+            <img alt="<%= w2P0.title %>" src="<%= w2Big(w2Cover(w2P0)) %>" onerror="<%= w2Fallback(w2Cover(w2P0)) %>" width="217" height="217">
           </a>
         </div>
         <div class="article-wrapper ugc-block">
@@ -564,7 +659,7 @@
           <% if (w2P1) { %>
           <div class="mix-item ugc-block clearfix">
             <a href="/<%= w2P1.uname %>/blog/<%= w2P1.id %>" class="ugc-block image" title="<%= w2P1.title %>">
-              <img src="<%= w2Cover(w2P1) %>" width="207" height="155" class="mix-img" alt="<%= w2P1.title %>">
+              <img src="<%= w2Big(w2Cover(w2P1)) %>" onerror="<%= w2Fallback(w2Cover(w2P1)) %>" width="207" height="155" class="mix-img" alt="<%= w2P1.title %>">
             </a>
             <div class="mix-article">
               <h6>
@@ -583,7 +678,7 @@
           <span>大家都在看</span>
           <% if (w2P2) { %>
           <div class="mix-item ugc-block clearfix">
-            <a href="/<%= w2P2.uname %>/blog/<%= w2P2.id %>" class="ugc-block" title="<%= w2P2.title %>"><img src="<%= w2Cover(w2P2) %>" width="207" height="155" class="mix-img image" alt="<%= w2P2.title %>"></a>
+            <a href="/<%= w2P2.uname %>/blog/<%= w2P2.id %>" class="ugc-block" title="<%= w2P2.title %>"><img src="<%= w2Big(w2Cover(w2P2)) %>" onerror="<%= w2Fallback(w2Cover(w2P2)) %>" width="207" height="155" class="mix-img image" alt="<%= w2P2.title %>"></a>
             <div class="mix-article">
               <h5>
                 <a href="/<%= w2P2.uname %>/blog/<%= w2P2.id %>" title="<%= w2P2.title %>">
@@ -641,7 +736,8 @@
           <ul>
             <% rank.slice(0, 3).forEach((r, i) => { %>
             <li class="<%= i === 0 ? 'first' : (i === 2 ? 'last' : '') %>">
-              <a href="/<%= r.name %>" class="thumbnail"><img src="<%= w2UserPic(r.name) %>" alt="<%= r.nick %>"></a>
+              <%# 第一格是 217×148 的大圖，後兩格 55×55；一律推大圖，小的縮下去不會糊 %>
+              <a href="/<%= r.name %>" class="thumbnail"><img src="<%= w2Big(w2UserPic(r.name)) %>" onerror="<%= w2Fallback(w2UserPic(r.name)) %>" alt="<%= r.nick %>"></a>
               <header>
                 <hgroup>
                   <h4><a href="/<%= r.name %>"><%= r.nick %></a></h4>

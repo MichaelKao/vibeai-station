@@ -167,11 +167,7 @@ td#ad_banner, td#ad_word { height: 0; padding: 0; line-height: 0; }
  * 桌機版面與還原度完全不受影響）。放在這裡而不是那一支：這幾條選擇器都是
  * 本檔自己發明的區塊，跟著它們的定義走比較不會改一邊漏一邊。
  *
- * ⚠ 這一段**只管本檔自己的區塊**。同一個斷點下，相簿家族還有幾個溢出的元素
- *   根不在這裡，要在共用檔處理：
- *     hr           702px ← 版型 skin 1/189 的 hr{width:700px}（產生檔，不能手改）
- *     table[width] 570～700px ← 整頁的 <table width="700"> 縮不到 min-content 以下
- *     #ad_square   690px ← 一排五格 120px 的縮圖表
+ * §14 收掉的是「不是本檔發明、但只有相簿家族會遇到」的那三個，見下。
  */
 @media (max-width: 999px) {
   .w2a-flash, .w2a-tools, .w2a-cmt, .w2a-report, .w2a-lock, .w2i-flash,
@@ -180,4 +176,65 @@ td#ad_banner, td#ad_word { height: 0; padding: 0; line-height: 0; }
   }
   .w2a-report textarea { width: 100%; box-sizing: border-box; }
   .w2a-quota { max-width: 100%; box-sizing: border-box; }
+}
+
+/* --- 14. 窄視窗：版型自己寫死的三個寬度 ---------------------------------
+ * 這三個不是本檔發明的，但只有相簿家族會踩到，而且根源那兩支檔都不能手改
+ * （wretch2012-album.css 是產生檔、wretch2012-rwd.css 由首頁 agent 負責），
+ * 所以在這裡收。一樣只在窄視窗生效，桌機一條都不會命中。
+ *
+ * ⚠ 為什麼要加 !important、為什麼 rwd.css 那邊寫了卻沒有用：
+ *   版型 skin 1/189（wretch2012-album.css 第 143–145 行）有
+ *     table{display:table !important} tr{display:table-row !important}
+ *     td{display:table-cell !important}
+ *   那三條是無名當年為了壓過使用者自訂 CSS 才加的 !important。結果
+ *   rwd.css 想把 #ad_square 攤成 inline-block 重排（那邊第 114–115、134 行）
+ *   完全被蓋掉——實測 375px 下 #ad_square 的 computed display 還是 table，
+ *   所以整張表維持 5 欄 120px、把頁面撐出 315px 的橫向捲軸。
+ *
+ * ⚠ 為什麼不照 rwd.css 的做法把格子攤成 inline-block 換行：
+ *   相簿格是「封面列 / 說明列」兩排交錯的表格（原版就是這樣排的）。
+ *   攤成 inline-block 之後兩排各自換行，會變成「五張封面」接「五行說明」，
+ *   封面跟它的名字對不起來。改成**讓五欄一起等比縮小**：欄數、順序、
+ *   封面與說明的對齊關係全部維持原版，只有格子變小。
+ */
+
+/* hr：版型的 hr{width:700px}（＋左右 1px 框＝702px）。 */
+@media (max-width: 999px) {
+  #bigcontainer hr { width: auto; max-width: 100%; }
+}
+
+/* 相簿／照片格：一排五格 120px ＋ cellspacing 10 ＝ 690px。
+ * 斷點取 719px：690 再加一點邊距，剛好是「五格塞不下」的那個寬度，
+ * 768px 以上維持原尺寸不動。
+ * 選擇器一律加 #bigcontainer 前綴——rwd.css 排在本檔後面，同分就是它贏，
+ * 多一個 id 才蓋得過它的 #ad_square td{width:46% !important}。 */
+@media (max-width: 719px) {
+  #bigcontainer #ad_square {
+    width: 100% !important; table-layout: fixed !important;
+    border-spacing: 4px !important;      /* 原本 cellspacing=10，窄視窗省下 30px */
+  }
+  #bigcontainer #ad_square td,
+  #bigcontainer #ad_square td.side {
+    width: auto !important; height: auto !important;
+    background-size: 100% 100% !important;   /* side_a.gif 的外框跟著格子縮 */
+  }
+  #bigcontainer #ad_square td.side img { max-width: 100% !important; height: auto !important; }
+  /* 版型的 body table#ad_square font a{width:120px} 會把說明撐回 120 */
+  #bigcontainer #ad_square font a { width: auto !important; }
+}
+
+/* 照片頁頁首那張兩欄表：左邊 <td rowspan=2 width=360> 是麵包屑，
+ * 右邊那欄放「16 / 611」與「第一張|上一張|下一張|最後一張|回上一層」。
+ * 375px 的視窗裡 360 就吃掉九成，右欄只剩三十幾 px，那排連結會變成
+ * 一個字一行的直排（實測 375px 高 300px 以上）。窄視窗改成上下堆疊。
+ * :not() 兩個是為了放過同一層的另外兩張表——.show 是放大圖的、
+ * #ad_square 是縮圖列，那兩張上面已經各自處理過了。 */
+@media (max-width: 719px) {
+  #body_show #bigcontainer > div > table:not(.show):not(#ad_square),
+  #body_show #bigcontainer > div > table:not(.show):not(#ad_square) tbody,
+  #body_show #bigcontainer > div > table:not(.show):not(#ad_square) tr,
+  #body_show #bigcontainer > div > table:not(.show):not(#ad_square) td {
+    display: block !important; width: auto !important; text-align: center;
+  }
 }

@@ -110,9 +110,18 @@ const cleanMusic = s => (s||'').split('\n').map(x=>x.trim())
 
 // ===== 全站 =====
 app.get('/', async (req,res)=>{
+  // 左側那個日期小工具（#wfp-archive）的日期連結指向 /?date=YYYY-MM-DD——
+  // 原站點下去會看到那一天的首頁。我們照抄了整組 DOM 卻**從來沒處理過這個參數**，
+  // 所以 11 個日期連結點下去畫面完全一樣，使用者會覺得「這東西是壞的」。
+  // 帶了合法日期就只看那天（含）以前的內容，跟原站「回到那一天的首頁」語意一致。
+  const day = /^\d{4}-\d{2}-\d{2}$/.test(req.query.date||'') ? req.query.date : null;
+  const dayWhere = day ? " AND substr(a.created,1,10)<=?" : "";
+  const dayWhereP = day ? " AND substr(p.created,1,10)<=?" : "";
+  const dayArgs = day ? [day] : [];
   res.render('index',{
-    hotAlbums: await all(`SELECT a.*,u.name uname,u.nick FROM albums a JOIN users u ON u.id=a.user_id WHERE a.pass='' AND a.friends_only=0 AND a.cover!='' ORDER BY a.views DESC LIMIT 8`),
-    newPhotos: await all(`SELECT p.*,a.title atitle,a.id aid,u.name uname FROM photos p JOIN albums a ON a.id=p.album_id JOIN users u ON u.id=a.user_id WHERE a.pass='' AND a.friends_only=0 ORDER BY p.id DESC LIMIT 8`),
+    day,
+    hotAlbums: await all(`SELECT a.*,u.name uname,u.nick FROM albums a JOIN users u ON u.id=a.user_id WHERE a.pass='' AND a.friends_only=0 AND a.cover!=''${dayWhere} ORDER BY a.views DESC LIMIT 8`,...dayArgs),
+    newPhotos: await all(`SELECT p.*,a.title atitle,a.id aid,u.name uname FROM photos p JOIN albums a ON a.id=p.album_id JOIN users u ON u.id=a.user_id WHERE a.pass='' AND a.friends_only=0${dayWhereP} ORDER BY p.id DESC LIMIT 8`,...dayArgs),
     // 熱門網誌：左縮圖右文字，取作者最新一張照片當縮圖（同 2005 首頁）
     hotPosts: await all(`SELECT p.*,u.name uname,u.nick,
         (SELECT ph.thumb FROM photos ph JOIN albums al ON al.id=ph.album_id

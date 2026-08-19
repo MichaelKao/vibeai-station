@@ -80,7 +80,10 @@ await post('/alpha/blog/new',{title:'第一篇',body:'內容內容內容',catego
 await post('/alpha/blog/new',{title:'鎖起來',body:'SECRETTEXT',category:'心情',pass:'8888'},A);
 const bl=await text('/alpha/blog');
 ok('文章列表', bl.includes('第一篇'));
-ok('心情天氣', bl.includes('心情：開心')&&bl.includes('天氣：晴'));
+// 心情／天氣在**單篇文章頁**，不是列表頁。原版列表頁的 .posted 只有
+// Reply(N) | Trackback(N) | prosecute 三項（blog_2012_default_skin_afuuu.html 逐篇都是）。
+// 註：拿「心情」去 grep 那份存檔會中 5 次，但那全是文章標題裡的「小心情」，不是欄位。
+ok('心情天氣（在單篇頁）', (await text('/alpha/blog/1')).includes('心情：開心'));
 ok('日期分隔', bl.includes('datediv'));
 ok('文章日曆', bl.includes('文章日曆'));
 ok('月份彙整', bl.includes('月份彙整'));

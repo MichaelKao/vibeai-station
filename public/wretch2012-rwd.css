@@ -41,6 +41,11 @@
   #wfp-footer, #wfp-inner-search, #wfp-universal-footer, #scrb-panel,
   #container1, #container2, #main2, #links, #links2, #banner {
     width: auto !important; max-width: 100%; box-sizing: border-box;
+    /* min-width 一定要一起歸零。max-width 贏不過 min-width——
+       相簿總站的 #container1 同時寫了 width:960px 與 min-width:960px，
+       只蓋 width 的話盒子還是被 min-width 撐在 960，
+       實測 768px 視窗仍溢出 192px、375px 仍溢出 585px。 */
+    min-width: 0 !important;
   }
 
   /* ── 1. 站台外框（首頁／相簿總站／網誌總站／影音／嘀咕／揪團） ────── */
@@ -86,6 +91,40 @@
 
   /* 分享列是絕對定位的浮層，窄螢幕會蓋住內容 */
   .wfp-sharing { position: static !important; width: auto !important; visibility: visible; }
+
+  /* ── 1-B. 相簿總站 /albums 的三欄 ────────────────────────────────
+   * 這一頁不走 .main/.side，它是 public/wretch2012-album-index.css 的
+   * .left_column 143 ＋ 8 ＋ .middle_column 486 ＋ .right_column 315 = 952，
+   * 三欄都 float 且都寫了 min-width，所以就算 #container1 縮了，
+   * 三欄加起來還是 952px 把頁面撐爆。改成直向堆疊。
+   * .left_column 原本有 margin-top:113px（讓出 #header 的 header.jpg 高度），
+   * 堆疊之後那段留白會變成中間憑空多一大塊，一起歸零。 */
+  .left_column, .middle_column, .right_column {
+    float: none !important;
+    width: auto !important;
+    min-width: 0 !important;
+    margin-left: 0 !important; margin-right: 0 !important;
+    margin-top: 12px !important;
+  }
+  /* #main2 也要一起取消 float。它包住左欄與中欄、而 #sidebar 是它的**兄弟**，
+     只要 #main2 還浮著，被取消 float 的 #sidebar 就會被擠到浮動框旁邊，
+     實測寬度被壓成 0px、整個右欄看不見（h3 也因此被判定成文字被切）。 */
+  #main2 { float: none !important; width: auto !important; }
+  /* 搜尋列在原版是絕對定位在 #header 裡（left:205px、width:500px），
+     窄視窗會直接戳出頁面右緣。改回正常流，讓它跟著 header 縮。 */
+  #searchForm, #search_keyword, #search_submit, #Hot_Keyword, #access_link {
+    position: static !important;
+    width: auto !important;
+    max-width: 100%;
+    left: auto !important; top: auto !important;
+    box-sizing: border-box;
+  }
+  #searchForm { height: auto !important; }
+  /* 左欄的 Conditions／Categories／Locations 堆疊後改成橫向排列，
+     不然 24 個分類會變成很長的一直條 */
+  #browse_album > li { display: inline-block; vertical-align: top; margin-right: 12px; }
+  /* #header 的 960×80 底圖與絕對定位的搜尋列在窄視窗會互相疊 */
+  #header, #footer, #ft { width: auto !important; min-width: 0 !important; max-width: 100%; box-sizing: border-box; }
 
   /* ── 2. 個人小站外框（留言板／名片／好友／MyPage 家族，原本 958px） ── */
   #hugewrapper, #bigcontainer, #container, #main, #content, #sidebar {

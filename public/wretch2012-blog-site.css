@@ -146,3 +146,19 @@ html > body #content #push button.push { margin: 0 0 0 2px; }
 
 /* 引用網址那一列：原站的 input 沒設寬度，在 300px 的迴響區裡會撐破 */
 .trackback-url input[type=text] { width: 96%; font-size: 10px; }
+
+/* --- 5. 窄視窗補丁（只在 1000px 以下生效） --------------------------------
+ * public/wretch2012-rwd.css 把 #container1 / #banner / #links 這些寫死 px 寬的
+ * 容器都收成 max-width:100% 了，唯獨漏掉版型自己的
+ *   #description2 .description{display:block;width:730px;...}
+ * 那條（skin117 原檔第 37 行，wretch2012-blog.css 是產生檔不能手改）。
+ * 730px 比 375px 的視窗寬一倍，實測整個網誌家族每一頁在 375px 都被它撐出
+ * 橫向捲軸（scrollWidth 750 > 視窗 375），banner 以外的內容全部被推歪。
+ *
+ * 斷點與 rwd.css 同樣取 999px：1000px 以上一條都不生效，
+ * 桌機量到的 730px 與原站逐像素相同，fidelity 與幾何量測不受影響。
+ * height:60px 不動——那是版型刻意留的高度，overflow:auto 本來就會自己捲。
+ */
+@media (max-width: 999px) {
+  #description2 .description { width: auto; max-width: 100%; }
+}

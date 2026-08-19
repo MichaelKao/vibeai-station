@@ -8,7 +8,8 @@
 // 這一支用 playwright-core 開系統的 Chrome，真的把頁面畫出來再檢查。
 //
 //   node tools/uicheck.mjs <網址…>                 只看頁面本身
-//   node tools/uicheck.mjs --click <網址…>          再把頁面上每個可點的東西點一遍
+//   node tools/uicheck.mjs --click <網址…>          再把頁面上每個站內連結點一遍
+//   node tools/uicheck.mjs --dead <網址…>           找「看起來能按、點了沒反應」的死控制項
 //   node tools/uicheck.mjs --json out.json <網址…>  機器可讀
 //
 // ⚠ --click 會按到「刪除」這類按鈕。**一定要對拋棄式的資料庫跑**：
@@ -25,6 +26,7 @@ const VIEWPORT = { width: +(process.env.VW || 1280), height: +(process.env.VH ||
 
 const args = process.argv.slice(2);
 const doClick = args.includes('--click');
+const doDead = args.includes('--dead');
 const jsonAt = args.indexOf('--json');
 const jsonOut = jsonAt >= 0 ? args[jsonAt + 1] : null;
 const urls = args.filter((a, i) =>
@@ -176,6 +178,73 @@ for (const u of urls) {
         console.log(`      ✗ 點「${c.label}」→ ${e.message.slice(0, 60)}`); problems++;
       }
     }
+  }
+
+  // --dead：找「看起來像按鈕、點下去卻什麼都沒發生」的控制項。
+  //
+  // 為什麼不能只看 HTML：href="#" 不一定是死的（可能掛了 JS），
+  // 有 onclick 也不一定是活的（函式可能根本沒定義）。唯一可靠的判準是**真的按下去**，
+  // 然後看有沒有任何事情發生：網址變了、DOM 變了、或發出了請求。
+  // 三個都沒有 → 使用者按了會覺得「這顆壞掉」。
+  if (doDead) {
+    const dead = [];
+    const controls = await page.evaluate(`(() => {
+      const out = [];
+      const els = document.querySelectorAll(
+        'button, input[type=submit], input[type=button], a[href="#"], a[href=""], [role=button]');
+      els.forEach((el, i) => {
+        const r = el.getBoundingClientRect();
+        if (r.width === 0 || r.height === 0) return;          // 看不見的不算
+        el.setAttribute('data-uicheck-id', 'c' + i);
+        out.push({ id: 'c' + i,
+                   label: (el.innerText || el.value || el.title || '').trim().slice(0, 24),
+                   tag: el.tagName.toLowerCase(),
+                   inForm: !!el.closest('form') });
+      });
+      return out;
+    })()`);
+
+    for (const c of controls) {
+      // 表單裡的送出鈕會真的送出資料，那是破壞性的，交給互動腳本去測，這裡跳過
+      if (c.inForm && (c.tag === 'button' || c.tag === 'input')) continue;
+      const before = page.url();
+      const sig = await page.evaluate(`(() => {
+        const el = document.querySelector('[data-uicheck-id="${c.id}"]');
+        if (!el) return null;
+        window.__uiMutated = false;
+        window.__uiReq = false;
+        const mo = new MutationObserver(() => { window.__uiMutated = true; });
+        mo.observe(document.body, { childList: true, subtree: true, attributes: true });
+        window.__uiMo = mo;
+        return true;
+      })()`);
+      if (!sig) continue;
+      let fired = false;
+      const onReq = () => { fired = true; };
+      page.on('request', onReq);
+      try {
+        await page.click(`[data-uicheck-id="${c.id}"]`, { timeout: 2000 });
+        await page.waitForTimeout(250);
+      } catch { /* 點不到就當它沒反應 */ }
+      page.off('request', onReq);
+      const changed = await page.evaluate(`(() => {
+        if (window.__uiMo) window.__uiMo.disconnect();
+        return { mutated: !!window.__uiMutated };
+      })()`).catch(() => ({ mutated: false }));
+      // 點 href="#" 會在網址尾巴加一個空的 hash，那**不是導頁**——
+      // 使用者看到的是「什麼都沒發生」。比對時把空 hash 去掉，
+      // 不然這種最典型的死連結會被判成「有反應」而漏掉（實測會漏）。
+      const bare = u2 => u2.replace(/#$/, '');
+      const navigated = bare(page.url()) !== bare(before);
+      if (!navigated && !changed.mutated && !fired)
+        dead.push(`${c.tag}「${c.label || '(無文字)'}」`);
+      if (navigated) { await page.goto(url, { waitUntil: 'load' }); await page.waitForTimeout(200); }
+    }
+    if (dead.length) {
+      console.log(`      死控制項 ${dead.length}：${dead.slice(0, 8).join('　')}`);
+      if (!flags.length) problems++;      // 這一頁如果前面已經計過就不要重複加
+    }
+    results[results.length - 1].dead = dead;
   }
 
   await ctx.close();
