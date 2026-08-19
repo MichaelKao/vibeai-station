@@ -195,6 +195,13 @@ export function schemaSql(forDriver = driver) {
       place TEXT DEFAULT '', when_text TEXT DEFAULT '', quota INTEGER DEFAULT 0, ${created}`),
     T('join_members', `join_id INTEGER REFERENCES joins(id) ON DELETE CASCADE,
       ${fkUser}, ${created}, PRIMARY KEY(join_id,user_id)`),
+    // 哈啦論壇：原站的官方說明／討論區（www.wretch.cc/hala/viewtopic.php?t=…）。
+    // 存檔裡它一律是被當成「說明文」連進去的（RSS HOWTO、看不到驗證碼怎麼辦），
+    // 版面本身沒有任何存檔，所以是自製的（見 views/hala.ejs）。
+    T('hala_topics', `id ${PK}, ${fkUser}, title TEXT, body TEXT DEFAULT '',
+      cat TEXT DEFAULT '', official INTEGER DEFAULT 0, views INTEGER DEFAULT 0, ${created}`),
+    T('hala_posts', `id ${PK}, topic_id INTEGER REFERENCES hala_topics(id) ON DELETE CASCADE,
+      ${fkUser}, author TEXT, body TEXT, ${created}`),
     // 影音（原站 www.wretch.cc/video/<帳號>，導覽第七顆 #linkVideo）。
     // 我們沒有轉檔與串流，做「最小可用」：存 YouTube 影片 id，用 <iframe> 內嵌。
     // vid 存純 id 而不是整條網址——內嵌網址要自己組，把 id 單獨存起來才不會
@@ -229,6 +236,8 @@ export function schemaSql(forDriver = driver) {
     CREATE INDEX IF NOT EXISTS idx_sysmsg_user   ON sysmsg(user_id, id DESC);
     CREATE INDEX IF NOT EXISTS idx_joins_user    ON joins(user_id, id DESC);
     CREATE INDEX IF NOT EXISTS idx_jmembers_join ON join_members(join_id);
+    CREATE INDEX IF NOT EXISTS idx_hala_topics   ON hala_topics(id DESC);
+    CREATE INDEX IF NOT EXISTS idx_hala_posts    ON hala_posts(topic_id, id);
     CREATE INDEX IF NOT EXISTS idx_videos_user   ON videos(user_id, id DESC);
     CREATE INDEX IF NOT EXISTS idx_digu_user     ON digu(user_id, id DESC);
   `);

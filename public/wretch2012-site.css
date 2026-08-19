@@ -225,3 +225,12 @@ html body #bg-wrapper #wfp-footer #wfp-lang { top: 24px; }   /* 跟著上移，�
 .w2-msg      { padding: 18px 12px; font-size: 14px; line-height: 1.9; }
 .w2-msg-back { padding: 0 12px 18px; }
 .w2-msg-back a { margin-right: 4px; }
+
+/* 哈啦論壇（views/hala.ejs / hala_topic.ejs）。原站版面沒有存檔，
+   排版照 phpBB 那個年代的慣例：左邊作者、右邊內文，一則一列。 */
+.w2-official { background: #c8508c; color: #fff; }
+.w2-hala td            { padding: 8px 10px; vertical-align: top; background: #fff; }
+.w2-hala .w2-hala-who  { width: 130px; background: #f4f4f4; font-size: 12px; line-height: 1.7; }
+.w2-hala .w2-hala-body { font-size: 13px; line-height: 1.9; word-break: break-word; }
+.w2-halareply          { padding: 10px 0 4px; }
+.w2-halareply textarea { width: 100%; box-sizing: border-box; }

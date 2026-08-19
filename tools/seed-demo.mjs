@@ -29,7 +29,7 @@ if (reset) {
   }
   for (const t of ['photo_comments', 'photos', 'albums', 'comments', 'trackbacks', 'favs',
     'posts', 'guestbook', 'visitors', 'friends', 'acts', 'sysmsg', 'reports', 'notices',
-    'videos', 'digu', 'join_members', 'joins', 'users'])
+    'videos', 'digu', 'join_members', 'joins', 'hala_posts', 'hala_topics', 'users'])
     await run(`DELETE FROM ${t}`);
   console.log(`已清空（順便刪掉 ${gone} 個舊檔案）`);
 }
@@ -313,8 +313,12 @@ console.log(`相簿 ${(await one('SELECT count(*) c FROM albums')).c} 本 / 照�
   + `（真實照片：新抓 ${fetched} 快取 ${cached}${failed ? ` / ${failed} 張抓不到，改用已抓到的真照片循環` : ''}）`);
 
 // ---- 網誌 ----
+// ⚠ 每一筆的最後兩欄是 [category, topic]。
+// **topic 必須是 src/taxonomy.js 的 BLOG_TOPICS 12 類之一**——
+// /blogs 的分類頁只認得那 12 個，塞別的進去會變成「點得進去、但靜靜地列出全部文章」
+// 的騙人連結（實測 topic='美食' 就是這樣）。category 是使用者自己取的，不受限制。
 const POSTS = [
-  ['今天去了那間很有名的牛肉麵', '排了快一個小時，說真的還好而已 XD\n不過湯頭是真的濃，麵條偏軟，喜歡的人應該會愛。\n下次還是回去吃巷口那間好了。', '生活', '美食'],
+  ['今天去了那間很有名的牛肉麵', '排了快一個小時，說真的還好而已 XD\n不過湯頭是真的濃，麵條偏軟，喜歡的人應該會愛。\n下次還是回去吃巷口那間好了。', '生活', '生活'],   // ← topic 必須是 BLOG_TOPICS 的 12 類之一，'美食' 不在裡面
   ['關於最近很紅的那首歌', '一開始覺得普普，聽了三天之後現在戒不掉。\n副歌那段真的很洗腦，已經單曲循環一整個禮拜。', '娛樂', '流行'],
   ['宜蘭兩天一夜流水帳', '禮拜六早上七點出發，中午就到了。\n民宿老闆超熱情，還送我們一堆水果。\n晚上去逛羅東夜市，蔥油餅排隊排到懷疑人生。', '旅遊', '旅遊'],
   ['期末快把我搞死了', '三份報告一個專題，還有兩科要考。\n已經連續三天睡不到五小時，撐過這禮拜就解脫。', '心情', '學習'],
@@ -787,6 +791,84 @@ for (const [ui, [name]] of [...USERS, ...EXTRA_USERS].entries()) {
     }
   }
   console.log(`揪團 ${n} 團 / 參加 ${m} 人次`);
+}
+
+// ---- 哈啦論壇 ----
+// 原站是官方說明／客服討論區，站上其他頁面會直接連進特定主題當說明文
+// （相簿頁的 RSS HOWTO、網誌迴響表單的「看不到驗證碼」）。
+// 所以種子資料要先有那幾篇官方說明，論壇才不是一個空殼。
+{
+  const OFFICIAL = [
+    ['RSS 是什麼？怎麼訂閱？', 'RSS',
+      'RSS 是一種讓你「不用一直回來看」的東西。\n把小站的 RSS 網址貼進閱讀器，有新東西就會自動出現。\n\n' +
+      '本站每個人都有四種 RSS：\n' +
+      '　網誌　　/<帳號>/blog/rss\n' +
+      '　相簿　　/<帳號>/album/rss\n' +
+      '　留言板　/<帳號>/guestbook/rss\n' +
+      '　迴響　　/<帳號>/blog/comments.rss\n\n' +
+      '上鎖的文章、好友限定的相簿、悄悄話都不會出現在 RSS 裡。'],
+    ['看不到驗證碼怎麼辦？', '常見問題',
+      '本站沒有使用驗證碼，留言與迴響直接送出就好。\n\n' +
+      '如果你是從別的地方連過來看到這篇：當年無名的迴響表單有一組數字驗證碼，\n' +
+      '看不到通常是圖片被擋掉，或瀏覽器關掉了圖片顯示。'],
+    ['小站的版面可以改成什麼樣子？', '版面',
+      '兩個地方可以改：\n\n' +
+      '一、相簿版型：個人設定 → 相簿樣式，目前有粉紅（預設）與灰白兩套原廠版型。\n' +
+      '　　注意它只換相簿，網誌、留言板、名片、好友各有自己的原廠版型。\n\n' +
+      '二、自訂樣式：個人設定裡有兩個框，一個套相簿與其餘頁面、一個只套網誌。\n' +
+      '　　直接寫 CSS，蓋得過預設版型。玩壞了清空就復原，不會弄壞資料。\n\n' +
+      '例如把網誌標題換色：[b].title a{color:#c8508c}[/b]'],
+    ['相簿要怎麼上鎖？好友限定又是什麼？', '相簿',
+      '到相簿頁，每一本相簿自己設定：\n\n' +
+      '　密碼　　　輸入密碼才看得到，適合給特定的人。\n' +
+      '　好友限定　只有你的好友看得到，非好友會被擋掉。\n\n' +
+      '兩種都不會出現在相簿總站，也不會出現在 RSS 裡。'],
+    ['本站有廣告或 VIP 嗎？', '站務',
+      '沒有。本站不放廣告、也沒有付費會員，所有功能一律免費。\n' +
+      '版面上原本是廣告位的地方，放的是站方公告與站內連結。'],
+  ];
+  const USERTOPICS = [
+    ['大家都用什麼拍照？', '閒聊',
+      '最近想換相機，預算兩萬左右。\n手機拍其實也夠用，但總覺得少了點什麼。'],
+    ['版面推薦交流', '版面',
+      '有人有好看的 CSS 可以分享嗎？\n我把背景換成深色之後就一直調不好字的顏色。'],
+    ['大家的小站都經營多久了？', '閒聊',
+      '我從三年前開始寫，中間停過很久。\n最近翻以前的文章覺得很有趣。'],
+  ];
+  const REPLIES = [
+    '原來如此，謝謝說明！', '照著做成功了', '這篇該置頂', '請問手機也可以嗎？',
+    '剛剛試了可以用', '推一個', '找好久終於找到這篇', '感謝站長',
+  ];
+  const ALLU = [...USERS, ...EXTRA_USERS];
+  let nT = 0, nP = 0;
+
+  async function topic(who, title, cat, body, official, days, seed) {
+    if (await one('SELECT 1 FROM hala_topics WHERE title=?', title)) return;
+    const r = await run(
+      'INSERT INTO hala_topics(user_id,title,body,cat,official,views,created) VALUES(?,?,?,?,?,?,?)',
+      uid[who], title, body, cat, official,
+      Math.floor(Math.random() * (official ? 8000 : 900)) + (official ? 500 : 20),
+      stamp(days, seed));
+    const tid = Number(r.lastInsertRowid);
+    nT++;
+    for (let k = 0; k < 1 + (seed % 3); k++) {
+      const w = ALLU[(seed * 5 + k * 3) % ALLU.length];
+      await run('INSERT INTO hala_posts(topic_id,user_id,author,body,created) VALUES(?,?,?,?,?)',
+        tid, uid[w[0]], w[1], pick(REPLIES, seed * 3 + k),
+        stamp(Math.max(0, days - 1 - k), seed * 7 + k));
+      nP++;
+    }
+  }
+
+  for (const [i, [title, cat, body]] of OFFICIAL.entries())
+    await topic('vibeai', title, cat, body, 1,
+      spread(OFFICIAL.length - i, OFFICIAL.length, 500), i * 9);
+
+  for (const [i, [title, cat, body]] of USERTOPICS.entries())
+    await topic(ALLU[(i * 11) % ALLU.length][0], title, cat, body, 0,
+      spread(USERTOPICS.length - i, USERTOPICS.length, 120), i * 13 + 3);
+
+  console.log(`哈啦 ${nT} 個主題 / ${nP} 則回覆`);
 }
 
 // ---- 收藏 ----

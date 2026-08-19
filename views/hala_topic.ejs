@@ -1,0 +1,79 @@
+<%
+  /* 哈啦單一主題 /hala/<id>（原站網址 /hala/viewtopic.php?t=<id> 也通）
+     ─────────────────────────────────────────────────────────────
+     跟 views/hala.ejs 同一個理由：原站的論壇版面沒有任何存檔，這是自製的。
+     排版照 phpBB 那個年代的慣例：左邊作者、右邊內文，一則一列。
+
+     內文一律走 src/format.js 的 render()——它會先把所有字元逸出，
+     只有白名單標記（[b][i][u][img][color]）才變成 HTML，
+     所以這裡用未逸出輸出是安全的（WRETCH_2012.md §4-4）。
+     （註解裡不能寫出 EJS 的標記符號，會被當成標記提早結束——踩過兩次了。）
+
+     資料來自 src/server.js 的 halaTopic()：t / posts。 */
+%>
+<%- include('partials/head2012', { title: t.title + ' - 哈啦 - ' + SITE_NAME }) %>
+
+  <div class="bd big-bd clearfix">
+    <div class="main">
+
+      <div class="mod w2-auth">
+        <div class="hd"><h2><%= t.title %></h2></div>
+        <div class="bd">
+
+          <p class="w2-blog-count">
+            <a href="/hala">← 回哈啦</a>　瀏覽 <b><%= t.views %></b>　回覆 <b><%= posts.length %></b>
+            <% if (t.cat) { %>　分類：<%= t.cat %><% } %>
+          </p>
+
+          <table class="w2-hala" width="100%" border="0" cellpadding="0" cellspacing="1">
+            <tr>
+              <td class="w2-hala-who">
+                <b><%= t.nick || '無名小站' %></b><br>
+                <span class="w2-sub"><%= t.created.slice(0, 16) %></span>
+              </td>
+              <td class="w2-hala-body"><%- render(t.body) %></td>
+            </tr>
+            <% posts.forEach((p, i) => { %>
+            <tr<% if (i === posts.length - 1) { %> id="last"<% } %>>
+              <td class="w2-hala-who">
+                <% if (p.uname) { %><a href="/<%= p.uname %>"><%= p.nick || p.author %></a><% } else { %><%= p.author %><% } %><br>
+                <span class="w2-sub"><%= p.created.slice(5, 16) %></span>
+              </td>
+              <td class="w2-hala-body"><%- render(p.body) %></td>
+            </tr>
+            <% }) %>
+          </table>
+
+          <% if (me) { %>
+          <form method="post" action="/hala/<%= t.id %>/reply" class="w2-halareply">
+            <p><textarea name="body" rows="4" maxlength="3000" placeholder="回覆這個主題" required></textarea></p>
+            <p><input type="submit" class="w2-btn" value="回覆"></p>
+          </form>
+          <% } else { %>
+          <p class="w2-msg"><a href="/login?next=<%= encodeURIComponent('/hala/' + t.id) %>">登入</a>之後就可以回覆。</p>
+          <% } %>
+
+        </div>
+      </div>
+
+    </div>
+    <div class="side">
+      <div class="mod w2-auth-side">
+        <div class="hd"><h2>逛逛別的</h2></div>
+        <div class="bd">
+          <ul>
+            <li><a href="/hala">回哈啦</a></li>
+            <li><a href="/help">服務說明</a></li>
+            <li><a href="/albums">相簿總站</a></li>
+            <li><a href="/blogs">網誌總站</a></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /#wrapper -->
+
+<div id="lower-wrapper" class="clearfix">
+  <div class="bd clearfix"></div>
+<%- include('partials/foot2012') %>

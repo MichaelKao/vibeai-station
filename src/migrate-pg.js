@@ -22,7 +22,7 @@ import { schemaSql } from './db.js';
 const TABLES = [
   'users', 'albums', 'photos', 'photo_comments', 'posts', 'comments', 'trackbacks',
   'guestbook', 'visitors', 'friends', 'favs', 'acts', 'sysmsg', 'reports', 'notices',
-  'videos', 'digu', 'joins', 'join_members',
+  'videos', 'digu', 'joins', 'join_members', 'hala_topics', 'hala_posts',
 ];
 // 用 IDENTITY 主鍵的表，搬完要把序列推到 max(id)，否則之後 INSERT 會撞主鍵
 const SERIAL_TABLES = TABLES.filter(t => !['friends', 'favs', 'join_members'].includes(t));

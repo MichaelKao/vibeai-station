@@ -365,9 +365,68 @@ app.post('/join/:id/in',requireLogin,async (req,res)=>{
   res.redirect('/join/'+j.id);
 });
 
+// ===== 哈啦論壇 =====
+// 原站是 www.wretch.cc/hala/viewtopic.php?t=65131 這種 phpBB 式的討論區。
+// 存檔裡它一律是被當成**官方說明文**連進去的：相簿頁的「RSS HOWTO」、
+// 網誌迴響表單的「What if you cannot see the numbers?（看不到驗證碼）」。
+// 版面本身沒有任何存檔，所以這幾頁是自製的（WRETCH_2012.md §3-A）。
+//
+// 網址保留原站的 /hala/viewtopic.php?t=<id>，這樣存檔裡那些連結原封不動就會通；
+// 另外提供比較好讀的 /hala/<id>。
+app.get('/hala',async (req,res)=>{
+  // ?q=rss 這種捷徑：站上其他頁面（相簿的 RSS HOWTO）要連到「某一篇說明」，
+  // 但種子重灌之後主題 id 會變，寫死 id 會指到別篇。改成用關鍵字找官方主題，
+  // 找得到就直接導過去，找不到就退回論壇首頁——連結永遠不會落空。
+  if(req.query.q){
+    const hit=await one("SELECT id FROM hala_topics WHERE official=1 AND (title LIKE ? OR cat LIKE ?) ORDER BY id LIMIT 1",
+      '%'+req.query.q+'%','%'+req.query.q+'%');
+    if(hit) return res.redirect('/hala/'+hit.id);
+  }
+  const page=Math.max(1,+req.query.p||1), per=20;
+  const total=(await one('SELECT count(*) c FROM hala_topics')).c;
+  res.render('hala',{ page, pages:Math.ceil(total/per), total,
+    topics:await all(`SELECT t.*,u.name uname,u.nick,
+        (SELECT count(*) FROM hala_posts WHERE topic_id=t.id) n
+      FROM hala_topics t LEFT JOIN users u ON u.id=t.user_id
+      ORDER BY t.official DESC, t.id DESC LIMIT ? OFFSET ?`,per,(page-1)*per) });
+});
+const halaTopic=async (req,res,id)=>{
+  const t=await one(`SELECT t.*,u.name uname,u.nick FROM hala_topics t
+    LEFT JOIN users u ON u.id=t.user_id WHERE t.id=?`,id);
+  if(!t) return null;
+  await run('UPDATE hala_topics SET views=views+1 WHERE id=?',t.id);
+  return { t, posts:await all(`SELECT p.*,u.name uname,u.nick,u.avatar FROM hala_posts p
+    LEFT JOIN users u ON u.id=p.user_id WHERE p.topic_id=? ORDER BY p.id`,t.id) };
+};
+// 原站網址：/hala/viewtopic.php?t=<id>
+app.get('/hala/viewtopic.php',async (req,res,next)=>{
+  const d=await halaTopic(req,res,req.query.t); if(!d) return next();
+  res.render('hala_topic',d);
+});
+app.get('/hala/:id',async (req,res,next)=>{
+  const d=await halaTopic(req,res,req.params.id); if(!d) return next();
+  res.render('hala_topic',d);
+});
+app.post('/hala',requireLogin,async (req,res)=>{
+  const title=(req.body.title||'').trim().slice(0,60);
+  const body=(req.body.body||'').trim().slice(0,3000);
+  if(!title||!body) return res.redirect('/hala');
+  const r=await run('INSERT INTO hala_topics(user_id,title,body,cat) VALUES(?,?,?,?)',
+    res.locals.me.id,title,body,(req.body.cat||'').slice(0,10));
+  res.redirect('/hala/'+Number(r.lastInsertRowid));
+});
+app.post('/hala/:id/reply',requireLogin,async (req,res)=>{
+  const t=await one('SELECT id FROM hala_topics WHERE id=?',req.params.id);
+  if(!t) return res.redirect('/hala');
+  const body=(req.body.body||'').trim().slice(0,3000);
+  if(body) await run('INSERT INTO hala_posts(topic_id,user_id,author,body) VALUES(?,?,?,?)',
+    t.id,res.locals.me.id,res.locals.me.nick,body);
+  res.redirect('/hala/'+t.id+'#last');
+});
+
 // ===== 個人小站 =====
 const RESERVED=new Set(['login','register','logout','rank','search','help','admin','uploads','img','style.css','favicon.ico',
-  'join',
+  'join','hala',
   ...Object.keys(SECTION)]);
 const site=express.Router({mergeParams:true});
 autoAsync(site);   // 個人小站的路由同樣需要 async 錯誤轉交（理由見檔頭 wrapAsync）

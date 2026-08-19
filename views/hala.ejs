@@ -1,0 +1,104 @@
+<%
+  /* 哈啦論壇 /hala
+     ─────────────────────────────────────────────────────────────
+     原站是 www.wretch.cc/hala/viewtopic.php?t=… 這種 phpBB 式的討論區。
+     **版面本身 archive.org 一份存檔都沒有**，我們手上只有「它被連進去的樣子」：
+       相簿頁       (RSS HOWTO)  → /hala/viewtopic.php?t=65131
+       網誌迴響表單 (What if you cannot see the numbers?) → ?t=65568
+     也就是說，站方是拿它當**官方說明／客服討論區**在用的。
+
+     所以這一頁是自製的（WRETCH_2012.md §3-A：救不回來就自己補、標明偏離），
+     用站台既有的元件語言組，不自創新的視覺。官方主題（official=1）置頂。
+
+     資料來自 src/server.js 的 app.get('/hala')：page / pages / total / topics。 */
+  const qs = p => '/hala?p=' + p;
+%>
+<%- include('partials/head2012', { title: '哈啦 - ' + SITE_NAME }) %>
+
+  <div class="bd big-bd clearfix">
+    <div class="main">
+
+      <div class="mod w2-auth">
+        <div class="hd"><h2>哈啦</h2></div>
+        <div class="bd">
+
+          <p class="w2-blog-count">共 <b><%= total %></b> 個主題</p>
+
+          <% if (!topics.length) { %>
+          <p>還沒有人開主題。<a href="/register">開一個帳號</a>，第一個就是你的。</p>
+          <% } %>
+
+          <ol class="w2-bloglist w2-halalist">
+            <% topics.forEach(t => { %>
+            <li>
+              <div class="content">
+                <p class="meta">
+                  <% if (t.official) { %><span class="topic w2-official">官方</span><% } %>
+                  <% if (t.cat) { %><span class="topic"><%= t.cat %></span><% } %>
+                  <a class="uname" href="<%= t.uname ? '/' + t.uname : '/hala' %>"><%= t.nick || '無名小站' %></a>
+                </p>
+                <h3><a class="skin-main-link" href="/hala/<%= t.id %>"><%= t.title %></a></h3>
+                <p class="description"><%= t.body.replace(/\s+/g, ' ').slice(0, 90) %></p>
+                <p class="stat">
+                  <span>回覆: <%= t.n %></span>
+                  <span>瀏覽: <%= t.views %></span>
+                  <span><%= t.created.slice(0, 10) %></span>
+                </p>
+              </div>
+            </li>
+            <% }) %>
+          </ol>
+
+          <% if (pages > 1) { %>
+          <div class="w2-pager">
+            <% if (page > 1) { %><a href="<%= qs(page-1) %>">上一頁</a><% } %>
+            <% for (let i=1; i<=pages; i++) { %><% if (i === page) { %><b><%= i %></b><% } else { %><a href="<%= qs(i) %>"><%= i %></a><% } %><% } %>
+            <% if (page < pages) { %><a href="<%= qs(page+1) %>">下一頁</a><% } %>
+          </div>
+          <% } %>
+
+        </div>
+      </div>
+
+    </div>
+    <div class="side">
+
+      <% if (me) { %>
+      <div class="mod w2-auth-side">
+        <div class="hd"><h2>開一個主題</h2></div>
+        <div class="bd">
+          <form method="post" action="/hala">
+            <p><input type="text" name="title" placeholder="標題" maxlength="60" required></p>
+            <p><input type="text" name="cat" placeholder="分類（可留空）" maxlength="10"></p>
+            <p><textarea name="body" rows="5" maxlength="3000" placeholder="想問什麼？" required></textarea></p>
+            <p><input type="submit" class="w2-btn" value="發表"></p>
+          </form>
+        </div>
+      </div>
+      <% } else { %>
+      <div class="mod w2-auth-side">
+        <div class="hd"><h2>開一個主題</h2></div>
+        <div class="bd"><p><a href="/login?next=%2Fhala">登入</a>之後就可以發問。</p></div>
+      </div>
+      <% } %>
+
+      <div class="mod w2-auth-side">
+        <div class="hd"><h2>逛逛別的</h2></div>
+        <div class="bd">
+          <ul>
+            <li><a href="/help">服務說明</a></li>
+            <li><a href="/albums">相簿總站</a></li>
+            <li><a href="/blogs">網誌總站</a></li>
+            <li><a href="/join">揪團</a></li>
+          </ul>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+</div><!-- /#wrapper -->
+
+<div id="lower-wrapper" class="clearfix">
+  <div class="bd clearfix"></div>
+<%- include('partials/foot2012') %>
