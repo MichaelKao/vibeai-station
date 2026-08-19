@@ -39,6 +39,18 @@ pnpm dev                             # http://localhost:3000
 > 帳號已存在就會整串連鎖失敗）。做法：
 > `DATA_DIR=/tmp/x PORT=3002 node src/server.js` 再 `BASE=http://localhost:3002 node test_all.mjs`。
 
+### 示範資料的量（2026-08-19 重灌）
+
+| 項目 | 數量 |
+|---|---|
+| 站友 | 38 位（8 個主要帳號 ＋ 30 個補充站友，都有大頭貼、相簿、網誌、影音、嘀咕） |
+| 相簿／照片 | 全部 24 類每類至少一本，照片**全部是真的**（loremflickr 的 CC 授權 Flickr 照片，關鍵字對著相簿主題抓） |
+| 網誌 | 全部 12 類每類都有文章 |
+| 其他 | 留言板 238 則（分頁列看得到）、好友 100+ 組（四種關係都有）、影音、嘀咕、收藏、站方公告 |
+
+灌資料前後都要跑 `node tools/emptycheck.mjs`，那支會把「看起來空空的」頁揪出來。
+**照片抓失敗會退回純色方塊**，那一眼就看得出是假的，所以 `--photos` 那個模式要顧著看。
+
 ### 還原度（離線量測，可重現）
 
 ```bash
@@ -154,6 +166,7 @@ Facebook 頁面貼進文章帶進來的 class（`.MsoNormal` `.uiInfoTable` `.da
 | 工具 | 用途 |
 |---|---|
 | `tools/fidelity.mjs --all` | **還原度量測**（離線，不靠 archive.org） |
+| `tools/emptycheck.mjs` | **空頁檢查**：掃全站每一頁（含 24 個相簿分類、12 個網誌分類），找出還印著「還沒有…」的模組、沒有照片的頁、以及純色色塊假照片。還原度 100% 不代表看起來不空，這兩支要一起跑 |
 | `tools/shot.mjs geo <原版> <我們> <選擇器清單>` | 幾何比對（要連 archive.org，會被限流） |
 | `tools/shot.mjs shot/pair/tree/measure` | 截圖／像素 diff／版面藍圖／元素量測 |
 | `tools/build-css2012.mjs` | 從原站原始 CSS 產生樣式 bundle，**不要手改 `public/wretch2012*.css`** |

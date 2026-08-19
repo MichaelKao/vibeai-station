@@ -120,10 +120,18 @@ app.get('/', async (req,res)=>{
       FROM posts p JOIN users u ON u.id=p.user_id WHERE p.pass='' ORDER BY p.views DESC LIMIT 6`),
     featAlbums: await all(`SELECT a.*,u.name uname,u.nick FROM albums a JOIN users u ON u.id=a.user_id
       WHERE a.featured=1 AND a.pass='' AND a.friends_only=0 AND a.cover!='' ORDER BY a.id DESC LIMIT 4`),
-    featPosts: await all(`SELECT p.*,u.name uname,u.nick FROM posts p JOIN users u ON u.id=p.user_id
-      WHERE p.featured=1 AND p.pass='' ORDER BY p.id DESC LIMIT 5`),
-    newUsers: await all(`SELECT name,nick FROM users ORDER BY id DESC LIMIT 8`),
-    rank: await all(`SELECT name,nick,visits FROM users ORDER BY visits DESC LIMIT 10`),
+    // 站長精選也要縮圖：跟 hotPosts 同一招（作者最新一張公開照片），
+    // 再帶出 u.avatar 當第二層退路。都沒有才會落到 user_cover.gif 那張卡通圖，
+    // 那張圖擺在「投稿精選」這種以人為主的模組裡特別假。
+    featPosts: await all(`SELECT p.*,u.name uname,u.nick,u.avatar,
+        (SELECT ph.thumb FROM photos ph JOIN albums al ON al.id=ph.album_id
+         WHERE al.user_id=p.user_id AND al.pass='' AND al.friends_only=0 ORDER BY ph.id DESC LIMIT 1) pthumb
+      FROM posts p JOIN users u ON u.id=p.user_id WHERE p.featured=1 AND p.pass='' ORDER BY p.id DESC LIMIT 5`),
+    newUsers: await all(`SELECT name,nick,avatar FROM users ORDER BY id DESC LIMIT 8`),
+    // 帶出 avatar：名家專欄／投稿精選那幾格會用它當代表圖。
+    // 之前只 SELECT name/nick，view 只好去 hotAlbums 裡找那個人的照片，
+    // 找不到就印卡通預設圖——排行榜上的人不一定在那幾個清單裡，所以常常找不到。
+    rank: await all(`SELECT name,nick,visits,avatar FROM users ORDER BY visits DESC LIMIT 10`),
     notices: await all(`SELECT * FROM notices ORDER BY id DESC LIMIT 5`),
     stats:{users:(await one('SELECT count(*) c FROM users')).c,photos:(await one('SELECT count(*) c FROM photos')).c,posts:(await one('SELECT count(*) c FROM posts')).c}});
 });
@@ -185,7 +193,10 @@ app.get('/blogs',async (req,res)=>{
   const total=(await one(`SELECT count(*) c FROM posts p WHERE ${where}`,...args)).c;
   res.render('blogs',{ topic, page, pages:Math.ceil(total/per), total, topics:BLOG_TOPICS,
     counts:Object.fromEntries((await all("SELECT topic,count(*) n FROM posts WHERE pass='' AND topic!='' GROUP BY topic")).map(r=>[r.topic,r.n])),
-    posts:await all(`SELECT p.*,u.name uname,u.nick,(SELECT count(*) FROM comments WHERE post_id=p.id) nc
+    // 帶出作者頭像：原版網誌總站每一則前面就是作者的封面圖
+    // （blog_2012_service_index.html 的 l.yimg.com/e/cover/<帳號>_90.jpg），
+    // 不是文章縮圖。之前一律印同一張 user_cover.gif，整頁看起來像沒載入。
+    posts:await all(`SELECT p.*,u.name uname,u.nick,u.avatar,(SELECT count(*) FROM comments WHERE post_id=p.id) nc
       FROM posts p JOIN users u ON u.id=p.user_id WHERE ${where} ORDER BY p.views DESC, p.id DESC LIMIT ? OFFSET ?`,...args,per,(page-1)*per) });
 });
 
@@ -288,6 +299,11 @@ app.use('/:name',async (req,res,next)=>{
   // view 用 skinCss('album'|'blog'|'guestbook'|'user'|'friend') 取自己那一支。
   res.locals.skinCss = service => skinCss(service, u.theme);
   res.locals.isFriend=res.locals.me?await isFriend(res.locals.me.id,u.id):false;
+  // 側欄名片小卡（partials/side.ejs）印站主最新一則嘀咕（.myDigu / .digu / .digu_date）。
+  // 這塊在個人站每一頁都會出現，所以放在這裡查一次就好；
+  // 之前只有留言板那條路由查、而且變數名還不一樣（lastDigu vs digu），
+  // 結果站上明明有嘀咕，每一頁都印「還沒有嘀咕」。
+  res.locals.digu=await one('SELECT * FROM digu WHERE user_id=? ORDER BY id DESC LIMIT 1',u.id);
   site(req,res,next);
 });
 const U=res=>res.locals.u;
@@ -555,6 +571,11 @@ const blogSide=async res=>({
   recentC:await all('SELECT c.author,c.post_id,p.title FROM comments c JOIN posts p ON p.id=c.post_id WHERE p.user_id=? ORDER BY c.id DESC LIMIT 5',U(res).id),
   months:await all("SELECT substr(created,1,7) ym, count(*) n FROM posts WHERE user_id=? GROUP BY ym ORDER BY ym DESC LIMIT 24",U(res).id),
   cal:await calendar(U(res).id, res.calYm),
+  // 側欄「最新引用」：blogside.ejs 讀 locals.trackbacks，但一直沒人給它，
+  // 所以站上明明有引用，那一格永遠印「尚無引用」。
+  trackbacks:await all(`SELECT p.id pid,p.title,u2.name uname,t.created
+    FROM trackbacks t JOIN posts p ON p.id=t.post_id JOIN users u2 ON u2.id=p.user_id
+    WHERE p.user_id=? ORDER BY t.id DESC LIMIT 5`,U(res).id),
   // #blogCategory 是「這個網誌屬於哪個站內分類」，原版是站方給整個網誌貼的標籤
   // （blog_2012_default_skin_afuuu.html:1690），不是單篇文章的 category。
   // users 表沒有這個欄位，先從站主自己文章最常用的 topic 推導出來——
@@ -752,7 +773,6 @@ site.get('/guestbook',async (req,res)=>{
   // 側欄那張名片小卡（#namecard）用得到：好友下拉 ＋ 最新一則嘀咕
   const side={
     gbFriends:await all("SELECT u.name,u.nick,COALESCE(NULLIF(f.grp,''),'好友') grp FROM friends f JOIN users u ON u.id=f.friend_id WHERE f.user_id=? ORDER BY grp, u.name LIMIT 300",U(res).id),
-    lastDigu:await one('SELECT * FROM digu WHERE user_id=? ORDER BY id DESC LIMIT 1',U(res).id),
     bulletins:[], msgs:[], sys:[],
   };
   const unread = res.locals.isOwner ? (await one('SELECT count(*) c FROM sysmsg WHERE user_id=? AND seen=0',U(res).id)).c : 0;

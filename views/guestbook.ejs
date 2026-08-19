@@ -130,6 +130,35 @@ document.addEventListener('click', function(e){
 });
 </script>
 
+<% } else if (tab === 'bulletin') { %>
+<%# ===== 站方公告（原版的 #tab_bulletin） =====
+    原版這個頁籤的每一則長得跟留言一模一樣，只是發文者固定是站方
+    （原站是 wretchoffice），人人可見、會分頁。所以沿用 .msg_body 那套骨架，
+    只把頭像換成站台 favicon、暱稱固定成站名，並且沒有「板主回覆」那一格。 %>
+<div id="search">共 <b><%= total %></b> 則站方公告</div>
+
+<%- include('partials/gbpager', { gpPage: page, gpPages: pages, gpPos: 'top', gpHref: n => '?tab=bulletin&p=' + n }) %>
+
+<div id="msg_list">
+  <% if (!bulletins.length) { %><div class="msg_body"><div class="w2-empty">目前沒有站方公告</div></div><% } %>
+  <% bulletins.forEach(m => { %>
+  <ul class="msg_body">
+    <li class="msg_content">
+      <ul>
+        <li class="msg_img"><img src="/favicon.ico" width="60" height="60" alt="<%= SITE_NAME %>"></li>
+        <li class="msg_man"><span>暱稱：</span><%= m.author %></li>
+        <li class="msg_title"><span>主題：</span><strong><%= m.title %></strong><cite></cite></li>
+        <li class="msg_date"><span>時間：</span><%= m.created %></li>
+        <li class="msg_word"><span>內容：</span><strong><%- gbBody(m.body) %></strong></li>
+        <li class="msg_info"><span>通知：</span></li>
+      </ul>
+    </li>
+  </ul>
+  <% }) %>
+</div>
+
+<%- include('partials/gbpager', { gpPage: page, gpPages: pages, gpPos: 'bottom', gpHref: n => '?tab=bulletin&p=' + n }) %>
+
 <% } else { %>
 <%# ===== 留言板本體 ===== %>
 <div id="search">共 <b><%= total %></b> 則留言</div>

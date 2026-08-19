@@ -44,7 +44,8 @@
           <ol class="w2-bloglist">
             <% posts.forEach(p => { %>
             <li>
-              <a class="thumbnail" href="/<%= p.uname %>/blog/<%= p.id %>"><img src="<%= COVER %>" width="85" height="85" alt=""></a>
+              <%# 原版這一格是作者的封面圖，不是文章縮圖。沒設頭像才退回 user_cover.gif。 %>
+              <a class="thumbnail" href="/<%= p.uname %>/blog/<%= p.id %>"><img src="<%= p.avatar && p.avatar !== '/img/avatar.png' ? p.avatar : COVER %>" width="85" height="85" alt="<%= p.nick %>"></a>
               <div class="content">
                 <p class="meta">
                   <a class="uname" href="/<%= p.uname %>"><%= p.uname %></a>

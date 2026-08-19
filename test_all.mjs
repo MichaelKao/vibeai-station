@@ -127,7 +127,9 @@ await post('/admin/notice',{body:'[公告] 測試站方公告'},A);
 {
   const bt = await text('/alpha/guestbook?tab=bulletin');
   ok('站方公告頁籤匿名可見', (await get('/alpha/guestbook?tab=bulletin')).status===200);
-  ok('站方公告頁籤看得到公告', bt.includes('測試站方公告'));
+  // 要驗**列在公告清單裡**，不是只在頁面上任何地方出現——
+  // 頂端的 .announcement 橫幅也會印同一則公告，只 includes 整頁會通過假的。
+  ok('站方公告頁籤看得到公告', /id="msg_list"[\s\S]*測試站方公告/.test(bt));
   // 這格接的是 notices 不是 guestbook：最新那則留言不該出現在公告頁籤
   ok('站方公告頁籤不混到留言', !bt.includes('GBMSG11'));
 }

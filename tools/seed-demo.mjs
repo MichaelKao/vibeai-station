@@ -10,16 +10,27 @@ import { all, one, run } from '../src/db.js';
 import { hash, salt } from '../src/auth.js';
 import fs from 'node:fs';
 import path from 'node:path';
-import { save, hasR2 } from '../src/storage.js';
+import { save, remove, hasR2 } from '../src/storage.js';
 import sharp from 'sharp';
 
 const reset = process.argv.includes('--reset');
 if (reset) {
+  // 先把檔案刪掉再刪資料列。只 DELETE 資料列的話，上傳目錄會留下一堆
+  // 沒有人指到的孤兒檔——跑三次就累積了七百多個，正式站有 R2 時那是真的在燒錢。
+  // 走 storage.remove() 才會連 R2 上的一起刪。
+  let gone = 0;
+  for (const r of await all("SELECT url, thumb FROM photos")) {
+    await remove(r.url); if (r.thumb && r.thumb !== r.url) await remove(r.thumb);
+    gone += 2;
+  }
+  for (const r of await all("SELECT avatar FROM users WHERE avatar LIKE '/uploads/%'")) {
+    await remove(r.avatar); gone++;
+  }
   for (const t of ['photo_comments', 'photos', 'albums', 'comments', 'trackbacks', 'favs',
     'posts', 'guestbook', 'visitors', 'friends', 'acts', 'sysmsg', 'reports', 'notices',
     'videos', 'digu', 'users'])
     await run(`DELETE FROM ${t}`);
-  console.log('已清空');
+  console.log(`已清空（順便刪掉 ${gone} 個舊檔案）`);
 }
 
 const pick = (a, i) => a[i % a.length];
@@ -82,8 +93,16 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
 let made = 0, fetched = 0, cached = 0, failed = 0;
 
 // 先把圖弄到手（回傳 Buffer），快取在 .seedcache/ 避免重跑重抓
+// 快取檔名用「關鍵字＋這個關鍵字的第幾張」，**不要用全域計數器**：
+// 用全域計數器的話，只要相簿清單改一筆，後面每一張的檔名就整批位移，
+// 快取全部失效、又要重抓好幾百張。照關鍵字編號就只有真的新增的那些要抓。
+const perKeyword = new Map();
 async function fetchPhotoBuffer(keyword, tint) {
-  const name = `seed_${keyword.replace(/\W/g, '')}_${made++}.jpg`;
+  const key = keyword.replace(/\W/g, '');
+  const seq = (perKeyword.get(key) || 0) + 1;
+  perKeyword.set(key, seq);
+  made++;
+  const name = `seed_${key}_${seq}.jpg`;
   const cache = path.join(CACHE, name);
 
   if (fs.existsSync(cache)) { cached++; return fs.readFileSync(cache); }
@@ -93,7 +112,9 @@ async function fetchPhotoBuffer(keyword, tint) {
     try {
       await sleep(THROTTLE_MS);
       // lock=<n> 讓同一個位置每次都拿到同一張，重跑畫面才穩定、可比對
-      const r = await fetch(`https://loremflickr.com/640/480/${encodeURIComponent(keyword)}?lock=${made}`,
+      // lock=<n> 讓同一個位置每次都拿到同一張。用 keyword+seq 當種子，
+      // 這樣同一本相簿的第 n 張永遠是同一張圖，畫面可比對。
+      const r = await fetch(`https://loremflickr.com/640/480/${encodeURIComponent(keyword)}?lock=${seq}`,
         { redirect: 'follow', signal: AbortSignal.timeout(25_000) });
       if (!r.ok) throw new Error('HTTP ' + r.status);
       // 重新編碼一次：確保是正常 JPEG，順便統一品質
@@ -127,28 +148,89 @@ const TINTS = ['#E48A41', '#447AC4', '#A1D344', '#CB3939', '#8AB9F4', '#FFD196',
 // 每本相簿配一組搜尋關鍵字。關鍵字全部指向**台灣的真實地點與題材**，
 // 這樣抓回來的照片才會跟相簿標題、跟「無名小站」這個情境對得上——
 // 隨機風景照放在「羅東夜市」底下一眼就看得出是假的。
+// **24 類每一類至少一本**（src/taxonomy.js 的 ALBUM_TOPICS 是逐字照抄原站的分類表）。
+// 只做 8 本的時候，/albums 的分類頁有 19 類點進去是空的，站看起來就是死的。
 const ALBUMS = [
-  ['宜蘭兩天一夜', '跟朋友衝一波，民宿超讚', '國內旅遊', '台灣', 'yilan,taiwan'],
-  ['九份老街', '假日人有夠多但還是要去', '國內旅遊', '台灣', 'jiufen,taiwan'],
-  ['我家的貓', '牠又把衛生紙咬爛了', '心肝寵物', '台灣', 'cat,taiwan'],
-  ['羅東夜市吃透透', '一週吃了五次', '美食記錄', '台灣', 'taiwan,nightmarket'],
-  ['台南小吃巡禮', '牛肉湯配肉燥飯', '美食記錄', '台灣', 'tainan,food'],
-  ['台北街頭隨手拍', '手機拍的', '專業攝影', '台灣', 'taipei,street'],
-  ['太魯閣', '走到腳快斷掉', '國內旅遊', '台灣', 'taroko,taiwan'],
-  ['畢業紀念', '再也回不去了', '學園生活', '台灣', 'taiwan,campus'],
+  ['宜蘭兩天一夜',   '跟朋友衝一波，民宿超讚',     '國內旅遊', '台灣',       'yilan,taiwan'],
+  ['九份老街',       '假日人有夠多但還是要去',     '國內旅遊', '台灣',       'jiufen,taiwan'],
+  ['太魯閣',         '走到腳快斷掉',               '國內旅遊', '台灣',       'taroko,taiwan'],
+  ['京都的秋天',     '楓葉季人擠人但值得',         '國外旅遊', '世界各地',   'kyoto,autumn'],
+  ['首爾自由行',     '明洞每天都在下雨',           '國外旅遊', '世界各地',   'seoul,korea'],
+  ['香港三天兩夜',   '茶餐廳一天吃三次',           '國外旅遊', '香港與澳門', 'hongkong,street'],
+  ['羅東夜市吃透透', '一週吃了五次',               '美食記錄', '台灣',       'taiwan,nightmarket'],
+  ['台南小吃巡禮',   '牛肉湯配肉燥飯',             '美食記錄', '台灣',       'tainan,food'],
+  ['這季的新衣',     '存了很久才買的',             '流行時尚', '台灣',       'fashion,clothes'],
+  ['隨手塗鴉',       '練習中，不要笑',             '圖像創作', '台灣',       'drawing,sketch'],
+  ['字型與排版練習', '看久了會上癮',               '美學設計', '台灣',       'typography,design'],
+  ['台北街頭隨手拍', '手機拍的',                   '專業攝影', '台灣',       'taipei,street'],
+  ['底片機重出江湖', '沖出來才知道拍壞了',         '專業攝影', '台灣',       'film,camera'],
+  ['我的公仔櫃',     '又要沒地方放了',             '蒐集收藏', '台灣',       'figure,toy'],
+  ['新桌機開箱',     '裝到半夜三點',               '電腦通訊', '台灣',       'computer,desk'],
+  ['動漫展戰利品',   '荷包再見',                   '電玩動漫', '台灣',       'anime,cosplay'],
+  ['鐵道紀行',       '追火車追了一整天',           '交通工具', '台灣',       'train,taiwan'],
+  ['我家的貓',       '牠又把衛生紙咬爛了',         '心肝寵物', '台灣',       'cat,taiwan'],
+  ['浪浪的日常',     '巷口那隻又來討飯',           '心肝寵物', '台灣',       'dog,street'],
+  ['美術館看展',     '看完腦袋很滿',               '展覽活動', '台灣',       'museum,exhibition'],
+  ['陽明山的花',     '週末上山透透氣',             '自然觀察', '台灣',       'yangmingshan,flower'],
+  ['週末打球',       '隔天全身痠痛',               '運動體育', '台灣',       'basketball,court'],
+  ['演唱會之夜',     '喊到隔天說不出話',           '影視娛樂', '台灣',       'concert,stage'],
+  ['二手挖寶',       '跳蚤市場真的有寶',           '拍賣市集', '台灣',       'fleamarket,vintage'],
+  ['過年圍爐',       '又被問什麼時候結婚',         '特定節日', '台灣',       'lunarnewyear,taiwan'],
+  ['畢業紀念',       '再也回不去了',               '學園生活', '台灣',       'taiwan,campus'],
+  ['社團出遊',       '一年一次的大合照',           '朋友團體', '台灣',       'friends,group'],
+  ['回外婆家',       '每年都要拍一張',             '家庭親情', '台灣',       'family,home'],
+  ['交往一週年',     '偷偷放上來',                 '情侶合照', '台灣',       'couple,park'],
+  ['自拍練習',       '角度真的很重要',             '女生個人', '台灣',       'portrait,girl'],
+  ['隨手一張',       '朋友幫我拍的',               '男生個人', '台灣',       'portrait,man'],
+  ['墾丁的海',       '曬到脫皮還是想再去',         '國內旅遊', '台灣',       'kenting,beach'],
+  ['阿里山日出',     '四點起床值得',               '國內旅遊', '台灣',       'alishan,sunrise'],
+  ['大阪吃到飽',     '章魚燒一天三份',             '國外旅遊', '世界各地',   'osaka,food'],
+  ['澳門走走',       '老城區比賭場好玩',           '國外旅遊', '香港與澳門', 'macau,street'],
+  ['上海外灘',       '晚上的燈真的很誇張',         '國外旅遊', '中國',       'shanghai,bund'],
+  ['早餐店日常',     '蛋餅加辣是基本',             '美食記錄', '台灣',       'breakfast,taiwan'],
+  ['手沖咖啡練習',   '豆子比機器重要',             '美食記錄', '台灣',       'coffee,pourover'],
+  ['喜歡的鞋',       '一雙穿三年',                 '流行時尚', '台灣',       'sneakers,shoes'],
+  ['水彩小練習',     '暈開的地方最難控制',         '圖像創作', '台灣',       'watercolor,painting'],
+  ['海報設計稿',     '改了十二版',                 '美學設計', '台灣',       'poster,graphicdesign'],
+  ['夜景練習',       '腳架終於買對了',             '專業攝影', '台灣',       'cityscape,night'],
+  ['黑膠收藏',       '一張一張慢慢找',             '蒐集收藏', '台灣',       'vinyl,records'],
+  ['鍵盤換軸心得',   '打字聲音好療癒',             '電腦通訊', '台灣',       'keyboard,mechanical'],
+  ['遊戲主機開箱',   '排隊排了兩小時',             '電玩動漫', '台灣',       'videogame,console'],
+  ['捷運的一天',     '通勤也可以拍照',             '交通工具', '台灣',       'metro,subway'],
+  ['兔子日常',       '牠只認得飼料袋的聲音',       '心肝寵物', '台灣',       'rabbit,pet'],
+  ['書展戰利品',     '又搬了一箱回家',             '展覽活動', '台灣',       'bookfair,books'],
+  ['溪邊的午後',     '水好冰但很舒服',             '自然觀察', '台灣',       'creek,forest'],
+  ['晨跑路線',       '沿著河濱一路到底',           '運動體育', '台灣',       'running,riverside'],
+  ['電影院的爆米花', '看午夜場的儀式感',           '影視娛樂', '台灣',       'cinema,popcorn'],
+  ['市場採買',       '婆婆媽媽都很會殺價',         '拍賣市集', '台灣',       'market,vegetables'],
+  ['中秋烤肉',       '煙燻到眼睛睜不開',           '特定節日', '台灣',       'barbecue,grill'],
+  ['宿舍的角落',     '四年就這麼過了',             '學園生活', '台灣',       'dormitory,student'],
+  ['球隊聚餐',       '輸球還是要吃',               '朋友團體', '台灣',       'dinner,friends'],
+  ['爸媽的老照片',   '翻到相簿最後一頁',           '家庭親情', '台灣',       'oldphoto,family'],
+  ['一起去看海',     '什麼都不做也很好',           '情侶合照', '台灣',       'couple,beach'],
+  ['今天的穿搭',     '外套是二手買的',             '女生個人', '台灣',       'outfit,woman'],
+  ['理了個平頭',     '涼快但有點後悔',             '男生個人', '台灣',       'portrait,boy'],
 ];
 
-for (const [name] of USERS) {
-  const n = 2 + (name.length % 3);
+// 主要示範帳號每人 4 本，補充站友每人 1 本——這樣 24 類每一類都有東西，
+// /albums 的分類頁跟排行榜才不會點進去是空的。
+// 起始位置用 index 錯開，不然每個人都拿到同幾本。
+// 用**連號**發樣板，不要用 (ui*3+i*7) 這種散列：散列會讓同一個標題在
+// 相簿總站的同一頁上出現好幾次（實測一頁 20 本裡有 5 組重複），看起來就很假。
+// 連號可以保證每個樣板都用過一輪，才開始第二輪。
+let albumSeq = 0;
+for (const [name] of [...USERS, ...EXTRA_USERS]) {
+  const isMain = USERS.some(u => u[0] === name);
+  const n = isMain ? 4 : 1;
   for (let i = 0; i < n; i++) {
-    const [title, descr, topic, place, keyword] = pick(ALBUMS, name.length + i);
+    const [title, descr, topic, place, keyword] = ALBUMS[albumSeq++ % ALBUMS.length];
     if (await one('SELECT 1 FROM albums WHERE user_id=? AND title=?', uid[name], title)) continue;
     const a = await run(`INSERT INTO albums(user_id,title,descr,topic,place,views,featured)
       VALUES(?,?,?,?,?,?,?)`, uid[name], title, descr, topic, place,
       Math.floor(Math.random() * 5000), i === 0 && name === 'meimei' ? 1 : 0);
     const aid = Number(a.lastInsertRowid);
     let cover = '';
-    for (let k = 0; k < 5 + (i % 4); k++) {
+    for (let k = 0; k < (isMain ? 5 + (i % 4) : 3); k++) {
       const p = await photo(keyword, pick(TINTS, uid[name] + k));
       // save() 已經把尺寸與 EXIF 算好回傳，不接住的話 #exif 面板永遠是空的
       // （照片頁的「圖片資訊」就沒東西可印）。
@@ -220,12 +302,69 @@ const POSTS = [
     '四天花下來大概八千塊，含來回車票、住宿、租車跟吃的。花蓮真的很適合放空，' +
     '下次想試試看住在山上的民宿，早上起來就能看到雲海。',
     '旅遊', '旅遊'],
+
+  // 以下補到 src/taxonomy.js 的 BLOG_TOPICS 12 類每一類都有文章。
+  // 只做 6 類的時候，/blogs 的分類頁與首頁「名家專欄」的分頁點進去一半是空的。
+  ['寫了三年終於完稿', '短篇小說寫了三年，昨天終於打上最後一句。\n改了七版，前面六版現在看都想燒掉。\n下一篇想試試看第一人稱。', '創作', '創作'],
+  ['手帳這樣寫比較不會斷', '買了新手帳又想從頭開始的人舉手。\n我的心得是格子不要太細，一天留三行就好，寫得完才會想繼續寫。\n貼紙可以買但不要買太多，會變成收集不是紀錄。', '創作', '創作'],
+  ['第一次跑十公里', '從完全不會跑到跑完十公里花了四個月。\n訣竅真的就是慢，慢到覺得自己在散步就對了。\n下個目標是半馬。', '運動', '運動'],
+  ['在家也能練的核心', '沒時間上健身房的日子，就靠棒式跟深蹲撐著。\n一天十五分鐘，三個月下來腰真的比較不酸了。', '運動', '運動'],
+  ['最近在追的那部劇', '一集四十分鐘，我一個晚上看了六集。\n編劇很敢寫，第八集那個轉折我到現在還在想。', '娛樂', '娛樂'],
+  ['演唱會搶票心得', '三個裝置一起開，最後是用平板搶到的。\n搶完手在抖。位置雖然遠但整場都站著跳完。', '娛樂', '娛樂'],
+  ['今年的球鞋', '穿了半年才來寫心得。\n鞋底比想像中軟，走一整天不太累，就是白色真的很難照顧。', '流行', '流行'],
+  ['換季衣櫃整理法', '丟不掉的原因通常是「說不定以後會穿」。\n我的規則是一年沒穿就送人，這樣衣櫃才有空間放新的。', '流行', '流行'],
+  ['新手機用了一個月', '拍照真的進步很多，尤其晚上。\n電池從早上八點用到晚上十一點還有兩成。', '科技', '科技'],
+  ['把舊筆電裝成備份機', '五年前的筆電拆開清了灰、換了固態硬碟，開機從一分半變十五秒。\n現在拿來當家裡的備份機剛剛好。', '科技', '科技'],
+  ['準備考試的那三個月', '每天六點起床唸到九點，中午睡半小時。\n最有用的不是唸多久，是每天固定同一個時段。', '學習', '學習'],
+  ['背單字終於找到方法', '以前抄十遍隔天就忘。\n改成每天看五十個、連續看七天，記得的比抄十遍還多。', '學習', '學習'],
+  ['開始記帳的第一年', '記了一年才發現最花錢的是外食跟飲料。\n只是把飲料減半，一年就多存了兩萬。', '財經', '財經'],
+  ['第一次報稅', '看不懂就直接打電話問國稅局，比在網路上亂查快很多。\n人很好，講得很清楚。', '財經', '財經'],
+  ['捷運上讓座那件事', '今天看到一個高中生讓座給老人家，被念說擋到路。\n那個表情我到現在還記得。\n做好事有時候真的需要勇氣。', '社會', '社會'],
+  ['社區的資源回收', '我們這棟大樓開始分得很細之後，垃圾量真的少了三分之一。\n一開始大家都在抱怨，現在習慣了。', '社會', '社會'],
+  ['一個人住的第三年', '學會了修水龍頭、換燈泡、跟自己吃飯。\n最難的還是生病的時候。', '生活', '生活'],
+  ['搬家血淚史', '低估了自己的東西有多少。\n下次一定提早兩週開始整理，還有紙箱要買大的不要買小的。', '生活', '生活'],
+  ['社團的最後一次聚會', '從大一到現在，這個社團給我的比我給它的多太多。\n昨天最後一次聚會，大家都說好要每年見一次。', '團體', '團體'],
+  ['讀書會辦了兩年', '兩年下來讀了二十三本書。\n最大的收穫不是讀了多少，是每個月都有一天一定會跟這群人見面。', '團體', '團體'],
+  ['把陽台種滿了', '從一盆薄荷開始，現在整個陽台都是。\n最好養的是黃金葛，最難養的是玫瑰，我已經陣亡三株了。', '生活', '生活'],
+  ['關於早起這件事', '試過六點起床一個月。\n前兩週像酷刑，第三週開始覺得早上的時間特別安靜。\n關鍵是前一晚十一點就要躺平。', '生活', '生活'],
+  ['第一次自己換機油', '看了三支影片就下去做了。\n最難的不是換，是把螺絲鎖回去的力道。\n省下的錢剛好買一頓晚餐。', '生活', '生活'],
+  ['花東縱谷騎車', '兩天騎了一百八十公里，屁股完全不是自己的。\n但轉過某個彎突然看到整片稻田那瞬間，什麼都值得了。', '旅遊', '旅遊'],
+  ['澎湖跳島', '三天跳了四個島，曬到脫兩層皮。\n吉貝的沙灘真的像明信片，但記得帶防曬。', '旅遊', '旅遊'],
+  ['一個人的東京', '第一次自己出國，緊張到前一晚沒睡。\n結果最快樂的是在便利商店挑飯糰那種小事。', '旅遊', '旅遊'],
+  ['寫程式的第一年', '從看不懂錯誤訊息，到現在會先看最後一行。\n進步最多的不是語法，是知道怎麼問問題。', '科技', '科技'],
+  ['把家裡網路換成 mesh', '老公寓牆太厚，一台分享器怎麼放都有死角。\n換成三顆之後，廁所終於也有訊號了。', '科技', '科技'],
+  ['備份這件事', '硬碟掛掉那天我才知道什麼叫欲哭無淚。\n現在是三份：電腦、外接、雲端。', '科技', '科技'],
+  ['重看一次經典老片', '小時候看只覺得熱鬧，現在看懂了裡面的無奈。\n好的作品會跟著你一起長大。', '娛樂', '娛樂'],
+  ['第一次進劇場', '沒有麥克風，聲音卻整場都聽得很清楚。\n中場休息時大家都在小聲討論，那個氣氛很迷人。', '娛樂', '娛樂'],
+  ['打了三年的那款遊戲', '昨天官方宣布要收了。\n公會裡的人約好最後一天一起上線。\n遊戲會關，但那幾年是真的。', '娛樂', '娛樂'],
+  ['開始游泳的第二個月', '從換氣就嗆水，到現在可以游完二十趟。\n教練說放鬆最重要，我到第六週才懂那是什麼意思。', '運動', '運動'],
+  ['爬了第一座百岳', '半夜三點起登，看到日出那刻整個人都醒了。\n下山比上山還累，膝蓋隔天完全不能彎。', '運動', '運動'],
+  ['球鞋穿到底該不該洗', '我的結論是：洗，但不要用洗衣機。\n刷子加中性清潔劑，陰乾兩天，可以多穿半年。', '流行', '流行'],
+  ['極簡衣櫃實驗', '只留三十件，穿了半年。\n最大的發現是我根本不需要那麼多選擇，早上快很多。', '流行', '流行'],
+  ['做手工皂', '第一批全部失敗，鹼度沒算好。\n第三批終於成功，送給朋友大家都說好用。', '創作', '創作'],
+  ['學了三個月的吉他', '手指按到起繭，終於可以完整彈完一首。\n晚上不敢練，怕鄰居抗議。', '創作', '創作'],
+  ['我的第一本手作書', '從裁紙到裝訂全部自己來。\n歪歪的，但翻開的時候心情完全不一樣。', '創作', '創作'],
+  ['考照的那個夏天', '路考考了三次才過。\n第三次教練說：你不是不會，是太緊張。他說對了。', '學習', '學習'],
+  ['線上課程的坑', '買了八門課，看完的只有兩門。\n後來改成一次只買一門，看完才准買下一門。', '學習', '學習'],
+  ['存下第一桶金', '不是靠投資，是靠三年不買不需要的東西。\n最有效的一招是把薪水一入帳就先轉走三成。', '財經', '財經'],
+  ['第一次繳勞健保', '看到金額的時候愣了一下。\n但真的生病去看醫生時，就覺得還好有繳。', '財經', '財經'],
+  ['巷口那間店收了', '開了二十三年。\n最後一天老闆娘還是笑笑的，只說謝謝大家這麼多年。\n以後早餐不知道要吃什麼了。', '社會', '社會'],
+  ['颱風天的便利商店', '半夜兩點還亮著燈。\n店員說有人需要就得開。\n買了一杯熱咖啡，覺得城市真的靠很多人撐著。', '社會', '社會'],
+  ['同學會十年', '有人變了很多，有人一開口還是那個樣子。\n散場時大家在停車場又聊了一個小時捨不得走。', '團體', '團體'],
+  ['志工隊的第一次出隊', '本來以為是去幫忙，結果被照顧最多的是我們。\n回程車上沒人講話，都在想事情。', '團體', '團體'],
+  ['養成寫日記的習慣', '一天三行，寫了兩年。\n回頭翻的時候才發現，那些以為過不去的事，其實都過去了。', '心情', '心情'],
+  ['關於長大這件事', '以前覺得長大是變厲害，現在覺得是學會接受自己不厲害。', '心情', '心情'],
+  ['深夜的公車', '最後一班，車上只有三個人。\n司機開得很慢，好像知道大家都累了。', '心情', '心情'],
 ];
 
-for (const [name] of USERS) {
-  const n = 2 + (name.length % 4);
+// 主要帳號每人 4 篇、補充站友每人 1 篇，起始位置照 index 錯開，
+// 這樣 12 類每一類都有文章，/blogs 的分類頁與首頁名家專欄才不會有空分頁。
+// 同樣用連號，理由見上面相簿那段。
+let postSeq = 0;
+for (const [name] of [...USERS, ...EXTRA_USERS]) {
+  const n = USERS.some(u => u[0] === name) ? 4 : 1;
   for (let i = 0; i < n; i++) {
-    const [title, body, category, topic] = pick(POSTS, name.length * 2 + i);
+    const [title, body, category, topic] = POSTS[postSeq++ % POSTS.length];
     if (await one('SELECT 1 FROM posts WHERE user_id=? AND title=?', uid[name], title)) continue;
     const r = await run(`INSERT INTO posts(user_id,title,body,category,topic,mood,weather,views,likes,featured)
       VALUES(?,?,?,?,?,?,?,?,?,?)`, uid[name], title, body, category, topic,
@@ -241,9 +380,12 @@ for (const [name] of USERS) {
   }
 }
 // 上面那圈是「每人挑幾篇」，長文不一定會落在示範帳號身上。
-// 「(繼續閱讀)」這個結構要靠它，所以明確補一篇給 meimei。
+// 「(繼續閱讀)」（.extended，views/blog.ejs 的 cut 判斷：內文超過 300 字）
+// 這個結構要靠它，所以明確補一篇給 meimei。
 {
-  const [title, body, category, topic] = POSTS[POSTS.length - 1];
+  // 挑**最長**那一篇，不要用 POSTS[POSTS.length-1]——在陣列後面補文章的時候
+  // 最後一筆就不是長文了，「(繼續閱讀)」那個結構會無聲無息地消失。
+  const [title, body, category, topic] = POSTS.reduce((a, b) => b[1].length > a[1].length ? b : a);
   if (!await one('SELECT 1 FROM posts WHERE user_id=? AND title=?', uid.meimei, title))
     await run(`INSERT INTO posts(user_id,title,body,category,topic,mood,weather,views,likes)
       VALUES(?,?,?,?,?,?,?,?,?)`, uid.meimei, title, body, category, topic, '開心', '晴',
@@ -276,8 +418,10 @@ for (const [name] of USERS) {
     if (other !== name && Math.random() < 0.45)
       await run('INSERT OR IGNORE INTO friends(user_id,friend_id,grp) VALUES(?,?,?)',
         uid[name], uid[other], pick(['好友', '同學', '同事', '網友'], other.length));
-  for (let i = 0; i < 5; i++)
-    await run('INSERT INTO visitors(user_id,who) VALUES(?,?)', uid[name], pick(USERS, i + 2)[0]);
+  // 「誰來我家」一頁 20 筆，只灌 5 筆而且都是同幾個人的話那一頁看起來像壞掉的。
+  const ALL = [...USERS, ...EXTRA_USERS];
+  for (let i = 0; i < 24; i++)
+    await run('INSERT INTO visitors(user_id,who) VALUES(?,?)', uid[name], pick(ALL, i * 5 + name.length)[0]);
   const p = await one('SELECT id,title FROM posts WHERE user_id=? ORDER BY id DESC', uid[name]);
   if (p) await run('INSERT INTO acts(user_id,kind,title,url) VALUES(?,?,?,?)',
     uid[name], 'blog', p.title, `/${name}/blog/${p.id}`);
@@ -338,10 +482,10 @@ const VIDEOS = [
   ['Counting Stars', 'hT_nvWreIhg', '跑步的時候都聽這首'],
   ['Never Gonna Give You Up', 'dQw4w9WgXcQ', '別問，點下去就對了'],
 ];
-for (const [name] of USERS) {
-  const want = name === 'meimei' ? VIDEOS.length : 2;
+for (const [ui, [name]] of [...USERS, ...EXTRA_USERS].entries()) {
+  const want = name === 'meimei' ? VIDEOS.length : (USERS.some(u => u[0] === name) ? 3 : 1);
   for (let i = 0; i < want; i++) {
-    const [title, vid, descr] = pick(VIDEOS, name.length + i);
+    const [title, vid, descr] = VIDEOS[(ui * 3 + i) % VIDEOS.length];
     if (await one('SELECT 1 FROM videos WHERE user_id=? AND vid=?', uid[name], vid)) continue;
     await run('INSERT INTO videos(user_id,title,vid,url,descr,views) VALUES(?,?,?,?,?,?)',
       uid[name], title, vid, 'https://www.youtube.com/watch?v=' + vid, descr,
@@ -359,12 +503,36 @@ const DIGUS = [
   '把版面換成粉紅色了，好看嗎', '剛跑完五公里，腿要斷了', '朋友揪去墾丁，還在考慮',
   '想吃鹹酥雞但已經半夜了', '今天人氣破一千了，謝謝大家', '睡前來聽一下音樂盒',
 ];
-for (const [name] of USERS) {
-  const want = name === 'meimei' ? DIGUS.length : 3;
+for (const [ui, [name]] of [...USERS, ...EXTRA_USERS].entries()) {
+  const want = name === 'meimei' ? DIGUS.length : (USERS.some(u => u[0] === name) ? 5 : 2);
   let have = (await one('SELECT count(*) c FROM digu WHERE user_id=?', uid[name])).c;
   for (let i = have; i < want; i++)
-    await run('INSERT INTO digu(user_id,body) VALUES(?,?)', uid[name], pick(DIGUS, i + name.length));
+    await run('INSERT INTO digu(user_id,body) VALUES(?,?)', uid[name], DIGUS[(ui * 4 + i) % DIGUS.length]);
 }
+
+// ---- 收藏 ----
+// 「我的收藏」頁與首頁的「投稿精選」都靠 favs。之前完全沒種，
+// 每個人點進去都是空的。每人收藏幾篇別人的文章。
+{
+  const posts = await all('SELECT id,user_id FROM posts ORDER BY id');
+  for (const [ui, [name]] of [...USERS, ...EXTRA_USERS].entries()) {
+    let n = 0;
+    for (const po of posts) {
+      if (po.user_id === uid[name]) continue;
+      if ((po.id + ui) % 7) continue;            // 稀疏地挑，不要每個人都收藏同幾篇
+      await run('INSERT OR IGNORE INTO favs(user_id,post_id) VALUES(?,?)', uid[name], po.id);
+      if (++n >= 6) break;
+    }
+  }
+  console.log(`收藏 ${(await one('SELECT count(*) c FROM favs')).c} 筆`);
+}
+
+// ---- 站長精選 ----
+// 首頁的「站長精選」與熱門相簿的獎牌靠 featured。分散一點，不要集中在一個人身上。
+for (const r of await all('SELECT id FROM posts ORDER BY views DESC LIMIT 6'))
+  await run('UPDATE posts SET featured=1 WHERE id=?', r.id);
+for (const r of await all('SELECT id FROM albums ORDER BY views DESC LIMIT 6'))
+  await run('UPDATE albums SET featured=1 WHERE id=?', r.id);
 
 // ---- 認證徽章 ----
 // 原站是付費 VIP，本站沒有金流，就當成站長掛給老站友的認證標記。

@@ -38,15 +38,32 @@
     return t.length > n ? t.slice(0, n) + '…' : t;
   };
   const w2Pic  = p => p.thumb || p.url;                    // 照片縮圖，沒有就用原圖
-  const w2Cover = p => p && p.pthumb ? p.pthumb : CDN + '/icon/user_cover.gif';
+  /* 文章的代表圖：先用作者最新一張公開照片（pthumb），沒有就用作者的大頭貼，
+     都沒有才落到無名那張「沒有封面」的卡通圖。原版這一格放的就是作者的封面圖，
+     整排卡通圖示會讓首頁看起來像沒載入完。 */
+  const w2Cover = p => (p && p.pthumb) ? p.pthumb
+    : (p && p.avatar && p.avatar !== '/img/avatar.png') ? p.avatar
+    : CDN + '/icon/user_cover.gif';
   /* 某位站友能拿來當縮圖的圖：先找他公開的相簿封面，再找他的照片，
      都沒有就用無名的「沒有封面」預設圖。首頁 route 沒有給每位站友的代表圖，
      只能從已經拿到的 hotAlbums / newPhotos 裡挑。 */
+  /* 帳號 → 大頭貼。首頁好幾個模組（排行榜、投稿精選、最新加入）都要拿人的代表圖，
+     每個清單的查詢各自帶了 avatar，這裡合成一張表，找不到才落到預設圖。 */
+  const w2Avatars = new Map();
+  for (const list of [locals.rank, locals.featPosts, locals.newUsers])
+    for (const x of (list || [])) {
+      const n = x.name || x.uname;
+      if (n && x.avatar && x.avatar !== '/img/avatar.png' && !w2Avatars.has(n)) w2Avatars.set(n, x.avatar);
+    }
   const w2UserPic = uname => {
     const a = (featAlbums.concat(hotAlbums)).find(x => x.uname === uname && x.cover);
     if (a) return a.cover;
     const p = newPhotos.find(x => x.uname === uname);
     if (p) return w2Pic(p);
+    // 這幾個清單裡找不到那個人時，退回他的大頭貼——首頁各模組的人本來就不一定
+    // 出現在熱門相簿或最新照片裡，只靠那兩個清單找的話大多會落到卡通預設圖。
+    const av = w2Avatars.get(uname);
+    if (av) return av;
     return CDN + '/icon/user_cover.gif';
   };
 
