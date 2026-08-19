@@ -26,13 +26,21 @@ const HERE = path.dirname(fileURLToPath(import.meta.url));
 const SEED_SCRIPT = path.join(HERE, '..', 'tools', 'seed-demo.mjs');
 
 export async function seedDemoIfEmpty() {
-  const n = (await one('SELECT count(*) c FROM users')).c;
-  if (n > 0) {
-    console.log(`[seed] 資料庫已經有 ${n} 位使用者，跳過（要重灌請先自己清空）`);
+  // 判斷「空不空」要看**內容**（相簿／網誌），不是看使用者數。
+  // 正式站本來就有一個站長帳號，用「有沒有使用者」當條件的話會永遠跳過，
+  // 站台就一直是空的——實際踩到過一次。
+  const users = (await one('SELECT count(*) c FROM users')).c;
+  const albums = (await one('SELECT count(*) c FROM albums')).c;
+  const posts = (await one('SELECT count(*) c FROM posts')).c;
+  if (albums > 0 || posts > 0) {
+    console.log(`[seed] 站上已經有內容（${albums} 本相簿 / ${posts} 篇網誌），跳過`);
     return;
   }
 
-  console.log('[seed] 資料庫是空的，開始灌示範資料——照片要上網抓，會跑一段時間');
+  // 種子腳本本身是「有就跳過」的寫法（每一筆都先查再插），而且這裡不傳 --reset，
+  // 所以既有的那些帳號會被沿用（照 name 比對），不會變成重複的人。
+  console.log(`[seed] 站上沒有內容（目前 ${users} 位使用者），開始灌示範資料`
+    + '——照片要上網抓並上傳 R2，會跑十幾分鐘');
   const child = spawn(process.execPath, [SEED_SCRIPT], {
     cwd: path.join(HERE, '..'),
     env: process.env,          // DATABASE_URL / DB_DRIVER / R2_* 都要傳下去
