@@ -1,97 +1,222 @@
 <%# 相片牆 /:name/album/:id/wall — 無名的 album/display.php?style=angel|taylor
     ─────────────────────────────────────────────────────────────
-    骨架照 assets_src2/html/album_display_taylor.html（瀑布）與
+    骨架與樣式照 assets_src2/html/album_display_taylor.html（瀑布）與
     album_display_angel.html（馬賽克）：
 
       #hugewrapper > #kukubar-upper
-                   > #wrapper > #wall-header > .wall_func > h1 > a.breadcrumb
-                              > #nav-panel.collapse > .nav-breadcrumbs > a.display_switcher
-                              > #wall                （taylor：瀑布流照片）
+                   > #bigcontainer
+                     > #nav-panel.collapse > .nav-breadcrumbs > a.display_switcher
+                     > #wrapper > #wall-header > .wall_func > h1 > a.breadcrumb
+                     >                                      > .additional_func
+                              > #wall > .brick.type_image   （taylor：瀑布）
                               > .loadst#vip_upgrade_from_photowall
                               > #flag
-                              > #imgTable > .montage （angel：馬賽克格）
+                              > table#imgTable > .montage    （angel：馬賽克）
                    > #kukubar-lower
+
+    外框改用 partials/head2012_site.ejs（不是 head2012in）：這一頁是相簿的頁，
+    kukubar 上的「目前服務」必須是 Album——存檔的 <legend>Album</legend> 與
+    「Album Search」都證實了。head2012in 那支把服務寫死成 Blog（它原本是
+    留言板／名片／好友在用的），套在相簿頁上會變成 Blog 分頁，這是真的錯。
+    人氣頁尾原版沒有，所以 w2Hits:false。
 
     【刻意偏離，理由寫在這裡】
     1. 原版兩種相片牆是 VIP 限定，`.restricted_string` 那句是「已達顯示上限，
        請加入 VIP」。本站沒有付費制度，整本都看得完，那一句改成「沒有更多照片了」。
     2. 原版是無限捲動（JS 逐批向 display.php 要資料）。本站一次把整本送出來，
        不做 Ajax——照片數量級距差三個數量級，捲動載入沒有必要。
-    3. 版面樣式寫在這一頁的 <style> 裡：原版的 album_display_*.css 還沒有進
-       tools/build-css2012.mjs 的 BUNDLES，而 public/wretch2012*.css 是產生出來的，
-       不能手改。等 bundle 加好之後這段就可以拿掉。 %>
+    3. 版面樣式寫在這一頁的 <style> 裡：**原版也是寫在頁面裡的**
+       （album_display_taylor.html 第 218-448 行、angel 靠 display_angel.css），
+       而 public/wretch2012*.css 是產生出來的、不能手改。下面這段的每一條
+       數值都抄自那兩份原檔（顏色、字級、200px 磚寬、120px 馬賽克格、
+       #nav-panel 的 -90px 收合），不是自己配的。
+    4. 兩種牆原版都是 JS 絕對定位（taylor 逐磚算 left/top、angel 連封面大圖
+       都是 JS 排的）。本站的瀑布照樣用 JS 分欄（見頁尾那段），但馬賽克改成
+       靜態密鋪：angel 的 JS 沒有存檔，硬猜一個會排得不像，密鋪至少是對的。
+    5. #nav-panel 原版捲到頂端時是收起來的（.collapse ＝ top:-90px），
+       捲過頁首才滑下來。本站相簿常常一頁就看完、根本捲不動，那樣切換模式的
+       連結會永遠點不到，所以「頁面高度不足以捲動」時就直接展開。 %>
 <%
-  const pwPath = '/' + u.name + '/album/' + album.id;
+  const pwPath  = '/' + u.name + '/album/' + album.id;
   const pwOther = style === 'angel' ? 'taylor' : 'angel';
+  const pwKind  = style === 'angel' ? 'Mosaic' : 'Waterfall';
 %>
-<%- include('partials/head2012in', {
-      title: (style === 'angel' ? 'Mosaic' : 'Waterfall') + 'Photo Wall-' + album.title + '-' + u.nick + '的' + SITE_NAME,
-      page: 'w2-wall',
-      skin: [] }) %>
+<%- include('partials/head2012_site', {
+      w2Title:   pwKind + 'Photo Wall - ' + album.title + ' - ' + u.name + "'s Album - " + SITE_NAME,
+      w2Service: 'Album',
+      w2Head:    'none',
+      w2BodyId:  'body_wall',
+    }) %>
 
 <style>
-/* 見檔頭第 3 點：原版 CSS 尚未進 bundle，這裡先寫最小可用的版面 */
-#wrapper{width:970px;margin:0 auto;padding-bottom:40px}
-#wall-header{padding:10px 0}
-#wall-header h1{font-size:15px;font-weight:bold;margin:0}
-#nav-panel{background:#333;color:#fff;line-height:30px;padding:0 10px;margin-bottom:10px}
-#nav-panel a{color:#fff;text-decoration:none}
-#nav-panel a.display_switcher span{color:#d1f97f}
-#wall{column-count:5;column-gap:10px}
-#wall .type_image{break-inside:avoid;margin:0 0 10px}
-#wall .type_image img{width:100%;display:block;border:0}
-#wall .type_image .cover{font-size:11px;color:#666;padding:2px 0}
-#imgTable{font-size:0}
-#imgTable .montage{display:inline-block;width:120px;height:120px;overflow:hidden;margin:0 2px 2px 0}
-#imgTable .montage img{width:120px;height:120px;object-fit:cover;border:0}
-.loadst{text-align:center;color:#999;padding:20px 0;font-size:12px}
-#endSpace{height:20px}
+/* ── 以下數值全部抄自原檔，出處見檔頭第 3 點 ───────────────────────── */
+
+/* album_display_taylor.html 的 reset 與底色。angel 的底是白的（display_angel.css）。 */
+html body#body_wall {
+  background: <%= style === 'angel' ? '#ffffff' : '#e9e9e9' %>;
+  font-size: 12px;
+  color: #999;
+  font-family: Arial, "Microsoft JhengHei", sans-serif;
+}
+<%# 這兩條的選擇器要壓過 skin 1/189 的 a{color:#A13636}，所以連 body 的 id 一起寫；
+    但**不能**寫成 #bigcontainer a——那樣會連 #nav-panel 裡的白字也一起蓋掉，
+    深色列上就變成灰字看不見（角度：angel 的底是白的，灰字剛好和列同色）。 %>
+#body_wall #wrapper a       { color: #999; text-decoration: none; }
+#body_wall #wrapper a:hover { color: #000; }
+/* 這一頁不吃 skin 1/189 的 700px 表格版型（那是相簿列表／照片頁用的） */
+#body_wall #bigcontainer table { background: none; }
+
+#wrapper     { padding: 20px; overflow: hidden; }
+#wall-header { margin: 0 auto; padding: 20px 0 40px; text-align: left; }
+#wall-header h1 { margin: 10px 0; display: inline-block; float: left; font-weight: normal; }
+.breadcrumb  { font-size: 22px; color: #999; text-shadow: 0 1px 1px #ffffff; }
+
+/* 原版 .wall_func 進場是淡入（opacity 0 → .unveiled 1）。
+   本站不做 Ajax，內容一開始就在，所以直接給 .unveiled，不留一秒空白。 */
+.wall_func { overflow: hidden; position: relative; top: 0; opacity: 1; }
+.wall_func:after { content: "."; display: block; height: 0; clear: both; visibility: hidden; }
+.additional_func {
+  text-align: right; float: right; border: 1px solid #cdcdcd; padding: 10px;
+  border-radius: 5px; box-shadow: 0 0 5px #f3f4f5; background: #efefef;
+  margin: 5px 5px 15px; position: relative; display: inline-block;
+}
+.additional_func:before, .additional_func:after {
+  content: ""; display: block; position: absolute;
+  border: 12px solid transparent; width: 0; height: 0; right: 70px;
+}
+.additional_func:before { border-top: 12px solid #cdcdcd; bottom: -25px; }
+.additional_func:after  { border-top: 12px solid #efefef; bottom: -24px; }
+.additional_func .social-wrapper { margin-bottom: 0 !important; float: left; display: inline-block; }
+
+/* 頂端那條深色列：原版釘在視窗上緣，收起來時 top:-90px */
+#nav-panel {
+  width: 100%; box-shadow: 0 2px 7px rgba(0,0,0,.3); overflow: hidden;
+  background: url(/img/wretch2012/album/bg_display_bar.png);
+  padding: 7px 15px 5px; border-bottom: 1px solid rgba(0,0,0,.2);
+  position: fixed; z-index: 9999; top: 0; left: 0;
+  box-sizing: border-box; transition: top .4s;
+}
+#nav-panel.collapse { top: -90px; transition: top .4s; }
+/* 捲不動的頁面（照片少、一頁就看完）：釘在上緣會蓋住 kukubar，
+   改成排在 kukubar 下面的一般區塊，切換模式的連結才點得到（檔頭第 5 點）。 */
+#nav-panel.inflow { position: static; top: auto; transition: none; }
+div.nav-breadcrumbs   { line-height: 30px; color: #fff; float: left; padding-right: 20px; }
+#body_wall #nav-panel a { text-decoration: none !important; color: #fff; }
+#body_wall #nav-panel a.display_switcher span       { color: #d1f97f; }
+#body_wall #nav-panel a.display_switcher:hover span { color: #fff; }
+
+/* ── 瀑布（taylor）：白磚 200px ────────────────────────────────────── */
+#wall { position: relative; margin: 0 auto; }
+/* 沒有 JS 時退回 CSS 多欄；有 JS 就換成下面的 .wall-col */
+#wall:not(.built) { column-width: 240px; column-gap: 0; }
+#wall .wall-col   { float: left; width: 240px; }
+.brick {
+  width: 200px; padding: 10px; margin: 0 auto 20px; background: #fff;
+  border-radius: 2px; box-shadow: 0 1px 4px #bbb;
+  break-inside: avoid; transition: box-shadow .5s;
+}
+.brick:hover      { box-shadow: 0 5px 10px #111; }
+.brick img        { position: relative; display: block; width: 200px; height: auto; outline: none; border: 0; }
+.brick .link_image{ position: relative; overflow: hidden; display: block; }
+.caption {
+  width: 200px; position: relative; word-break: break-all; overflow: hidden;
+  padding: 10px 0 0; text-align: left; min-height: 30px; max-height: 240px;
+}
+.caption p { font-size: 12px; color: #999; line-height: 30px; word-break: break-all; text-align: left; margin: 0; }
+
+/* ── 馬賽克（angel）：120px 等大方格密鋪 ──────────────────────────── */
+#imgTable { margin: 0 auto; font-size: 0; }
+#imgTable td { padding: 0; }
+.montage {
+  display: inline-block; width: 120px; height: 120px; overflow: hidden;
+  border: 2px solid #fff; position: relative; z-index: 2; vertical-align: top;
+  transition: box-shadow .5s, transform .15s linear;
+}
+/* 原版滑過去會放大 1.6 倍、蓋在別格上面（display_angel.css .montage:hover） */
+.montage:hover { overflow: visible; transform: scale(1.6); z-index: 100; }
+.montage img   { width: 120px; height: 120px; object-fit: cover; background: #fff; border: none; display: block; }
+.montage p     {
+  position: relative; margin: -15px 0 0; font-size: 12px;
+  font-family: Arial, "Microsoft JhengHei", sans-serif; display: none;
+  background-color: #fff; color: #666; word-break: break-all; overflow: hidden;
+}
+.montage:hover p { display: block; }
+
+/* ── 頁尾那句（原版 .loadst，25px 粗體淺灰）────────────────────────── */
+.loadst   { position: relative; clear: both; padding: 40px 0; overflow: hidden; }
+.loadst p { text-align: center; text-shadow: 0 1px 1px #ffffff; font-weight: bold;
+            color: #bbb; line-height: 25px; font-size: 25px; margin: 0; }
+#flag     { clear: both; height: 5px; overflow: hidden; }
+#endSpace { clear: both; height: 20px; }
 </style>
+
+<%# 原版這條列釘在視窗上緣，捲過頁首才滑下來 %>
+<div id="nav-panel" class="collapse">
+  <!-- Breadcrumbs -->
+  <div class="nav-breadcrumbs">
+    <a href="/<%= u.name %>/album"><%= u.name %>'s album</a>
+    <span>&nbsp;&raquo;&nbsp;</span>
+    <a href="<%= pwPath %>"><%= album.title %></a>
+    <a href="<%= pwPath %>/wall?style=<%= pwOther %>" class="display_switcher"><span> - 切換到<%= style === 'angel' ? '瀑布' : '馬賽克' %>模式</span></a>
+  </div>
+</div>
 
 <div id="wrapper">
 
   <div id="wall-header">
-    <div class="wall_func">
+    <div class="wall_func unveiled">
       <h1>
         <a class="breadcrumb" href="/<%= u.name %>/album"><%= u.name %>'s album</a>
         <span class="breadcrumb">&nbsp;&raquo;&nbsp;</span>
         <a class="breadcrumb" href="<%= pwPath %>"><%= album.title %></a>
       </h1>
-    </div>
+      <%# 分享列：原版就掛在 .additional_func 裡。絕對網址由 foot2012_site 的 JS 補。 %>
+      <div class="additional_func">
+        <div class="social-wrapper">
+<div class="social-widget">
+  <div class="bd">
+      <a class="fb" title="分享在我的Facebook" target="_blank" data-share="fb" data-path="<%= pwPath %>/wall" data-title="<%= pwKind %>Photo Wall-<%= album.title %>" href="<%= pwPath %>/wall">分享在我的Facebook</a>
+      <a class="plurk" title="分享在我的Plurk" target="_blank" data-share="plurk" data-path="<%= pwPath %>/wall" data-title="<%= pwKind %>Photo Wall-<%= album.title %>" href="<%= pwPath %>/wall">分享在我的Plurk</a>
+      <a class="yim" title="分享在我的即時通" data-share="yim" data-path="<%= pwPath %>/wall" data-title="<%= pwKind %>Photo Wall-<%= album.title %>" href="<%= pwPath %>/wall">分享在我的即時通</a>
   </div>
-
-  <div id="nav-panel" class="collapse">
-    <!-- Breadcrumbs -->
-    <div class="nav-breadcrumbs">
-      <a href="/<%= u.name %>/album"><%= u.name %>'s album</a>
-      <span>&nbsp;&raquo;&nbsp;</span>
-      <a href="<%= pwPath %>"><%= album.title %></a>
-      <a href="<%= pwPath %>/wall?style=<%= pwOther %>" class="display_switcher"><span> - 切換到<%= style === 'angel' ? '瀑布' : '馬賽克' %>模式</span></a>
+</div>
+<div class="wretch-reblog fixinline">
+    <div class="bd bubble-none">
+        <%# 原站的「發文」是把這本相簿轉貼到自己的網誌（blog/post.php?rtype=album）。
+            本站的 GET /:me/blog/new 不吃 query，所以只開一張空白的發文頁。 %>
+        <a class="wretch" href="<%= me ? '/' + me.name + '/blog/new' : '/login' %>" target="_blank" title="發文至無名">發文
+                </a>
+    </div>
+</div>
+        </div>
+      </div>
     </div>
   </div>
 
 <% if (style === 'angel') { %>
-  <%# 馬賽克：等大方格密鋪（album_display_angel.html 的 #imgTable > .montage） %>
-  <div id="imgTable">
-<%# id="cover" 只掛第一格：原版那顆 id 是給 JS 抓封面用的，
-        每一格都掛會變成一堆重複 id %>
-    <% photos.forEach((p, i) => { %><a class="montage"<% if (i === 0) { %> id="cover"<% } %> href="/<%= u.name %>/photo/<%= p.id %>"><img src="<%= p.thumb || p.url %>" alt="<%= p.caption %>"></a><% }) %>
-  </div>
+  <%# 馬賽克：等大方格密鋪。DOM 照存檔——table#imgTable 裡包 div.montage，
+      每一格是 a>img 再加一行 p.type_image>span 的說明（滑過去才出現）。
+      id="cover" 只掛第一格：原版那顆 id 是給 JS 抓封面用的，每格都掛會撞 id。 %>
+  <table id="imgTable" border="0" cellpadding="0" cellspacing="0" align="center">
+    <tr><td>
+<% photos.forEach((p, i) => { %><div class="<% if (i === 0) { %>cover <% } %>montage"<% if (i === 0) { %> id="cover"<% } %>><a href="/<%= u.name %>/photo/<%= p.id %>"><img src="<%= p.thumb || p.url %>" border="0" alt="<%= p.caption %>"></a><p class="type_image"><span><%= p.caption %></span></p></div>
+<% }) %>    </td></tr>
+  </table>
   <div id="endSpace"></div>
-  <div class="loadst" id="loading_sign">
+  <div class="loadst finished" id="loading_sign">
     <p><span class="finished_string"><%= photos.length ? '沒有更多照片了' : '這本相簿還沒有照片' %></span></p>
   </div>
 <% } else { %>
-  <%# 瀑布：等寬不等高（album_display_taylor.html 的 #wall） %>
+  <%# 瀑布：等寬不等高的白磚。原版的磚是 .brick（display 200px + padding 10px），
+      裡面 a.link_image>img 再接 .caption>p，class 由 display_taylor 的 CSS 反推
+      （.brick .link_image / .caption p / .type_video .caption p 都在那份原檔裡）。 %>
   <div id="wall">
-    <% photos.forEach(p => { %>
-    <div class="type_image">
-      <a href="/<%= u.name %>/photo/<%= p.id %>"><img src="<%= p.url %>" alt="<%= p.caption %>"></a>
-      <% if (p.caption) { %><div class="cover"><%= p.caption %></div><% } %>
+<% photos.forEach(p => { %>    <div class="brick type_image">
+      <a class="link_image" href="/<%= u.name %>/photo/<%= p.id %>"><img src="<%= p.url %>" alt="<%= p.caption %>"></a>
+      <div class="caption"><p><%= p.caption %></p></div>
     </div>
-    <% }) %>
-  </div>
-  <div class="loadst" id="vip_upgrade_from_photowall">
+<% }) %>  </div>
+  <div class="loadst finished" id="vip_upgrade_from_photowall">
     <p>
       <span class="finished_string"><%= photos.length ? '沒有更多照片了' : '這本相簿還沒有照片' %></span>
     </p>
@@ -101,4 +226,67 @@
 
 </div><!-- /#wrapper -->
 
-<%- include('partials/foot2012in') %>
+<script>
+/* 1) 瀑布分欄：原版是 JS 逐磚算 left/top（display_taylor 的 .brick 是 absolute），
+      本站改成「把每一塊丟進目前最矮的那一欄」，視覺結果一樣而且不用量座標。
+      沒有 JS 時退回 CSS 多欄（#wall:not(.built) 的 column-width）。
+   2) #nav-panel：原版捲到頁首時收起來（.collapse），捲過去才滑下來。
+      本站相簿常常一頁就看完，那樣切換模式的連結會永遠點不到，
+      所以捲不動的頁面直接展開（檔頭第 5 點）。 */
+(function () {
+  var wall = document.getElementById('wall');
+  if (wall) {
+    var COL = 240;                                   /* 200 磚寬 + 兩側 padding/間距 */
+    var bricks = [].slice.call(wall.children);
+    var layout = function () {
+      var n = Math.max(1, Math.min(bricks.length, Math.floor(wall.clientWidth / COL)));
+      if (wall.dataset.cols === String(n)) return;
+      wall.dataset.cols = n;
+      wall.innerHTML = '';
+      var cols = [];
+      for (var i = 0; i < n; i++) {
+        var c = document.createElement('div');
+        c.className = 'wall-col';
+        wall.appendChild(c);
+        cols.push(c);
+      }
+      bricks.forEach(function (b, i) { cols[i % n].appendChild(b); });
+      /* 高度差太大就再平衡一次：把最高那欄的最後一塊搬到最矮的那欄 */
+      for (var pass = 0; pass < bricks.length; pass++) {
+        var hi = 0, lo = 0;
+        cols.forEach(function (c, i) {
+          if (c.offsetHeight > cols[hi].offsetHeight) hi = i;
+          if (c.offsetHeight < cols[lo].offsetHeight) lo = i;
+        });
+        var last = cols[hi].lastElementChild;
+        if (hi === lo || !last) break;
+        if (cols[hi].offsetHeight - cols[lo].offsetHeight <= last.offsetHeight) break;
+        cols[lo].appendChild(last);
+      }
+      wall.classList.add('built');
+    };
+    layout();
+    window.addEventListener('load', function () { wall.dataset.cols = ''; layout(); });
+    window.addEventListener('resize', layout);
+  }
+
+  var panel = document.getElementById('nav-panel');
+  var head  = document.querySelector('.wall_func');
+  if (panel && head) {
+    var sync = function () {
+      /* 先把 .inflow 拿掉再量，否則量到的是「已經排進版面」之後的高度 */
+      panel.classList.remove('inflow');
+      var scrollable = document.documentElement.scrollHeight - window.innerHeight > 40;
+      panel.classList.toggle('inflow', !scrollable);
+      if (!scrollable) return panel.classList.remove('collapse');
+      panel.classList.toggle('collapse', head.getBoundingClientRect().bottom > 0);
+    };
+    sync();
+    window.addEventListener('scroll', sync);
+    window.addEventListener('resize', sync);
+    window.addEventListener('load', sync);
+  }
+})();
+</script>
+
+<%- include('partials/foot2012_site', { w2Hits: false }) %>

@@ -15,10 +15,17 @@
  * 所以節點從 <a> 變成 <button>。外觀數值逐條沿用原檔，讓它看起來一模一樣。
  */
 
-/* 1a. #push 的「推」「收」——數值抄自 font.css 的 html #push a 那一組 */
+/* 1a. #push 的「推」「收」——數值抄自 font.css 的 html #push a 那一組
+ *
+ * ⚠ box-sizing 一定要寫。原檔那組數值是給 <a>（預設 content-box）算的：
+ * width:24 + padding-left:12 + border:2 = 實際 38×21，兩顆並排剛好塞進 81px 的 #push。
+ * <button> 在瀏覽器的 UA 樣式表是 border-box，同一組數值只會得到 24×19，
+ * 內容區只剩 10px，「推」「收」兩個字會滿出邊框，右邊那顆還會蓋住左邊那顆
+ * （未登入時「收」是 <a>＝38px，「推」是 <button>＝24px，兩顆一寬一窄更明顯）。
+ */
 #content #push form { display: inline; float: left; margin: 0; padding: 0; }
 html #content #push button {
-  display: block; width: 24px; height: 19px; float: left;
+  display: block; box-sizing: content-box; width: 24px; height: 19px; float: left;
   border: 1px solid #aaa; text-decoration: none; color: #777;
   font-size: 13px; font-family: georgia; line-height: 19px;
   margin: 0 0 0 1px; padding: 0 0 0 12px;
@@ -30,17 +37,29 @@ html #content #push button.push:hover { color: #09c; border-color: #1A84B7; }
 html #content #push button.pull:hover { color: #f09; border-color: #e2669e; }
 html > body #content #push button.push { margin: 0 0 0 2px; }
 
-/* 1b. 分享列的「發文」——數值抄自 sharing.css 的 .wretch-reblog .bd a.wretch */
+/* 1b. 分享列的「發文」——數值抄自 sharing.css 的 .wretch-reblog .bd a.wretch
+ * 同 1a：原檔的 height:28 是 <a> 的內容高，加 border 之後量到 30px。
+ * <button> 預設 border-box，不補這一行就只有 28px，登入後那顆「發文」
+ * 會比旁邊的 Facebook／Plurk 矮 2px，整條分享列底線對不齊。 */
 .wretch-reblog .bd form { display: inline; float: left; margin: 0; padding: 0; }
 .wretch-reblog .bd button.wretch {
+  box-sizing: content-box;
   height: 28px; line-height: 28px; display: inline-block;
   font-family: arial; font-size: 12px;
-  padding: 0 5px 0 24px; text-decoration: none; margin: 0; float: left;
+  /* 原檔只給 padding-left:24px，右邊那 5px 是 .bubble-none .wretch 在
+     「沒有泡泡」時才補的。這裡本來寫死 padding:0 5px 0 24px，有泡泡時
+     就比隔壁 <a> 版本寬 5px，登入前後分享列長度會跳動。
+     四邊都要寫出來：<button> 的 UA 樣式帶 padding:1px 6px，
+     只寫 padding-left 的話上下各多 1px、右邊多 6px（實測變成 86×32）。 */
+  padding: 0 0 0 24px; text-decoration: none; margin: 0; float: left;
   color: #666; border: 1px solid #e3e3e3; border-radius: 0 3px 3px 0;
   background: url(/img/wretch2012/chrome/ico_wretch.png) no-repeat 7px 8px;
   background-color: #fff; vertical-align: top; cursor: pointer;
 }
 .wretch-reblog .bd button.wretch:hover { border: 1px solid #bfbfbf; background-color: #f8f8f8; }
+/* 沒有泡泡時右邊補 5px——原檔的 .wretch-reblog .bubble-none .wretch 就是幹這個，
+   但上面那條的權重比它高，所以要在同樣的權重上再寫一次給 <button> 版本。 */
+.wretch-reblog .bd.bubble-none button.wretch { padding-right: 5px; }
 
 /* 1c. .posted 與迴響列裡的表單鈕：長得像文字連結（#content a 的顏色） */
 .posted form, .comments-post form, .w2b-owner form { display: inline; margin: 0; padding: 0; }
@@ -66,6 +85,17 @@ html > body #content #push button.push { margin: 0 0 0 2px; }
  */
 .comments-body ul li.comments-word p { white-space: pre-wrap; }
 .comments-author li p { white-space: pre-wrap; }
+
+/* --- 2b. 文章內的圖片不准撐破 490px 的內文欄 -------------------------------
+ * 「插入自己的照片」與 [img]網址[/img] 產生的是 <img class="inpost">，
+ * 原尺寸直接輸出。站上的照片是 640px 寬，內文欄只有 490px（#content 530 − padding），
+ * 實測會一路長到 x=925，蓋掉 x=815 開始的 #links 側欄——那是肉眼可見的跑版。
+ *
+ * 原站沒有這條（2012 年貼大圖一樣會爆版），這是**刻意偏離**：
+ * 復刻的是版面，不是那個年代的 bug。等比縮放只動寬高，版型其他數值不受影響。
+ * （public/style.css 早就有同一條，但 2012 版的網誌頁沒載那支。）
+ */
+#content .innertext img.inpost { max-width: 100%; height: auto; }
 
 /* --- 3. 分頁列的間距 -------------------------------------------------------
  * 原站的 .list-linkcontrol / .comments-linkcontrol 完全沒有 CSS，

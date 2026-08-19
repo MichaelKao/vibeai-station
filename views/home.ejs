@@ -86,5 +86,8 @@
   <div class="w2-more"><a href="/<%= u.name %>/guestbook">更多留言..</a></div>
 </div>
 
-<%- include('partials/gbfoot') %>
+<%# 側欄 li#stats 那格印的是「留言：N」，它讀的是 local `total`。
+    MyPage 這條 route 沒有 total（它給的是 counts），不傳的話那格永遠印 0，
+    上面才剛寫「留言 64 則」，下面就變 0，自相矛盾。 %>
+<%- include('partials/gbfoot', { total: counts.gb }) %>
 <%- include('partials/foot2012in') %>

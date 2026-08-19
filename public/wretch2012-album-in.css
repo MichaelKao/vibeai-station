@@ -157,3 +157,27 @@ td#ad_banner, td#ad_word { height: 0; padding: 0; line-height: 0; }
 #et.w2a-exif.open { display: block; }
 #et.w2a-exif td.sidetitle { width: 90px; color: #999; padding: 2px 6px; white-space: nowrap; }
 #et.w2a-exif td.side { background: #f6f6f6; padding: 2px 6px; }
+
+/* --- 13. 窄視窗：把上面那幾塊寫死的 px 寬放開 ---------------------------
+ * 上面 §2、§6、§7、§8、§9、§11 那幾塊都是本站自己加的區塊，寬度寫死成
+ * 700／680／400px 對齊版心。窄視窗（uicheck 量 375px）時它們會把整頁撐出
+ * 橫向捲軸——照片頁量到 .w2a-cmt 700、密碼頁量到 .w2a-lock 700。
+ *
+ * 斷點與寫法跟 public/wretch2012-rwd.css 一致（999px 以上一條都不生效，
+ * 桌機版面與還原度完全不受影響）。放在這裡而不是那一支：這幾條選擇器都是
+ * 本檔自己發明的區塊，跟著它們的定義走比較不會改一邊漏一邊。
+ *
+ * ⚠ 這一段**只管本檔自己的區塊**。同一個斷點下，相簿家族還有幾個溢出的元素
+ *   根不在這裡，要在共用檔處理：
+ *     hr           702px ← 版型 skin 1/189 的 hr{width:700px}（產生檔，不能手改）
+ *     table[width] 570～700px ← 整頁的 <table width="700"> 縮不到 min-content 以下
+ *     #ad_square   690px ← 一排五格 120px 的縮圖表
+ */
+@media (max-width: 999px) {
+  .w2a-flash, .w2a-tools, .w2a-cmt, .w2a-report, .w2a-lock, .w2i-flash,
+  #et.w2a-exif {
+    width: auto; max-width: 100%; box-sizing: border-box;
+  }
+  .w2a-report textarea { width: 100%; box-sizing: border-box; }
+  .w2a-quota { max-width: 100%; box-sizing: border-box; }
+}

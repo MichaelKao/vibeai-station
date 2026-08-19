@@ -1,142 +1,149 @@
-<%- include('partials/head',{title:'搜尋',layout:'index'}) %>
+<%
+  /* 站內搜尋 /search
+     ─────────────────────────────────────────────────────────────
+     跟 views/rank.ejs 同一個理由（見那一支的檔頭）：這一頁原本吃
+     partials/head（2005 綠版），但 2012 外框**每一頁**右上角的搜尋框
+     都送到這裡（partials/head2012.ejs 的 form action="/search"），
+     首頁的深色站內搜尋條也是。搜一次就從 2012 掉進 2005，
+     是整站被踩最多次的混搭，所以改成 2012 的外框與元件。
 
-<%# 搜尋：2005 首頁綠版版型（WRETCH_DOM.md 第 7 節）760px 兩欄 %>
-<table width="760" border="0" cellpadding="0" cellspacing="0" align="center"><tr>
-  <td class="side1"></td>
-  <td id="banner1">
-    <div id="banner">
-      <a href="/"><img id="sitelogo" src="<%= SITE_LOGO %>" alt="<%= SITE_NAME %>"></a>
-      <div id="pageheader">
-        <h1><a href="/"><%= SITE_NAME %></a></h1>
-        <span class="description"><%= SITE_DESC %></span>
+     原站的搜尋結果頁沒有存檔（Yahoo 搜尋是另一個網域），照 §3-A
+     用既有元件組，不自創新的視覺。
+
+     表單契約不動：action="/search"、GET、欄位名 q
+     （src/server.js 的 app.get('/search') 只讀 q）。
+
+     資料來自 app.get('/search')：k / users / albums / posts。 */
+  const seTotal = users.length + albums.length + posts.length;
+%>
+<%- include('partials/head2012', { title: (k ? k + ' - ' : '') + '搜尋 - 無名小站' }) %>
+
+  <div class="bd big-bd clearfix">
+    <div class="main">
+
+      <div class="mod w2-auth">
+        <div class="hd"><h2>站內搜尋</h2></div>
+        <div class="bd">
+
+          <form action="/search" method="GET" class="w2-searchform">
+            <input type="text" name="q" value="<%= k %>" size="24" maxlength="40"
+                   placeholder="找相簿 / 找文章 / 找朋友" autofocus>
+            <input type="submit" class="w2-btn" value="搜尋">
+          </form>
+
+          <% if (k) { %>
+          <p class="w2-blog-count">「<%= k %>」找到 <b><%= seTotal %></b> 筆</p>
+          <% } else { %>
+          <p class="w2-blog-count">輸入關鍵字，會同時找站友、相簿與網誌文章。</p>
+          <% } %>
+
+        </div>
       </div>
-    </div>
-  </td>
-  <td class="side2"></td>
-</tr></table>
 
-<table id="bigtab" width="760" border="0" cellspacing="0" cellpadding="0" align="center"><tr>
-  <td class="side1"></td>
+      <% if (k) { %>
 
-  <%# 左欄 505px %>
-  <td width="505" valign="top" class="album_content">
+      <div class="mod w2-auth" id="users">
+        <div class="hd"><h2>站友（<%= users.length %>）</h2></div>
+        <div class="bd">
+          <% if (!users.length) { %><p class="w2-note">找不到相符的站友。</p><% } %>
+          <ol class="w2-ranklist">
+            <% users.forEach(x => { %>
+            <li>
+              <a class="ava" href="/<%= x.name %>"><img src="<%= x.avatar %>" width="20" height="20" alt="<%= x.nick %>"></a>
+              <span class="num">
+                <a href="/<%= x.name %>/album">相簿</a>
+                <a href="/<%= x.name %>/blog">網誌</a>
+                <a href="/<%= x.name %>/guestbook">留言板</a>
+              </span>
+              <a href="/<%= x.name %>"><%= x.nick %></a>
+              <span class="w2-blog-n">(<%= x.name %>)</span>
+            </li>
+            <% }) %>
+          </ol>
+        </div>
+      </div>
 
-    <div class="album_title"><a href="/search">搜尋</a></div>
-    <div class="side">
-      <form action="/search">
-        輸入搜尋字串：
-        <input class="grid_search" name="q" value="<%= k %>" size="24" maxlength="40" placeholder="找相簿 / 找文章 / 找影音 / 找朋友">
-        <input type="submit" class="btn" value="搜尋">
-      </form>
-      <% if(k){ %>
-      變更搜尋類別：
-      <a href="#users">找朋友</a>　<a href="#albums">找相簿</a>　<a href="#posts">找文章</a>
+      <div class="mod w2-auth" id="albums">
+        <div class="hd"><h2>相簿（<%= albums.length %>）</h2></div>
+        <div class="bd">
+          <% if (!albums.length) { %><p class="w2-note">找不到相符的相簿。</p><% } %>
+          <ul class="w2-albumgrid">
+            <% albums.forEach(a => { %>
+            <li>
+              <a href="/<%= a.uname %>/album/<%= a.id %>" title="<%= a.title %>">
+                <img src="<%= a.cover || (CDN + '/icon/user_cover.gif') %>" alt="<%= a.title %>">
+              </a>
+              <a class="t" href="/<%= a.uname %>/album/<%= a.id %>"><%= a.title %></a>
+              <span class="n"><%= a.views %> 人次</span>
+              <a class="n" href="/<%= a.uname %>"><%= a.uname %></a>
+            </li>
+            <% }) %>
+          </ul>
+          <% if (albums.length) { %><p class="w2-more"><a href="/albums">更多相簿</a></p><% } %>
+        </div>
+      </div>
+
+      <div class="mod w2-auth" id="posts">
+        <div class="hd"><h2>網誌（<%= posts.length %>）</h2></div>
+        <div class="bd">
+          <% if (!posts.length) { %><p class="w2-note">找不到相符的文章。</p><% } %>
+          <ol class="w2-bloglist w2-nothumb">
+            <% posts.forEach(p => { %>
+            <li>
+              <div class="content">
+                <p class="meta">
+                  <a class="uname" href="/<%= p.uname %>"><%= p.uname %></a>
+                  <span class="topic"><%= p.created.slice(0, 10) %></span>
+                  <%# 上鎖的文章只比對標題（src/server.js 的查詢），內文不會外流，
+                      這裡標出來讓人知道點進去要輸入密碼。 %>
+                  <% if (p.pass) { %><span class="topic">（上鎖）</span><% } %>
+                </p>
+                <h3><a class="skin-main-link" href="/<%= p.uname %>/blog/<%= p.id %>"><%= p.title %></a></h3>
+              </div>
+            </li>
+            <% }) %>
+          </ol>
+          <% if (posts.length) { %><p class="w2-more"><a href="/blogs">更多網誌</a></p><% } %>
+        </div>
+      </div>
+
       <% } %>
+
     </div>
-
-    <% if(k){ %>
-
-    <a name="users" id="users"></a>
-    <div class="album_title">站友 (<%= users.length %>)</div>
     <div class="side">
-      <% if(!users.length){ %><span class="gray">找不到相符的站友</span><% } %>
-      <table width="100%" border="0" cellpadding="2" cellspacing="0">
-      <% users.forEach(x=>{ %>
-        <tr>
-          <td width="24"><a href="/<%= x.name %>"><img src="<%= x.avatar %>" width="20" height="20" alt="<%= x.nick %>"></a></td>
-          <td><a href="/<%= x.name %>"><%= x.nick %></a> (<%= x.name %>)</td>
-          <td align="right"><a href="/<%= x.name %>/album">相簿</a>　<a href="/<%= x.name %>/blog">網誌</a>　<a href="/<%= x.name %>/guestbook">留言板</a></td>
-        </tr>
-      <% }) %>
-      </table>
-    </div>
 
-    <a name="albums" id="albums"></a>
-    <div class="album_title">相簿 (<%= albums.length %>)</div>
-    <% if(!albums.length){ %><div class="side"><span class="gray">找不到相符的相簿</span></div><% } %>
-    <table border="0" cellspacing="0" cellpadding="0">
-    <% for(let i=0;i<albums.length;i+=3){ const row=albums.slice(i,i+3); %>
-      <tr>
-      <% row.forEach((a,j)=>{ %>
-        <% if(j>0){ %><td width="10"></td><% } %>
-        <td class="album_grid" width="120" height="150" align="center">
-          <a href="/<%= a.uname %>/album/<%= a.id %>"><% if(a.cover){ %><img src="<%= a.cover %>" width="120" height="120" alt="<%= a.title %>"><% } else { %><img src="<%= CDN %>/icon/user_cover.gif" width="85" height="85" alt="<%= a.title %>"><% } %></a>
-        </td>
-      <% }) %>
-      </tr>
-      <tr>
-      <% row.forEach((a,j)=>{ %>
-        <% if(j>0){ %><td width="10"></td><% } %>
-        <td class="album_grid1" width="120" height="60" align="center" valign="top">
-          <span class="album_font_id"><a href="/<%= a.uname %>"><%= a.uname %></a></span><br>
-          <span class="album_font_title"><a href="/<%= a.uname %>/album/<%= a.id %>"><%= a.title %></a></span><br>
-          <span class="album_font_desc"><%= a.views %> 人次</span>
-        </td>
-      <% }) %>
-      </tr>
-    <% } %>
-    </table>
-    <div align="right"><span class="blog_font_desc"><a href="/albums">更多相簿..</a></span></div>
-
-    <a name="posts" id="posts"></a>
-    <div class="blog_title">網誌 (<%= posts.length %>)</div>
-    <div class="side">
-      <% if(!posts.length){ %><span class="gray">找不到相符的文章</span><% } %>
-      <% posts.forEach(p=>{ %>
-      <div>
-        <a href="/<%= p.uname %>/blog/<%= p.id %>"><%= p.title %></a>
-        － <a href="/<%= p.uname %>"><%= p.uname %></a>
-        <%= p.created.slice(0,10) %>
-        <% if(p.pass){ %><span class="gray">（上鎖）</span><% } %>
+      <% if (k) { %>
+      <div class="mod w2-auth-side">
+        <div class="hd"><h2>搜尋結果</h2></div>
+        <div class="bd">
+          <ul>
+            <li><a href="#users">站友（<%= users.length %>）</a></li>
+            <li><a href="#albums">相簿（<%= albums.length %>）</a></li>
+            <li><a href="#posts">網誌（<%= posts.length %>）</a></li>
+          </ul>
+        </div>
       </div>
-      <% }) %>
+      <% } %>
+
+      <div class="mod w2-auth-side">
+        <div class="hd"><h2>逛逛別的</h2></div>
+        <div class="bd">
+          <ul>
+            <li><a href="/rank">人氣排行榜</a></li>
+            <li><a href="/albums">相簿總站</a></li>
+            <li><a href="/blogs">網誌總站</a></li>
+            <li><a href="/video">影音</a></li>
+            <li><a href="/join">揪團</a></li>
+            <li><a href="/digu">嘀咕</a></li>
+          </ul>
+        </div>
+      </div>
+
     </div>
-    <div align="right"><span class="blog_font_desc"><a href="/blogs">更多網誌..</a></span></div>
+  </div>
 
-    <% } %>
+</div><!-- /#wrapper -->
 
-  </td>
-
-  <td width="5"></td>
-
-  <%# 右欄 160px %>
-  <td width="160" valign="top">
-    <div class="sidetitle"><%= SITE_NAME %></div>
-    <div class="side">
-      <a href="/albums">相簿</a><br>
-      <a href="/blogs">網誌</a><br>
-      <a href="/rank">人氣排行</a><br>
-      <a href="/help">服務說明</a>
-    </div>
-
-    <% if(!me){ %>
-    <div class="sidetitle">一個帳號，多項功能</div>
-    <div class="side">
-      <a href="/register"><img src="<%= CDN %>/icon/joinfree_index.gif" width="150" height="60" alt="免費註冊"></a>
-      個人相簿<br>個人網誌 (BLOG,部落格)<br>個人留言板
-    </div>
-
-    <div class="sidetitle">會員登入</div>
-    <div class="side"><form method="post" action="/login">
-      帳號: <input name="name" size="10"><br>
-      密碼: <input name="pass" type="password" size="10"><br>
-      <input type="submit" class="btn" value="登入">
-    </form></div>
-    <% } else { %>
-    <div class="sidetitle"><%= me.nick %> 的小站</div>
-    <div class="side">
-      <a href="/<%= me.name %>">MyPage</a><br>
-      <a href="/<%= me.name %>/album">相簿</a><br>
-      <a href="/<%= me.name %>/blog">網誌</a><br>
-      <a href="/<%= me.name %>/guestbook">留言板</a><br>
-      <a href="/<%= me.name %>/card">名片</a><br>
-      <a href="/<%= me.name %>/friends">好友</a><br>
-      <a href="/<%= me.name %>/settings">個人設定</a>
-    </div>
-    <% } %>
-  </td>
-
-  <td class="side2"></td>
-</tr></table>
-
-<%- include('partials/foot') %>
+<div id="lower-wrapper" class="clearfix">
+  <div class="bd clearfix"></div>
+<%- include('partials/foot2012') %>

@@ -117,10 +117,13 @@
           <dt class="service_link">service link</dt>
           <dd class="services_link">
             <ul>
+              <%# 影音與揪團兩顆原本都指到 /help（那時候這兩個服務還沒做，是死連結）。
+                  /video 與 /join 已經上線，導覽列（partials/head2012.ejs）也早就改過去了，
+                  這一頁漏改，點下去會落到不相干的服務說明頁。 %>
               <li><a href="/albums">Wretch Album</a></li>
               <li><a href="/blogs">Blog</a></li>
-              <li><a href="/help">Wretch Video</a></li>
-              <li><a href="/help">Join</a></li>
+              <li><a href="/video">Wretch Video</a></li>
+              <li><a href="/join">Join</a></li>
             </ul>
           </dd>
         </dl>

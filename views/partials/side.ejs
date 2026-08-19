@@ -56,8 +56,13 @@
 
   <%# 原站好友 0 人時 select 照樣輸出，只有佔位那一行，所以這裡不加 length 判斷 %>
   <li id="friendlist" class="box">
+    <%# 下拉用 gbFriends，**不要跟下面那塊「好友連結」共用同一個 local**。
+        `friends` 在這支 partial 裡同時兼兩個差很多的角色：
+        這顆下拉的資料來源、以及「要不要整塊印好友連結」的開關。
+        留言板那條 route 送的是 gbFriends，共用的結果就是下拉永遠是空的；
+        硬把 friends 接上去又會多印一整塊原版沒有的 35 筆清單。 %>
     <%- include('friendlist2012', {
-          flFriends: (typeof friends !== 'undefined' && friends) ? friends : [],
+          flFriends: locals.gbFriends || (typeof friends !== 'undefined' && friends) || [],
           flLabel: "- Friends' Guestbook -", flGo: '/guestbook' }) %>
   </li>
 
@@ -96,7 +101,10 @@
     <div class="w2-h3">音樂盒</div>
     <div align="center">
 <% const tracks=(u.music||'').split('\n').map(s=>s.trim()).filter(Boolean); if (tracks.length) { %>
-<audio id="mbox" controls loop style="width:100%;height:26px"></audio>
+<%# preload="none" 是必要的：下面那段 JS 在載入時就會設 a.src，
+    瀏覽器預設會立刻去抓整個檔案——站主填的網址如果掛了（或被 CORS／ORB 擋），
+    每一頁都會多一個失敗請求。設成 none 之後要等使用者按播放才會去抓。 %>
+<audio id="mbox" controls loop preload="none" style="width:100%;height:26px"></audio>
 <%# 曲目清單放在 data 屬性，交給 EJS 的 HTML escape 處理，避免使用者網址跳出 script 區塊 %>
 <div id="mboxlist" data-tracks="<%= JSON.stringify(tracks) %>" style="max-height:80px;overflow:auto;margin-top:3px;font-size:11px"></div>
 <script>
@@ -123,7 +131,11 @@
       本站沒有排名查詢，.totalmsg 裝累積人氣——同樣是「這個小站的熱度」。
       #stats 只有 90px 高且 overflow:hidden，所以最多放三行。 %>
   <li id="stats" class="box">
-    留言：<%= typeof total !== 'undefined' ? total : 0 %><br>
+    <%# 這格永遠是「留言板有幾則留言」。不能直接用 total——
+        total 是「目前這一頁在數什麼」：站方公告頁籤是公告數、系統訊息頁籤是訊息數、
+        誰來我家是足跡數、我的收藏是收藏數，印出來全都掛著「留言：」的標籤。
+        route 有送 gbCount 就用它，沒送才退回 total。 %>
+    留言：<%= locals.gbCount !== undefined ? gbCount : (typeof total !== 'undefined' ? total : 0) %><br>
     今日人氣：<%= u.hits_date === new Date().toLocaleDateString('sv-SE') ? (u.today_hits || 0) : 0 %><br>
     <span class="totalmsg">累積人氣：<%= u.visits %></span>
   </li>

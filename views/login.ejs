@@ -34,10 +34,12 @@
                 <th><label for="w2-pass">密碼</label></th>
                 <td><input type="password" id="w2-pass" name="pass" size="24" autocomplete="current-password"></td>
               </tr>
-              <tr>
-                <th></th>
-                <td><label><input type="checkbox" name="remember" value="1"> 記住我的帳號</label></td>
-              </tr>
+              <%# 這裡本來有一個「記住我的帳號」checkbox（name=remember）。
+                  拿掉的理由：src/server.js 的 app.post('/login') 從頭到尾沒有讀 remember，
+                  勾不勾結果都一樣——而且 session cookie 本來就設 maxAge 30 天，
+                  不勾也會記住。留著等於給使用者一顆按了沒有反應的開關。
+                  真的要做「不要記住我」的話得先讓後端支援 session cookie 改成
+                  browser-session，屆時再連同這個欄位一起加回來。 %>
               <tr>
                 <th></th>
                 <td>

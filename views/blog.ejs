@@ -39,7 +39,9 @@
   };
   const filterLabel = cat ? '文章分類：' + cat
                     : ym  ? '月份彙整：' + ym.slice(0,4) + ' 年 ' + (+ym.slice(5,7)) + ' 月'
-                    : day ? '文章日曆：' + day
+                    /* 單日原本直接印 ISO 的 2025-05-22，跟上面兩行的中文格式不一致；
+                       改用跟 .datediv 同一支 wDate()，整頁只有一種日期寫法。 */
+                    : day ? '文章日曆：' + wDate(day)
                     : '';
 %>
 <%- include('partials/blog2012_head', { title: u.nick + ' - 無名小站', artTitle: filterLabel, medium: '' }) %>
@@ -76,6 +78,20 @@
   posts.forEach(p => {
     const locked = p.pass && !isOwner;          /* 上鎖文章不吐內文 */
     const cut    = p.body.length > 300;
+    /* 摘要在第 300 個字硬切，會切在 [img]…[/img] 這種標記的中間。
+       src/format.js 的 render() 只認**成對**的標記，落單的開頭原封不動印出來，
+       首頁就會冒出「[img]/uploads/9f3a-…」這串裸文字（實測會）。
+       所以切完之後把落單的開頭一起丟掉：
+         (1) 連 ']' 都還沒切到的殘缺標記，退回那個 '[' 為止
+         (2) 有開頭、結尾被切掉的標記，退回那個開頭為止（每退一次就再檢查一遍） */
+    let lead = p.body.slice(0, 300);
+    if (cut) {
+      const open = lead.lastIndexOf('[');
+      if (open > lead.lastIndexOf(']')) lead = lead.slice(0, open);
+      let m;
+      while ((m = /\[(img|b|i|u|color)(?:=[^\[\]]*)?\](?![\s\S]*\[\/\1\])/i.exec(lead)))
+        lead = lead.slice(0, m.index);
+    }
 %>
       <div class="date">
         <div class="datediv">
@@ -91,7 +107,7 @@
                 原版列表頁與文章頁都有這顆，之前傳 null 是因為列表沒查轉貼數。 %>
             <%- include('partials/blogshare', { shPost: p, shOwner: u.name, shTb: p.tb, shCan: !!(me && !isOwner) }) %>
 
-            <div class="innertext"><% if (locked) { %>＊ 這篇文章已上鎖，需要密碼才能觀看 ＊<% } else { %><%- render(cut ? p.body.slice(0,300) + '…' : p.body) %><% } %></div>
+            <div class="innertext"><% if (locked) { %>＊ 這篇文章已上鎖，需要密碼才能觀看 ＊<% } else { %><%- render(cut ? lead + '…' : p.body) %><% } %></div>
 
             <% if (locked || cut) { %>
             <div class="extended"><a href="/<%= u.name %>/blog/<%= p.id %>">(繼續閱讀)</a></div>

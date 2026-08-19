@@ -15,19 +15,26 @@
         <div class="hd"><h2><%= j.title %></h2></div>
         <div class="bd">
 
+          <%# 欄名／欄值不能叫 sidetitle / side。那兩個是**名片頁那一套表格**的 class
+              （public/style.css 與 wretch2012-album-188.css），這一頁走的是 2012 站台外框，
+              而 wretch2012.css 的 .side 是「右邊 300px 的側欄」：
+                .side{width:300px;margin-right:10px;float:right}
+              掛在 <td> 上會把 display 算成 block、整欄浮動並鎖死 300px，
+              量到的結果是欄名停在 x=272、欄值卻從 x=474 開始，中間空 200px，
+              「說明」那格還被夾成 300px 提早折行。改用本頁自己的 w2-card-* 就沒有這個撞名。 %>
           <table class="w2-card" width="100%" border="0" cellpadding="0" cellspacing="1">
-            <tr><td class="sidetitle" align="right">發起人：</td>
-                <td class="side"><a href="/<%= j.uname %>"><%= j.nick %></a></td></tr>
-            <tr><td class="sidetitle" align="right">地點：</td>
-                <td class="side"><%= j.place || '—' %></td></tr>
-            <tr><td class="sidetitle" align="right">時間：</td>
-                <td class="side"><%= j.when_text || '—' %></td></tr>
-            <tr><td class="sidetitle" align="right">人數：</td>
-                <td class="side"><%= members.length %><% if (j.quota) { %> / <%= j.quota %><% } %> 人</td></tr>
-            <tr><td class="sidetitle" align="right">說明：</td>
-                <td class="side" style="white-space:pre-wrap"><%= j.descr %></td></tr>
-            <tr><td class="sidetitle" align="right">發起於：</td>
-                <td class="side"><%= j.created.slice(0, 16) %></td></tr>
+            <tr><td class="w2-card-k" align="right">發起人：</td>
+                <td class="w2-card-v"><a href="/<%= j.uname %>"><%= j.nick %></a></td></tr>
+            <tr><td class="w2-card-k" align="right">地點：</td>
+                <td class="w2-card-v"><%= j.place || '—' %></td></tr>
+            <tr><td class="w2-card-k" align="right">時間：</td>
+                <td class="w2-card-v"><%= j.when_text || '—' %></td></tr>
+            <tr><td class="w2-card-k" align="right">人數：</td>
+                <td class="w2-card-v"><%= members.length %><% if (j.quota) { %> / <%= j.quota %><% } %> 人</td></tr>
+            <tr><td class="w2-card-k" align="right">說明：</td>
+                <td class="w2-card-v" style="white-space:pre-wrap"><%= j.descr %></td></tr>
+            <tr><td class="w2-card-k" align="right">發起於：</td>
+                <td class="w2-card-v"><%= j.created.slice(0, 16) %></td></tr>
           </table>
 
           <p class="w2-joinbtn">
@@ -41,8 +48,10 @@
               <% if (!joined && j.quota && members.length >= j.quota) { %>
                 <span class="w2-note">人數已滿</span>
               <% } else { %>
+              <%# 外觀沿用站台既有的 .w2-btn（登入／註冊頁那顆），不自創第二種按鈕。
+                  action/method/欄位名一個字都沒動。 %>
               <form method="post" action="/join/<%= j.id %>/in">
-                <input type="submit" value="<%= joined ? '取消參加' : '我要參加' %>">
+                <input type="submit" class="w2-btn" value="<%= joined ? '取消參加' : '我要參加' %>">
               </form>
               <% } %>
             <% } %>

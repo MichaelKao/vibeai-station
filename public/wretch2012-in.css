@@ -26,6 +26,15 @@ body.w2-user   #container { width: auto; }
 body.w2-friend #content,
 body.w2-user   #content   { width: auto; float: none; }
 body.w2-friend            { text-align: left; }
+/* 名片頁原版是 <div id="container" align="center">，靠瀏覽器對 align 屬性的
+ * 預設對應把 600px 的表格擺到正中間（原站那一頁只載 版型 + user/font）。
+ * bundle 帶進來的 guestbook/layout.css 有 text-align:left、friend/fix.css 有
+ * margin:0 20px，兩條都是作者樣式，優先度高過 align 屬性那個 presentational
+ * hint，於是整張名片被壓到左邊 20px。這裡把版面還原成原版的置中；
+ * 用 margin:auto 而不是 text-align:-webkit-center，效果一樣又不必靠前綴。 */
+body.w2-user   #container { margin: 0; }
+body.w2-user   #container > table,
+body.w2-user   #container > form > table { margin-left: auto; margin-right: auto; }
 /* 留言板家族原本沒有 friend/fix.css（它把字級改成 .8em、給 #content 加了內距） */
 body.w2-gb { font: 13px/1.231 arial, helvetica, clean, sans-serif; }
 body.w2-gb #content { padding: 0; }
@@ -170,8 +179,11 @@ html body div#bigcontainer div#container div#main div#sidebar ul li#ad_lrec div 
                 border: 1px solid #b8d7f0; background: #eff8ff; color: #84aece; }
 .w2-ad-in a   { color: #5e89aa; text-decoration: none; }
 .w2-ad-in a:hover { text-decoration: underline; }
-/* 尺寸照原版：橫幅 728×90、方塊 300×250 */
-#ad_banner .w2-ad-in, #ad_gbook .w2-ad-in { width: 728px; height: 90px; }
+/* 尺寸照原版：橫幅 728×90、方塊 300×250。
+ * max-width 是給窄螢幕的保險：728px 寫死時，375px 視窗量到 353px 的橫向溢出
+ * （名片頁與好友頁整頁被這一格撐開）。桌機寬度下 max-width 不會生效，
+ * 實測值仍然是 728×90，還原度不受影響。 */
+#ad_banner .w2-ad-in, #ad_gbook .w2-ad-in { width: 728px; max-width: 100%; height: 90px; }
 #ad_lrec                                  { padding: 0 !important; }
 #ad_lrec  .w2-ad-in                       { width: 300px; height: 250px; line-height: 1.9; }
 /* 300×250 是直的，連結改成一行一個才填得滿，不會變成一個空框 */
@@ -189,6 +201,22 @@ html body div#bigcontainer div#container div#main div#sidebar ul li#ad_lrec div 
  */
 .myDigu .digu a { color: inherit; text-decoration: none; }
 .myDigu .digu a:hover { text-decoration: underline; }
+
+/* --- 14. #msg_added 的「標籤欄」只該套在每一列的第一個 <span> -------------
+ * 版型有一條 #msg_added li span{display:block;width:105px;float:left;
+ * text-align:right;border-bottom:1px solid #b8d7f0}——那是給欄位名稱那一格用的，
+ * 因為原站「我要留言」表單每個 li 剛好只有一個 span。
+ * 本站在同一個 li 裡還放了別的 span：說明文字 .w2-sub、表情圖列 .w2-emo、
+ * 版型色盤 .w2-themepick。它們一律被當成標籤欄，變成 105px 的靠右浮動塊，
+ * 於是浮到隔壁欄去、還帶著一條藍底線——「我要留言」的表情圖擠成 4×5 直排、
+ * 「個人設定」整頁的標籤與說明錯位（實測 1280px 視窗）。
+ * 這裡只把「不是標籤」的那幾個 span 還原成一般行內內容，標籤欄照舊。 */
+#msg_added li > span.w2-sub,
+#msg_added li > span.w2-emo,
+#msg_added li > span.w2-themepick {
+  display: inline-block; width: auto; float: none;
+  text-align: left; margin-right: 0; padding-bottom: 0; border-bottom: 0;
+}
 
 /* ===== 留言板頁專屬（補結構用，由留言板 agent 維護） ===== */
 /* ===== 名片頁專屬（補結構用，由名片 agent 維護） ===== */

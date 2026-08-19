@@ -36,15 +36,19 @@
             <li>
               <%# 縮圖直接用 YouTube 的，不必自己存一份。
                   影片本體是 iframe 內嵌，只有點進單一支才載，列表頁不要放 iframe——
-                  一頁二十個 iframe 會把瀏覽器拖垮。 %>
-              <a class="thumbnail" href="/<%= v.uname %>/video#v<%= v.id %>">
+                  一頁二十個 iframe 會把瀏覽器拖垮。
+
+                  錨點一定要寫成 #v_<id>：個人影音頁（views/video.ejs）每一支的
+                  id 是 v_123，之前這裡寫 #v123 對不上，點進去永遠停在頁首，
+                  一頁十二支根本找不到剛剛點的那一支。 %>
+              <a class="thumbnail" href="/<%= v.uname %>/video#v_<%= v.id %>">
                 <img src="https://i.ytimg.com/vi/<%= v.vid %>/mqdefault.jpg" width="85" height="85" alt="<%= v.title %>">
               </a>
               <div class="content">
                 <p class="meta">
                   <a class="uname" href="/<%= v.uname %>"><%= v.uname %></a>
                 </p>
-                <h3><a class="skin-main-link" href="/<%= v.uname %>/video#v<%= v.id %>"><%= v.title %></a></h3>
+                <h3><a class="skin-main-link" href="/<%= v.uname %>/video#v_<%= v.id %>"><%= v.title %></a></h3>
                 <p class="description"><%= v.descr %></p>
                 <p class="stat"><span>播放: <%= v.views %></span></p>
               </div>
@@ -71,7 +75,7 @@
         <div class="bd">
           <ul>
             <% hot.forEach(v => { %>
-            <li><a href="/<%= v.uname %>/video#v<%= v.id %>"><%= v.title %></a>
+            <li><a href="/<%= v.uname %>/video#v_<%= v.id %>"><%= v.title %></a>
               <span class="w2-blog-n">(<%= v.views %>)</span></li>
             <% }) %>
           </ul>

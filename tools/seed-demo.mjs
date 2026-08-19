@@ -8,6 +8,7 @@
 
 import { all, one, run } from '../src/db.js';
 import { hash, salt } from '../src/auth.js';
+import { CITIES, SEXES, ZODIACS } from '../src/taxonomy.js';
 import fs from 'node:fs';
 import path from 'node:path';
 import { save, remove, hasR2 } from '../src/storage.js';
@@ -93,9 +94,13 @@ for (const [name, nick, intro, admin] of [...USERS, ...EXTRA_USERS]) {
     Math.floor(Math.random() * 90000) + 1000, Math.floor(Math.random() * 400),
     new Date().toLocaleDateString('sv-SE'),
     pick(['活著就是為了吃', '青春不留白', '有夢最美', '認真的女人最美麗'], nick.length),
-    pick(['台北市', '台中市', '高雄市', '台南市'], nick.length),
-    pick(['男', '女'], nick.length), pick(['A', 'B', 'O', 'AB'], nick.length),
-    pick(['牡羊座', '金牛座', '雙子座', '巨蟹座'], nick.length),
+    // ⚠ 這幾個值**一定要用 src/taxonomy.js 的字面值**。
+    // POST /:name/card 會拿 CITIES / SEXES 當白名單過濾，對不上就存成空字串——
+    // 使用者只要按一次「儲存名片」，性別與居住地就被清空了，而且畫面不會報錯。
+    // 之前種的是 '高雄市' / '男'，白名單裡是 '高雄' / '男生'，全部過不了。
+    pick(CITIES, nick.length),
+    pick(SEXES, nick.length), pick(['A', 'B', 'O', 'AB'], nick.length),
+    pick(ZODIACS, nick.length),
     pick(['學生', '工程師', '設計師', '服務業'], nick.length),
     pick(['台大', '成大', '政大', '中山'], nick.length),
     pick(['攝影、旅行', '看電影、聽音樂', '打球、睡覺'], nick.length));
@@ -683,13 +688,26 @@ for (const [ui, [name]] of [...USERS, ...EXTRA_USERS].entries()) {
 // 那一格在每個人的站上都是空的，首頁的背景音樂開關也就沒有意義。
 // 用 archive.org 的公眾領域錄音（Internet Archive 的 Open Audio，可自由使用）。
 {
-  const TRACKS = [
-    'https://archive.org/download/78_the-blue-danube-waltz_johann-strauss/The%20Blue%20Danube%20Waltz.mp3',
-    'https://archive.org/download/CanonInDMajor/Canon%20in%20D%20Major.mp3',
-    'https://archive.org/download/MoonlightSonata_755/MoonlightSonata.mp3',
+  // ⚠ **一定要先驗過再存**。上一版直接寫死三個 archive.org 的網址，
+  // 結果全部回 403 + text/html，Chrome 的 ORB 直接擋掉，
+  // 站上每一頁都多一個失敗請求，而且音樂盒根本放不出聲音。
+  // 這跟之前照片全變色塊是同一類錯誤：沒驗證就當它會動。
+  const CANDIDATES = [
+    'https://upload.wikimedia.org/wikipedia/commons/c/c8/Example.ogg',
   ];
+  const TRACKS = [];
+  for (const url of CANDIDATES) {
+    try {
+      const r = await fetch(url, { method: 'HEAD', redirect: 'follow',
+                                   signal: AbortSignal.timeout(15000) });
+      const ct = r.headers.get('content-type') || '';
+      if (r.ok && /^(audio|application\/ogg)/.test(ct)) TRACKS.push(url);
+      else console.log(`  音樂盒略過（HTTP ${r.status} ${ct}）：${url}`);
+    } catch (e) { console.log(`  音樂盒略過（連不到）：${url}`); }
+  }
+  if (!TRACKS.length) console.log('  沒有可用的音樂網址，音樂盒留空');
   let n = 0;
-  for (const [ui, [name]] of [...USERS, ...EXTRA_USERS].entries()) {
+  for (const [ui, [name]] of (TRACKS.length ? [...USERS, ...EXTRA_USERS] : []).entries()) {
     if (ui % 3) continue;                       // 三個人裡一個有音樂盒
     await run('UPDATE users SET music=? WHERE id=?',
       TRACKS.slice(0, 1 + (ui % TRACKS.length)).join('\n'), uid[name]);

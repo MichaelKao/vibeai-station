@@ -230,5 +230,10 @@ document.addEventListener('click',function(e){
 </script>
 <% } %>
 
+<%# ⚠ 側欄 li#friendlist 那顆下拉（「去逛好友的留言板」）目前是空的：
+    partials/side.ejs 讀的 local 叫 `friends`，這條 route 送出來的叫 `gbFriends`，
+    兩邊名字對不上。這裡不從 view 硬接，因為 side.ejs 用同一個 `friends`
+    同時決定要不要印「好友連結」那一格——接上去下拉會活，但留言板側欄會多出
+    一格原版沒有的 35 筆好友清單。根在共用檔，留給 side.ejs／route 統一處理。 %>
 <%- include('partials/gbfoot') %>
 <%- include('partials/foot2012in') %>

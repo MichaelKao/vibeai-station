@@ -1,0 +1,141 @@
+/* 響應式圖層 —— 原站沒有這個東西
+ * ===========================================================================
+ * 2012 年的無名小站是 **970px 固定寬**：視窗一縮小就出現橫向捲軸，
+ * 導覽列那顆「手機(NEW)」連到的是另一個獨立的行動版活動頁
+ * （tw.wretch.campaign.yahoo.net/2011mobilecam/），不是響應式版面。
+ *
+ * 所以這一整支是 WRETCH_2012.md §3-A 意義下的**刻意偏離**：使用者要求
+ * 「無名有的功能我要有，沒有的我也要有」，RWD 屬於後者。
+ *
+ * ── 為什麼獨立成一支、而且只在窄視窗生效 ──────────────────────────────
+ * 每一條規則都包在 @media (max-width: 999px) 裡。
+ * **1000px 以上一條都不生效**，桌機看到的版面與原站逐像素相同，
+ * tools/fidelity.mjs 與既有的幾何量測完全不受影響。
+ * 斷點選 999 是因為版面本體 970px ＋ 左右各 10px 邊距 = 990，
+ * 再留一點捲軸的餘裕。
+ *
+ * 載入順序必須是**最後一支**（在版型與各服務的偏離層之後），
+ * 才蓋得過那些寫死的 px 寬度。見 views/partials/head2012*.ejs。
+ *
+ * ── 手法 ──────────────────────────────────────────────────────────────
+ * 原站的版面是「固定寬 + float 分欄 + table 排版」，這三種在窄螢幕都會爆。
+ * 對應處理：
+ *   固定寬   width:970px → max-width:100%
+ *   float    .main/.side 取消 float 改直向堆疊
+ *   table    相簿與名片是真的 <table>，讓它可以橫向捲而不是把整頁撐爛
+ *   圖片     一律 max-width:100%，不然照片會頂出容器
+ */
+
+@media (max-width: 999px) {
+
+  /* ── 0. 全站 ──────────────────────────────────────────────────────
+   * ⚠ 這裡**刻意不寫** html{overflow-x:hidden}。
+   * 那一行會讓 document.scrollWidth 等於視窗寬，量測工具就再也量不到橫向溢出——
+   * 版面還是壞的，只是看不見了，而且內容會被裁掉。
+   * 寧可讓它露出來被 tools/uicheck.mjs 抓到，然後真的去修那個寬度。 */
+  img, video, iframe { max-width: 100%; height: auto; }
+
+  /* 各種寫死 px 寬的容器。清單是 uicheck 在 375/768px 下實際量出來的，
+     不是憑印象列的——每加一批就重跑一次，直到不再報超寬。 */
+  .bd, .hd, .ft,
+  #wfp-footer, #wfp-inner-search, #wfp-universal-footer, #scrb-panel,
+  #container1, #container2, #main2, #links, #links2, #banner {
+    width: auto !important; max-width: 100%; box-sizing: border-box;
+  }
+
+  /* ── 1. 站台外框（首頁／相簿總站／網誌總站／影音／嘀咕／揪團） ────── */
+  #wrapper, #lower-wrapper, #bg-wrapper {
+    width: auto !important;
+    max-width: 100%;
+    padding-left: 8px; padding-right: 8px;
+    box-sizing: border-box;
+  }
+  /* 640 + 300 的雙欄改直向堆疊 */
+  .main, .side {
+    float: none !important;
+    width: auto !important;
+    margin-left: 0 !important; margin-right: 0 !important;
+  }
+  .side { margin-top: 12px; }
+  .mod, #wfp-cover.mod { width: auto !important; max-width: 100%; }
+
+  /* 首頁的頁首與導覽列：天空底圖固定 970 寬，讓它縮。
+     選擇器是實際量出來的（uicheck 在 375/768px 下報「超寬元素」報出來的那幾個），
+     不是猜的：#wfp-universal-header / #wfp-navigation / .belt / .title。 */
+  .hd, #wfp-header, nav, #nav,
+  #wfp-universal-header, #wfp-navigation, #wfp-search,
+  .belt, .title, #wfp-cover, #wfp-featured, #wfp-today, #wfp-celebrity {
+    width: auto !important; max-width: 100%; box-sizing: border-box;
+  }
+  nav ul, #nav ul { display: flex; flex-wrap: wrap; }
+  nav li, #nav li { float: none !important; }
+
+  /* 今日主題那疊照片是絕對定位的，窄螢幕會飛出去——改成正常流 */
+  #wfp-cover .stack { height: auto !important; }
+  #wfp-cover .stack .block,
+  #wfp-cover .stack .gallery {
+    position: static !important;
+    width: auto !important; height: auto !important;
+    margin: 8px 0 !important;
+  }
+  #wfp-cover .stack .block a { width: auto !important; height: auto !important; }
+
+  /* 熱門相簿的格子：原本是固定寬並排，改成自動換行 */
+  #wfp-featured .featured-photos ul { display: flex; flex-wrap: wrap; }
+  #wfp-featured .featured-photos li { float: none !important; width: auto !important; }
+
+  /* 分享列是絕對定位的浮層，窄螢幕會蓋住內容 */
+  .wfp-sharing { position: static !important; width: auto !important; visibility: visible; }
+
+  /* ── 2. 個人小站外框（留言板／名片／好友／MyPage 家族，原本 958px） ── */
+  #hugewrapper, #bigcontainer, #container, #main, #content, #sidebar {
+    width: auto !important;
+    max-width: 100%;
+    box-sizing: border-box;
+  }
+  #content, #sidebar { float: none !important; margin: 0 !important; }
+  #sidebar { margin-top: 12px !important; }
+
+  /* 好友頁是流動寬 + 左欄固定 360／右邊 margin-left:375，窄螢幕會疊在一起 */
+  #friendListDiv, #num_friends { margin-left: 0 !important; }
+  #header, #boxProfile { width: auto !important; float: none !important; }
+
+  /* ── 3. 相簿與名片是真的 <table> 排版 ──────────────────────────────
+   * 相簿頁整頁是 <table width="700">、名片是 <table width="600">，
+   * 這種寫死的寬度在窄螢幕會直接把頁面撐爆（uicheck 在 375px 量到三個 700px 的表格）。
+   * 不硬拆表格結構——那會動到 1:1 的骨架、還原度會掉。
+   * 改成讓表格自己縮，欄位由內容決定。 */
+  table[width], table {
+    max-width: 100% !important;
+    width: auto !important;
+    table-layout: auto;
+  }
+  /* 縮圖列那種一排五格的，改成可以換行 */
+  #ad_square, #ad_square tbody, #ad_square tr { display: block; }
+  #ad_square td { display: inline-block; width: auto !important; }
+
+  /* ── 4. kukubar 上下兩條固定列 ──────────────────────────────────── */
+  #kukubar-upper, #kukubar-lower { width: auto !important; max-width: 100%; }
+  #kukubar-upper .right-side, #kukubar-lower .right-side { display: none; }
+
+  /* ── 5. 表單：輸入框不要頂出容器 ─────────────────────────────────── */
+  input[type=text], input[type=password], input[type=email],
+  input[type=number], input[type=date], textarea, select {
+    max-width: 100%; box-sizing: border-box;
+  }
+}
+
+/* 真正的窄螢幕（手機直立）再收一次 */
+@media (max-width: 599px) {
+  /* 導覽列六顆擠成兩排 */
+  nav li a, #nav li a { padding-left: 8px; padding-right: 8px; font-size: 12px; }
+
+  /* 相簿縮圖格：原本一排五格 120px，手機改一排兩格 */
+  #ad_square td, .grid, .gridclass { display: inline-block; width: 46% !important; }
+
+  /* 好友卡 110×155 一排兩張 */
+  #friendListDiv ol li { width: 46% !important; margin-right: 2% !important; }
+
+  /* 名片那種「欄位:值」兩欄表，窄螢幕改成上下 */
+  .w2-card td.sidetitle, .w2-card td.side { display: block; width: auto !important; text-align: left; }
+}

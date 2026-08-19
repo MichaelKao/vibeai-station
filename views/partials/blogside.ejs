@@ -30,7 +30,10 @@
   const curYm     = locals.ym || '';
   const curK      = locals.k  || '';
   const curInBody = !!locals.inBody;
-  const tbs       = locals.trackbacks || [];
+  /* 側欄的「最新引用」用 sideTbs，不能用 trackbacks——
+     單篇文章頁自己也傳一個 trackbacks（那一篇的引用清單），
+     而它展開在 blogSide() 之後，同名會把側欄這份整個蓋掉。 */
+  const tbs       = locals.sideTbs || [];
   const wk        = ['日','一','二','三','四','五','六'];
   const wkAbbr    = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
   const IMG       = '/img/wretch2012/blog';

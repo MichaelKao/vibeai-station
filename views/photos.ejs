@@ -22,9 +22,10 @@
      說明列的字級：這一頁是 font.small-e（11px Verdana），
      相簿列表頁是 font.small-c（12px 新細明體）——兩頁本來就不一樣，各自照抄。
 
-     【偏離】#photowall 的 Mosaic / Waterfall 原本指向 album/display.php 的兩種
-     相片牆（存檔 album_display_angel.html / album_display_taylor.html）。
-     本站沒有做這兩頁，兩顆都接到幻燈片 /:name/album/:id/slide。
+     #photowall 的 Mosaic / Waterfall 原本指向 album/display.php 的兩種相片牆
+     （存檔 album_display_angel.html / album_display_taylor.html）。本站已經有
+     這兩頁（views/photowall.ejs，route 是 /:name/album/:id/wall?style=…），
+     所以兩顆各自接回自己那一種——之前兩顆都接幻燈片是相片牆還沒做時的暫代。
 
      EJS 用 with(locals)：內部變數加 ph 前綴，避免和 local 撞名（TDZ）。 */
 
@@ -85,12 +86,12 @@
             <span>Photo Wall&nbsp;(VIP only):&nbsp;</span>
             <div class="tooltip"><span><a target="_blank" href="/help">僅相簿主人為VIP會員時才有此功能喔！</a></span></div>
         </div>
-        <a class="mosazic" href="<%= phPath %>/slide">Mosaic            <div class="overlay">
+        <a class="mosazic" href="<%= phPath %>/wall?style=angel">Mosaic            <div class="overlay">
                 <img src ="/img/wretch2012/album/mosazic.jpg"/>
             </div>
         </a>
         <span class="separator">&nbsp;|&nbsp;</span>
-        <a class="waterfall" href="<%= phPath %>/slide">Waterfall            <div class="overlay">
+        <a class="waterfall" href="<%= phPath %>/wall">Waterfall            <div class="overlay">
                 <img src ="/img/wretch2012/album/waterfall.jpg" />
             </div>
         </a>

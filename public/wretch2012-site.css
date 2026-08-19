@@ -110,3 +110,112 @@ html body #bg-wrapper #wfp-footer #wfp-lang { top: 24px; }   /* 跟著上移，�
 .w2-pager a:hover   { background: #F4F4F4; }
 
 .w2-blog-n          { color: #999; font-size: 93%; }
+
+/* --- 5. 影音／嘀咕／揪團三個總站 -----------------------------------------
+ * views/videos.ejs、digus.ejs、joins.ejs、join.ejs 這四頁在原站完全沒有存檔，
+ * 是照 WRETCH_2012.md §3-A 自製的，版面沿用上面第 2、4 段那組元件
+ * （.mod / .w2-auth / .w2-bloglist / .w2-pager）。
+ *
+ * 但當時有幾個 class 只寫在 HTML 裡、CSS 從來沒補，用瀏覽器實測就看得到：
+ *   .w2-h3       沒有任何規則 → 量到 margin 0，「參加的人（2）」跟上下兩段黏成一片
+ *   .w2-card     沒有任何規則 → 兩欄表沒有欄寬也沒有行距
+ *   .w2-joinbtn  沒有任何規則 → 按鈕上下都是 0，卡在表格與下一段標題中間
+ *   .w2-joinform 沒有任何規則 → 側欄表單是瀏覽器預設外觀，跟登入頁像兩個站
+ * 數值全部沿用本檔既有的那幾組（#F0F0F0 細線／#666 欄名／#999 說明／
+ * #CECBCE 輸入框邊框／3px 圓角），不新增視覺語言。
+ */
+.w2-h3          { margin: 18px 0 8px; padding-bottom: 6px;
+                  border-bottom: 1px solid #F0F0F0;
+                  font-size: 116%; font-weight: bold; color: #000; }
+.w2-note        { color: #999; font-size: 93%; }
+
+/* 兩欄式資料表（揪團詳情）。欄名固定 6em 右對齊，值欄吃剩下的寬度。
+   注意欄位 class 是 w2-card-k / w2-card-v——不能用 sidetitle / side，
+   那是名片頁那一套表格的名字，而 wretch2012.css 的 .side 是「右邊 300px 側欄」，
+   掛到 <td> 上會讓整欄浮動並鎖死 300px（見 views/join.ejs 的註解）。 */
+.w2-card        { width: 100%; border-collapse: collapse; }
+.w2-card .w2-card-k { width: 6em; padding: 4px 10px 4px 0; color: #666;
+                      white-space: nowrap; vertical-align: top; line-height: 1.8; }
+.w2-card .w2-card-v { padding: 4px 0; line-height: 1.8; }
+
+.w2-joinbtn       { margin: 14px 0 0; }
+.w2-joinbtn form  { display: inline; }
+
+/* 側欄的發起表單：欄位撐滿側欄，輸入框外觀比照 .w2-auth-form */
+.w2-joinform p    { margin: 0 0 8px; }
+.w2-joinform input[type=text],
+.w2-joinform input[type=number],
+.w2-joinform textarea {
+  width: 100%; box-sizing: border-box; padding: 4px 6px;
+  border: 1px solid #CECBCE; background: #FFF; border-radius: 3px;
+  font-family: inherit; font-size: 100%;
+}
+.w2-joinform textarea { resize: vertical; }
+
+/* 影音縮圖來源是 YouTube 的 mqdefault（320×180），塞進 85×85 的格子會被壓扁成
+   矮胖的樣子。裁切而不是變形，其餘清單的縮圖本來就是 90×90 不受影響。 */
+.w2-videolist .thumbnail img { object-fit: cover; }
+
+/* --- 6. 排行／搜尋／服務說明 ---------------------------------------------
+ * 這三頁（views/rank.ejs、search.ejs、help.ejs）原本吃 partials/head，
+ * 也就是上一版 2005 綠版的 760px 兩欄版型。WRETCH_2012.md §1-B 定案
+ * 「整站統一 2012，不與 2005 混搭」，而它們正好是 2012 外框最常連到的三頁
+ * （頁首搜尋框、右上角服務說明、頁尾五條連結、首頁「我的」的排行榜），
+ * 所以改成 head2012 外框。下面是這三頁多用到的幾個清單樣式，
+ * 數值一律沿用本檔上面既有的那幾組（#F0F0F0 細線／#999 次要文字／
+ * #C9C8C8 縮圖框，後者取自 wretch2012.css 的 .featured-photos li）。
+ */
+
+/* 名次清單（站友人氣榜、搜尋到的站友） */
+.w2-ranklist        { margin: 0; padding: 0; list-style: none; }
+.w2-ranklist li     { overflow: hidden; padding: 5px 0; line-height: 20px;
+                      border-top: 1px solid #F0F0F0; }
+.w2-ranklist li:first-child { border-top: 0; }
+.w2-ranklist .no    { float: left; width: 24px; margin-right: 8px;
+                      color: #999; text-align: right; }
+.w2-ranklist .ava   { float: left; margin-right: 8px; }
+.w2-ranklist .ava img { display: block; }
+/* 右邊那欄（人氣數字／相簿網誌留言板三個連結）先浮動，左邊的名字才會
+   在剩下的寬度裡自然截斷，不會把數字擠到下一行。 */
+.w2-ranklist .num   { float: right; margin-left: 12px; color: #999; }
+.w2-ranklist .num a { margin-left: 8px; }
+
+/* 相簿方格。108×108 是相簿總站 .album_list li 的實測縮圖尺寸
+   （見 views/albums.ejs 檔頭），沿用同一個數字。
+   .main 是 640px、.mod 兩側各 1px 框、.bd 左右各 20px padding → 內寬 598，
+   一列五格：5×108 + 4×12 = 588，塞得下。 */
+.w2-albumgrid       { overflow: hidden; margin: 0; padding: 0; list-style: none; }
+.w2-albumgrid li    { float: left; width: 108px; margin: 0 12px 14px 0;
+                      text-align: center; line-height: 1.4; }
+.w2-albumgrid li:nth-child(5n) { margin-right: 0; }
+.w2-albumgrid img   { display: block; width: 108px; height: 108px;
+                      object-fit: cover; border: 1px solid #C9C8C8;
+                      margin-bottom: 4px; }
+.w2-albumgrid .t    { display: block; height: 2.8em; overflow: hidden; }
+/* 一行到底不折——折了整排格子的高度就參差不齊 */
+.w2-albumgrid .n    { display: block; color: #999; font-size: 93%;
+                      white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* 沒有縮圖的文章清單（排行榜與搜尋結果只查了標題與內文，沒有帶封面圖）。
+   .w2-bloglist .content 本來要留 97px 給縮圖，這裡把那個縮排收掉。 */
+.w2-bloglist.w2-nothumb .content { margin-left: 0; }
+.w2-bloglist.w2-nothumb .meta .no { margin-right: 6px; color: #999; }
+
+.w2-more            { margin: 10px 0 0; text-align: right; }
+.w2-more a          { color: #999; font-size: 93%; }
+
+.w2-searchform      { margin: 0 0 12px; }
+.w2-searchform input[type=text] {
+  width: 320px; height: 34px; line-height: 34px; padding: 0 8px;
+  border: 1px solid #CECBCE; background: #FFF; font-size: 108%;
+  border-radius: 3px; vertical-align: middle;
+}
+.w2-searchform .w2-btn { vertical-align: middle; }
+
+/* 服務說明的條列。原本是一行一個「・」加 <br>，改成真的 <ul>。
+   段落間距只在 .w2-help 裡生效——YUI reset 把 p 的 margin 歸零了，
+   但不能全站放開，其他頁的 p 有自己的間距（例如 .w2-blog-count）。 */
+.w2-helplist        { margin: 0 0 4px; padding: 0; list-style: none; }
+.w2-helplist li     { padding: 3px 0 3px 12px; line-height: 1.8;
+                      background: url(/img/wretch2012/index/ico_fp_dot.png) no-repeat 0 11px; }
+.w2-help p          { margin: 0 0 8px; line-height: 1.8; }

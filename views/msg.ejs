@@ -3,7 +3,12 @@
   /* 通用訊息頁：找不到頁面／沒有權限／好友限定／空間不足／已送出檢舉。
      從 /:name/… 進來時 res.locals.u 有值 → 700px 個人小站外框（WRETCH_DOM.md 第 3 節）；
      從站台層（404、500、/report）進來時 u 為 null → 760px 首頁綠外框（第 7 節）。 */
-  const backUrl = (typeof back !== 'undefined' && back) ? back : '/';
+  /* 「回上一頁」的落點。路由多半會帶 back 進來；沒帶的時候（例如
+     src/auth.js 的 requireOwner 只給 title/msg）本來一律回首頁，
+     但使用者是在別人的小站上被擋下來的，把他丟回站台首頁等於要他重走一遍。
+     所以有 u 就退回那個小站的門口，只有站台層的訊息才回 /。 */
+  const backUrl = (typeof back !== 'undefined' && back) ? back
+                : (u ? '/' + u.name : '/');
 %>
 <% if (u) { %>
 <%- include('partials/sitetop') %>

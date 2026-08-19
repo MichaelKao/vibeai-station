@@ -1,139 +1,139 @@
-<%- include('partials/head',{title:'人氣排行',layout:'index'}) %>
+<%
+  /* 人氣排行 /rank
+     ─────────────────────────────────────────────────────────────
+     這一頁原本吃 partials/head（2005 綠版 760px 兩欄），是上一輪 2005 版留下來的。
+     WRETCH_2012.md §1-B 已經定案「整站統一 2012，不與 2005 的橘／藍混搭」，
+     而這一頁從 2012 的外框到處連得到——頁首「目前共 N 位站友」那條、
+     頁尾 RSS 列的「名家專欄」、首頁「我的」清單的「排行榜」、
+     影音／嘀咕／揪團三個總站的側欄——點過去整個版面換成綠色 2005，
+     是全站最刺眼的一處混搭。改成跟 /video /digu /join 同一套外框與元件。
 
-<%# 人氣排行：2005 首頁綠版版型（WRETCH_DOM.md 第 7 節）760px 兩欄 %>
-<table width="760" border="0" cellpadding="0" cellspacing="0" align="center"><tr>
-  <td class="side1"></td>
-  <td id="banner1">
-    <div id="banner">
-      <a href="/"><img id="sitelogo" src="<%= SITE_LOGO %>" alt="<%= SITE_NAME %>"></a>
-      <div id="pageheader">
-        <h1><a href="/"><%= SITE_NAME %></a></h1>
-        <span class="description"><%= SITE_DESC %></span>
+     原站的 www.wretch.cc/rank/ 沒有任何存檔，所以照 §3-A：用站台既有的
+     .mod / .w2-auth / .w2-bloglist / .w2-ranklist 組出來，不自創新的視覺。
+
+     資料來自 src/server.js 的 app.get('/rank')：users / albums / posts。
+
+     ⚠ posts 是 `ORDER BY p.views DESC` 撈出來的，但這一頁沿用無名的「得點」
+     （瀏覽 ×10 ＋ 推薦 ×50）當名次數字，兩者不同調——照原順序印出來會看到
+     第 2 名 187940、第 3 名 189650 這種數字倒著長的畫面。
+     排序的 SQL 在 src/server.js（共用檔，不在這一輪能改的範圍），
+     所以在 view 這一層依實際顯示的數字重排；撈出來的三十筆不變。 */
+  const rkScore = p => p.views * 10 + p.likes * 50;
+  const rkPosts = posts.slice().sort((a, b) => rkScore(b) - rkScore(a));
+%>
+<%- include('partials/head2012', { title: '人氣排行 - 無名小站' }) %>
+
+  <div class="bd big-bd clearfix">
+    <div class="main">
+
+      <div class="mod w2-auth" id="users">
+        <div class="hd"><h2>站友人氣榜</h2></div>
+        <div class="bd">
+          <% if (!users.length) { %><p>還沒有站友，快來申請第一個帳號！</p><% } %>
+          <ol class="w2-ranklist">
+            <% users.forEach((x, i) => { %>
+            <li>
+              <span class="no"><%= i + 1 %></span>
+              <a class="ava" href="/<%= x.name %>"><img src="<%= x.avatar %>" width="20" height="20" alt="<%= x.nick %>"></a>
+              <span class="num">累積人氣 <%= x.visits %></span>
+              <a href="/<%= x.name %>"><%= x.nick %></a>
+              <span class="w2-blog-n">(<%= x.name %>)</span>
+            </li>
+            <% }) %>
+          </ol>
+        </div>
       </div>
+
+      <div class="mod w2-auth" id="albums">
+        <div class="hd"><h2>熱門相簿</h2></div>
+        <div class="bd">
+          <% if (!albums.length) { %><p>還沒有公開相簿。</p><% } %>
+          <ul class="w2-albumgrid">
+            <% albums.forEach((a, i) => { %>
+            <li>
+              <a href="/<%= a.uname %>/album/<%= a.id %>" title="<%= a.title %>">
+                <%# 相簿封面有時候存的是原圖（src/server.js 的 /photo/:pid/cover），
+                    比例不一定是正方，所以用 CSS 裁切而不是硬拉成 108×108。 %>
+                <img src="<%= a.cover || (CDN + '/icon/user_cover.gif') %>" alt="<%= a.title %>">
+              </a>
+              <a class="t" href="/<%= a.uname %>/album/<%= a.id %>"><%= a.title %></a>
+              <%# 一格只有 108px 寬。原本寫「第 N 名・1234 人次」，實測會折成兩行，
+                  而且只有部分格子會折，整排的基線就參差不齊。名次改成前綴的序號。 %>
+              <span class="n"><%= i + 1 %>. <%= a.views %> 人次</span>
+              <a class="n" href="/<%= a.uname %>"><%= a.nick %></a>
+            </li>
+            <% }) %>
+          </ul>
+          <p class="w2-more"><a href="/albums">更多相簿</a></p>
+        </div>
+      </div>
+
+      <div class="mod w2-auth" id="posts">
+        <div class="hd"><h2>熱門網誌</h2></div>
+        <div class="bd">
+          <% if (!posts.length) { %><p>還沒有文章。</p><% } %>
+          <ol class="w2-bloglist w2-nothumb">
+            <% rkPosts.forEach((p, i) => { %>
+            <li>
+              <div class="content">
+                <p class="meta">
+                  <span class="no"><%= i + 1 %></span>
+                  <a class="uname" href="/<%= p.uname %>"><%= p.nick %></a>
+                  <span class="topic">得點 <%= rkScore(p) %></span>
+                </p>
+                <h3><a class="skin-main-link" href="/<%= p.uname %>/blog/<%= p.id %>"><%= p.title %></a></h3>
+                <p class="description"><%= p.body.length > 80 ? p.body.slice(0, 80) + '…' : p.body %></p>
+              </div>
+            </li>
+            <% }) %>
+          </ol>
+          <p class="w2-more"><a href="/blogs">更多網誌</a></p>
+        </div>
+      </div>
+
     </div>
-  </td>
-  <td class="side2"></td>
-</tr></table>
-
-<table id="bigtab" width="760" border="0" cellspacing="0" cellpadding="0" align="center"><tr>
-  <td class="side1"></td>
-
-  <%# 左欄 505px %>
-  <td width="505" valign="top" class="album_content">
-
-    <a name="users" id="users"></a>
-    <div class="album_title"><a href="/rank">人氣排行</a></div>
     <div class="side">
-      <% if(!users.length){ %><span class="gray">還沒有站友</span><% } %>
-      <table width="100%" border="0" cellpadding="2" cellspacing="0">
-      <% users.forEach((x,i)=>{ %>
-        <tr>
-          <td width="26" align="right"><span class="point_grade"><%= i+1 %></span></td>
-          <td width="24"><a href="/<%= x.name %>"><img src="<%= x.avatar %>" width="20" height="20" alt="<%= x.nick %>"></a></td>
-          <td><a href="/<%= x.name %>"><%= x.nick %></a> (<%= x.name %>)</td>
-          <td align="right">累積人氣: <span class="point_grade"><%= x.visits %></span></td>
-        </tr>
-      <% }) %>
-      </table>
+
+      <div class="mod w2-auth-side">
+        <div class="hd"><h2>排行分類</h2></div>
+        <div class="bd">
+          <ul>
+            <li><a href="#users">站友人氣榜</a></li>
+            <li><a href="#albums">熱門相簿</a></li>
+            <li><a href="#posts">熱門網誌</a></li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="mod w2-auth-side">
+        <div class="hd"><h2>逛逛別的</h2></div>
+        <div class="bd">
+          <ul>
+            <li><a href="/albums">相簿總站</a></li>
+            <li><a href="/blogs">網誌總站</a></li>
+            <li><a href="/video">影音</a></li>
+            <li><a href="/join">揪團</a></li>
+            <li><a href="/digu">嘀咕</a></li>
+            <li><a href="/help">服務說明</a></li>
+          </ul>
+        </div>
+      </div>
+
+      <% if (!me) { %>
+      <div class="mod w2-auth-side">
+        <div class="hd"><h2>一個帳號，多項功能</h2></div>
+        <div class="bd">
+          <p><a href="/register">免費註冊</a>之後就有自己的相簿、網誌與留言板。</p>
+          <p class="w2-auth-cta"><a class="w2-btn" href="/login">會員登入</a></p>
+        </div>
+      </div>
+      <% } %>
+
     </div>
+  </div>
 
-    <a name="albums" id="albums"></a>
-    <div class="album_title"><a href="/albums">熱門相簿</a></div>
-    <% if(!albums.length){ %><div class="side"><span class="gray">還沒有公開相簿</span></div><% } %>
-    <table border="0" cellspacing="0" cellpadding="0">
-    <% for(let i=0;i<albums.length;i+=3){ const row=albums.slice(i,i+3); %>
-      <tr>
-      <% row.forEach((a,j)=>{ %>
-        <% if(j>0){ %><td width="10"></td><% } %>
-        <td class="album_grid" width="120" height="150" align="center">
-          <a href="/<%= a.uname %>/album/<%= a.id %>"><% if(a.cover){ %><img src="<%= a.cover %>" width="120" height="120" alt="<%= a.title %>"><% } else { %><img src="<%= CDN %>/icon/user_cover.gif" width="85" height="85" alt="<%= a.title %>"><% } %></a>
-        </td>
-      <% }) %>
-      </tr>
-      <tr>
-      <% row.forEach((a,j)=>{ %>
-        <% if(j>0){ %><td width="10"></td><% } %>
-        <td class="album_grid1" width="120" height="60" align="center" valign="top">
-          <span class="album_font_id"><a href="/<%= a.uname %>"><%= a.nick %></a></span><br>
-          <span class="album_font_title"><a href="/<%= a.uname %>/album/<%= a.id %>"><%= a.title %></a></span><br>
-          <span class="album_font_desc">第 <%= i+j+1 %> 名・<%= a.views %> 人次</span>
-        </td>
-      <% }) %>
-      </tr>
-    <% } %>
-    </table>
-    <div align="right"><span class="blog_font_desc"><a href="/albums">更多相簿..</a></span></div>
+</div><!-- /#wrapper -->
 
-    <a name="posts" id="posts"></a>
-    <div class="blog_title"><a href="/blogs">熱門網誌</a></div>
-    <% if(!posts.length){ %><div class="side"><span class="gray">還沒有文章</span></div><% } %>
-    <table border="0" cellspacing="0" cellpadding="0">
-    <% posts.forEach((p,i)=>{ %>
-      <tr>
-        <td class="blog_grid" width="120" height="120" align="center" valign="middle">
-          <span class="blog_font_id"><%= i+1 %></span>
-        </td>
-        <td class="blog_grid1" width="380" valign="top">
-          <span class="blog_font_id"><a href="/<%= p.uname %>"><%= p.nick %></a></span><br>
-          <span class="blog_font_arttitle"><a href="/<%= p.uname %>/blog/<%= p.id %>"><%= p.title %></a></span><br>
-          <span class="blog_font_desc"><%= p.body.length>80 ? p.body.slice(0,80)+'…' : p.body %>
-            <a href="/<%= p.uname %>/blog/<%= p.id %>">(繼續閱讀)</a></span>
-          <div align="right"><span class="blog_point_title">得點: </span><span class="blog_point_grade"><%= p.views*10 + p.likes*50 %></span></div>
-        </td>
-      </tr>
-    <% }) %>
-    </table>
-    <div align="right"><span class="blog_font_desc"><a href="/blogs">更多網誌..</a></span></div>
-
-  </td>
-
-  <td width="5"></td>
-
-  <%# 右欄 160px %>
-  <td width="160" valign="top">
-    <div class="sidetitle"><%= SITE_NAME %></div>
-    <div class="side">
-      <a href="/albums">相簿</a><br>
-      <a href="/blogs">網誌</a><br>
-      <a href="/search">搜尋</a><br>
-      <a href="/help">服務說明</a>
-    </div>
-
-    <div class="sidetitle">人氣排行</div>
-    <div class="side">
-      <a href="#users">站友</a><br>
-      <a href="#albums">熱門相簿</a><br>
-      <a href="#posts">熱門網誌</a>
-    </div>
-
-    <% if(!me){ %>
-    <div class="sidetitle">一個帳號，多項功能</div>
-    <div class="side">
-      <a href="/register"><img src="<%= CDN %>/icon/joinfree_index.gif" width="150" height="60" alt="免費註冊"></a>
-      個人相簿<br>個人網誌 (BLOG,部落格)<br>個人留言板
-    </div>
-
-    <div class="sidetitle">會員登入</div>
-    <div class="side"><form method="post" action="/login">
-      帳號: <input name="name" size="10"><br>
-      密碼: <input name="pass" type="password" size="10"><br>
-      <input type="submit" class="btn" value="登入">
-    </form></div>
-    <% } else { %>
-    <div class="sidetitle"><%= me.nick %> 的小站</div>
-    <div class="side">
-      <a href="/<%= me.name %>">MyPage</a><br>
-      <a href="/<%= me.name %>/album">相簿</a><br>
-      <a href="/<%= me.name %>/blog">網誌</a><br>
-      <a href="/<%= me.name %>/guestbook">留言板</a><br>
-      <a href="/<%= me.name %>/card">名片</a><br>
-      <a href="/<%= me.name %>/friends">好友</a><br>
-      <a href="/<%= me.name %>/settings">個人設定</a>
-    </div>
-    <% } %>
-  </td>
-
-  <td class="side2"></td>
-</tr></table>
-
-<%- include('partials/foot') %>
+<div id="lower-wrapper" class="clearfix">
+  <div class="bd clearfix"></div>
+<%- include('partials/foot2012') %>

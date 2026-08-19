@@ -1,144 +1,158 @@
-<%- include('partials/head',{title:'服務說明',layout:'index'}) %>
+<%
+  /* 服務說明 /help
+     ─────────────────────────────────────────────────────────────
+     跟 views/rank.ejs 同一個理由（見那一支的檔頭）：這一頁原本吃
+     partials/head（2005 綠版）。它是 2012 外框每一頁右上角「服務說明」
+     與導覽列第六顆「手機」的目的地，還有頁尾七條連結裡的五條，
+     是全站被連到最多次的一頁，卻是唯一還長 2005 樣子的，所以改成 2012。
 
-<%# 服務說明：2005 首頁綠版版型（WRETCH_DOM.md 第 7 節）760px 兩欄
-    #rss 是站台導覽行「RSS HOWTO」連過來的錨點 %>
-<table width="760" border="0" cellpadding="0" cellspacing="0" align="center"><tr>
-  <td class="side1"></td>
-  <td id="banner1">
-    <div id="banner">
-      <a href="/"><img id="sitelogo" src="<%= SITE_LOGO %>" alt="<%= SITE_NAME %>"></a>
-      <div id="pageheader">
-        <h1><a href="/"><%= SITE_NAME %></a></h1>
-        <span class="description"><%= SITE_DESC %></span>
+     內容也一起更正：原本寫「復刻 2005 年……相簿橘 #E48A41、網誌藍 #447AC4、
+     頁寬 700」，那是上一版（已移入 attic/wretch-2005/）的規格。
+     現在的目標版本是 2011–2013 關站前的最後版、版面 970px 置中
+     （WRETCH_2012.md 第 0 節的實測值），說明頁不能還在講舊的。
+
+     #rss 是 partials/head2012_site.ejs 與 partials/sitetop.ejs 的
+     「RSS HOWTO」連過來的錨點，id 不能改。 */
+%>
+<%- include('partials/head2012', { title: '服務說明 - 無名小站' }) %>
+
+  <div class="bd big-bd clearfix">
+    <div class="main">
+
+      <div class="mod w2-auth">
+        <div class="hd"><h2>服務說明</h2></div>
+        <%# w2-help 只是為了放開 <p> 的段落間距（YUI reset 把 p 的 margin 歸零） %>
+        <div class="bd w2-help">
+
+          <p>一個復刻無名小站的懷舊社群：相簿、網誌、留言板、名片、好友、誰來我家、
+             人氣計數器、音樂盒……<b>全部免費、不打廣告、沒有 VIP</b>。</p>
+          <p>版面依 2011–2013 年關站前最後版的存檔原始碼重建，
+             版面總寬 <b>970px 置中</b>、基礎字級 13px。</p>
+          <p><b>怎麼開始？</b> <a href="/register">免費註冊</a>一個帳號，
+             你的小站網址就是 <b>/你的帳號</b>。</p>
+
+          <div class="w2-h3" id="album">相簿</div>
+          <ul class="w2-helplist">
+            <li>可建立多本相簿，每本可設<b>封面、說明、站內分類、地區</b></li>
+            <li><b>密碼相簿</b>：設了密碼，別人要輸入才看得到（掛鑰匙圖示）</li>
+            <li><b>好友限定</b>：只有你加為好友的人看得到，也不會出現在相簿總站與搜尋</li>
+            <li>一次可上傳 20 張（每張 8MB 內），自動產生縮圖與 1024px 大圖</li>
+            <li>單張照片頁：第一張 | 上一張 | 下一張 | 最後一張，按 <b>C</b> 或方向鍵可快速翻頁</li>
+            <li><b>幻燈片</b>自動播放、<b>一頁瀏覽</b>整本大圖、照片可留迴響</li>
+            <li>相簿總站一頁 20 本，跟當年一樣</li>
+          </ul>
+
+          <div class="w2-h3" id="blog">網誌</div>
+          <ul class="w2-helplist">
+            <li>發表文章可設<b>分類、站內分類、心情、天氣、密碼</b></li>
+            <li>內文可用 [b]粗體[/b]、[i]斜體[/i]、[u]底線[/u]、[color=#f60]顏色[/color]、[img]網址[/img]，
+                網址會自動變連結，也可以直接<b>從自己的相簿點選插入照片</b></li>
+            <li>顏文字：:) XD ^^ T_T orz &lt;3 會自動變成圖示</li>
+            <li>側欄有<b>最新文章、文章分類、文章日曆、月份彙整、搜尋這個網誌、最新迴響、人氣指數、RSS</b></li>
+            <li>讀者可<b>迴響、推薦、收藏、引用</b>到自己的網誌；板主可逐則<b>板主回覆</b></li>
+          </ul>
+
+          <div class="w2-h3" id="gb">留言板・名片・好友</div>
+          <ul class="w2-helplist">
+            <li>留言板分成<b>留言板／系統訊息／我要留言</b>三個頁籤</li>
+            <li>訪客可留<b>悄悄話</b>，只有板主看得到（暱稱、主題、內容三處都會遮起來）</li>
+            <li><b>名片</b>：姓名、性別、生日、星座、血型、居住地、職業、學校、興趣、座右銘、MSN、個人網頁</li>
+            <li><b>好友</b>可分類（同學、同事、網友…自己命名），還有<b>好友動態</b>看大家的新文章</li>
+            <li>登入後去別人的小站會留下<b>誰來我家</b>足跡</li>
+          </ul>
+
+          <div class="w2-h3" id="more">影音・揪團・嘀咕</div>
+          <ul class="w2-helplist">
+            <%# 這三個服務原站有、但 archive.org 一頁存檔都沒有，是本站自製的
+                （WRETCH_2012.md §3-A 的刻意偏離），說明頁要講清楚它們能做什麼。 %>
+            <li><a href="/video">影音</a>：貼 YouTube 網址就收進自己的影音頁，總站看得到全站最新與最熱門</li>
+            <li><a href="/join">揪團</a>：開一個活動（標題、地點、時間、人數上限），其他人按參加</li>
+            <li><a href="/digu">嘀咕</a>：一句話動態，一則最多 140 字，總站是全站的時間軸</li>
+          </ul>
+
+          <div class="w2-h3" id="skin">個人化</div>
+          <ul class="w2-helplist">
+            <li><b>版面樣式</b>：8 種預設配色（經典橘、經典藍、甜心粉、草地綠、夢幻紫、酷炫黑、海洋藍、咖啡棕）</li>
+            <li><b>自訂 CSS</b>：想怎麼改就怎麼改，玩壞了清空即可復原</li>
+            <li><b>音樂盒</b>：一行一個 mp3 網址，可放整個播放清單，訪客能切歌</li>
+            <li><b>大頭貼</b>：90×90，跟當年一樣</li>
+            <li>以上都在<b>個人設定</b>（登入後從上方工具列進去）</li>
+          </ul>
+
+          <div class="w2-h3" id="rss">RSS HOWTO</div>
+          <p>RSS 是網誌的訂閱格式，訂閱之後不用一直回來按重新整理，新文章會自己送到閱讀器裡。</p>
+          <ul class="w2-helplist">
+            <li>每個小站的網誌都有一份 RSS，網址是 <b>/帳號/blog/rss</b></li>
+            <li>網誌頁與各個小站頁的右上角都有 <b>RSS</b> 連結，按右鍵複製網址即可</li>
+            <li>把網址貼進任何 RSS 閱讀器（Feedly、Inoreader、Thunderbird…）就訂閱完成</li>
+            <li>RSS 只會送出沒有上鎖的文章，密碼文章不會外流</li>
+            <% if (me) { %>
+            <li>你自己的訂閱網址：<a href="/<%= me.name %>/blog/rss">/<%= me.name %>/blog/rss</a></li>
+            <% } %>
+          </ul>
+
+          <div class="w2-h3" id="faq">常見問題</div>
+          <ul class="w2-helplist">
+            <li><b>要錢嗎？</b> 不用，永遠免費，也不會有廣告或 VIP。</li>
+            <li><b>空間多大？</b> 每人 500MB。快滿時相簿頁會顯示用量條。</li>
+            <li><b>忘記密碼？</b> 目前請聯絡站長協助。</li>
+            <li><b>想刪帳號？</b> 個人設定最下面有「永久刪除我的帳號」，會連照片一起清掉。</li>
+            <li><b>看到不當內容？</b> 每則留言與文章旁都有「檢舉」，站長會處理。</li>
+          </ul>
+
+          <div class="w2-h3" id="about">關於</div>
+          <p>本站與 Yahoo!／無名小站無任何關聯，名稱與 Logo 為 <%= SITE_NAME %> 自有，
+             純粹是對那個年代的致敬之作。請勿上傳侵權或不當內容。</p>
+
+        </div>
       </div>
+
     </div>
-  </td>
-  <td class="side2"></td>
-</tr></table>
-
-<table id="bigtab" width="760" border="0" cellspacing="0" cellpadding="0" align="center"><tr>
-  <td class="side1"></td>
-
-  <%# 左欄 505px %>
-  <td width="505" valign="top" class="album_content">
-
-    <div class="album_title"><a href="/help">服務說明</a></div>
     <div class="side">
-      一個復刻 2005 年台灣網路氛圍的懷舊社群：相簿、網誌、留言板、名片、好友、誰來我家、
-      人氣計數器、音樂盒……<b>全部免費、不打廣告、沒有 VIP</b>。<br>
-      版面配色與尺寸參考當年網站的存檔原始碼重建（相簿橘 #E48A41、網誌藍 #447AC4、頁寬 700）。<br>
-      <b>怎麼開始？</b> <a href="/register">免費註冊</a>一個帳號，你的小站網址就是 <b>/你的帳號</b>。
+
+      <div class="mod w2-auth-side">
+        <div class="hd"><h2>這一頁</h2></div>
+        <div class="bd">
+          <ul>
+            <li><a href="#album">相簿</a></li>
+            <li><a href="#blog">網誌</a></li>
+            <li><a href="#gb">留言板・名片・好友</a></li>
+            <li><a href="#more">影音・揪團・嘀咕</a></li>
+            <li><a href="#skin">個人化</a></li>
+            <li><a href="#rss">RSS HOWTO</a></li>
+            <li><a href="#faq">常見問題</a></li>
+            <li><a href="#about">關於</a></li>
+          </ul>
+        </div>
+      </div>
+
+      <% if (!me) { %>
+      <div class="mod w2-auth-side">
+        <div class="hd"><h2>一個帳號，多項功能</h2></div>
+        <div class="bd">
+          <p>個人相簿、個人網誌、個人留言板，<a href="/register">免費註冊</a>就有。</p>
+          <p class="w2-auth-cta"><a class="w2-btn" href="/login">會員登入</a></p>
+        </div>
+      </div>
+      <% } %>
+
+      <div class="mod w2-auth-side">
+        <div class="hd"><h2>逛逛別的</h2></div>
+        <div class="bd">
+          <ul>
+            <li><a href="/rank">人氣排行榜</a></li>
+            <li><a href="/albums">相簿總站</a></li>
+            <li><a href="/blogs">網誌總站</a></li>
+            <li><a href="/search">站內搜尋</a></li>
+          </ul>
+        </div>
+      </div>
+
     </div>
+  </div>
 
-    <div class="album_title">相簿</div>
-    <div class="side">
-      ・可建立多本相簿，每本可設<b>封面、說明、站內分類、地區</b><br>
-      ・<b>密碼相簿</b>：設了密碼，別人要輸入才看得到（掛鑰匙圖示）<br>
-      ・<b>好友限定</b>：只有你加為好友的人看得到，也不會出現在相簿總站與搜尋<br>
-      ・一次可上傳 20 張（每張 8MB 內），自動產生縮圖與 1024px 大圖<br>
-      ・單張照片頁：第一張 | 上一張 | 下一張 | 最後一張，按 <b>C</b> 或方向鍵可快速翻頁<br>
-      ・<b>幻燈片</b>自動播放、<b>一頁瀏覽</b>整本大圖、照片可留迴響<br>
-      ・相簿一頁 20 本（5×4），跟當年一樣
-    </div>
+</div><!-- /#wrapper -->
 
-    <div class="blog_title">網誌</div>
-    <div class="side">
-      ・發表文章可設<b>分類、站內分類、心情、天氣、密碼</b><br>
-      ・內文可用 [b]粗體[/b]、[i]斜體[/i]、[u]底線[/u]、[color=#f60]顏色[/color]、[img]網址[/img]，
-        網址會自動變連結，也可以直接<b>從自己的相簿點選插入照片</b><br>
-      ・顏文字：:) XD ^^ T_T orz &lt;3 會自動變成圖示<br>
-      ・側欄有<b>最新文章、文章分類、文章日曆、月份彙整、搜尋這個網誌、最新迴響、人氣指數、RSS</b><br>
-      ・讀者可<b>迴響、推薦、收藏、引用</b>到自己的網誌；板主可逐則<b>板主回覆</b>
-    </div>
-
-    <div class="album_title">留言板・名片・好友</div>
-    <div class="side">
-      ・留言板分成<b>留言板／系統訊息／我要留言</b>三個頁籤<br>
-      ・訪客可留<b>悄悄話</b>，只有板主看得到（暱稱、主題、內容三處都會遮起來）<br>
-      ・<b>名片</b>：姓名、性別、生日、星座、血型、居住地、職業、學校、興趣、座右銘、MSN、個人網頁<br>
-      ・<b>好友</b>可分類（同學、同事、網友…自己命名），還有<b>好友動態</b>看大家的新文章<br>
-      ・登入後去別人的小站會留下<b>誰來我家</b>足跡
-    </div>
-
-    <div class="blog_title">個人化</div>
-    <div class="side">
-      ・<b>網誌樣式</b>：8 種預設配色（經典橘、經典藍、甜心粉、草地綠、夢幻紫、酷炫黑、海洋藍、咖啡棕）<br>
-      ・<b>自訂 CSS</b>：想怎麼改就怎麼改，玩壞了清空即可復原<br>
-      ・<b>音樂盒</b>：一行一個 mp3 網址，可放整個播放清單，訪客能切歌<br>
-      ・<b>大頭貼</b>：90×90，跟當年一樣<br>
-      ・以上都在<b>個人設定</b>（登入後從上方工具列進去）
-    </div>
-
-    <a name="rss" id="rss"></a>
-    <div class="blog_title">RSS HOWTO</div>
-    <div class="side">
-      RSS 是網誌的訂閱格式，訂閱之後不用一直回來按重新整理，新文章會自己送到閱讀器裡。<br>
-      ・每個小站的網誌都有一份 RSS，網址是 <b>/帳號/blog/rss</b><br>
-      ・網誌頁與各個小站頁的右上角都有 <b>RSS</b> 連結，按右鍵複製網址即可<br>
-      ・把網址貼進任何 RSS 閱讀器（Feedly、Inoreader、Thunderbird…）就訂閱完成<br>
-      ・RSS 只會送出沒有上鎖的文章，密碼文章不會外流<br>
-      <% if(me){ %>・你自己的訂閱網址：<a href="/<%= me.name %>/blog/rss">/<%= me.name %>/blog/rss</a><% } %>
-    </div>
-
-    <div class="album_title">常見問題</div>
-    <div class="side">
-      <b>要錢嗎？</b> 不用，永遠免費，也不會有廣告或 VIP。<br>
-      <b>空間多大？</b> 每人 500MB。快滿時相簿頁會顯示用量條。<br>
-      <b>忘記密碼？</b> 目前請聯絡站長協助。<br>
-      <b>想刪帳號？</b> 個人設定最下面有「永久刪除我的帳號」，會連照片一起清掉。<br>
-      <b>看到不當內容？</b> 每則留言與文章旁都有「檢舉」，站長會處理。
-    </div>
-
-    <div class="blog_title">關於</div>
-    <div class="side">
-      本站與 Yahoo!／無名小站無任何關聯，名稱與 Logo 為 <%= SITE_NAME %> 自有，
-      未使用原站任何圖檔或樣板，純粹是對那個年代的致敬之作。<br>
-      請勿上傳侵權或不當內容。
-    </div>
-
-  </td>
-
-  <td width="5"></td>
-
-  <%# 右欄 160px %>
-  <td width="160" valign="top">
-    <div class="sidetitle"><%= SITE_NAME %></div>
-    <div class="side">
-      <a href="/albums">相簿</a><br>
-      <a href="/blogs">網誌</a><br>
-      <a href="/rank">人氣排行</a><br>
-      <a href="/search">搜尋</a><br>
-      <a href="#rss">RSS HOWTO</a>
-    </div>
-
-    <% if(!me){ %>
-    <div class="sidetitle">一個帳號，多項功能</div>
-    <div class="side">
-      <a href="/register"><img src="<%= CDN %>/icon/joinfree_index.gif" width="150" height="60" alt="免費註冊"></a>
-      個人相簿<br>個人網誌 (BLOG,部落格)<br>個人留言板
-    </div>
-
-    <div class="sidetitle">會員登入</div>
-    <div class="side"><form method="post" action="/login">
-      帳號: <input name="name" size="10"><br>
-      密碼: <input name="pass" type="password" size="10"><br>
-      <input type="submit" class="btn" value="登入">
-    </form></div>
-    <% } else { %>
-    <div class="sidetitle"><%= me.nick %> 的小站</div>
-    <div class="side">
-      <a href="/<%= me.name %>">MyPage</a><br>
-      <a href="/<%= me.name %>/album">相簿</a><br>
-      <a href="/<%= me.name %>/blog">網誌</a><br>
-      <a href="/<%= me.name %>/guestbook">留言板</a><br>
-      <a href="/<%= me.name %>/card">名片</a><br>
-      <a href="/<%= me.name %>/friends">好友</a><br>
-      <a href="/<%= me.name %>/settings">個人設定</a>
-    </div>
-    <% } %>
-  </td>
-
-  <td class="side2"></td>
-</tr></table>
-
-<%- include('partials/foot') %>
+<div id="lower-wrapper" class="clearfix">
+  <div class="bd clearfix"></div>
+<%- include('partials/foot2012') %>

@@ -348,7 +348,10 @@
               <li><a class="skin-main-link-hover" href="/<%= me.name %>/album">相簿</a></li>
               <li><a class="skin-main-link-hover" href="/<%= me.name %>/guestbook">留言</a></li>
               <li><a class="skin-main-link-hover" href="/<%= me.name %>/card">名片</a></li>
-              <li><a class="skin-main-link-hover" href="/<%= me.name %>/friend">好友</a></li>
+              <%# 好友頁的路徑是 /:user/friends（複數）。原本寫成單數 /friend，
+                  那個路徑沒有 GET route，登入之後點「好友」會拿到 404。
+                  單數的 /:user/friend 是 POST（加／刪好友），不是可以瀏覽的頁。 %>
+              <li><a class="skin-main-link-hover" href="/<%= me.name %>/friends">好友</a></li>
               <li><a class="skin-main-link-hover" href="/<%= me.name %>/feed">好友動態</a></li>
               <li><a class="skin-main-link-hover" href="/<%= me.name %>/visitors">誰來我家</a></li>
               <li><a class="skin-main-link-hover" href="/<%= me.name %>/settings">個人設定</a></li>
@@ -359,7 +362,10 @@
               <li><a class="skin-main-link-hover" href="/<%= me.name %>/album">相簿</a></li>
               <li><a class="skin-main-link-hover" href="/<%= me.name %>/guestbook">留言</a></li>
               <li><a class="skin-main-link-hover" href="/<%= me.name %>/card">名片</a></li>
-              <li><a class="skin-main-link-hover" href="/<%= me.name %>/friend">好友</a></li>
+              <%# 好友頁的路徑是 /:user/friends（複數）。原本寫成單數 /friend，
+                  那個路徑沒有 GET route，登入之後點「好友」會拿到 404。
+                  單數的 /:user/friend 是 POST（加／刪好友），不是可以瀏覽的頁。 %>
+              <li><a class="skin-main-link-hover" href="/<%= me.name %>/friends">好友</a></li>
               <li><a class="skin-main-link-hover" href="/<%= me.name %>/feed">好友動態</a></li>
               <li><a class="skin-main-link-hover" href="/<%= me.name %>/visitors">誰來我家</a></li>
               <li><a class="skin-main-link-hover" href="/<%= me.name %>/settings">個人設定</a></li>

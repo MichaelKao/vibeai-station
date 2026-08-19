@@ -22,6 +22,10 @@
 %><!DOCTYPE HTML>
 <html lang="zh-Hant">
 <head>
+<%# 原站沒有這一行（2012 年還沒人在管手機）。沒有它的話手機瀏覽器會用
+    980px 的虛擬視窗寬度來排版，wretch2012-rwd.css 的媒體查詢永遠不會觸發，
+    使用者看到的就是被縮到很小的桌機版。這是刻意加的，桌機不受影響。 %>
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <meta charset="utf-8">
 <title><%= locals.title || '無名小站' %></title>
 <meta name="description" content="無名小站 － 相簿、網誌、留言板">
@@ -30,6 +34,11 @@
 <%# 本站刻意偏離原站之處（收掉廣告保留位等），每條都附理由 %>
 <link rel="stylesheet" href="/wretch2012-site.css">
 <%# 使用者自訂 CSS 一定放最後，才蓋得過主題——這是無名的靈魂功能 %>
+<%# 響應式圖層。原站沒有 RWD（2012 是 970px 固定寬），這是刻意加的，
+    整支包在 @media (max-width:999px) 裡，桌機寬度一條都不生效。
+    **一定要放在所有版型與偏離層之後**才蓋得過那些寫死的 px 寬度，
+    但要放在使用者自訂 CSS 之前——自訂 CSS 依契約 §4-5 永遠是最後一個。 %>
+<link rel="stylesheet" href="/wretch2012-rwd.css">
 <% if (u && u.css) { %><style><%- safeCss(u.css) %></style><% } %>
 </head>
 <body>

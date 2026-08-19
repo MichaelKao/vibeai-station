@@ -46,8 +46,9 @@
      本站的 photo_comments 資料表已經在跑，所以用舊版頁面自己的語彙補一塊，
      樣式寫在 public/wretch2012-album-in.css §7。
 
-     【偏離】相片牆的「馬賽克 / 瀑布」原本指向 album/display.php 的兩種相片牆，
-     本站沒做這兩頁，兩顆都接到幻燈片。
+     相片牆的「馬賽克 / 瀑布」原本指向 album/display.php 的兩種相片牆。本站已經
+     有這兩頁（views/photowall.ejs，route 是 /:name/album/:id/wall?style=…），
+     兩顆各自接回自己那一種——之前兩顆都接幻燈片是相片牆還沒做時的暫代。
 
      EJS 用 with(locals)：內部變數加 ph 前綴，避免和 local 撞名（TDZ）。 */
 
@@ -107,8 +108,8 @@
 
                                   |  <a href="#et" id="exif" title="圖片資訊(熱鍵:i)">圖片資訊</a>
 
-            |    相片牆&nbsp;<span class="hide-fun">(VIP only)</span>:&nbsp;<a class="mosazic" href="<%= phBook %>/slide">馬賽克</a>
-      | <a class="waterfall" href="<%= phBook %>/slide">瀑布</a>
+            |    相片牆&nbsp;<span class="hide-fun">(VIP only)</span>:&nbsp;<a class="mosazic" href="<%= phBook %>/wall?style=angel">馬賽克</a>
+      | <a class="waterfall" href="<%= phBook %>/wall">瀑布</a>
         </font>
       </td>
             </tr>

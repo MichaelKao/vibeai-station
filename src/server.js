@@ -225,9 +225,19 @@ app.post('/login',async (req,res)=>{
 app.post('/logout',(req,res)=>req.session.destroy(()=>res.redirect('/')));
 
 // ===== 站長後台 =====
-const requireAdmin=(req,res,next)=>res.locals.me?.admin?next():res.status(403).send('forbidden');
+// 被擋下來的畫面也要套版。原本是 res.status(403).send('forbidden')，
+// 使用者看到的是瀏覽器的白底純文字，跟整站的 2012 外框完全脫節。
+// 未登入的情況導去登入頁並帶 next，登入完就會回到原本要去的地方；
+// 已登入但不是站長才回 403 的訊息頁。
+const requireAdmin=(req,res,next)=>{
+  if(res.locals.me?.admin) return next();
+  if(!res.locals.me) return res.redirect('/login?next='+encodeURIComponent(req.originalUrl));
+  res.status(403).render('msg',{title:'沒有權限',msg:'這裡只有站長進得來。',back:'/'});
+};
 app.get('/admin',requireAdmin,async (req,res)=>res.render('admin',{
-  users:await all(`SELECT u.id,u.name,u.nick,u.visits,u.admin,u.created,
+  // u.vip 一定要撈：後台的認證徽章下拉靠它回填目前等級，
+  // 沒撈的話每一列都顯示「無」，站長根本看不出誰已經掛了徽章。
+  users:await all(`SELECT u.id,u.name,u.nick,u.visits,u.admin,u.vip,u.created,
     (SELECT COALESCE(SUM(p.bytes),0) FROM photos p JOIN albums a ON a.id=p.album_id WHERE a.user_id=u.id) bytes
     FROM users u ORDER BY u.id DESC`),
   notices:await all('SELECT * FROM notices ORDER BY id DESC'),
@@ -374,6 +384,10 @@ app.use('/:name',async (req,res,next)=>{
   // 之前只有留言板那條路由查、而且變數名還不一樣（lastDigu vs digu），
   // 結果站上明明有嘀咕，每一頁都印「還沒有嘀咕」。
   res.locals.digu=await one('SELECT * FROM digu WHERE user_id=? ORDER BY id DESC LIMIT 1',u.id);
+  // 側欄那格「留言：N」永遠要是留言板的則數。放在這裡而不是留言板那條 route，
+  // 是因為側欄在個人站每一頁都會出現：只在留言板送的話，誰來我家會印足跡數、
+  // 我的收藏會印 0，標籤卻都寫著「留言」。
+  res.locals.gbCount=(await one('SELECT count(*) c FROM guestbook WHERE user_id=?',u.id)).c;
   site(req,res,next);
 });
 const U=res=>res.locals.u;
@@ -643,9 +657,19 @@ const blogSide=async res=>({
   cal:await calendar(U(res).id, res.calYm),
   // 側欄「最新引用」：blogside.ejs 讀 locals.trackbacks，但一直沒人給它，
   // 所以站上明明有引用，那一格永遠印「尚無引用」。
-  trackbacks:await all(`SELECT p.id pid,p.title,u2.name uname,t.created
-    FROM trackbacks t JOIN posts p ON p.id=t.post_id JOIN users u2 ON u2.id=p.user_id
-    WHERE p.user_id=? ORDER BY t.id DESC LIMIT 5`,U(res).id),
+  // 側欄「最新引用」＝**別人引用了我哪一篇**，所以要 join t.from_post
+  // 取「引用者那一篇」的作者。之前 join 的是 t.post_id（＝被引用的、我自己那篇），
+  // 撈出來的 uname 永遠是站主本人，側欄整排印「, by 我自己」。
+  //
+  // key 叫 sideTbs 不叫 trackbacks：單篇文章頁（site.get('/blog/:id')）自己也傳一個
+  // trackbacks（那一篇的引用清單），而它是接在 ...blogSide(res) 後面展開的，
+  // 同名會把側欄這份蓋掉——文章頁的側欄就只看得到這一篇的引用，通常是「尚無引用」。
+  sideTbs:await all(`SELECT fp.id pid,fp.title,fu.name uname,t.created
+    FROM trackbacks t
+    JOIN posts mine ON mine.id=t.post_id
+    JOIN posts fp   ON fp.id=t.from_post
+    JOIN users fu   ON fu.id=fp.user_id
+    WHERE mine.user_id=? ORDER BY t.id DESC LIMIT 5`,U(res).id),
   // #blogCategory 是「這個網誌屬於哪個站內分類」，原版是站方給整個網誌貼的標籤
   // （blog_2012_default_skin_afuuu.html:1690），不是單篇文章的 category。
   // users 表沒有這個欄位，先從站主自己文章最常用的 topic 推導出來——
@@ -687,6 +711,66 @@ site.get('/blog/rss',async (req,res)=>{
     `<title>${esc(u.nick)}的網誌</title><link>${origin}/${u.name}/blog</link>`+
     `<description>${esc(u.intro||'')}</description><language>zh-TW</language>${items}</channel></rss>`);
 });
+// ===== 另外三個 RSS：相簿 / 留言板 / 迴響 =====
+// 原站這三個都有（WRETCH_SPEC.md §6 的網址表，逐條實測過的）：
+//   /album/album_rss.php?id=帳號        相簿
+//   /guestbook/帳號&rss20=1             留言板
+//   /blog/帳號&commentsRss20=1          迴響
+// 之前只做了網誌那一支，其餘三支是 404 或把參數當成沒看到。
+//
+// 共用的組裝函式放這裡，四支 RSS 的欄位與逸出方式才會一致
+// （原本網誌那支自己內嵌了一份 esc，很容易改一邊漏一邊）。
+const rssEsc = s => String(s ?? '').replace(/[&<>"']/g,
+  c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&apos;' }[c]));
+const rssDate = s => new Date(String(s).replace(' ', 'T')).toUTCString();
+function rssFeed({ title, link, desc, items }) {
+  const body = items.map(i =>
+    `<item><title>${rssEsc(i.title)}</title><link>${i.link}</link>`
+    + `<guid isPermaLink="true">${i.link}</guid>`
+    + `<pubDate>${rssDate(i.created)}</pubDate>`
+    + `<description>${rssEsc(i.desc)}</description></item>`).join('');
+  return `<?xml version="1.0" encoding="UTF-8"?><rss version="2.0"><channel>`
+    + `<title>${rssEsc(title)}</title><link>${link}</link>`
+    + `<description>${rssEsc(desc)}</description><language>zh-TW</language>${body}</channel></rss>`;
+}
+const originOf = req => `${req.protocol}://${req.get('host')}`;
+
+// 相簿 RSS：原站是「這個人最新的照片」，不是相簿本身
+site.get('/album/rss',async (req,res)=>{
+  const u=U(res), origin=originOf(req);
+  // 上鎖與好友限定的相簿不能出現在公開的 feed 裡
+  const rows=await all(`SELECT p.id,p.caption,p.created,a.title atitle
+    FROM photos p JOIN albums a ON a.id=p.album_id
+    WHERE a.user_id=? AND a.pass='' AND a.friends_only=0 ORDER BY p.id DESC LIMIT 20`,u.id);
+  res.type('application/rss+xml').send(rssFeed({
+    title:`${u.nick}的相簿`, link:`${origin}/${u.name}/album`, desc:u.intro||'',
+    items:rows.map(p=>({ title:p.caption||p.atitle, link:`${origin}/${u.name}/photo/${p.id}`,
+      created:p.created, desc:p.atitle })) }));
+});
+
+// 留言板 RSS：悄悄話不能外流
+site.get('/guestbook/rss',async (req,res)=>{
+  const u=U(res), origin=originOf(req);
+  const rows=await all(`SELECT id,author,subject,body,created FROM guestbook
+    WHERE user_id=? AND secret=0 ORDER BY id DESC LIMIT 20`,u.id);
+  res.type('application/rss+xml').send(rssFeed({
+    title:`${u.nick}的留言板`, link:`${origin}/${u.name}/guestbook`, desc:u.intro||'',
+    items:rows.map(m=>({ title:`${m.author}：${m.subject||'無標題'}`,
+      link:`${origin}/${u.name}/guestbook`, created:m.created, desc:m.body })) }));
+});
+
+// 迴響 RSS：整個網誌的最新迴響（原站的 commentsRss20）。上鎖文章的迴響不放。
+site.get('/blog/comments.rss',async (req,res)=>{
+  const u=U(res), origin=originOf(req);
+  const rows=await all(`SELECT c.id,c.author,c.body,c.created,p.id pid,p.title
+    FROM comments c JOIN posts p ON p.id=c.post_id
+    WHERE p.user_id=? AND p.pass='' ORDER BY c.id DESC LIMIT 20`,u.id);
+  res.type('application/rss+xml').send(rssFeed({
+    title:`${u.nick}的網誌迴響`, link:`${origin}/${u.name}/blog`, desc:u.intro||'',
+    items:rows.map(c=>({ title:`${c.author} 回應了「${c.title}」`,
+      link:`${origin}/${u.name}/blog/${c.pid}#postComments`, created:c.created, desc:c.body })) }));
+});
+
 const myPhotos = async res => await all(`SELECT p.id,p.thumb,p.url FROM photos p JOIN albums a ON a.id=p.album_id
   WHERE a.user_id=? ORDER BY p.id DESC LIMIT 40`, U(res).id);
 site.get('/blog/new',requireLogin,requireOwner,async (req,res)=>res.render('post_edit',{nav:'blog',post:null,photos:await myPhotos(res),emotes:EMOTES,...await blogSide(res)}));

@@ -234,6 +234,12 @@
   <hr class="nohr">
 
   <div id="footer"></div>
+
+  <%# 原版好友頁的 #extraDiv1-4 在 #container **裡面**、#footer 之後，5-8 才在外面
+      （gb_friend_a000001_20131226.html 的 #footer 段落）。foot2012in.ejs 之前
+      因為動不到這支 view，暫時把 1-8 全印在外面並留了紙條說要搬回來——
+      現在搬回來，外面那支只印 5-8。 %>
+  <%- include('partials/extradiv2012', { edFrom: 1, edTo: 4 }) %>
 </div><!-- /#container -->
 
 <script>
@@ -268,8 +274,17 @@
           return '<li><a href="/' + encodeURIComponent(name) + s[0] + '">' + s[1] + '</a></li>';
         }).join('')
       + '</ul></div>';
+    /* 擺位置：預設貼在卡片右邊。好友清單是流動寬度，最右邊那一行的卡片
+       右緣就在視窗邊上，直接往右擺會把 382px 的小卡推出視窗外——實測整頁
+       多出 269px 的橫向捲軸（1280px 視窗）。放不下就改貼卡片左邊，
+       再夾在視窗內，兩邊各留 4px。 */
     var r = li.getBoundingClientRect();
-    box.style.left = (r.right + window.scrollX + 6) + 'px';
+    var vw = document.documentElement.clientWidth;
+    var w = box.offsetWidth || 382;
+    var left = r.right + 6;
+    if (left + w > vw - 4) left = r.left - 6 - w;   // 右邊放不下就換左邊
+    if (left < 4) left = Math.max(4, vw - 4 - w);   // 左邊也放不下就靠右夾住
+    box.style.left = (left + window.scrollX) + 'px';
     box.style.top = (r.top + window.scrollY) + 'px';
     box.style.visibility = 'visible';
   });
@@ -280,4 +295,5 @@
 })();
 </script>
 
-<%- include('partials/foot2012in') %>
+<%# extraFrom: 5 —— 1-4 已經在上面的 #container 裡出了（原版就是這樣分的） %>
+<%- include('partials/foot2012in', { extraFrom: 5 }) %>

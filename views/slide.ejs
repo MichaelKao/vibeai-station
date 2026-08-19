@@ -46,6 +46,21 @@
 <title><%= album.title %> - <%= u.name %>'s Album - <%= SITE_NAME %></title>
 <link rel="shortcut icon" type="image/x-icon" href="/favicon.ico">
 <link href="/wretch2012-slider.css" rel="stylesheet" type="text/css">
+<style>
+/* 【刻意偏離，一行】底部控制列的「－ 秒數 ＋」按不下去。
+   原因不是我們寫錯，原檔就是這樣：slider.css 裡 #slideinfo 是 position:fixed
+   但**沒有 z-index**，而照片那層 .slideElement 是 position:absolute、
+   在 DOM 裡排在 #slideinfo 後面 —— 同一個堆疊環境、z-index 都是 auto 時
+   後面的畫在上面，所以 1024px 寬的照片正好蓋住控制列中間那一段。
+   實測（視窗 1280）：#slidewrap 佔 x=128~1152，
+   #decInterval(x=1013) / #incInterval(x=1106) / 半顆 #pauseBtn 都落在裡面，
+   elementFromPoint 回傳的是 .slideElement，點下去沒有反應。
+   左右翻頁鈕 #prev/#next 在窄視窗（照片比視窗寬時）也會中同一招。
+   只補 z-index，不動任何尺寸與位置，畫面看起來完全一樣。
+   ⚠ 寫在這裡不寫進 public/wretch2012-slider.css：那支是
+     tools/build-css2012.mjs 產生的原檔，不能手改。 */
+#slideinfo, #prev, #next { z-index: 1; }
+</style>
 </head>
 <body>
   <h2 id="booktitle">&nbsp;</h2>

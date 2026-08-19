@@ -49,7 +49,12 @@
               <div class="content">
                 <p class="meta">
                   <a class="uname" href="/<%= p.uname %>"><%= p.uname %></a>
-                  <% if (p.topic) { %><a class="topic" href="/blogs?topic=<%= encodeURIComponent(p.topic) %>"><%= p.topic %></a><% } %>
+                  <%# 只有 BLOG_TOPICS 這 12 類才做成連結。src/server.js 的 /blogs 會用
+                      isBlogTopic() 擋掉不認得的分類，結果是**靜靜地列出全部文章**，
+                      看起來像分類篩選失效（現況：種子資料有兩篇 topic='美食'，
+                      那不是 12 類之一，點下去會拿到全站 59 篇）。
+                      不在清單裡的就印成純文字，不給一個點了會騙人的連結。 %>
+                  <% if (p.topic) { %><% if (topics.includes(p.topic)) { %><a class="topic" href="/blogs?topic=<%= encodeURIComponent(p.topic) %>"><%= p.topic %></a><% } else { %><span class="topic"><%= p.topic %></span><% } %><% } %>
                 </p>
                 <h3><a class="skin-main-link" href="/<%= p.uname %>/blog/<%= p.id %>"><%= p.title %></a></h3>
                 <p class="description"><%= CAP(p.body, 90) %>
