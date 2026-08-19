@@ -1,0 +1,104 @@
+<%# 相片牆 /:name/album/:id/wall — 無名的 album/display.php?style=angel|taylor
+    ─────────────────────────────────────────────────────────────
+    骨架照 assets_src2/html/album_display_taylor.html（瀑布）與
+    album_display_angel.html（馬賽克）：
+
+      #hugewrapper > #kukubar-upper
+                   > #wrapper > #wall-header > .wall_func > h1 > a.breadcrumb
+                              > #nav-panel.collapse > .nav-breadcrumbs > a.display_switcher
+                              > #wall                （taylor：瀑布流照片）
+                              > .loadst#vip_upgrade_from_photowall
+                              > #flag
+                              > #imgTable > .montage （angel：馬賽克格）
+                   > #kukubar-lower
+
+    【刻意偏離，理由寫在這裡】
+    1. 原版兩種相片牆是 VIP 限定，`.restricted_string` 那句是「已達顯示上限，
+       請加入 VIP」。本站沒有付費制度，整本都看得完，那一句改成「沒有更多照片了」。
+    2. 原版是無限捲動（JS 逐批向 display.php 要資料）。本站一次把整本送出來，
+       不做 Ajax——照片數量級距差三個數量級，捲動載入沒有必要。
+    3. 版面樣式寫在這一頁的 <style> 裡：原版的 album_display_*.css 還沒有進
+       tools/build-css2012.mjs 的 BUNDLES，而 public/wretch2012*.css 是產生出來的，
+       不能手改。等 bundle 加好之後這段就可以拿掉。 %>
+<%
+  const pwPath = '/' + u.name + '/album/' + album.id;
+  const pwOther = style === 'angel' ? 'taylor' : 'angel';
+%>
+<%- include('partials/head2012in', {
+      title: (style === 'angel' ? 'Mosaic' : 'Waterfall') + 'Photo Wall-' + album.title + '-' + u.nick + '的' + SITE_NAME,
+      page: 'w2-wall',
+      skin: [] }) %>
+
+<style>
+/* 見檔頭第 3 點：原版 CSS 尚未進 bundle，這裡先寫最小可用的版面 */
+#wrapper{width:970px;margin:0 auto;padding-bottom:40px}
+#wall-header{padding:10px 0}
+#wall-header h1{font-size:15px;font-weight:bold;margin:0}
+#nav-panel{background:#333;color:#fff;line-height:30px;padding:0 10px;margin-bottom:10px}
+#nav-panel a{color:#fff;text-decoration:none}
+#nav-panel a.display_switcher span{color:#d1f97f}
+#wall{column-count:5;column-gap:10px}
+#wall .type_image{break-inside:avoid;margin:0 0 10px}
+#wall .type_image img{width:100%;display:block;border:0}
+#wall .type_image .cover{font-size:11px;color:#666;padding:2px 0}
+#imgTable{font-size:0}
+#imgTable .montage{display:inline-block;width:120px;height:120px;overflow:hidden;margin:0 2px 2px 0}
+#imgTable .montage img{width:120px;height:120px;object-fit:cover;border:0}
+.loadst{text-align:center;color:#999;padding:20px 0;font-size:12px}
+#endSpace{height:20px}
+</style>
+
+<div id="wrapper">
+
+  <div id="wall-header">
+    <div class="wall_func">
+      <h1>
+        <a class="breadcrumb" href="/<%= u.name %>/album"><%= u.name %>'s album</a>
+        <span class="breadcrumb">&nbsp;&raquo;&nbsp;</span>
+        <a class="breadcrumb" href="<%= pwPath %>"><%= album.title %></a>
+      </h1>
+    </div>
+  </div>
+
+  <div id="nav-panel" class="collapse">
+    <!-- Breadcrumbs -->
+    <div class="nav-breadcrumbs">
+      <a href="/<%= u.name %>/album"><%= u.name %>'s album</a>
+      <span>&nbsp;&raquo;&nbsp;</span>
+      <a href="<%= pwPath %>"><%= album.title %></a>
+      <a href="<%= pwPath %>/wall?style=<%= pwOther %>" class="display_switcher"><span> - 切換到<%= style === 'angel' ? '瀑布' : '馬賽克' %>模式</span></a>
+    </div>
+  </div>
+
+<% if (style === 'angel') { %>
+  <%# 馬賽克：等大方格密鋪（album_display_angel.html 的 #imgTable > .montage） %>
+  <div id="imgTable">
+<%# id="cover" 只掛第一格：原版那顆 id 是給 JS 抓封面用的，
+        每一格都掛會變成一堆重複 id %>
+    <% photos.forEach((p, i) => { %><a class="montage"<% if (i === 0) { %> id="cover"<% } %> href="/<%= u.name %>/photo/<%= p.id %>"><img src="<%= p.thumb || p.url %>" alt="<%= p.caption %>"></a><% }) %>
+  </div>
+  <div id="endSpace"></div>
+  <div class="loadst" id="loading_sign">
+    <p><span class="finished_string"><%= photos.length ? '沒有更多照片了' : '這本相簿還沒有照片' %></span></p>
+  </div>
+<% } else { %>
+  <%# 瀑布：等寬不等高（album_display_taylor.html 的 #wall） %>
+  <div id="wall">
+    <% photos.forEach(p => { %>
+    <div class="type_image">
+      <a href="/<%= u.name %>/photo/<%= p.id %>"><img src="<%= p.url %>" alt="<%= p.caption %>"></a>
+      <% if (p.caption) { %><div class="cover"><%= p.caption %></div><% } %>
+    </div>
+    <% }) %>
+  </div>
+  <div class="loadst" id="vip_upgrade_from_photowall">
+    <p>
+      <span class="finished_string"><%= photos.length ? '沒有更多照片了' : '這本相簿還沒有照片' %></span>
+    </p>
+  </div>
+  <div id="flag"></div>
+<% } %>
+
+</div><!-- /#wrapper -->
+
+<%- include('partials/foot2012in') %>

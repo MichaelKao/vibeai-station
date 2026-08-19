@@ -27,6 +27,24 @@
      只有相簿列表頁手邊有 albums，就拿它湊；其他頁印原站那句的替代版本。
      前綴保留原站的「首頁好文：」。這條列在回報的「湊資料」清單裡。 */
   const w2Roll  = (locals.albums || []).slice(0, 6);
+  /* 這一支同時收三種頁，靠手邊的 local 分辨（head 那邊的 w2Head 傳不進來）：
+       單張照片 有 p ／ 單本相簿 有 album+photos ／ 相簿列表 有 albums
+     只有相簿列表有 bottom part 的 td#ad_button，rapid 欄位組合也三頁不同。 */
+  const w2Kind = locals.p ? 'photo'
+               : (locals.album && locals.photos) ? 'book'
+               : locals.albums ? 'list' : '';
+  /* 隱藏 metadata（原站的 RAPID 標記）：值全部換成本站自己的，
+     ov_status 沿用原站的組合碼寫法（登入狀態_是否認證帳號）。 */
+  const w2Ov = (w2Me ? 'log' : 'unlog') + '_' + (w2Owner && w2Owner.vip ? 'VPO' : 'NPO');
+  const w2Meta = w2Kind === 'book' ? {
+        wid: w2Owner ? w2Owner.name : '', vip_status: (w2Owner && w2Owner.vip) || 0,
+        cat: (locals.album && album.topic) || 'None', privacy: locals.album && album.pass ? 1 : (locals.album && album.friends_only ? 2 : 0),
+        album: 'i=' + (w2Owner ? w2Owner.name : '') + '&b=' + (locals.album ? album.id : ''),
+        location: (locals.album && album.place) || 'None', ov_status: w2Ov }
+      : w2Kind === 'list' ? {
+        wid: w2Owner ? w2Owner.name : '', vip_status: (w2Owner && w2Owner.vip) || 0,
+        privacy: 0, ov_status: w2Ov }
+      : null;
 %>
 <% if (w2Hits) { %>
 <table width="700" border="0" cellpadding="0" cellspacing="0" align="center">
@@ -40,6 +58,17 @@
 </td>
 </tr>
 </table>
+<% } %>
+<% if (w2Kind === 'list') { %>
+<!-- bottom part -->
+<%# 原版 album_index_a000000jay.html:779-793：人氣頁尾之後一張 700px 表格，
+    裡面只有 td#ad_button。版位照做，內容換成本站自己的入口。 %>
+<table width="700" border="0" cellpadding="0" cellspacing="0" align="center">
+  <tr>
+<%- include('adslot2012', { adId: 'ad_button', adTag: 'td' }) %>
+  </tr>
+</table>
+<!-- end of bottom part -->
 <% } %>
 
 </div><!-- /#bigcontainer -->
@@ -156,17 +185,20 @@
     if (q) { location.href = q + encodeURIComponent(v); }
   });
 
-  /* 社群分享列：fb / plurk / 即時通要「絕對網址」，EJS 拿不到 host，
-     所以 DOM 先寫 data-share / data-path / data-title，這裡補上 location.origin。 */
+  /* 社群分享列：分享網址要「絕對網址」，EJS 拿不到 host，
+     所以 DOM 先寫 data-share / data-path / data-title，這裡補上 location.origin。
+     只有還活著的服務才接：fb / plurk / tw(X)。
+     Yahoo 即時通（.yim）與 Google+ 已停止服務，DOM 照留但不連外。 */
   document.querySelectorAll('a[data-share]').forEach(function(a){
     var url = location.origin + a.getAttribute('data-path');
     var t   = a.getAttribute('data-title') || document.title;
     var k   = a.getAttribute('data-share');
-    if (k === 'fb')    a.href = 'https://www.facebook.com/sharer.php?u=' + encodeURIComponent(url) + '&t=' + encodeURIComponent(t);
+    if (k === 'fb')    a.href = 'https://www.facebook.com/sharer/sharer.php?u=' + encodeURIComponent(url);
     if (k === 'plurk') a.href = 'https://www.plurk.com/?qualifier=shares&status=' + encodeURIComponent(url + ' (' + t + ')');
-    if (k === 'yim')   a.href = 'ymsgr:customstatus?' + encodeURIComponent(t + ' ' + url);
+    if (k === 'tw')    a.href = 'https://twitter.com/intent/tweet?url=' + encodeURIComponent(url) + '&text=' + encodeURIComponent(t);
   });
 })();
 </script>
+<%- include('pagemeta2012', { pm: w2Meta || {} }) %>
 </body>
 </html>

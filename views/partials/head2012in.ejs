@@ -20,9 +20,27 @@
        title  <title>
        skin   要接在 wretch2012-gb.css 之後的版型檔（陣列，可省略）
        page   <body> 的頁別 class：w2-gb（留言板家族）/ w2-user / w2-friend
+       ad     要不要印 #ad_banner（預設：名片與好友頁印，留言板家族不印——
+              留言板原版是 #ad_gbook 且在 #container 裡，由 gbtop.ejs 負責）
 
      注意：EJS 用 with(locals)，不能宣告和 local 同名的 const，
      非必定存在的變數一律走 locals.xxx。 */
+  /* #wretch-crumb 的值：原站是 Yahoo 的 CSRF token（&.c=…&.t=…）。
+     本站目前靠 cookie 的 SameSite=lax 擋 CSRF，沒有那套 token；
+     照抄別人的字串沒有意義，所以自己發一組同格式的。
+     後端把真正的 session token 放進 res.locals.crumb 之後，這裡自動改用它。
+     **這一輪只輸出、不做驗證**——先驗證會把既有表單全部擋掉。 */
+  const w2Crumb = locals.crumb ||
+    ('&.c=' + (locals.me ? 'u' + me.id : 'g') + Math.random().toString(36).slice(2, 12)
+     + '&.t=' + Math.floor(Date.now() / 1000));
+  /* 站方公告：原站 2013 年底這格放的是關站公告，本站接自己的 notices 表。
+     沒有公告就整塊不輸出——原站 2012 的快照同樣沒有這個節點，
+     這是「沒有資料就走空狀態」（WRETCH_2012.md §1-A），不是漏做。
+     ⚠ notices 目前只在首頁 route 有，內頁要等後端把它放進全域 locals。 */
+  const w2Notice = (locals.notices && notices.length) ? notices[0]
+                 : (locals.siteNotice || null);
+  const w2Ad = locals.ad !== undefined ? locals.ad
+             : ['w2-user', 'w2-friend'].includes(locals.page || '');
 %><!DOCTYPE HTML>
 <html lang="zh-Hant">
 <head>
@@ -45,7 +63,11 @@
 <% if (locals.u && u.css) { %><style><%- safeCss(u.css) %></style><% } %>
 </head>
 <body class="<%= locals.page || 'w2-gb' %>">
-<div id="hugewrapper">
+<!-- nv hugewrepper -->
+<div id="hugewrapper"><input id="wretch-crumb" type="hidden" value="<%= w2Crumb %>">
+<%# #static-path 是 kukubar.js 組素材網址用的根路徑（原站 l.yimg.com/e/serv/common/）。
+    本站的素材根就是 CDN（R2；本機自動回退到 public/img/）。 %>
+<input id="static-path" type="hidden" value="<%= CDN %>">
 
 <div id="kukubar-upper" class="font-black kukubar-customized kukubar-bar">
   <div class="left-side">
@@ -61,8 +83,10 @@
       <ul class="dropdown blog-service">
         <li class="album-index"><a class="bar-link" href="/albums">Album</a></li>
         <li class="blog-index"><a class="bar-link" href="/blogs">Blog</a></li>
-        <li class="video-index"><a class="bar-link" href="/help">Video</a></li>
-        <li class="digu-index"><a class="bar-link" href="/help">Digu</a></li>
+        <%# 影音與嘀咕本站有（另一位 agent 正在做後端），指到約定好的網址；
+            站台層級的總站還沒有，所以用手邊的站主／自己當入口。 %>
+        <li class="video-index"><a class="bar-link" href="<%= locals.u ? '/'+u.name+'/video' : (me ? '/'+me.name+'/video' : '/help') %>">Video</a></li>
+        <li class="digu-index"><a class="bar-link" href="<%= locals.u ? '/'+u.name+'/digu' : (me ? '/'+me.name+'/digu' : '/help') %>">Digu</a></li>
         <li class="join-index"><a class="bar-link" href="/help">Join</a></li>
         <li><a class="bar-link" href="/">Yahoo!</a></li>
         <li><a class="bar-link" href="/help">Help</a></li>
@@ -70,8 +94,11 @@
       </ul>
     </div>
 
-    <%# 原站這裡是每日更換的「今日主題：…」跑馬。本站沒有編輯台，指向排行榜。 %>
+    <%# 原站這裡是每日更換的「今日主題：…」跑馬。本站沒有編輯台，指向排行榜。
+        .announcement 是站方公告，優先度高於今日主題（原站 2013 底就是這樣排的，
+        CSS 見 wretch2012-in.css §11）。 %>
     <div id="infozone">
+      <% if (w2Notice) { %><p class="announcement"><a href="/help"><%= w2Notice.body || w2Notice %></a></p><% } %>
       <ul>
         <li><a href="/rank" class="theme">今日主題：本週人氣排行榜</a></li>
       </ul>
@@ -95,7 +122,9 @@
           </div>
           <div class="search-field">
             <label for="wretch-search-text" class="hidden">搜尋</label>
-            <input id="wretch-search-text" type="text" name="q" title="Article Search" placeholder="Article Search">
+            <%# .blur 是原站搜尋框沒焦點時的灰字 class（kukubar.css input.blur{color:#C6C6C6}）。
+                kukubar2012.ejs 與 head2012_site.ejs 早就這樣寫，這支是三份 copy 裡唯一漏掉的。 %>
+            <input id="wretch-search-text" type="text" name="q" title="Article Search" placeholder="Article Search" class="blur">
             <input id="wretch-search-btn" type="submit" value="送出">
           </div>
         </fieldset>
@@ -129,5 +158,13 @@
   </div>
 </div>
 
-<div id="bigcontainer">
+<%# 那兩個 inline style 是原站就有的（kukubar.js 開下拉時會改 #bigcontainer 的
+    z-index，position:relative 是前提）。三支外框只有這裡漏掉，補齊。 %>
+<div id="bigcontainer" style="position: relative !important; zoom:1 !important;" >
 <% if (flash) { %><div class="w2-flash"><%= flash %></div><% } %>
+<%# #ad_banner 在 #bigcontainer 內、#container 之前（名片與好友頁；
+    留言板家族原版改用 #ad_gbook 且在 #container 裡面，見 gbtop.ejs）。 %>
+<% if (w2Ad) { %><%- include('adslot2012', {
+      adId: 'ad_banner',
+      adNotices: locals.notices || (locals.siteNotice ? [locals.siteNotice] : []),
+      adTopics: locals.blogTopics || locals.topics || [] }) %><% } %>

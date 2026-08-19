@@ -26,6 +26,10 @@
      用手邊有的 recent[0]（這個網誌的最新文章）湊，前綴保留原站的「今日主題：」。 */
   const kkInfo    = (locals.recent && locals.recent.length) ? locals.recent[0] : null;
   const kkInfoUrl = (kkInfo && locals.u) ? '/' + u.name + '/blog/' + kkInfo.id : '/blogs';
+  /* 站方公告：接自己的 notices 表。沒有公告就整塊不輸出——原站 2012 的快照
+     同樣沒有這個節點（.announcement 只出現在 2013 底的關站公告）。 */
+  const kkNotice = (locals.notices && notices.length) ? notices[0]
+                 : (locals.siteNotice || null);
 %>
 <style>
 .kukubar-customized {
@@ -46,8 +50,9 @@
             <ul class="dropdown <%= kkService %>-service">
                 <li class="album-index"><a class="bar-link" href="/albums">Album</a></li>
                 <li class="blog-index"><a class="bar-link" href="/blogs">Blog</a></li>
-                <li class="video-index"><a class="bar-link" href="/help">Video</a></li>
-                <li class="digu-index"><a class="bar-link" href="/help">Digu</a></li>
+                <%# 影音與嘀咕本站有（另一位 agent 正在做後端），指到約定好的網址 %>
+                <li class="video-index"><a class="bar-link" href="<%= locals.u ? '/'+u.name+'/video' : '/help' %>">Video</a></li>
+                <li class="digu-index"><a class="bar-link" href="<%= locals.u ? '/'+u.name+'/digu' : '/help' %>">Digu</a></li>
                 <li class="join-index"><a class="bar-link" href="/help">Join</a></li>
                 <li><a class="bar-link" href="/">Yahoo!</a></li>
                 <li><a class="bar-link" href="/help">Help</a></li>
@@ -55,6 +60,7 @@
             </ul>
         </div>
         <div id="infozone">
+             <% if (kkNotice) { %><p class="announcement"><a href="/help"><%= kkNotice.body || kkNotice %></a></p><% } %>
              <ul>
                 <li><a href="<%= kkInfoUrl %>" class="theme">今日主題：<%= kkInfo ? kkInfo.title : '逛逛大家的網誌' %></a></li>
              </ul>

@@ -66,6 +66,17 @@
   const w2AlbumTopics = ['國內旅遊','國外旅遊','美食記錄','流行時尚',
                          '圖像創作','專業攝影','心肝寵物','學園生活'];
   const w2BlogTopics  = ['創作','旅遊','生活','運動','娛樂'];
+  /* 名家專欄的五個分頁籤。原版的 id 是 celebrity_artist/model/athletes/writer/politician
+     （藝人／模特兒／運動明星／作家／政治名人）——那是版面識別字不是資料，照抄。
+     我們沒有「名家」這種身分，分頁改接站內分類（src/taxonomy.js 的 BLOG_TOPICS），
+     挑語意最接近的五類對上去，這樣 id 的意思跟看到的東西還對得起來。 */
+  const w2Cele = [
+    { id:'celebrity_artist',     topic:'娛樂' },
+    { id:'celebrity_model',      topic:'流行' },
+    { id:'celebrity_athletes',   topic:'運動' },
+    { id:'celebrity_writer',     topic:'創作' },
+    { id:'celebrity_politician', topic:'社會' },
+  ];
 
   /* 腰帶四個分頁＝四個網誌分類（原站是編輯部的四個企劃頻道） */
   const w2Belt = [
@@ -149,6 +160,11 @@
               <% }) %>
             </ol>
           </div>
+
+<%# 分享列（靠右）。原版位置就是這裡：.pagination 收掉之後、.bd.stack 收掉之前。 %>
+<%- include('partials/wfpsharing2012', { wsSide: 'right', wsPath: '/',
+      wsTitle: notices.length ? w2Cap(notices[0].body, 40) : SITE_NAME }) %>
+
         </div>
       </div>
 
@@ -217,6 +233,11 @@
                   <div class="panel-text">
                     <h5 class="model-name">
                       <a href="/<%= w2Best.uname %>" title="<%= w2Best.nick %>"><%= w2Best.nick %></a>
+                      <%# 12×12 的「加為朋友」小圖示（文字被 text-indent:-9999px 推走）。
+                          CSS 選擇器綁死 a.add-friend-btn，所以一定要是 <a> 不能是 <button>；
+                          但加好友是 POST /:user/friend，GET 不該改狀態，
+                          所以這顆連到對方名片頁——那一頁的 [加入好友名單] 就是那個 form。 %>
+                      <a href="/<%= w2Best.uname %>/card" class="add-friend-btn" title="加為朋友">加為朋友</a>
                     </h5>
                     <p><a href="/<%= w2Best.uname %>/album/<%= w2Best.id %>" title="<%= w2Best.title %>"><%= w2Best.title %></a></p>
                   </div>
@@ -232,6 +253,7 @@
                   <div class="panel-text">
                     <h5 class="model-name">
                       <a href="/<%= p.uname %>" title="<%= p.uname %>"><%= p.uname %></a>
+                      <a href="/<%= p.uname %>/card" class="add-friend-btn" title="加為朋友">加為朋友</a>
                     </h5>
                     <p><a href="/<%= p.uname %>/photo/<%= p.id %>" title="<%= w2C %>"><%= w2C %></a></p>
                   </div>
@@ -240,7 +262,17 @@
               <% }) %>
             </ul>
           </div>
-        </div>
+
+<%# 熱門相簿的兩個分頁各有自己的一組分享連結（原版 index_20120610082113.html:384-413）。
+    id 字串 featured_beauty / featured_selected 是版面識別字不是資料，照抄
+    （本檔 205 行的 id="featured_selected" 早就是照抄的）。
+    .tab-on 掛在**目前開著的那一頁**上——原版開的是第二頁，我們開的是第一頁，
+    所以 tab-on 跟著對調。CSS：.sharing-tab{display:none}、.tab-on{display:block!important}。 %>
+        <div id="wfp-featured-sharing-featured_beauty" class="sharing-tab tab-on">
+<%- include('partials/wfpsharing2012', { wsSide: 'left', wsPath: '/albums', wsTitle: '人氣相簿' }) %>
+</div><div id="wfp-featured-sharing-featured_selected" class="sharing-tab ">
+<%- include('partials/wfpsharing2012', { wsSide: 'left', wsPath: '/albums?topic=' + encodeURIComponent('女生個人'), wsTitle: '站內分類' }) %>
+</div>        </div>
         <div class="ft">
           <a id="featured-more" href="/albums" title="看更多熱門相簿">看更多熱門相簿</a>
         </div>
@@ -253,6 +285,24 @@
       <%# ⑧ 我的：未登入＝登入卡，已登入＝服務清單 %>
       <div id="wfp-my">
         <div class="wfp-my">
+
+          <%# 背景音樂偏好開關。這不是播放器——它是站台層級的一個偏好：
+              「逛別人的小站時要不要自動播對方的背景音樂」。
+              原站寫 cookie mf，本專案沒有 cookie-parser，改走 session
+              （src/server.js 的 GET /bgm，locals.bgmOn）。
+              文案逐字照原檔 index_20120610082113.html:421-441，
+              連「開啓」用異體字「啓」、tip 卻用「開啟」這個不一致都照抄。
+              素材 ico_fp_musicon/off.png（12×12）已在 repo。 %>
+          <div class="my-setting">
+            <div id="wfp-bgm">
+              <div class="tooltip">
+                <p class="status"><%= bgmOn ? '背景音樂設定開啓' : '背景音樂設定關閉' %></p>
+                <p class="tip"><%= bgmOn ? '點選圖示關閉' : '點選圖示開啟' %></p>
+              </div>
+              <a href="/bgm?on=<%= bgmOn ? 0 : 1 %>" class="<%= bgmOn ? 'bgm-on' : 'bgm-off' %>"><img src="/img/wretch2012/index/ico_fp_music<%= bgmOn ? 'on' : 'off' %>.png" alt="背景音樂"></a>
+            </div>
+          </div>
+
           <% if (me) { %>
           <div class="hd">
             <p>你好<a href="/<%= me.name %>"><%= me.nick %></a></p>
@@ -383,6 +433,7 @@
                   <p class="more"><a href="/help">更多站方公告</a></p>
                 </div>
               </article>
+<%- include('partials/wfpsharing2012', { wsSide: 'right', wsPath: '/help', wsTitle: SITE_NAME }) %>
             </li>
             <% } %>
             <% w2Today.forEach((n, i) => { const w2Th = newPhotos[i + 3] || newPhotos[i] || null; %>
@@ -405,6 +456,9 @@
                   <p class="more"><a href="/help">更多站方公告</a></p>
                 </div>
               </article>
+<%# 每一則活動都有自己的分享列。CSS 讓它預設 display:none，
+    滑到該則上面（.sharing-on）才現身——跟原版靜態畫面一致。 %>
+<%- include('partials/wfpsharing2012', { wsSide: 'right', wsPath: '/help', wsTitle: w2Cap(n.body, 40) }) %>
             </li>
             <% }) %>
           </ol>
@@ -553,8 +607,8 @@
           </header>
           <div class="nav">
             <ul class="skin-tab">
-              <% w2BlogTopics.forEach((t, i) => { %>
-              <li id="celebrity_<%= i %>" class="<%= i === 0 ? 'first on' : '' %>"><a href="/blogs?topic=<%= encodeURIComponent(t) %>"><%= t %></a></li>
+              <% w2Cele.forEach((c, i) => { %>
+              <li id="<%= c.id %>" class="<%= i === 0 ? 'first on' : '' %>"><a href="/blogs?topic=<%= encodeURIComponent(c.topic) %>"><%= c.topic %></a></li>
               <% }) %>
             </ul>
           </div>
@@ -582,6 +636,10 @@
           <p class="more"><a href="/rank">更多排行</a></p>
         </div>
         <div id="celebrity-corner-ad"></div>
+        <%# 原版這顆是名家專欄 AJAX 換頁用的 CSRF token（crumb），
+            快照裡 value 就是空字串（爬蟲沒登入）。我們的分頁是純連結不走 AJAX，
+            節點照留，值一樣留空——版面識別字的一部分。 %>
+        <input type="hidden" id="wfp-celebrity-token" value="">
       </div>
 
       <%# ⑬ 官方部落格位置改放站內分類連結 %>

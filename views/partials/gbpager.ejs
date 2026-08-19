@@ -1,0 +1,38 @@
+<%
+  /* 留言板分頁列 —— 原版逐字重製
+     ═══════════════════════════════════════════════════════════════════════
+     三份快照歸納出來的規則（gb_guestbook_a000000010_20131226.html:154、
+     gb_gbook_page2_a050907_20110816.html:439-440、
+     gb_gbook_announce_a0190728_20110702.html:426-427）：
+
+       <ul id="page_control_top" class="page_control">
+       1<a id="page_link_2" href="…page=2" class="">2</a>…<a id="next" …>下一頁</a></ul>
+
+       第 2 頁時：
+       <a id="prev" …>上一頁</a><a id="first" …>1</a>2<a id="page_link_3" …>3</a>…
+
+     1. **目前頁是裸文字**，沒有 <a>
+     2. 第 1 頁那顆的 id 是 **first**，不是 page_link_1 —— `#page_link_1` 永不存在
+     3. 第 N（≥2）頁那顆是 **page_link_N**
+     4. #prev 在最前、#next 在最後，文案是「上一頁」「下一頁」
+     5. 最多印 min(總頁數, 15) 顆
+     6. 每個 <a> 都帶一個空的 class=""（原檔就是這樣，照抄）
+     7. 上下各一份，內容逐字相同，只有 ul 的 id 不同
+        （page_control_top / page_control_bottom）
+
+     ⚠ 這一套跟**好友頁**的分頁列不是同一個元件：好友頁是 div#pagelink_1 +
+     «» 符號 + 一頁 25 人。不要互相共用（詳見 views/friends.ejs 的註解）。
+
+     ── include 參數 ──────────────────────────────────────────────────────
+       gpPage   目前第幾頁（1 起算）
+       gpPages  總頁數
+       gpHref   函式 (n) => 該頁網址
+       gpPos    'top' | 'bottom'，決定 ul 的 id
+
+     EJS 用 with(locals)：內部變數一律加 gp 前綴，避免和 local 撞名（TDZ）。 */
+  const gpP  = +locals.gpPage || 1;
+  const gpN  = +locals.gpPages || 1;
+  const gpH  = locals.gpHref;
+  const gpId = locals.gpPos === 'bottom' ? 'page_control_bottom' : 'page_control_top';
+  const gpMax = Math.min(gpN, 15);
+%><% if (gpN > 1) { %><ul id="<%= gpId %>" class="page_control"><% if (gpP > 1) { %><a id="prev" href="<%= gpH(gpP - 1) %>" class="">上一頁</a><% } %><% for (let gpI = 1; gpI <= gpMax; gpI++) { %><% if (gpI === gpP) { %><%= gpI %><% } else { %><a id="<%= gpI === 1 ? 'first' : 'page_link_' + gpI %>" href="<%= gpH(gpI) %>" class=""><%= gpI %></a><% } %><% } %><% if (gpP < gpN) { %><a id="next" href="<%= gpH(gpP + 1) %>" class="">下一頁</a><% } %></ul><% } %>

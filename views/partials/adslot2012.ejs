@@ -1,0 +1,62 @@
+<%
+  /* 廣告版位 #ad_banner / #ad_gbook / #ad_lrec / #ad_button
+     ═══════════════════════════════════════════════════════════════════════
+     原版逐字（節點、id、尺寸就是下面這些，內容是 Yahoo 的廣告碼）：
+
+       名片・好友   gb_user_a000000010_20120531.html:100
+                    <div id="ad_banner" align="center">…728×90…</div>
+                    位置：#bigcontainer 內、#container 之前
+       相簿列表     album_index_a000000jay.html:134-141
+                    <td id="ad_banner" … style="width:700px;height:90px">…</td>
+                    位置：banner part 第一張 700px 表格
+                    album_index_a000000jay.html:787
+                    <td id="ad_button"><!-- SpaceID=0 robot --></td>（bottom part）
+       留言板       gb_guestbook_a000000010_20131226.html:118-122
+                    <div id="ad_gbook">…728×90…</div>
+                    位置：**#container 裡面**、#header 之前（跟 #ad_banner 不同格）
+       留言板側欄   gb_guestbook_a000000010_20131226.html:465-469
+                    <li id="ad_lrec" class="box">…300×250…</li>
+                    位置：#friendlist 與 #stats 之間
+
+     **本站的做法**：版位 DOM、id、尺寸全部照原版做，裡面改放我們自己的內容
+     （站方公告、站內分類、站內入口）。理由：這幾個節點在原站是版面的一部分
+     ——`gb_overwrite.css` 甚至用 !important 把 #ad_gbook 撐成固定 90px，
+     不做就是頁面中間缺一塊；做成空殼又會變成一個 90px 的洞。
+     放我們自己真的有的東西，版位對得上、也沒有假資料。
+     一行第三方廣告碼、一個對外請求都沒有。
+
+     ── include 參數 ──────────────────────────────────────────────────────
+       adId       'ad_banner' | 'ad_gbook' | 'ad_lrec' | 'ad_button'
+       adTag      外層標籤：'div'（預設）| 'td' | 'li'
+       adNotices  站方公告陣列（notices 表）。沒有就不印公告那段
+       adTopics   站內分類字串陣列（ALBUM_TOPICS / BLOG_TOPICS）
+       adTopicUrl 分類連結前綴，預設 '/albums?topic='
+
+     EJS 用 with(locals)：內部變數一律加 ad 前綴，避免和 local 撞名（TDZ）。 */
+  const adId   = locals.adId || 'ad_banner';
+  const adTag  = locals.adTag || 'div';
+  const adNo   = (locals.adNotices || []).slice(0, adId === 'ad_lrec' ? 4 : 1);
+  const adTp   = (locals.adTopics || []).slice(0, adId === 'ad_lrec' ? 12 : 6);
+  const adTUrl = locals.adTopicUrl || '/albums?topic=';
+  const adCls  = 'w2-ad w2-' + adId;
+%><<%= adTag %> id="<%= adId %>"<% if (adTag !== 'li') { %> align="center"<% } %> class="<%= adTag === 'li' ? 'box ' + adCls : adCls %>">
+<% if (adId === 'ad_button') { %>
+  <%# 原版是相簿內頁的小按鈕廣告。本站放一句站內入口，尺寸與位置照原版。 %>
+  <a class="w2-ad-btn" href="/albums">到相簿總站逛逛大家的相簿</a>
+<% } else { %>
+  <div class="w2-ad-in">
+    <div class="w2-ad-hd">站內導覽</div>
+<% if (adNo.length) { %>    <div class="w2-ad-notice">
+<% adNo.forEach(function(n){ %>      <a href="/help">站方公告：<%= n.body %></a>
+<% }) %>    </div>
+<% } %>
+<% if (adTp.length) { %>    <div class="w2-ad-topics">
+<% adTp.forEach(function(t){ %><a href="<%= adTUrl %><%= encodeURIComponent(t) %>"><%= t %></a>
+<% }) %>    </div>
+<% } %>
+    <div class="w2-ad-links">
+      <a href="/albums">熱門相簿</a><a href="/blogs">熱門網誌</a><a href="/rank">人氣排行榜</a><a href="/help">服務說明</a><% if (locals.u) { %><a href="/<%= u.name %>/album">這個人的相簿</a><a href="/<%= u.name %>/blog">這個人的網誌</a><% } %>
+    </div>
+  </div>
+<% } %>
+</<%= adTag %>>

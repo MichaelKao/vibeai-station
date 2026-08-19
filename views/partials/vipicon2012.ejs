@@ -1,0 +1,33 @@
+<%
+  /* .vip_icon —— 帳號認證章
+     ═══════════════════════════════════════════════════════════════════════
+     原版逐字（三種變體，差別只在 align 與圖檔）：
+       單本相簿 album_album_list.html:148　　#banner 的第一個節點
+         <a target='_blank' href='http://bill.wretch.cc/'><img align="middle"
+            class="vip_icon" border="0" src=".../isAuth_silver.gif" alt="vip_icon" /></a>
+       單張照片 album_show_zh_kellyla.html:176　isAuth_gold.gif
+       留言板   gb_guestbook_a000000010_20131226.html:161　留言者名字前
+         <a target='_blank' href='…'><img class="vip_icon" align="absmiddle"
+            border="0" src=".../isAuth.gif" /></a>
+
+     原站四個等級對應 #rapid_vip_status（0 非 VIP／3 銀／4 金），VIP 免廣告。
+     本站沒有付費會員，這個章的語意改成「站方認證帳號」：
+     users.vip（後端 agent 正在加這個欄位）不是 0 就印。
+     沒有這個欄位時 locals.u.vip 是 undefined → 當 0，整塊不輸出，
+     和原站「非 VIP 就沒有這個節點」的行為一致。
+
+     連結指 /help（認證說明），不連外——原站指的是 bill.wretch.cc 繳費頁。
+     素材已在 repo：public/img/wretch2012/{blog,gb}/isAuth*.gif
+
+     ── include 參數 ──────────────────────────────────────────────────────
+       viUser   必填。要檢查的使用者物件
+       viStyle  'silver'（相簿，預設）| 'gold'（照片）| 'auth'（留言板／網誌）
+
+     EJS 用 with(locals)：內部變數一律加 vi 前綴，避免和 local 撞名（TDZ）。 */
+  const viU = locals.viUser || null;
+  const viOn = !!(viU && viU.vip);
+  const viS = locals.viStyle || 'silver';
+  const viSrc = viS === 'gold'   ? '/img/wretch2012/blog/isAuth_gold.gif'
+              : viS === 'silver' ? '/img/wretch2012/gb/isAuth_silver.gif'
+                                 : '/img/wretch2012/gb/isAuth.gif';
+%><% if (viOn) { %><a href="/help" title="站方認證帳號"><img align="<%= viS === 'auth' ? 'absmiddle' : 'middle' %>" class="vip_icon" border="0" src="<%= viSrc %>" alt="vip_icon" /></a><% } %>

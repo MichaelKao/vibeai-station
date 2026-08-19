@@ -41,18 +41,34 @@
 <%- include('kukubar2012_lower') %>
 <script>
 /* 社群分享列的分享網址要絕對網址，樣板端拿不到 host，在這裡補。
-   （partials/blogshare.ejs 只寫了 data-share / data-path / data-title） */
+   （partials/socialshare2012.ejs 只寫了 data-share / data-path / data-title）
+   只有還活著的服務才接：fb / plurk / tw(X)。
+   Yahoo 即時通與 Google+ 已停止服務，DOM 照留但不連外。 */
 (function(){
   var base = location.protocol + '//' + location.host;
   document.querySelectorAll('a[data-share]').forEach(function(a){
     var url = encodeURIComponent(base + a.getAttribute('data-path'));
     var t   = encodeURIComponent(a.getAttribute('data-title') || '');
     var k   = a.getAttribute('data-share');
-    if (k === 'fb')    a.href = 'https://www.facebook.com/sharer.php?u=' + url + '&t=' + t;
+    if (k === 'fb')    a.href = 'https://www.facebook.com/sharer/sharer.php?u=' + url;
     if (k === 'plurk') a.href = 'https://www.plurk.com/?qualifier=shares&status=' + url + '+(' + t + ')';
-    if (k === 'yim')   a.href = 'ymsgr:customstatus?' + t + '+' + url;
+    if (k === 'tw')    a.href = 'https://twitter.com/intent/tweet?url=' + url + '&text=' + t;
+  });
+
+  /* select#friendlist 的跳頁：原站是 meetfriend.js 的 MeetFriend()。
+     本站統一用 data-user-go（partials/friendlist2012.ejs 產的）。 */
+  document.addEventListener('change', function(e){
+    var s = e.target;
+    if (!s || s.tagName !== 'SELECT') return;
+    var go = s.getAttribute('data-user-go');
+    if (go !== null && s.value) location.href = '/' + encodeURIComponent(s.value) + go;
   });
 })();
 </script>
+<%# 隱藏 metadata：網誌只有兩欄（觀看者狀態、是否站方認證作者），值是本站自己的。
+    欄位組合每頁不同，說明見 partials/pagemeta2012.ejs。 %>
+<%- include('pagemeta2012', { pm: {
+      ov_status: (locals.me ? 'log' : 'unlog') + '_' + (u && u.vip ? 'VPO' : 'NPO'),
+      ytalent:   (u && u.admin) ? 1 : 0 } }) %>
 </body>
 </html>

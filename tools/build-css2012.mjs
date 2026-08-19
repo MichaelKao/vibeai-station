@@ -84,6 +84,10 @@ const BUNDLES = {
       ['album/css/newButton.css', 'css/album_newButton.css', 'album'],
       ['album/css/newPanel.css', 'css/album_newPanel.css', 'album'],
       ['album/css/photowall_overlay.css（照片牆）', 'css/album_photowall_overlay.css', 'album'],
+      // 照片頁那個「換用新版相片頁」推廣浮層（#remindvers）的樣式。
+      // 之前沒進 bundle，浮層就變成一坨沒有樣式的項目符號掉在版面最下面。
+      // 這支同時提供 .hidden{display:none}，浮層預設收起來也靠它。
+      ['album/css/spp_promotion.css（#remindvers 推廣浮層）', 'css/album_spp_promotion.css', 'album'],
       ['common/css/sharing.css（pic.wretch.cc 版）', 'css/album_sharing.css', 'album'],
       ['common/css/kukubar.css（內頁工具列）', 'css/chrome_kukubar.css', 'chrome'],
     ],
@@ -103,6 +107,10 @@ const BUNDLES = {
       ['album/css/newButton.css', 'css/album_newButton.css', 'album'],
       ['album/css/newPanel.css', 'css/album_newPanel.css', 'album'],
       ['album/css/photowall_overlay.css（照片牆）', 'css/album_photowall_overlay.css', 'album'],
+      // 照片頁那個「換用新版相片頁」推廣浮層（#remindvers）的樣式。
+      // 之前沒進 bundle，浮層就變成一坨沒有樣式的項目符號掉在版面最下面。
+      // 這支同時提供 .hidden{display:none}，浮層預設收起來也靠它。
+      ['album/css/spp_promotion.css（#remindvers 推廣浮層）', 'css/album_spp_promotion.css', 'album'],
       ['common/css/sharing.css（pic.wretch.cc 版）', 'css/album_sharing.css', 'album'],
       ['common/css/kukubar.css（內頁工具列）', 'css/chrome_kukubar.css', 'chrome'],
     ],

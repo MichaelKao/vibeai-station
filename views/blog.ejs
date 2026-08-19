@@ -87,7 +87,9 @@
             <div class="articletext">
             <a name="<%= p.id %>"></a>
             <h3 class="title"><% if (p.pass) { %><img src="/img/wretch2012/blog/lock.gif" width="21" height="16" border="0" align="absmiddle" alt="[鎖]"><% } %><a href="/<%= u.name %>/blog/<%= p.id %>"><%= p.title %></a><% if (p.featured) { %><a href="/blogs" target="_blank"><img src="/img/wretch2012/blog/hot.png" border="0" alt=""></a><% } %></h3>
-            <%- include('partials/blogshare', { shPost: p, shOwner: u.name, shTb: null, shCan: !!(me && !isOwner) }) %>
+            <%# shTb 給數字才會印 span.bubble（「已被轉貼幾次」的泡泡）。
+                原版列表頁與文章頁都有這顆，之前傳 null 是因為列表沒查轉貼數。 %>
+            <%- include('partials/blogshare', { shPost: p, shOwner: u.name, shTb: p.tb, shCan: !!(me && !isOwner) }) %>
 
             <div class="innertext"><% if (locked) { %>＊ 這篇文章已上鎖，需要密碼才能觀看 ＊<% } else { %><%- render(cut ? p.body.slice(0,300) + '…' : p.body) %><% } %></div>
 

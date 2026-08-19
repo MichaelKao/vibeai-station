@@ -1,0 +1,128 @@
+<%# 影音 /:name/video — 無名的 www.wretch.cc/video/<帳號>
+    ─────────────────────────────────────────────────────────────
+    【刻意偏離，理由寫在這裡】
+    無名的影音服務一頁存檔都沒有（assets_src2/html/ 44 份裡沒有 video_*），
+    連 CSS 都沒有，所以這一頁**沒有原版可以照抄**。做法是：
+      1. 外框走 2012 內頁 chrome（#kukubar-upper / #bigcontainer / #kukubar-lower），
+         跟名片、好友同一套，不自創第二種頁框；
+      2. 版面用留言板家族既有的 class（.w2-h3 / .w2-grid / .w2-empty…），
+         不新增樣式檔；
+      3. 服務導覽 ul#serviceList 七顆逐字照抄原版（含 #linkVideo 這一顆，
+         原版就是從那裡連過來的）。
+    功能是「最小可用」：站主貼 YouTube 網址，站上用 <iframe> 內嵌。
+    無名當年是自建影音服務，我們沒有轉檔與串流，不做假的上傳介面。
+
+    表單 action 與欄位 name 對應 src/server.js：
+      POST /:name/video           title / url / descr
+      POST /:name/video/:id/del %>
+<%- include('partials/head2012in', {
+      title: u.nick + '的影音 - 無名小站',
+      page: 'w2-user',
+      skin: ['/wretch2012-skin-user.css'] }) %>
+
+<div id="container">
+
+  <div id="header">
+    <div id="boxProfile">
+
+      <div class="Pcover">
+        <span>
+          <cite></cite>
+          <img id="cover" src="<%= u.avatar %>" alt="<%= u.nick %> 的影音">
+        </span>
+      </div>
+
+      <div class="Ptext">
+        <h1><%= u.nick %> 的影音</h1>
+
+        <ul id="serviceList">
+          <li><a id="linkMypage" href="/<%= u.name %>">MyPage</a></li>
+          <li><a id="linkAlbum" href="/<%= u.name %>/album">album</a></li>
+          <li><a id="linkBlog" href="/<%= u.name %>/blog">blog</a></li>
+          <li><a id="linkGbook" href="/<%= u.name %>/guestbook">guestbook</a></li>
+          <li><a id="linkUser" href="/<%= u.name %>/card">User</a></li>
+          <li><a id="linkFriend" href="/<%= u.name %>/friends">Friend</a></li>
+          <li><a id="linkVideo" href="/<%= u.name %>/video">Video</a></li>
+        </ul>
+
+        <% if (me && !isOwner) { %>
+        [<form method="post" action="/<%= u.name %>/friend" style="display:inline"><button class="w2-linkbtn" type="submit"><%= isFriend ? '移出好友名單' : '加入好友名單' %></button></form>]
+        <% } %>
+        [<a href="/<%= u.name %>/digu">嘀咕</a>]<br>
+      </div>
+
+      <div id="menu">
+        <div id="msg"><strong>目前顯示：</strong>
+          <span>共 </span><span id="msg2"><%= total %></span> 支影片
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <hr class="nohr">
+
+  <div id="content">
+
+    <div id="videoListDiv">
+      <div class="w2-h3"><%= u.nick %> 的影音（<%= total %> 支）</div>
+
+      <% if (!videos.length) { %>
+      <div class="w2-empty">還沒有影片</div>
+      <% } %>
+
+      <% videos.forEach(v => { %>
+      <div class="w2-panel" id="v_<%= v.id %>">
+        <div class="w2-h3"><%= v.title %></div>
+        <%# 只內嵌 youtube-nocookie：vid 是 server.js 的 ytId() 驗過的 11 碼 id，
+            使用者插不進別的網址 %>
+        <iframe width="480" height="270" src="https://www.youtube-nocookie.com/embed/<%= v.vid %>"
+                title="<%= v.title %>" frameborder="0" allowfullscreen></iframe>
+        <% if (v.descr) { %><div class="w2-sub"><%= v.descr %></div><% } %>
+        <div class="w2-sub"><%= v.created %>
+          &nbsp;<a href="<%= v.url %>" rel="nofollow noopener" target="_blank">在 YouTube 觀看</a>
+          <% if (isOwner) { %>
+          &nbsp;<form method="post" action="/<%= u.name %>/video/<%= v.id %>/del" style="display:inline"
+                      onsubmit="return confirm('刪除這支影片？')"><button class="w2-linkbtn" type="submit">刪除</button></form>
+          <% } %>
+        </div>
+      </div>
+      <% }) %>
+
+      <% if (pages > 1) { %>
+      <div id="pagelink_1">
+        <% if (page > 1) { %><a href="?p=<%= page-1 %>">&laquo; </a><% } %>
+        <% for (let i = 1; i <= pages; i++) { %><% if (i === page) { %><%= i %> <% } else { %><a href="?p=<%= i %>"><%= i %></a> <% } %><% } %>
+        <% if (page < pages) { %><a href="?p=<%= page+1 %>"> &raquo;</a><% } %>
+      </div>
+      <% } %>
+
+      <div class="clear" id="listBottom"></div>
+    </div>
+
+    <% if (isOwner) { %>
+    <div class="w2-panel">
+      <div class="w2-h3">新增影片</div>
+      <form method="post" action="/<%= u.name %>/video">
+        <table class="w2-rows">
+          <tr><td width="90">影片網址</td>
+            <td><input type="text" name="url" size="46" maxlength="200" required
+                       placeholder="https://www.youtube.com/watch?v=..."></td></tr>
+          <tr><td>標題</td><td><input type="text" name="title" size="30" maxlength="60"></td></tr>
+          <tr><td>說明</td><td><input type="text" name="descr" size="46" maxlength="200"></td></tr>
+          <tr><td></td><td><input type="submit" value="新增">
+            <span class="w2-note">目前支援 YouTube 網址</span></td></tr>
+        </table>
+      </form>
+    </div>
+    <% } %>
+
+    <div id="num_videos">共有 <%= total %> 支影片 &nbsp;</div>
+  </div>
+
+  <hr class="nohr">
+
+  <div id="footer"></div>
+</div><!-- /#container -->
+
+<%- include('partials/foot2012in') %>

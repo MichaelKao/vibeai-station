@@ -1,0 +1,123 @@
+<%# 嘀咕 /:name/digu — 無名的 www.wretch.cc/digu/<帳號>
+    ─────────────────────────────────────────────────────────────
+    【刻意偏離，理由寫在這裡】
+    嘀咕獨立頁同樣一份存檔都沒有（assets_src2/html/ 沒有 digu_*）。
+    有存檔可證的只有留言板側欄那張名片小卡上的三個 class：
+      <p class="myDigu"><span class="digu">…</span><a class="digu_date">…</a></p>
+    （gb_guestbook_a000000010_20131226.html，一次只印**最新一則**）
+    所以這一頁沿用同一組 class 名，讓側欄與列表頁講同一種話；
+    外框走 2012 內頁 chrome，不自創第二種頁框。
+
+    功能是「最小可用」：站主自己發一句話，訪客只看。
+    原站的嘀咕有回應與轉噗，那些沒有存檔也沒有規格，不憑印象補。
+
+    表單 action 與欄位 name 對應 src/server.js：
+      POST /:name/digu           body
+      POST /:name/digu/:id/del %>
+<%- include('partials/head2012in', {
+      title: u.nick + '的嘀咕 - 無名小站',
+      page: 'w2-user',
+      skin: ['/wretch2012-skin-user.css'] }) %>
+
+<div id="container">
+
+  <div id="header">
+    <div id="boxProfile">
+
+      <div class="Pcover">
+        <span>
+          <cite></cite>
+          <img id="cover" src="<%= u.avatar %>" alt="<%= u.nick %> 的嘀咕">
+        </span>
+      </div>
+
+      <div class="Ptext">
+        <h1><%= u.nick %> 的嘀咕</h1>
+
+        <ul id="serviceList">
+          <li><a id="linkMypage" href="/<%= u.name %>">MyPage</a></li>
+          <li><a id="linkAlbum" href="/<%= u.name %>/album">album</a></li>
+          <li><a id="linkBlog" href="/<%= u.name %>/blog">blog</a></li>
+          <li><a id="linkGbook" href="/<%= u.name %>/guestbook">guestbook</a></li>
+          <li><a id="linkUser" href="/<%= u.name %>/card">User</a></li>
+          <li><a id="linkFriend" href="/<%= u.name %>/friends">Friend</a></li>
+          <li><a id="linkVideo" href="/<%= u.name %>/video">Video</a></li>
+        </ul>
+
+        <% if (me && !isOwner) { %>
+        [<form method="post" action="/<%= u.name %>/friend" style="display:inline"><button class="w2-linkbtn" type="submit"><%= isFriend ? '移出好友名單' : '加入好友名單' %></button></form>]
+        <% } %>
+        [<a href="/<%= u.name %>/guestbook">留言板</a>]<br>
+      </div>
+
+      <div id="menu">
+        <div id="msg"><strong>目前顯示：</strong>
+          <span>共 </span><span id="msg2"><%= total %></span> 則嘀咕
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <hr class="nohr">
+
+  <div id="content">
+
+    <% if (isOwner) { %>
+    <div class="w2-panel">
+      <form method="post" action="/<%= u.name %>/digu">
+        <span>正在嘀咕：</span>
+        <input type="text" name="body" size="40" maxlength="140" required
+               placeholder="你在做什麼？">
+        <input type="submit" value="嘀咕">
+        <span class="w2-note">一則最多 140 字</span>
+      </form>
+    </div>
+    <% } %>
+
+    <div id="diguListDiv">
+      <div class="w2-h3"><%= u.nick %> 的嘀咕（<%= total %> 則）</div>
+
+      <% if (!digus.length) { %>
+      <div class="w2-empty">還沒有嘀咕</div>
+      <% } %>
+
+      <table class="w2-rows">
+        <% digus.forEach(d => { %>
+        <tr id="d_<%= d.id %>">
+          <td>
+            <p class="myDigu">
+              <span class="digu"><%- render(d.body) %></span>
+              <a class="digu_date" href="/<%= u.name %>/digu#d_<%= d.id %>"><%= d.created %></a>
+            </p>
+          </td>
+          <% if (isOwner) { %>
+          <td width="60" class="w2-when">
+            <form method="post" action="/<%= u.name %>/digu/<%= d.id %>/del"
+                  onsubmit="return confirm('刪除這則嘀咕？')"><button class="w2-linkbtn" type="submit">刪除</button></form>
+          </td>
+          <% } %>
+        </tr>
+        <% }) %>
+      </table>
+
+      <% if (pages > 1) { %>
+      <div id="pagelink_1">
+        <% if (page > 1) { %><a href="?p=<%= page-1 %>">&laquo; </a><% } %>
+        <% for (let i = 1; i <= pages; i++) { %><% if (i === page) { %><%= i %> <% } else { %><a href="?p=<%= i %>"><%= i %></a> <% } %><% } %>
+        <% if (page < pages) { %><a href="?p=<%= page+1 %>"> &raquo;</a><% } %>
+      </div>
+      <% } %>
+
+      <div class="clear" id="listBottom"></div>
+    </div>
+
+    <div id="num_digu">共有 <%= total %> 則嘀咕 &nbsp;</div>
+  </div>
+
+  <hr class="nohr">
+
+  <div id="footer"></div>
+</div><!-- /#container -->
+
+<%- include('partials/foot2012in') %>

@@ -1,0 +1,28 @@
+<%
+  /* #extraDiv1…N —— 版型／使用者自訂 CSS 的裝飾掛點
+     ═══════════════════════════════════════════════════════════════════════
+     原版一律長這樣，內容永遠是空的：
+       <div id="extraDivN"><span></span></div>
+
+     為什麼要有：這是「使用者自訂 CSS」這個靈魂功能（WRETCH_2012.md §4-5）的
+     配套設施。原廠版型自己就留了空規則等人接手
+     （assets_src2/css/gb_default_skin577_friend.css:35-42 宣告了
+       #extraDiv1{} #extraDiv2{} #extraDiv3{} #extraDiv4{}）。
+     我們已經支援 u.css，卻沒有給使用者任何可以掛東西的節點——補上這些才算做完。
+
+     **每頁的個數與位置都不一樣，不能一支硬套**（實測）：
+       好友   8　#extraDiv1-4 在 #container 內、5-8 在 #container 外
+       網誌   6　1-2 在 #main2 後、3-4 在 #container2 後、5-6 在 #container1 後
+       留言板 4　1-2 在 #container 內、3-4 在 #container 外
+       名片   0　真的沒有，不要加
+
+     ── include 參數 ──────────────────────────────────────────────────────
+       edFrom  起始編號（含），預設 1
+       edTo    結束編號（含）；小於 edFrom 就什麼都不印
+
+     呼叫範例（註解裡不能寫 EJS 的輸出標記，掃描器會把它當成真的標記）：
+       include('extradiv2012', { edFrom: 3, edTo: 4 }) */
+  const edA = +(locals.edFrom || 1);
+  const edB = +(locals.edTo || 0);
+%><% for (let edI = edA; edI <= edB; edI++) { %><div id="extraDiv<%= edI %>"><span></span></div>
+<% } %>

@@ -1,6 +1,6 @@
 # 交接：接下來要做什麼
 
-> 最後更新：2026-08-18。換機器接手時先讀這份，再讀 `WRETCH_2012.md`（復刻契約）。
+> 最後更新：2026-08-19。換機器接手時先讀這份，再讀 `WRETCH_2012.md`（復刻契約）。
 
 ---
 
@@ -30,8 +30,14 @@ pnpm dev                             # http://localhost:3000
 | 登入／註冊 | 完成。原站沒有這兩頁（導去 Yahoo），用 2012 元件語言自製 |
 | 版型切換 | 完成。照原站做法：選版型 → 載那支版型 CSS，不是 body class |
 | 資料層 | **正式站已跑 Postgres**（新加坡）+ **Redis**（新加坡）+ R2 |
-| 回歸測試 | 86 項全綠（`node test_all.mjs`，需先啟一個 server） |
-| SQL 方言測試 | 11 項全綠（`node test_pg.mjs`） |
+| 影音／相片牆／嘀咕 | 完成。原站有、我們原本沒有的三個功能，版面 1:1 ＋ 最小可用實作 |
+| 廣告版位 | 版位 DOM／id／尺寸照原版，內容換成站方公告與站內連結（`partials/adslot2012.ejs`） |
+| 回歸測試 | **119 項全綠**（`node test_all.mjs`） |
+| SQL 方言測試 | **23 項全綠**（`node test_pg.mjs`） |
+
+> ⚠ `test_all.mjs` **要對一個乾淨的資料庫跑**（它第一步就是註冊 alpha/bravo/charlie，
+> 帳號已存在就會整串連鎖失敗）。做法：
+> `DATA_DIR=/tmp/x PORT=3002 node src/server.js` 再 `BASE=http://localhost:3002 node test_all.mjs`。
 
 ### 還原度（離線量測，可重現）
 
@@ -40,32 +46,52 @@ pnpm dev &                    # 先啟站
 node tools/fidelity.mjs --all
 ```
 
-最近一次結果：**結構平均 74%**
-名片 89% / 首頁 81% / 單張照片 76% / 網誌 75% / 相簿 69% / 留言板 66% / 好友 60%
+最近一次結果：**八頁全部 100%**（首頁／相簿列表／單本相簿／單張照片／網誌／留言板／名片／好友）
+
+> 2026-08-19 修好了量測工具本身的三個 bug，所以**新舊數字不能直接比**：
+>   1. **頁面配錯**：`album_album_list.html` 其實是「單本相簿的照片列表」，
+>      舊表把它配給「相簿列表」，等於拿 A 頁對 B 頁，憑空多出 20 個假缺漏。
+>   2. **單張照片永遠抓第一張**：第一張本來就不該有「第一張／上一張」連結，
+>      於是 `#first`／`#prev` 被誤報成缺漏。改抓中間那張。
+>   3. **沒剝掉 `<script>`**：原版把 FB／G+／Twitter 外掛塞在 `document.write` 的字串裡，
+>      那不是 DOM；反過來說，我們塞一段死 script 就能加分。兩邊都剝掉，分數才不能造假。
+> 修好之後的**真實起點是 86%**（不是 74%），再補到 100%。
+
+報表印兩個百分比：
+- **可達** ＝ 命中 ÷（原版全部 − 排除項）← 這才是要推到 100% 的分母
+- **原始** ＝ 命中 ÷ 原版全部（含排除項）
+
+排除項只有 9 個，全部集中在網誌頁，而且每一條都印得出理由：使用者把 Word／
+Facebook 頁面貼進文章帶進來的 class（`.MsoNormal` `.uiInfoTable` `.data` …）。
+那是內容不是版面，而且 `WRETCH_2012.md` §4-4 規定使用者輸入一律逸出，結構上不可達。
 
 > 該工具同時會印「文案覆蓋率」，**那個數字不要採用**。原版頁面上的中文大多是
-> 別人的內容（相簿名、文章、留言）和我們沒有的功能（影音／揪團／嘀咕／VIP），
-> 量到的是內容差異不是還原度。
+> 別人的內容（相簿名、文章、留言），量到的是內容差異不是還原度。
 
 ---
 
 ## 2. 待辦（依優先序）
 
-### A. 補結構缺漏 — 這是把 74% 往上推的主要工作
+### A. ~~補結構缺漏~~ — **2026-08-19 做完了，八頁都 100%**
 
-`node tools/fidelity.mjs --all` 會列出每頁缺的 id/class。缺漏分三類，**只有第 2 類要補**：
+使用者當時的三個決定（往後同類問題照這個走）：
 
-1. **不該補**：`#share_facebook`、`.g-plusone`、`#photowall`（VIP 相片牆）、
-   `#linkVideo`（影音）、`.vip_icon`、`#exif`、`#rapid_*`（Yahoo 埋點）、
-   `#ad_banner`／`#ad_gbook`（廣告位）— 我們沒有這些功能
-2. **該補**：
-   - `#wretch-crumb` 麵包屑 — **每一頁都缺**，影響最大
-   - `#first` / `#prev` — 照片頁導覽的 id（文字有、id 沒帶）
-   - `#page_link_2..7` — 留言板分頁
-   - `#cateSelect` / `#searchInput` — 好友頁的分類與搜尋
-   - 網誌的 `.blogbody` / `.blogbody2` / `.articletext` / `.posted` / `.innertext` / `.extended`
-     ← **上次量測時站上沒有文章，所以測不到，要重測確認是不是真的缺**
-3. **不會一樣**：`#u_a7512128` 這種由使用者 id 產生的
+| 題目 | 決定 | 落在哪 |
+|---|---|---|
+| 廣告版位 | **保留版位，放自家內容**——DOM／id／尺寸照原版，裡面換成站方公告與站內連結 | `partials/adslot2012.ejs` |
+| 我們沒有的功能（影音／VIP 相片牆／嘀咕） | **版面照做＋最小功能**，不做空殼 | `/:user/video`、`/:user/album/:id/wall`、`/:user/digu` |
+| 社群外掛 | **能用的做真的**（FB／Twitter／Plurk 純 `<a href>`，不載 SDK）；**死掉的留外觀**（Google+／Yahoo IM 只留 class 與圖，不連外） | `partials/socialshare2012.ejs`、`wfpsharing2012.ejs` |
+
+> 上一版這一節寫的「不該補／該補」分類**有幾條是錯的**，別再照抄：
+> - `#wretch-crumb` **不是麵包屑**，是 `#hugewrapper` 裡的 hidden input（CSRF token），
+>   旁邊是 `#static-path`。而且 `blog2012_head.ejs` 當時早就有了，不是「每一頁都缺」。
+> - `#first` / `#prev` **根本沒缺**，是量測工具永遠抓相簿第一張造成的誤判。
+> - `.blogbody` 那一整組**當時就都有了**，缺的只有 `.extended`，而且原因是種子文章太短
+>   沒觸發「繼續閱讀」，不是 markup 沒寫。
+
+**還沒做完的只剩一件事**：`.vip_icon` 那套認證章的**後台介面**。
+欄位（`users.vip`，0 無／1 銀／2 金／3 白金）與畫面都好了，
+但目前只能靠 `tools/seed-demo.mjs` 或直接改資料庫來設定，`/admin` 沒有對應的操作。
 
 ### B. 補更多原廠版型
 
@@ -93,6 +119,7 @@ node tools/fidelity.mjs --all
 ### D. 線上示範資料
 
 正式站的 Postgres 目前是**空的**。使用者已同意灌示範資料。
+本機的種子資料已經重灌過（2026-08-19），162 張都是真的台灣照片。
 要灌的話需要在能連到 Postgres 的環境跑 `tools/seed-demo.mjs`
 （Railway 的 PG 只有內網位址，本機連不到；可考慮加一個 `SEED_DEMO=1` 的啟動旗標，
 做法比照 `src/migrate-pg.js`）。
@@ -114,6 +141,11 @@ node tools/fidelity.mjs --all
 | **手寫 parser 做 codemod 必錯** | 我踩了三次（視窗太短、把 `...` 誤判成成員存取、字串遮罩失步，漏 47 處）。`tools/codemod-await.mjs` 已改用 acorn，並會自己再解析一次驗證 |
 | **測試不要綁 class 名稱** | 復刻不同年代時 class 一定會變，綁 class 會在功能沒壞時誤報。要驗行為 |
 | **原版用詞** | 2012 是「回上一層」，「回頂端」是 2005 的說法 |
+| **量測工具本身會錯，先驗工具再驗版面** | 這次八頁裡有三頁的「缺漏」是工具的 bug（頁面配錯、永遠抓第一張、沒剝 script），照著補會做出原版不存在的東西。看到「缺很多」先去讀那一頁的原始檔確認它真的是同一頁 |
+| **`test_all.mjs` 不是冪等的** | 第一步就註冊 alpha/bravo/charlie，對已經跑過的 DB 再跑一次會整串連鎖失敗，看起來像「改壞了 14 項」。一定要開一個 `DATA_DIR` 全新的 server 來跑 |
+| **EJS 標記不能巢狀** | `<%# 註解 %>` 塞進 `<%- include(...) %>` 的參數物件裡會 500（`Could not find matching close tag`）。要在 include 參數裡寫註解就用 JS 的 `/* */` |
+| **`<%= %>` 會逸出引號** | 寫 `<li <%= on ? ' class="current"' : '' %>>` 會輸出 `class=&quot;current&quot;`，class 整個失效而且畫面看不出來。要寫成 `class="<%= on ? 'current' : '' %>"` |
+| **種子資料的模數會撞在一起** | 悄悄話用 `i%17===5`、板主回覆用 `i%9===2`，兩個在 i=56 同時成立，那則對訪客是隱藏的，`.reply_content` 就永遠量不到。挑間隔時要確認不會同步 |
 
 ---
 
@@ -128,7 +160,9 @@ node tools/fidelity.mjs --all
 | `tools/build-assets.mjs` | 2005 版素材管線（已停用，`attic/` 那批才用得到） |
 | `tools/seed-demo.mjs [--reset]` | 示範資料（台灣照片，走 R2） |
 | `tools/codemod-await.mjs <檔>` | 同步→非同步轉換（acorn，含自我驗證） |
-| `test_all.mjs` / `test_pg.mjs` | 回歸測試 86 項／SQL 方言 11 項 |
+| `test_all.mjs` / `test_pg.mjs` | 回歸測試 119 項／SQL 方言 23 項（`test_all` 要對乾淨的 DB 跑，見第 1 節） |
+| `tools/fidelity.mjs --page <名稱>` | 只量一頁，開發時用 |
+| `tools/fidelity.mjs --all --json out.json` | 機器可讀的明細 |
 
 ---
 

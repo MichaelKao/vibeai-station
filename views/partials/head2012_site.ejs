@@ -51,6 +51,17 @@
      內頁 route 沒有好友這份 local，能湊的只有 home/friends 兩頁才有的 friends，
      所以這裡容許沒有——沒有就只印那一個 optgroup 標題行（原站也是這樣）。 */
   const w2Friends = locals.friends || [];
+  /* #wretch-crumb：原站是 Yahoo 的 CSRF token（&.c=…&.t=…）。本站靠 cookie 的
+     SameSite=lax 擋 CSRF，沒有那套 token，所以自己發一組同格式的；
+     後端把真正的 session token 放進 res.locals.crumb 之後這裡自動改用它。
+     **只輸出、不驗證**——先驗證會把既有表單全部擋掉。 */
+  const w2Crumb = locals.crumb ||
+    ('&.c=' + (w2Me ? 'u' + w2Me.id : 'g') + Math.random().toString(36).slice(2, 12)
+     + '&.t=' + Math.floor(Date.now() / 1000));
+  /* 站方公告：接自己的 notices 表。沒有公告就整塊不輸出——原站 2012 的快照
+     同樣沒有這個節點（.announcement 只出現在 2013 底的關站公告）。 */
+  const w2Notice = (locals.notices && notices.length) ? notices[0]
+                 : (locals.siteNotice || null);
 %><!DOCTYPE html>
 <html lang="zh-Hant">
 <head>
@@ -61,15 +72,18 @@
 <%# 版型 bundle（原站原檔，只改素材路徑）→ 本站刻意偏離層 → 使用者自訂 CSS %>
 <link rel="stylesheet" href="<%= w2Css %>" type="text/css">
 <link rel="stylesheet" href="/wretch2012-album-in.css" type="text/css">
+<%# 共用 chrome（kukubar／站方公告／分享列）的刻意偏離層。本來只有網誌在載，
+    但那幾條規則是三套外框共用的，相簿家族也要吃到。 %>
+<link rel="stylesheet" href="/wretch2012-chrome-site.css" type="text/css">
 <% if (w2Owner && w2Owner.css) { %><style><%- safeCss(w2Owner.css) %></style><% } %>
 </head>
 <%# 無名相簿頁關掉右鍵／拖曳／選取，逐字照抄存檔的 <body> 屬性 %>
 <body<% if (w2BodyId) { %> id="<%= w2BodyId %>"<% } %> onDragStart="return false" oncontextmenu="return false" onSelectStart="return false">
 <!-- nv hugewrepper -->
-<div id="hugewrapper">
-<%# 原站這裡還有 input#wretch-crumb（Yahoo 的 CSRF token）。本站沒有那套 token，
-    偽造一個沒有意義，所以只留 #static-path（kukubar.js 拿它組素材網址）。 %>
-<input id="static-path" type="hidden" value="/img/wretch2012/">
+<div id="hugewrapper"><input id="wretch-crumb" type="hidden" value="<%= w2Crumb %>">
+<%# #static-path 是 kukubar.js 組素材網址用的根路徑（原站 l.yimg.com/e/serv/common/）。
+    本站的素材根就是 CDN（R2；本機自動回退到 public/img/）。 %>
+<input id="static-path" type="hidden" value="<%= CDN %>">
 <style>
 .kukubar-customized {
     background:#EEEDDD; /* old browsers */
@@ -89,8 +103,9 @@
             <ul class="dropdown <%= w2Svc %>-service">
                 <li class="album-index"><a class="bar-link" href="/albums">Album</a></li>
                 <li class="blog-index"><a class="bar-link" href="/blogs">Blog</a></li>
-                <li class="video-index"><a class="bar-link" href="/help">Video</a></li>
-                <li class="digu-index"><a class="bar-link" href="/help">Digu</a></li>
+                <%# 影音與嘀咕本站有（另一位 agent 正在做後端），指到約定好的網址 %>
+                <li class="video-index"><a class="bar-link" href="<%= w2Owner ? '/'+w2Owner.name+'/video' : '/help' %>">Video</a></li>
+                <li class="digu-index"><a class="bar-link" href="<%= w2Owner ? '/'+w2Owner.name+'/digu' : '/help' %>">Digu</a></li>
                 <li class="join-index"><a class="bar-link" href="/help">Join</a></li>
                 <li><a class="bar-link" href="/">Yahoo!</a></li>
                 <li><a class="bar-link" href="/help">Help</a></li>
@@ -100,6 +115,7 @@
         <%# #infozone 原站放編輯部挑的「今日主題」。內頁 route 沒有這份 local，
             用手邊的站主暱稱湊一行，前綴保留原站的「今日主題：」。 %>
         <div id="infozone">
+             <% if (w2Notice) { %><p class="announcement"><a href="/help"><%= w2Notice.body || w2Notice %></a></p><% } %>
              <ul>
                 <li><a href="/albums" class="theme">今日主題：逛逛大家的相簿</a></li>
              </ul>
@@ -160,6 +176,17 @@
 </div>
 <div id="bigcontainer" style="position: relative !important; zoom:1 !important;" >
 <% if (flash) { %><div class="w2a-flash"><%= flash %></div><% } %>
+<% if (w2Head === 'list') { %>
+<%# 原版 banner part 的第一張表格就是 700×90 的 td#ad_banner
+    （album_index_a000000jay.html:134-141）。版位照做，內容換成本站自己的。 %>
+<table width="700" border="0" cellpadding="0" cellspacing="0" align="center">
+  <tr>
+<%- include('adslot2012', { adId: 'ad_banner', adTag: 'td',
+      adNotices: locals.notices || (locals.siteNotice ? [locals.siteNotice] : []),
+      adTopics: locals.topics || [] }) %>
+  </tr>
+</table>
+<% } %>
 <% if (w2Head !== 'none' && w2Owner) { %>
 
 <!-- banner part -->
@@ -167,6 +194,8 @@
   <tr>
     <td>
       <div id="banner">
+        <%# 認證章：原版在 #banner 的第一個節點（非 VIP 就整塊沒有） %>
+        <%- include('vipicon2012', { viUser: w2Owner, viStyle: 'silver' }) %>
         <% if (w2Head === 'list') { %>
         <a href="/<%= w2Owner.name %>/album"><%= w2Owner.name %>'s AlbumList</a>
         <% } else { %>
@@ -186,28 +215,13 @@
     <td class="sidetitle">
 
   <%# 導覽鈕列：DOM 與 id 逐字照抄存檔（MyPage / album / blog / guestbook /
-      User / Friend / Video）。本站沒有影音服務，Video 指到服務說明。 %>
-  <div class="small-c" id="MySpace">
-    <span>[ <%= w2Owner.name %> 的</span>
-    <a id="linkMypage" href="/<%= w2Owner.name %>">MyPage</a><span>&nbsp;&nbsp;|&nbsp;</span>
-    <a id="linkAlbum" href="/<%= w2Owner.name %>/album">album</a><span>&nbsp;&nbsp;|&nbsp;</span>
-    <a id="linkBlog" href="/<%= w2Owner.name %>/blog">blog</a><span>&nbsp;&nbsp;|&nbsp;</span>
-    <a id="linkGbook" href="/<%= w2Owner.name %>/guestbook">guestbook</a><span>&nbsp;&nbsp;|&nbsp;</span>
-    <a id="linkUser" href="/<%= w2Owner.name %>/card">User</a><span>&nbsp;&nbsp;|&nbsp;</span>
-    <a id="linkFriend" href="/<%= w2Owner.name %>/friends">Friend</a><span>&nbsp;&nbsp;|&nbsp;</span>
-    <a id="linkVideo" href="/help">Video</a>
-    <span>]</span>
-  </div>
+      User / Friend / Video），四種變體集中在 partials/myspace2012.ejs。 %>
+  <%- include('myspace2012', { msUser: w2Owner, msVariant: 'album' }) %>
   <span class="small-c">
     <%# 原站的 onChange="MeetFriend('/album/', this)" 是一支外部 JS，
         本站直接在 foot2012_site.ejs 那段 JS 裡做同一件事（跳到 /帳號/album）。 %>
-    <select id="friendlist" name="friendlist" data-user-go="/album">
-  <option>- Friends' Album -</option>
-<% if (w2Friends.length) { %>
-        <optgroup label="好友">
-<% w2Friends.forEach(f => { %>          <option value="<%= f.name %>"><%= f.name %><% if (f.nick && f.nick !== f.name) { %>(<%= f.nick %>)<% } %></option>
-<% }) %>        </optgroup>
-<% } %>    </select>
+    <%- include('friendlist2012', { flFriends: w2Friends,
+          flLabel: "- Friends' Album -", flGo: '/album' }) %>
 <% if (w2Head === 'list') { %>
     <%# 「- Category -」原站是相簿主人自己開的個人分類（?cid=N）。
         本站的 albums 表沒有個人分類欄位，也不能改 src/，所以拿站內分類

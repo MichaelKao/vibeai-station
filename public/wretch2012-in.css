@@ -136,3 +136,61 @@ body.w2-friend .w2-panel { background: #fff; border: 1px solid #999; padding: 10
 body.w2-friend .w2-nick { display: block; font-size: 12px; text-align: center;
                           height: 1.3em; overflow: hidden; }
 body.w2-friend .w2-grp  { color: #999; }
+
+/* --- 11. 站方公告 .announcement ------------------------------------------
+ * 我們 bundle 進來的是 2011 版 chrome_kukubar.css，裡面沒有 .announcement
+ * ——那三條是 2013 版才加的（assets_src2/css/chrome_kukubar_20130903.css:781-790）。
+ * 數值照那份抄，另外多一條：有公告時把「今日主題」那一行收起來。
+ * #infozone 只有 350×30 且 overflow:hidden，兩行本來就會互相蓋掉，
+ * 2013 的原站同樣是讓公告取代今日主題（它直接 #infozone ul{display:none}），
+ * 這裡改用兄弟選擇器，沒有公告時今日主題照常出現，才留得住 2012 的樣子。
+ */
+#kukubar-upper #infozone .announcement    { line-height: 30px; margin: 0; }
+#kukubar-upper #infozone .announcement a  { color: #e00; }
+#kukubar-upper #infozone .announcement ~ ul { display: none; }
+
+/* --- 12. 廣告版位改放本站自己的內容 ---------------------------------------
+ * #ad_banner / #ad_gbook / #ad_lrec / #ad_button 的節點、id、尺寸照原版，
+ * 內容換成站方公告與站內入口（views/partials/adslot2012.ejs）。
+ * 原站的 gb_overwrite.css 為了防止使用者用自訂 CSS 把廣告藏起來，
+ * 對 #ad_gbook a / #ad_lrec div a 下了 `width:728px!important;height:90px!important`
+ * 這種「假設裡面只有一張廣告圖」的規則——我們裡面是一排文字連結，
+ * 不還原這幾條就會變成每個連結都 728×90。同樣的選擇器、同樣的 !important，
+ * 排在後面把它蓋回去。
+ */
+html body div#bigcontainer div#container div#ad_gbook a,
+html body div#bigcontainer div#container div#ad_gbook a img,
+html body div#bigcontainer div#container div#main div#sidebar ul li#ad_lrec div a,
+html body div#bigcontainer div#container div#main div#sidebar ul li#ad_lrec div a img {
+  width: auto !important; height: auto !important; display: inline !important;
+}
+.w2-ad        { text-align: center; }
+.w2-ad-in     { display: inline-block; box-sizing: border-box; text-align: left;
+                overflow: hidden; padding: 6px 10px; font-size: 12px; line-height: 1.6;
+                border: 1px solid #b8d7f0; background: #eff8ff; color: #84aece; }
+.w2-ad-in a   { color: #5e89aa; text-decoration: none; }
+.w2-ad-in a:hover { text-decoration: underline; }
+/* 尺寸照原版：橫幅 728×90、方塊 300×250 */
+#ad_banner .w2-ad-in, #ad_gbook .w2-ad-in { width: 728px; height: 90px; }
+#ad_lrec                                  { padding: 0 !important; }
+#ad_lrec  .w2-ad-in                       { width: 300px; height: 250px; line-height: 1.9; }
+/* 300×250 是直的，連結改成一行一個才填得滿，不會變成一個空框 */
+#ad_lrec .w2-ad-links a, #ad_lrec .w2-ad-topics a { display: block; margin-right: 0; }
+.w2-ad-hd     { font-weight: bold; color: #5e89aa; margin-bottom: 2px; }
+.w2-ad-notice { margin-bottom: 3px; }
+.w2-ad-topics a, .w2-ad-links a { display: inline-block; margin-right: 8px; white-space: nowrap; }
+.w2-ad-btn    { font-size: 12px; color: #5e89aa; }
+
+/* --- 13. 嘀咕 .myDigu ---------------------------------------------------
+ * 原版名片小卡是二選一：有嘀咕印 .myDigu、沒有印 .myDesc（兩框同尺寸，
+ * 疊起來會把 ul#myService 擠出可視區）。本站一律走 .myDigu，
+ * 沒有嘀咕時印空狀態——自我介紹在 gbtop.ejs 的 #description 已經有一份。
+ * 樣式本來就在 bundle 裡（wretch2012-gb.css:330-331），這裡只補連結顏色。
+ */
+.myDigu .digu a { color: inherit; text-decoration: none; }
+.myDigu .digu a:hover { text-decoration: underline; }
+
+/* ===== 留言板頁專屬（補結構用，由留言板 agent 維護） ===== */
+/* ===== 名片頁專屬（補結構用，由名片 agent 維護） ===== */
+/* ===== 好友頁專屬（補結構用，由好友 agent 維護） ===== */
+/* ===== 個人站共用（補結構用） ===== */

@@ -34,28 +34,17 @@
   </tr>
   <tr>
     <td>
-      <font class="small-c">
-        [ <%= u.name %> 的
-        <a id="linkMypage" href="/<%= u.name %>">MyPage</a><span>&nbsp;&nbsp;|&nbsp;</span>
-        <a id="linkAlbum" href="/<%= u.name %>/album">相簿</a><span>&nbsp;&nbsp;|&nbsp;</span>
-        <a id="linkBlog" href="/<%= u.name %>/blog">網誌</a><span>&nbsp;&nbsp;|&nbsp;</span>
-        <a id="linkGbook" href="/<%= u.name %>/guestbook">留言板</a><span>&nbsp;&nbsp;|&nbsp;</span>
-        <a id="linkUser" href="/<%= u.name %>/card">名片</a><span>&nbsp;&nbsp;|&nbsp;</span>
-        <a id="linkFriend" href="/<%= u.name %>/friends">好友</a>
-        ]
-      </font>
-      <% if (friends.length) { %>
+      <%- include('partials/myspace2012', {
+            msUser: u, msVariant: 'card',
+            msLabels: ['MyPage','相簿','網誌','留言板','名片','好友','影音'] }) %>
       <span class="small-c">
-        <select name="friendlist" onchange="if(this.value)location.href='/'+encodeURIComponent(this.value)+'/card'">
-          <option value="">－ 好友的名片 －</option>
-          <% friends.forEach(f => { %><option value="<%= f.name %>"><%= f.name %>(<%= f.nick %>)</option><% }) %>
-        </select>
+        <%- include('partials/friendlist2012', { flFriends: friends, flGo: '/card' }) %>
       </span>
-      <% } %>
       <br>
-      <% if (me && !isOwner) { %>
-      <span class="boxAddFriendLink">[<form method="post" action="/<%= u.name %>/friend" style="display:inline"><button class="w2-linkbtn small-c" type="submit"><%= isFriend ? '移出好友名單' : '加入好友名單' %></button></form>]</span>
-      <% } %>
+      <%# 原版這一格不分登入狀態一律輸出（gb_user_a000000010_20120531.html:12449，
+          該存檔是登出態的爬蟲抓的，照樣有這個節點）。訪客點了導去登入，
+          本人看到的是停用態——節點永遠在，變的只是裡面那顆連結。 %>
+      <span class="boxAddFriendLink"><% if (isOwner) { %>[<span class="small-c">Your Card</span>]<% } else if (me) { %>[<form method="post" action="/<%= u.name %>/friend" style="display:inline"><button class="w2-linkbtn small-c" type="submit"><%= isFriend ? '移出好友名單' : '加入好友名單' %></button></form>]<% } else { %>[<a class="small-c" href="/login?next=<%= encodeURIComponent('/' + u.name + '/card') %>">加入好友名單</a>]<% } %></span>
     </td>
   </tr>
 </table>
@@ -94,8 +83,11 @@
       <td class="side" width="450"><%= u.msn %> &nbsp;</td></tr>
   <tr><td class="sidetitle" align="right">個人網頁：</td>
       <td class="side" width="450"><% if (u.homepage) { %><a href="<%= u.homepage %>" rel="nofollow noopener" target="_blank"><%= u.homepage %></a><% } %> &nbsp;</td></tr>
+  <%# 原版這一格帶 id="id_introduction"（gb_user_a000000010_20120531.html:14097）——
+      當年是留給那段 Flash 偵測 JS 用 innerHTML 換掉的掛點（放 slide.com 的相片輪播）。
+      我們沒有 Flash，但這個 id 是版面的一部分，使用者自訂 CSS 也會拿它當選擇器。 %>
   <tr><td class="sidetitle" align="right">自我介紹：</td>
-      <td class="side" width="450" style="white-space:pre-wrap"><%= u.intro %> &nbsp;</td></tr>
+      <td class="side" width="450" id="id_introduction" style="white-space:pre-wrap"><%= u.intro %> &nbsp;</td></tr>
   <tr><td class="sidetitle" align="right">加入日期：</td>
       <td class="side" width="450"><%= u.created.slice(0,10) %> &nbsp;</td></tr>
 </table>

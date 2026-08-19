@@ -11,10 +11,18 @@
     必須放在 #main 裡、#content 之後——overwrite.css 的名片修正是
     `div#main div#sidebar ul li#mine div#namecard`，位置不對就不生效。
 
-    原站這裡還有一格 li#ad_lrec（300×250 廣告）。本站不放廣告，整格不輸出。
+    li#ad_lrec（300×250）照原版做在 #friendlist 與 #stats 之間，
+    內容換成本站自己的（站方公告／站內入口），見 partials/adslot2012.ejs。
 
     呼叫端可傳 visitors / friends；沒傳（例如留言板頁的 route 就沒送這兩份資料）
     或傳 null 就不顯示那一格。sideAvatar 已經不需要了：名片小卡本來就永遠有頭像。 %>
+<%
+  /* 嘀咕（原站的一句話動態）本站另一位 agent 正在做，網址約定 /:user/digu。
+     原版 #namecard 是二選一：有嘀咕印 .myDigu、沒有印 .myDesc
+     （兩個框都是 123×68，同時印會把 #myService 擠出可視區）。
+     自我介紹在 gbtop.ejs 的 #description 已經有一份，這裡不會漏掉資訊。 */
+  const sdDigu = locals.digu || null;
+%>
 <div id="sidebar">
 <ul>
 
@@ -28,16 +36,11 @@
       </div>
       <div id="myInfo">
         <p class="myNick"><%= u.nick %></p>
-        <p class="myDesc"><%= u.intro %></p>
+        <p class="myDigu"><span class="digu"><a href="/<%= u.name %>/digu"><%= sdDigu ? sdDigu.body : '還沒有嘀咕' %></a></span><span class="digu_date"><%= sdDigu ? sdDigu.created.slice(5,16) : '' %></span></p>
       </div>
-      <ul id="myService">
-        <li id="myMypage"><a href="/<%= u.name %>">MyPage</a></li>
-        <li id="myAlbum"><a href="/<%= u.name %>/album">相簿</a></li>
-        <li id="myBlog"><a href="/<%= u.name %>/blog">網誌</a></li>
-        <li id="myGbook"><a href="/<%= u.name %>/guestbook">留言板</a></li>
-        <li id="myUser"><a href="/<%= u.name %>/card">名片</a></li>
-        <li id="myFriend"><a href="/<%= u.name %>/friends">好友</a></li>
-      </ul>
+      <%# 第七格 li#myVideo 是影音，網址照約定的 /:user/video %>
+      <%- include('myspace2012', { msUser: u, msVariant: 'gb',
+            msLabels: ['MyPage','相簿','網誌','留言板','名片','好友','影音'] }) %>
     </div>
   </li>
 
@@ -51,15 +54,16 @@
     <a class="rss" href="/<%= u.name %>/blog/rss">RSS <img align="bottom" border="0" src="/img/wretch2012/gb/rss.gif" alt="RSS"></a>
   </li>
 
-  <% if (typeof friends !== 'undefined' && friends && friends.length) { %>
+  <%# 原站好友 0 人時 select 照樣輸出，只有佔位那一行，所以這裡不加 length 判斷 %>
   <li id="friendlist" class="box">
-    <%# 原站是 MeetFriend()，跳到選中那位好友的同一個服務。這裡跳留言板。 %>
-    <select name="friendlist" onchange="if(this.value)location.href='/'+encodeURIComponent(this.value)+'/guestbook'">
-      <option value="">－ 好友的留言板 －</option>
-      <% friends.forEach(f => { %><option value="<%= f.name %>"><%= f.name %>(<%= f.nick %>)</option><% }) %>
-    </select>
+    <%- include('friendlist2012', {
+          flFriends: (typeof friends !== 'undefined' && friends) ? friends : [],
+          flLabel: "- Friends' Guestbook -", flGo: '/guestbook' }) %>
   </li>
-  <% } %>
+
+  <%- include('adslot2012', { adId: 'ad_lrec', adTag: 'li',
+        adNotices: locals.notices || (locals.siteNotice ? [locals.siteNotice] : []),
+        adTopics: locals.blogTopics || locals.topics || [] }) %>
 
   <% if (typeof visitors !== 'undefined' && visitors) { %>
   <li class="box">
@@ -114,10 +118,14 @@
     </div>
   </li>
 
+  <%# 原版這格是「Messages: 262」＋ span.totalmsg「Hot Ranks: 311」。
+      class 名字和內容對不上（裝的是人氣不是留言數），但原始碼就是這樣寫的。
+      本站沒有排名查詢，.totalmsg 裝累積人氣——同樣是「這個小站的熱度」。
+      #stats 只有 90px 高且 overflow:hidden，所以最多放三行。 %>
   <li id="stats" class="box">
+    留言：<%= typeof total !== 'undefined' ? total : 0 %><br>
     今日人氣：<%= u.hits_date === new Date().toLocaleDateString('sv-SE') ? (u.today_hits || 0) : 0 %><br>
-    累積人氣：<%= u.visits %><br>
-    加入日期：<%= u.created.slice(0,10) %>
+    <span class="totalmsg">累積人氣：<%= u.visits %></span>
   </li>
 
 </ul>

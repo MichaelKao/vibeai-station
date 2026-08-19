@@ -1,0 +1,62 @@
+<%
+  /* select#friendlist —— 「去逛好友的同一個服務」下拉
+     ═══════════════════════════════════════════════════════════════════════
+     逐字來源 gb_user_a000000010_20120531.html:129-191（名片頁那份最完整）：
+
+       <select id="friendlist" name="friendlist" onChange="MeetFriend('/user/', this);">
+         <option>- My Friends -</option>
+         <optgroup label="相遇在...中興商工">
+           <option value="a0953253940">a0953253940(飛飛)</option>
+           …
+         </optgroup>
+         …
+         <option value="rom062424">rom062424</option>   ← 沒分類的裸掛在最後
+       </select>
+
+     三份存檔交叉驗證出來的規則（照做）：
+       1. optgroup 的 label 就是站主自己打的好友分類 → 對應我們的 friends.grp
+       2. 沒有分類的好友不包 optgroup，直接接在所有 optgroup 之後
+       3. option 文字 = 帳號(暱稱)，沒設暱稱就只有帳號；value = 帳號
+       4. 第一個 option 是佔位提示，**沒有 value 屬性**
+       5. **好友 0 人時 select 照樣輸出**，裡面只有佔位那一行
+          （blog_2012_default_skin_afuuu.html:1710-1712 實證）
+          → 所以呼叫端不要再用 `if (friends.length)` 把整段包起來
+
+     佔位文字與 onChange 目標各服務不同：
+       名片   - My Friends -          MeetFriend('/user/', this)
+       相簿   - Friends' Album -      MeetFriend('/album/', this)
+       網誌   - Friends' Blog -       MeetFriend('http://www.wretch.cc/blog/', this)
+       留言板 - Friends' Guestbook -  MeetFriend('/guestbook/', this)
+
+     原站的 MeetFriend() 是一支外部 JS，本站改用 data-user-go：
+     頁尾那段 JS 看到 select 有 data-user-go 就跳 /<選到的帳號><data-user-go>。
+     （foot2012_site.ejs 與 blog2012_foot.ejs 都有這段；head2012in 家族的
+       foot2012in.ejs 這一輪也補上了。）
+
+     ── include 參數 ──────────────────────────────────────────────────────
+       flFriends  好友陣列 [{name, nick, grp}]。沒有 grp 就全部當未分類。
+                  拿不到（route 沒送）就傳空陣列／省略，一樣會輸出空的 select。
+       flLabel    佔位文字，預設 '- My Friends -'
+       flGo       選到之後要去哪個服務，接在帳號後面：
+                  '' 名片以外可用 '/album' '/blog' '/guestbook' '/card'
+
+     EJS 用 with(locals)：內部變數一律加 fl 前綴，避免和 local 撞名（TDZ）。 */
+  const flF   = locals.flFriends || [];
+  const flGo  = locals.flGo === undefined ? '/card' : locals.flGo;
+  /* 分組：有 grp 的照 grp 收成 optgroup（維持傳入順序，後端已 ORDER BY grp,name），
+     grp 是空字串／沒有這個欄位的一律當「未分類」，最後裸掛。 */
+  const flG = new Map();
+  const flBare = [];
+  flF.forEach(function(f){
+    const g = (f.grp || '').trim();
+    if (!g) return flBare.push(f);
+    if (!flG.has(g)) flG.set(g, []);
+    flG.get(g).push(f);
+  });
+%><select id="friendlist" name="friendlist" data-user-go="<%= flGo %>">
+  <option><%= locals.flLabel || '- My Friends -' %></option>
+<% flG.forEach(function(list, g){ %>        <optgroup label="<%= g %>">
+<% list.forEach(function(f){ %>              <option value="<%= f.name %>"><%= f.name %><% if (f.nick && f.nick !== f.name) { %>(<%= f.nick %>)<% } %></option>
+<% }) %>          </optgroup>
+<% }) %><% flBare.forEach(function(f){ %>              <option value="<%= f.name %>"><%= f.name %><% if (f.nick && f.nick !== f.name) { %>(<%= f.nick %>)<% } %></option>
+<% }) %>            </select>

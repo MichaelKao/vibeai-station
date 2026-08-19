@@ -134,7 +134,7 @@ export function schemaSql(forDriver = driver) {
   stmts.push([
     T('users', `id ${PK}, name ${CI} UNIQUE, pass TEXT, salt TEXT, nick TEXT,
       intro TEXT DEFAULT '', avatar TEXT DEFAULT '/img/avatar.png', css TEXT DEFAULT '',
-      music TEXT DEFAULT '', visits INTEGER DEFAULT 0, admin INTEGER DEFAULT 0,
+      music TEXT DEFAULT '', visits INTEGER DEFAULT 0, admin INTEGER DEFAULT 0, vip INTEGER DEFAULT 0,
       today_hits INTEGER DEFAULT 0, hits_date TEXT DEFAULT '',
       realname TEXT DEFAULT '', sex TEXT DEFAULT '', birthday TEXT DEFAULT '',
       zodiac TEXT DEFAULT '', blood TEXT DEFAULT '', city TEXT DEFAULT '',
@@ -144,9 +144,13 @@ export function schemaSql(forDriver = driver) {
     T('albums', `id ${PK}, ${fkUser}, title TEXT, descr TEXT DEFAULT '', cover TEXT DEFAULT '',
       pass TEXT DEFAULT '', views INTEGER DEFAULT 0, topic TEXT DEFAULT '', place TEXT DEFAULT '',
       friends_only INTEGER DEFAULT 0, featured INTEGER DEFAULT 0, ${created}`),
+    // width/height/taken/camera 是照片頁 #exif（圖片資訊）面板要用的。
+    // 只有「之後上傳」的照片會有值——舊照片的 EXIF 在當初壓縮時就沒留下來，
+    // 那是既成事實，面板要能處理空值（見 src/storage.js 的 readExif）。
     T('photos', `id ${PK}, album_id INTEGER REFERENCES albums(id) ON DELETE CASCADE,
       url TEXT, thumb TEXT DEFAULT '', caption TEXT DEFAULT '', views INTEGER DEFAULT 0,
-      bytes INTEGER DEFAULT 0, ${created}`),
+      bytes INTEGER DEFAULT 0, width INTEGER DEFAULT 0, height INTEGER DEFAULT 0,
+      taken TEXT DEFAULT '', camera TEXT DEFAULT '', ${created}`),
     T('photo_comments', `id ${PK}, photo_id INTEGER REFERENCES photos(id) ON DELETE CASCADE,
       author TEXT, body TEXT, ${created}`),
     T('posts', `id ${PK}, ${fkUser}, title TEXT, body TEXT, category TEXT DEFAULT '未分類',
@@ -158,8 +162,8 @@ export function schemaSql(forDriver = driver) {
       reply TEXT DEFAULT '', ${created}`),
     T('trackbacks', `id ${PK}, post_id INTEGER REFERENCES posts(id) ON DELETE CASCADE,
       from_post INTEGER, ${created}`),
-    T('guestbook', `id ${PK}, ${fkUser}, author TEXT, subject TEXT DEFAULT '', body TEXT,
-      secret INTEGER DEFAULT 0, reply TEXT DEFAULT '', ${created}`),
+    T('guestbook', `id ${PK}, ${fkUser}, author TEXT, author_id INTEGER, subject TEXT DEFAULT '',
+      body TEXT, secret INTEGER DEFAULT 0, reply TEXT DEFAULT '', ${created}`),
     T('visitors', `id ${PK}, ${fkUser}, who TEXT, ${created}`),
     T('friends', `user_id INTEGER, friend_id INTEGER, grp TEXT DEFAULT '好友',
       ${created}, PRIMARY KEY(user_id,friend_id)`),
@@ -170,6 +174,16 @@ export function schemaSql(forDriver = driver) {
     T('reports', `id ${PK}, kind TEXT, target_id INTEGER, url TEXT, reason TEXT,
       reporter TEXT, done INTEGER DEFAULT 0, ${created}`),
     T('notices', `id ${PK}, body TEXT, ${created}`),
+    // 影音（原站 www.wretch.cc/video/<帳號>，導覽第七顆 #linkVideo）。
+    // 我們沒有轉檔與串流，做「最小可用」：存 YouTube 影片 id，用 <iframe> 內嵌。
+    // vid 存純 id 而不是整條網址——內嵌網址要自己組，把 id 單獨存起來才不會
+    // 每次顯示都重新解析使用者貼進來的字串。
+    T('videos', `id ${PK}, ${fkUser}, title TEXT, vid TEXT, url TEXT DEFAULT '',
+      descr TEXT DEFAULT '', views INTEGER DEFAULT 0, ${created}`),
+    // 嘀咕（原站 www.wretch.cc/digu/<帳號>，噗浪式的一句話）。
+    // 不併進 acts：acts 是「好友動態」的事件記錄（kind/title/url），
+    // 嘀咕是使用者自己寫的內容，語意不同，混在一起之後兩邊都不好改。
+    T('digu', `id ${PK}, ${fkUser}, body TEXT, ${created}`),
   ].join('\n'));
 
   // 帳號大小寫不敏感：SQLite 靠 COLLATE NOCASE，PG 靠 lower() 唯一索引
@@ -192,13 +206,53 @@ export function schemaSql(forDriver = driver) {
     CREATE INDEX IF NOT EXISTS idx_favs_user     ON favs(user_id, created DESC);
     CREATE INDEX IF NOT EXISTS idx_acts_user     ON acts(user_id, id DESC);
     CREATE INDEX IF NOT EXISTS idx_sysmsg_user   ON sysmsg(user_id, id DESC);
+    CREATE INDEX IF NOT EXISTS idx_videos_user   ON videos(user_id, id DESC);
+    CREATE INDEX IF NOT EXISTS idx_digu_user     ON digu(user_id, id DESC);
   `);
 
   return stmts;
+}
+
+// ===== 補欄位 =====
+// schemaSql() 用的是 CREATE TABLE IF NOT EXISTS，**對已經存在的表不會補欄位**。
+// 本機的 station.db 與正式站的 Postgres 都是既有的表，所以新欄位一定要另外
+// 走 ALTER TABLE，而且要冪等（每次啟動都會跑一次）：
+//   Postgres 有 ADD COLUMN IF NOT EXISTS；
+//   SQLite 沒有，要先問 pragma_table_info 有沒有這一欄。
+// 表名與欄名都是下面這張常數表裡的字面值，不是使用者輸入，可以直接拼進 SQL。
+const ADD_COLUMNS = [
+  ['users',  'vip',    'INTEGER DEFAULT 0'],   // 認證／VIP 徽章 .vip_icon、相片牆 .vip_only
+  ['photos', 'width',  'INTEGER DEFAULT 0'],   // 以下四欄給照片頁的 #exif 面板
+  ['photos', 'height', 'INTEGER DEFAULT 0'],
+  ['photos', 'taken',  "TEXT DEFAULT ''"],
+  ['photos', 'camera', "TEXT DEFAULT ''"],
+  // 留言者的帳號。原版留言板每一則的暱稱與大頭貼都是連到那個人的小站
+  // （gb_guestbook_a000000010_20131226.html:12441），認證章 .vip_icon 也掛在這裡。
+  // 我們原本只存 author 文字，連不回帳號，那三個東西就都做不出來。
+  // 可為 NULL——訪客不登入也能留言，那種就沒有連結、沒有認證章。
+  ['guestbook', 'author_id', 'INTEGER'],
+];
+
+export async function addColumns(forDriver = driver) {
+  for (const [table, col, type] of ADD_COLUMNS) {
+    try {
+      if (forDriver === 'postgres') {
+        await exec(`ALTER TABLE ${table} ADD COLUMN IF NOT EXISTS ${col} ${type}`);
+      } else {
+        const has = await one(`SELECT 1 c FROM pragma_table_info('${table}') WHERE name='${col}'`);
+        if (!has) await exec(`ALTER TABLE ${table} ADD COLUMN ${col} ${type}`);
+      }
+    } catch (e) {
+      // 「欄位已存在」是可以吞掉的（兩個行程同時啟動就會撞到）；
+      // 其他錯誤要讓它炸出來，不然schema 沒補成功會在很遠的地方才出事。
+      if (!/duplicate column|already exists/i.test(e.message)) throw e;
+    }
+  }
 }
 
 // 對目前這個資料庫建表。搬移工具要對「另一個」資料庫建表時，
 // 自己拿 schemaSql('postgres') 去打。
 export async function migrate() {
   for (const sql of schemaSql(driver)) await exec(sql);
+  await addColumns(driver);
 }

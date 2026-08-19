@@ -46,6 +46,45 @@ ok('1-featured 這種切換寫法不動',
   toPg('UPDATE albums SET featured=1-featured WHERE id=?'),
   'UPDATE albums SET featured=1-featured WHERE id=$1');
 
+// ── 好友頁的四種關係 ────────────────────────────────────────────────────────
+// 這幾條是全站最複雜的 SQL：子查詢 + DISTINCT + LIMIT/OFFSET。
+// 位置參數的編號要「照出現順序」數過子查詢，數錯的話 PG 會拿到錯的值卻不報錯。
+ok('子查詢裡的 ? 也照順序編號',
+  toPg('SELECT 1 FROM friends f WHERE f.user_id=? AND f.friend_id<>? AND f.friend_id NOT IN (SELECT friend_id FROM friends WHERE user_id=?)'),
+  'SELECT 1 FROM friends f WHERE f.user_id=$1 AND f.friend_id<>$2 AND f.friend_id NOT IN (SELECT friend_id FROM friends WHERE user_id=$3)');
+
+ok('count(*) 包一層子查詢（DISTINCT 計數）',
+  toPg('SELECT count(*) c FROM (SELECT DISTINCT u.id FROM friends f JOIN users u ON u.id=f.friend_id WHERE f.user_id=?) t'),
+  'SELECT count(*) c FROM (SELECT DISTINCT u.id FROM friends f JOIN users u ON u.id=f.friend_id WHERE f.user_id=$1) t');
+
+ok('LIMIT ? OFFSET ? 排在最後面',
+  toPg("SELECT DISTINCT u.id,COALESCE(NULLIF(f.grp,''),'好友') grp FROM friends f WHERE f.user_id=? ORDER BY grp, u.name LIMIT ? OFFSET ?"),
+  "SELECT DISTINCT u.id,COALESCE(NULLIF(f.grp,''),'好友') grp FROM friends f WHERE f.user_id=$1 ORDER BY grp, u.name LIMIT $2 OFFSET $3");
+
+
+// ── 建表與補欄位 ────────────────────────────────────────────────────────────
+// schemaSql() 用 CREATE TABLE IF NOT EXISTS，**對已經存在的表不會補欄位**，
+// 所以新欄位得靠 addColumns() 的 ALTER TABLE。這一段釘住兩件事：
+//   1. 新表／新欄位真的出現在 DDL 裡（漏掉的話正式站會在查詢時才炸）
+//   2. ALTER 那段是冪等的，連跑兩次不能出錯
+{
+  const { schemaSql, migrate, one, driver } = await import('./src/db.js');
+  const ddl = schemaSql('postgres').join('\n');
+  ok('建表 SQL 含 videos 表', /CREATE TABLE IF NOT EXISTS videos\(/.test(ddl), true);
+  ok('建表 SQL 含 digu 表', /CREATE TABLE IF NOT EXISTS digu\(/.test(ddl), true);
+  ok('建表 SQL 含 users.vip', /vip INTEGER DEFAULT 0/.test(ddl), true);
+  ok('建表 SQL 含 photos 的 EXIF 欄位',
+    ['width INTEGER', 'height INTEGER', "taken TEXT", "camera TEXT"].every(s => ddl.includes(s)), true);
+
+  await migrate();
+  await migrate();          // 連跑兩次：ALTER TABLE 那段必須是冪等的
+  if (driver === 'sqlite') {
+    for (const c of ['width', 'height', 'taken', 'camera'])
+      ok(`photos 補上 ${c} 欄位`, !!await one(`SELECT 1 FROM pragma_table_info('photos') WHERE name='${c}'`), true);
+    ok('users 補上 vip 欄位', !!await one("SELECT 1 FROM pragma_table_info('users') WHERE name='vip'"), true);
+  }
+}
+
 
 // ── session store 的匯出形狀 ────────────────────────────────────────────────
 // 為什麼要測這個：src/cache.js 的 Redis 路徑在本機**永遠不會執行**

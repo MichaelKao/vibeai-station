@@ -1,0 +1,109 @@
+<%
+  /* 社群分享列 .social-wrapper —— 全站唯一一份
+     ═══════════════════════════════════════════════════════════════════════
+     DOM 逐字照抄三份存檔（三頁的分享列是同一段程式印的，結構完全一致）：
+       assets_src2/html/album_album_list.html:223-290          單本相簿
+       assets_src2/html/album_show_zh_kellyla.html             單張照片
+       assets_src2/html/blog_2012_default_skin_afuuu.html      網誌文章
+     樣式來自已經串進 bundle 的 common/css/sharing.css（album_sharing.css）。
+
+       .social-wrapper
+       ├ .social-widget > .bd > a.fb / a.plurk / a.yim
+       ├ .wretch-reblog.fixinline > .bd(.bubble-none) > a.wretch|button.wretch
+       │                                              └ span.bubble.bubble-gradient > span
+       ├ .kplizer.fixinline > a.kplizer-btn            ← 網誌才有
+       └ .plus-wrapper > .social-gpluson > .g-plusone
+                       + a.twitter-share-button
+                       + #share_facebook
+
+     為什麼要有這支：原本 views/photos.ejs、views/photo.ejs、
+     views/partials/blogshare.ejs 各自抄了一份，三份已經開始長歪
+     （bubble 的有無、target、a.wretch 的 href 都不一樣）。
+     分享列是全站共用元件，只該有一份。
+
+     ── 對外連線的原則（本站與原站的差異，逐項說明）──────────────────
+     · Facebook / Plurk / X(Twitter)：**做成真的能用的分享連結**，
+       純 <a href>，不載任何第三方 SDK、不埋 like iframe。
+       原站的 #share_facebook 是 facebook.com/plugins/like.php 的 iframe，
+       那會把每個訪客的瀏覽紀錄送給 Meta；改成同尺寸的 <a>，版位一樣、不追蹤。
+     · Google+（.social-gpluson / .g-plusone）2019 年關站、
+       Yahoo 即時通（.yim）2018 年終止服務 —— 兩個都**只留一模一樣的外觀與 class，
+       不連外**。.g-plusone 維持原版的空 div 與 data-* 屬性，
+       .yim 的 href 指回本頁（原站是 ymsgr: 協定，現在按了只會跳出錯誤對話框）。
+
+     絕對網址：EJS 拿不到 host，所以 fb / plurk / tw 三顆先寫
+     data-share / data-path / data-title，由頁尾那段 JS 補上 location.origin
+     （foot2012_site.ejs、blog2012_foot.ejs 都有同一段）。
+
+     ── include 參數 ──────────────────────────────────────────────────────
+       ssPath    必填。要分享的站內路徑（`/meimei/blog/12`），不含 host
+       ssTitle   必填。分享標題
+       ssReblog  轉貼（原站的「發文至無名」）：
+                   { action: '/x/blog/12/trackback' }  → <form> + <button class="wretch">
+                   { href:   '/me/blog/new' }          → <a class="wretch">
+                 省略就走 href='/login'
+       ssTb      轉貼次數。給數字才印 span.bubble；null/省略 → .bubble-none
+       ssKplizer true 才印「找知識」那格（原版只有網誌文章頁有）
+       ssPlus    false 可關掉 .plus-wrapper 那一組（預設 true）
+
+     呼叫範例（註解裡不能寫 EJS 的輸出標記，掃描器會把它當成真的標記，
+     所以下面只寫函式本體，實際使用時外面要包上輸出標記）：
+
+       網誌文章
+       include('socialshare2012', {
+         ssPath: '/' + u.name + '/blog/' + p.id, ssTitle: p.title,
+         ssReblog: (me && !isOwner) ? { action: '/' + u.name + '/blog/' + p.id + '/trackback' }
+                                    : { href: me ? '/' + me.name + '/blog/new' : '/login' },
+         ssTb: p.tb, ssKplizer: true })
+
+       單本相簿／單張照片
+       include('socialshare2012', {
+         ssPath: phPath, ssTitle: album.title,
+         ssReblog: { href: me ? '/' + me.name + '/blog/new' : '/login' } })
+
+     EJS 用 with(locals)：內部變數一律加 ss 前綴，避免和 local 撞名（TDZ）。 */
+  const ssP     = locals.ssPath;
+  const ssT     = locals.ssTitle || '';
+  const ssRb    = locals.ssReblog || {};
+  /* 泡泡的有無看的是「被轉貼過幾次」：原版有轉貼才印 span.bubble，
+     一次都沒有就給外框掛 .bubble-none（blog_2012_default_skin_afuuu.html
+     兩種都有：@11991 是 3 次的泡泡、@30396 是 bubble-none）。
+     所以 0 要當成「沒有」，不能只判斷 null——一律 >0 才印。 */
+  const ssBub   = +locals.ssTb > 0 ? +locals.ssTb : null;
+  const ssPlus  = locals.ssPlus !== false;
+%>
+<div class="social-wrapper">
+<div class="social-widget">
+  <div class="bd">
+      <a class="fb" title="分享在我的Facebook" target="_blank" data-share="fb" data-path="<%= ssP %>" data-title="<%= ssT %>" href="<%= ssP %>">分享在我的Facebook</a>
+      <a class="plurk" title="分享在我的Plurk" target="_blank" data-share="plurk" data-path="<%= ssP %>" data-title="<%= ssT %>" href="<%= ssP %>">分享在我的Plurk</a>
+      <%# Yahoo 即時通已停止服務：外觀與 class 照留，href 指回本頁，不連外 %>
+      <a class="yim" title="分享在我的即時通" rel="nofollow" href="<%= ssP %>">分享在我的即時通</a>
+  </div>
+</div>
+<div class="wretch-reblog fixinline">
+    <div class="bd <%= ssBub === null ? 'bubble-none' : '' %>">
+        <% if (ssRb.action) { %>
+        <form method="post" action="<%= ssRb.action %>"><button class="wretch" title="發文至無名">發文<% if (ssBub !== null) { %><span class="bubble bubble-gradient"><span></span><%= ssBub %></span><% } %></button></form>
+        <% } else { %>
+        <a class="wretch" href="<%= ssRb.href || '/login' %>" title="發文至無名">發文<% if (ssBub !== null) { %><span class="bubble bubble-gradient"><span></span><%= ssBub %></span><% } %></a>
+        <% } %>
+    </div>
+</div>
+<% if (locals.ssKplizer) { %>
+<div class="kplizer fixinline">
+    <a class="kplizer-btn" href="/search?q=<%= encodeURIComponent(ssT) %>">找知識</a>
+</div>
+<% } %>
+<% if (ssPlus) { %>
+<%# 原站這一組是 document.write 出來的，後面掛 plusone.js 與 widgets.js 兩支外部 script。
+    這裡只留 DOM：Google+ 已關站（空殼），X 與 Facebook 換成純 <a> 分享連結。 %>
+<div class="plus-wrapper">
+  <div class="social-gpluson">
+    <div class="g-plusone" data-count="false" data-annotation="none" expandTo="top" data-size="Medium" data-style="vertical-align:middle;" data-href="<%= ssP %>"></div>
+  </div>
+  <a class="twitter-share-button" data-count="none" data-url="<%= ssP %>" data-share="tw" data-path="<%= ssP %>" data-title="<%= ssT %>" target="_blank" rel="noopener" href="<%= ssP %>">分享到 X</a>
+  <a class="fixinline" id="share_facebook" data-share="fb" data-path="<%= ssP %>" data-title="<%= ssT %>" target="_blank" rel="noopener" href="<%= ssP %>">Facebook</a>
+</div>
+<% } %>
+</div>

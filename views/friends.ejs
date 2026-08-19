@@ -4,10 +4,16 @@
 
       #container > #header > #boxProfile > .Pcover（200×200 大頭照）
                                         > .Ptext（h1 + ul#serviceList + 加好友）
-                                        > #menu > #msg
+                                        > #menu > form > ul.inline > li.il ×3
+                                                > #msg
                  > hr.nohr
-                 > #content > #condition > ul > li.current > a
-                            > #friendListDiv > ol > li > a > span.font_id + div.font_img > img
+                 > #content > #relationship
+                            > #condition > ul > li#current_tag0..3 > a
+                            > #friendListDiv > ol > li#u_<帳號>
+                                                    > a > span.font_id + div.font_img > img
+                                             > .common_friend_page_link
+                                             > #listBottom.clear
+                            > #pagelink_1
                             > #num_friends
                  > hr.nohr
                  > #footer
@@ -19,23 +25,58 @@
     但 kukubar.css 有一條 html,body{border:none!important}，原站就會把它蓋掉，
     所以這裡看不到那條色帶，這是原站本來的行為，不是漏掉。
 
-    原站的 #menu 有「分類下拉 + 搜尋好友」表單；本站的 route 不吃這兩個參數
-    （src/server.js 的 site.get('/friends') 沒有 query），所以不做假的表單，
-    分類改成 #friendListDiv 裡的分段標題。
+    ── 2026-08-19 改版：原本是「上下兩塊」，現在照原站做成四個關係頁籤 ──
+    舊版把「我的好友」與「誰加我為好友」上下疊在同一頁，並用 #grp-mine /
+    #grp-fans 錨點當頁籤。原站不是這樣：它是 ?c=0..3 四個真頁籤，一頁一份清單
+    （#current_tag0..3）。舊版那個做法讓 #current_tag2 / #current_tag3 永遠不存在，
+    也讓分頁做不出來。route（src/server.js 的 site.get('/friends')）已經吃
+    c / cateSelect / search_id / p 四個參數，這裡照原站的結構重畫。
+
+    刻意偏離（原站沒存檔或做不到的，逐條寫在下面）：
+      1. #cateSelect 的 option value 原站是 group id 數字，我們沒有 group 表，
+         直接放分類名字串；-1 保留給「全部」，語意跟原站一致。
+      2. 原站搜尋表單是 method="post"，我們用 GET（可加書籤、可分頁）。
+         欄位 name（cateSelect / search_id）照抄不動，POST 進來 route 也接得住。
+      3. 原站每張卡有 onmouseover 的 ddtip() 小卡，那支 JS 沒有存檔，
+         我們用 #mini 這個容器 + 自己寫的最小行為（見 partials/foot2012in.ejs）。
 
     表單 action 與欄位 name 對應 src/server.js：
+      GET  /:name/friends?c=&cateSelect=&search_id=&p=
       POST /:name/friend                  （加入／移出好友）
       POST /:name/friends/:fid/group      grp %>
 <%
-  // 好友依 grp 分組（server.js 的查詢已經 ORDER BY grp）
-  const groups = {};
-  friends.forEach(f => { (groups[f.grp] = groups[f.grp] || []).push(f); });
-  const groupNames = Object.keys(groups);
+  // 四個關係頁籤。文字用原站的語意，不是逐字英文——
+  // WRETCH_2012.md §3-A：中文語系模板字串 12 個快照全是英文，查無中文版，
+  // 這裡屬於「救不回來就自己補」的一項。
+  const relTabs = [
+    ['我的好友',      counts.mine  ],
+    ['誰加我為好友',  counts.fans  ],
+    ['互相是好友',    counts.mutual],
+    ['好友的好友',    counts.fof   ],
+  ];
+  const qs = (over) => {
+    const p = new URLSearchParams();
+    const v = { c: rel, cateSelect: cate, search_id: q, p: page, ...over };
+    if (+v.c)            p.set('c', v.c);
+    if (v.cateSelect)    p.set('cateSelect', v.cateSelect);
+    if (v.search_id)     p.set('search_id', v.search_id);
+    if (+v.p > 1)        p.set('p', v.p);
+    const s = p.toString();
+    return '/' + u.name + '/friends' + (s ? '?' + s : '');
+  };
 %>
 <%- include('partials/head2012in', {
       title: u.nick + '的好友列表 - 無名小站',
       page: 'w2-friend',
       skin: ['/wretch2012-skin-friend.css'] }) %>
+
+<%# 滑到頭像浮出的迷你名片。原版是空的 div 當容器（gb_friend_a000001:149，
+    位置就是這裡：#bigcontainer 之後、版面之前），內容由 friend/js/desc_get.js
+    的 ddtip() 動態塞。那支 JS 有落地（assets_src2/css/gb_friend_desc_get.js），
+    但它去打的 fetch_latest_data.php 我們沒有，所以改成 SSR 就把資料寫在
+    <li> 的 data-* 上，下面那段原生 JS 直接讀，不必再發一次請求。
+    樣式與 7 張素材 repo 全有（public/wretch2012-gb.css 的 /*mini*/ 區塊）。 %>
+<div id="mini" onmouseover="this.style.visibility='visible';" onmouseout="this.style.visibility='hidden'"></div>
 
 <div id="container">
 
@@ -52,14 +93,9 @@
       <div class="Ptext">
         <h1><%= u.nick %> 的好友列表</h1>
 
-        <ul id="serviceList">
-          <li><a id="linkMypage" href="/<%= u.name %>">MyPage</a></li>
-          <li><a id="linkAlbum" href="/<%= u.name %>/album">相簿</a></li>
-          <li><a id="linkBlog" href="/<%= u.name %>/blog">網誌</a></li>
-          <li><a id="linkGbook" href="/<%= u.name %>/guestbook">留言板</a></li>
-          <li><a id="linkUser" href="/<%= u.name %>/card">名片</a></li>
-          <li><a id="linkFriend" href="/<%= u.name %>/friends">好友</a></li>
-        </ul>
+        <%- include('partials/myspace2012', {
+              msUser: u, msVariant: 'friend',
+              msLabels: ['MyPage','相簿','網誌','留言板','名片','好友','影音'] }) %>
 
         <% if (me && !isOwner) { %>
         [<form method="post" action="/<%= u.name %>/friend" style="display:inline"><button class="w2-linkbtn" type="submit"><%= isFriend ? '移出好友名單' : '加入好友名單' %></button></form>]
@@ -67,10 +103,35 @@
         [<a href="/rank">找朋友</a>]<br>
       </div>
 
+      <%# 分類下拉 + 依帳號搜尋。ul.inline > li.il 是原站的版面骨架
+          （gb_friend_fix.css：ul.inline li{display:inline}、
+            #menu li.il{float:left;margin-right:10px}）。
+          原站另有 select.js 把原生 select 換成 .selectBox 的假下拉，
+          但那三張背景圖 Wayback 完全沒收（skin.md §七-1），
+          假下拉做不出 1:1，所以維持原生 select 掛 class。 %>
       <div id="menu">
+        <form action="/<%= u.name %>/friends" method="get" name="search_form">
+          <input type="hidden" name="c" value="<%= rel %>">
+          <ul class="inline">
+            <li class="il">
+              <select class="selectBox" id="cateSelect" name="cateSelect">
+                <% groups.forEach(g => { %>
+                <option value="<%= g.g %>"<%= cate === g.g ? ' selected' : '' %>><%= g.g %>（<%= g.n %>）</option>
+                <% }) %>
+                <option value="-1"<%= cate ? '' : ' selected' %>>－全部－</option>
+              </select>
+            </li>
+            <li class="il">
+              <input id="searchInput" name="search_id" type="text" value="<%= q %>">
+            </li>
+            <li class="il">
+              <input type="submit" value="搜尋好友">
+            </li>
+          </ul>
+        </form>
         <div id="msg"><strong>目前顯示：</strong>
-          <span>分類：</span><span id="msg0">全部</span>，
-          <span>共 </span><span id="msg2"><%= friends.length %></span> 人
+          <span>分類：</span><span id="msg0"><%= cate || '－全部－' %></span>，
+          <span>搜尋：</span><span id="msg2"><%= q %></span>
         </div>
       </div>
 
@@ -81,58 +142,77 @@
 
   <div id="content">
 
+    <%# 「好友的好友」的推坑區塊。原站登出態的文案有存檔、登入態沒有
+        （爬蟲永遠登出），登入態這句是我們自己補的。 %>
+    <div id="relationship">
+      <% if (me) { %>
+      <p><a href="<%= qs({ c: 3, p: 1 }) %>">看看還有誰跟 <%= u.nick %> 有共同的朋友，說不定你們也認識…</a></p>
+      <% } else { %>
+      <p>你和 <%= u.nick %> 可能有共同的朋友，請先<a href="/login?next=<%= encodeURIComponent('/' + u.name + '/friends') %>">登入</a>才看得到。</p>
+      <p><a href="<%= qs({ c: 3, p: 1 }) %>">哪些人跟 <%= u.nick %> 是共同的朋友，還有其他你可能認識的人…</a></p>
+      <% } %>
+    </div>
+
     <div id="condition">
       <ul>
-        <li id="current_tag0" class="current"><a href="#grp-mine"><%= u.nick %> 的好友</a></li>
-        <li id="current_tag1"><a href="#grp-fans">誰加 <%= u.nick %> 為好友</a></li>
+        <% relTabs.forEach((t, i) => { %>
+        <li id="current_tag<%= i %>" class="<%= rel === i ? 'current' : '' %>"><a href="<%= qs({ c: i, p: 1 }) %>"><%= t[0] %>（<%= t[1] %>）</a></li>
+        <% }) %>
       </ul>
     </div>
 
     <div id="friendListDiv">
 
-      <div class="w2-h3" id="grp-mine"><%= u.nick %> 的好友（<%= friends.length %> 人<% if (groupNames.length > 1) { %>，<%= groupNames.length %> 個分類<% } %>）</div>
-      <% if (!friends.length) { %><div class="w2-empty">目前還沒有好友</div><% } %>
-      <% groupNames.forEach(g => { %>
-      <div class="font_cate"><strong><%= g %></strong>（<%= groups[g].length %>）</div>
-      <ol>
-        <% groups[g].forEach(f => { %>
-        <li>
-          <a href="/<%= f.name %>" title="<%= f.nick %>">
-            <span class="font_id"><%= f.name %></span>
-            <div class="font_img"><img src="<%= f.avatar %>" width="90" height="90" alt="<%= f.name %>"></div>
-          </a>
-          <span class="w2-nick"><%= f.nick %></span>
-        </li>
-        <% }) %>
-      </ol>
-      <div style="clear:both"></div>
-      <% }) %>
-
-      <div class="w2-h3" id="grp-fans">誰加 <%= u.nick %> 為好友（<%= fans.length %> 人）</div>
-      <% if (!fans.length) { %><div class="w2-empty">目前還沒有人把 <%= u.nick %> 加入好友名單</div><% } else { %>
-      <ol>
-        <% fans.forEach(f => { %>
-        <li>
-          <a href="/<%= f.name %>" title="<%= f.nick %>">
-            <span class="font_id"><%= f.name %></span>
-            <div class="font_img"><img src="<%= f.avatar %>" width="90" height="90" alt="<%= f.name %>"></div>
-          </a>
-          <span class="w2-nick"><%= f.nick %></span>
-        </li>
-        <% }) %>
-      </ol>
-      <div style="clear:both"></div>
+      <% if (!rows.length) { %>
+      <div class="w2-empty"><%= q || cate ? '沒有符合條件的好友' : '這裡還是空的' %></div>
       <% } %>
+
+      <ol>
+        <%# 每一項的 id 是 u_<帳號>，跟原站同一套命名規則
+            （原站是 u_a7512128，我們是 u_<本站帳號>——字串當然不會一樣，
+              但規則一樣，tools/fidelity.mjs 的 NORMALIZE 就是為此而設）。
+            原站的 class 放的是 group id 數字，我們沒有 group 表，放分類名。
+            img 沒有 width/height 是原站的寫法（靠 CSS 定尺寸），
+            onerror 換備用圖也照抄——頭像連不到時才不會破一個叉。 %>
+        <% rows.forEach(f => { %>
+        <li id="u_<%= f.name %>" class="<%= f.grp %>" style="position:relative"
+            data-nick="<%= f.nick %>" data-grp="<%= f.grp %>" data-cover="<%= f.avatar %>">
+          <a href="/<%= f.name %>/friends" target="_blank">
+            <span class="font_id"><%= f.name %></span>
+            <div class="font_img"><img src="<%= f.avatar %>" alt="<%= f.name %>" onerror="this.src='/img/wretch2012/gb/tpic5.jpg'"></div>
+          </a>
+        </li>
+        <% }) %>
+      </ol>
+
+      <%# 原站這個 div 三份快照裡都是空的（登出態拿不到共同好友清單），
+          我們也只在 c=3 有東西時才填，其餘照原站出空 div。 %>
+      <div class="common_friend_page_link"></div>
+
+      <%# 好友卡是 float:left，不清就撐不開外框。原站用的就是這個節點當 clearfix。 %>
+      <div class="clear" id="listBottom"></div>
 
     </div>
 
-    <% if (isOwner && friends.length) { %>
+    <%# 好友頁的分頁列跟留言板**不是同一套**：這裡是 div#pagelink_1 + » « 符號、
+        一頁 25 人（原始檔頁首 JS 寫死 paginator='25'）；留言板是 ul.page +
+        #page_link_N + 中文上下頁、一頁 10 則。不要共用同一支 partial。 %>
+    <% if (pages > 1) { %>
+    <div id="pagelink_1">
+      <% if (page > 1) { %><a class="prev" href="<%= qs({ p: page - 1 }) %>">&laquo;</a><% } %>
+      <% for (let i = 1; i <= pages; i++) { %><% if (i === page) { %><%= i %><% } else { %><a href="<%= qs({ p: i }) %>"><%= i %></a><% } %>
+      <% } %>
+      <% if (page < pages) { %><a class="next" href="<%= qs({ p: page + 1 }) %>">&raquo;</a><% } %>
+    </div>
+    <% } %>
+
+    <% if (isOwner && rows.length && rel === 0) { %>
     <%# 原站的好友分類是在 /admin/friend/ 改的，那幾頁沒有存檔。
         本站就地做一張表，欄位 name 對得上 POST /:name/friends/:fid/group。 %>
     <div class="w2-panel">
       <div class="w2-h3">好友分類</div>
       <table class="w2-rows">
-        <% friends.forEach(f => { %>
+        <% rows.forEach(f => { %>
         <tr>
           <td width="200"><a href="/<%= f.name %>"><%= f.nick %></a>
             <span class="font_cate">(<%= f.name %>)</span></td>
@@ -148,12 +228,56 @@
     </div>
     <% } %>
 
-    <div id="num_friends">共有 <%= friends.length %> 位好友 &nbsp;</div>
+    <div id="num_friends">共有 <%= total %> 位<%= relName %> &nbsp;</div>
   </div>
 
   <hr class="nohr">
 
   <div id="footer"></div>
 </div><!-- /#container -->
+
+<script>
+/* 迷你名片：原版 ddtip() 的最小重製。
+   原版把帳號／暱稱／分類／封面當參數寫在每個 <li> 的 inline onmouseover 裡，
+   我們改成 data-*（同樣是 SSR 就決定好，只是不用把字串跳脫兩層），
+   內容結構照 desc_get.js 產出的那份：#mini_content > a>img + h3 + ul#mini_service。
+   「戳戳／看關係／連連看」我們沒有這些功能，整組不做。 */
+(function () {
+  var box = document.getElementById('mini');
+  var list = document.getElementById('friendListDiv');
+  if (!box || !list) return;
+  var SERVICES = [['', 'MyPage'], ['/album', '相簿'], ['/blog', '網誌'],
+                  ['/video', '影音'], ['/friends', '好友'], ['/guestbook', '留言板']];
+  var esc = function (s) {
+    return String(s == null ? '' : s).replace(/[&<>"]/g,
+      function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; });
+  };
+  list.addEventListener('mouseover', function (e) {
+    var li = e.target.closest && e.target.closest('li[id^="u_"]');
+    if (!li) return;
+    var name = li.id.slice(2);
+    box.innerHTML =
+      '<div id="mini_content">'
+      + '<a href="/' + encodeURIComponent(name) + '/friends"><img src="' + esc(li.dataset.cover) + '"'
+      + ' onerror="this.src=\'/img/wretch2012/gb/tpic5.jpg\'"></a>'
+      + '<h3><a href="/' + encodeURIComponent(name) + '">' + esc(name) + '</a>'
+      + '<span class="cate">' + esc((li.dataset.grp || '').slice(0, 12)) + '</span>'
+      + '<span class="desc">' + esc(li.dataset.nick) + '</span></h3>'
+      + '<ul id="mini_service">'
+      + SERVICES.map(function (s) {
+          return '<li><a href="/' + encodeURIComponent(name) + s[0] + '">' + s[1] + '</a></li>';
+        }).join('')
+      + '</ul></div>';
+    var r = li.getBoundingClientRect();
+    box.style.left = (r.right + window.scrollX + 6) + 'px';
+    box.style.top = (r.top + window.scrollY) + 'px';
+    box.style.visibility = 'visible';
+  });
+  list.addEventListener('mouseout', function (e) {
+    if (e.relatedTarget && box.contains(e.relatedTarget)) return;
+    box.style.visibility = 'hidden';
+  });
+})();
+</script>
 
 <%- include('partials/foot2012in') %>

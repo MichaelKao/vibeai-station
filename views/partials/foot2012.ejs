@@ -7,6 +7,13 @@
   const w2fPad = n => String(n).padStart(2, '0');
   const w2fNow = new Date();
   const w2fToday = w2fNow.getFullYear() + '-' + w2fPad(w2fNow.getMonth() + 1) + '-' + w2fPad(w2fNow.getDate());
+  /* 首頁那顆叫 #global-crumb（內頁的是 #wretch-crumb，不同 id，別搞混）。
+     原站是 Yahoo 的 CSRF token；本站靠 cookie 的 SameSite=lax，沒有那套 token，
+     所以自己發一組同格式的，**只輸出、不驗證**（先驗證會把既有表單全部擋掉）。
+     後端把真正的 session token 放進 res.locals.crumb 之後這裡自動改用它。 */
+  const w2fCrumb = locals.crumb ||
+    ('&.c=' + (locals.me ? 'u' + me.id : 'g') + Math.random().toString(36).slice(2, 12)
+     + '&.t=' + Math.floor(Date.now() / 1000));
 %>
   <div class="ft">
 
@@ -44,6 +51,7 @@
         <p><span><a href="/help">著作權侵權</a></span>本站設有管理員並依台灣網站內容分級規定處理</p>
         <p>雅虎資訊 版權所有 © 2012 Yahoo! Taiwan All Rights Reserved.</p>
       </footer>
+      <input type="hidden" id="global-crumb" name="global-crumb" value="<%= w2fCrumb %>">
       <input type="hidden" id="today-date" name="today-date" value="<%= w2fToday %>">
       <input type="hidden" id="anchor" name="anchor" value="">
     </div>

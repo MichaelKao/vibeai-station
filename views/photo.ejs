@@ -27,8 +27,18 @@
        └ 迴響區（本站加的，理由見下）
 
      熱鍵照抄原站 show_hotkey：z 第一張 / x 上一張 / c 下一張 / v 最後一張 / b 回上一層 /
-     s 自動播放。原站另外有 i（圖片資訊 EXIF），本站沒有存 EXIF，那顆連結與熱鍵都拿掉。
-     一併拿掉的還有「iZoom Revolution」（VIP 的放大鏡服務，本站沒有）。
+     s 自動播放 / i 圖片資訊。
+
+     2026-08-19 補回來的三塊（原本註解寫「拿掉」，現在都做了）：
+       #exif   照片的尺寸／檔案大小／拍攝時間／相機。photos 表已經有 width/height/
+               taken/camera 四欄，storage.save() 上傳時就存下來。
+               **原版那塊表格的 DOM 完全沒有存檔**（全 assets_src2/ 只搜得到那顆 <a>），
+               所以面板本身是自製的，屬 WRETCH_2012.md §3-A 的「救不回來就自己補」。
+       #remindvers  原站勸使用者換新版相片頁的推廣浮層。我們沒有兩套相片頁，
+               照抄那三句賣點等於宣傳一個不存在的功能，所以文案改成推銷本站真的有的
+               「一頁瀏覽」。DOM 與 15 張素材照原版（partials/remindvers2012.ejs）。
+       .newVideoUpdate  紅色 NEW 小圖章。原版掛在 VIP 的 iZoom 放大鏡上，
+               我們沒有 iZoom，改掛「一頁瀏覽」。
 
      【偏離】迴響區：本站照抄的舊版 show.php 沒有迴響——2012 年只有「新版相片頁」
      （assets_src2/html/album_show_teresagiol.html，CSS 是 album/css/wspp.css）才有，
@@ -66,6 +76,10 @@
     <tr>
       <td rowspan="2" width="360" valign=middle>
         <font class="normal-a">
+            <%# 站方認證章。原版這裡是金色 isAuth_gold.gif（照片頁專用的等級），
+                相簿列表頁是銀色。原站語意是付費 VIP，本站沒有付費會員，
+                改成「站方認證帳號」（users.vip），細節見 partials/vipicon2012.ejs。 %>
+            <%- include('partials/vipicon2012', { viUser: u, viStyle: 'gold' }) %>
             <a href="/<%= u.name %>/album"><%= u.nick %>的相簿</a> &gt;
             <a href="<%= phBook %>"><%= p.atitle %></a>
         </font>
@@ -91,6 +105,8 @@
 
               <a href="<%= phBook %>/slide?i=<%= idx %>" id="slide" title="自動播放(熱鍵:s)" target="_blank">自動播放</a>
 
+                                  |  <a href="#et" id="exif" title="圖片資訊(熱鍵:i)">圖片資訊</a>
+
             |    相片牆&nbsp;<span class="hide-fun">(VIP only)</span>:&nbsp;<a class="mosazic" href="<%= phBook %>/slide">馬賽克</a>
       | <a class="waterfall" href="<%= phBook %>/slide">瀑布</a>
         </font>
@@ -109,7 +125,11 @@
 <p align="right">
 
 </p>
-  <table class="show" border=0 width=100%>
+  <%# width 一定要加引號。原檔是不加引號的 width=100 加百分號，
+      但百分號後面緊接著大於號，剛好就是 EJS 的標記結束符號，
+      那個大於號會被吃掉：渲染出來的 table 標籤沒收掉，整欄塌成 90px，
+      主圖跟著縮到 90x68。（這段註解本身也不能寫出那兩個字元，同理。） %>
+  <table class="show" border=0 width="100%">
   <tr>
     <td align="center">
 
@@ -151,6 +171,11 @@
     <p align="right">
         <a style="font-size=8pt" target="_blank" href="/search?q=<%= encodeURIComponent(p.caption || p.atitle) %>">搜尋更多</a>&nbsp;
     <a style="font-size=8pt" target="_blank" href="/<%= u.name %>/guestbook">留言</a>&nbsp;
+    <%# .newVideoUpdate 是一顆紅色「NEW」小圖章（new_album.gif 21×11），
+        不是影音功能——原站最早拿它標影音有新東西，後來當通用 NEW 章重用，
+        名稱跟用途早就脫鉤了。原版這裡掛的是 VIP 的 iZoom 放大鏡，我們沒有，
+        改掛本站真的有的「一頁瀏覽」（?all=1）。 %>
+    <a style="font-size=8pt" href="/<%= u.name %>/album/<%= p.album_id %>?all=1" target="_blank"><img  class="newVideoUpdate" alt="newVideoUpdate" src="/img/wretch2012/album/new_album.gif" border="0" />一頁瀏覽</a>&nbsp;&nbsp;
 &nbsp;
 <a style="font-size=8pt" href="#" class="w2a-reportlink" data-kind="photo" data-id="<%= p.id %>">檢舉這張相片</a>
 <br/>
@@ -265,6 +290,71 @@
     }
     if (e.target.id === 'w2a-rcancel') document.getElementById('w2a-reportbox').style.display = 'none';
   });
+})();
+</script>
+
+<%# 圖片資訊（EXIF）。原站是把同一頁帶 &e 重載，PHP 在頁面下方多印一塊表格，
+    #et 是那塊表格的錨點（熱鍵 i）。
+    **原版那塊表格的 DOM 完全沒有存檔**——全 assets_src2/ 只搜得到那顆
+    <a id="exif"> 和 hotkey 旗標，帶 &e 的快照一份都沒有。所以表格本身只能自製，
+    照 WRETCH_2012.md §3-A 的規矩標明是刻意偏離。
+    我們不用重載，直接同頁展開；沒有 EXIF 的照片（截圖、轉檔過的圖）是多數，
+    那就只印尺寸與檔案大小，不要印空欄位。 %>
+<div id="et" class="w2a-exif">
+  <table border="0" cellspacing="1">
+    <tr><td class="sidetitle" align="right">尺寸：</td>
+        <td class="side"><% if (p.width) { %><%= p.width %> × <%= p.height %> 像素<% } else { %>—<% } %></td></tr>
+    <tr><td class="sidetitle" align="right">檔案大小：</td>
+        <td class="side"><%= p.bytes ? Math.round(p.bytes / 1024) + ' KB' : '—' %></td></tr>
+    <tr><td class="sidetitle" align="right">拍攝時間：</td>
+        <td class="side"><%= p.taken || '—' %></td></tr>
+    <tr><td class="sidetitle" align="right">相機：</td>
+        <td class="side"><%= p.camera || '—' %></td></tr>
+    <tr><td class="sidetitle" align="right">上傳時間：</td>
+        <td class="side"><%= p.created %></td></tr>
+  </table>
+</div>
+<script>
+/* 原站按「圖片資訊」是重載整頁（&e），我們同頁展開就好。
+   熱鍵 i 照原站保留（show_hotkey_parameters['exif']）。 */
+(function () {
+  var link = document.getElementById('exif'), box = document.getElementById('et');
+  if (!link || !box) return;
+  var toggle = function (e) { if (e) e.preventDefault();
+    box.classList.toggle('open');
+    if (box.classList.contains('open')) box.scrollIntoView({ behavior: 'smooth' }); };
+  link.addEventListener('click', toggle);
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'i' && !/^(INPUT|TEXTAREA)$/.test(document.activeElement.tagName)) toggle();
+  });
+})();
+</script>
+
+<%# 推銷浮層。原站位置是 #bigcontainer 收掉之後、#hugewrapper 收掉之前的
+    兄弟節點，也就是版面的最後——所以放在 foot2012_site 之前。 %>
+<%- include('partials/remindvers2012', { rvHref: '/' + u.name + '/album/' + p.album_id + '?all=1' }) %>
+<script>
+/* 「一週後提醒我」：原站的 remindvers.js 沒有存檔，這裡做等價的最小行為。
+   原站寫 cookie，本專案沒有 cookie-parser，改用 localStorage。
+
+   ⚠ **預設不主動跳出來**，跟原始存檔一樣（那份快照裡整個浮層就包在 .hidden 裡）。
+   理由：浮層的標題與三顆圖示都是**原版的圖片素材**，上面印死了
+   「相片頁全新改版上線」「留言 / 社交 / 介面」——那是無名當年在推銷他們自己的
+   新版相片頁，我們沒有那個東西。圖換不掉，只換下面三行字的話，
+   整塊就變成在宣傳一個不存在的功能，那就是 WRETCH_2012.md §1-A 說的假資料。
+   所以：DOM、素材、樣式全部照原版留著（結構還原度算得到），但不主動顯示；
+   要看的人可以自己在 console 打 document.querySelector('#remindvers').parentNode
+     .classList.remove('hidden')。 */
+(function () {
+  var box = document.getElementById('remindvers');
+  if (!box) return;
+  var KEY = 'w2-remindvers-until';
+  var hide = function () {
+    localStorage.setItem(KEY, Date.now() + 7 * 24 * 3600 * 1000);
+    box.parentNode.classList.add('hidden');
+  };
+  box.querySelector('.attlater').addEventListener('click', function (e) { e.preventDefault(); hide(); });
+  box.querySelector('.attnow').addEventListener('click', hide);
 })();
 </script>
 

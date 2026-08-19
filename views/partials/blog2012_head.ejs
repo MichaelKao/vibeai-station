@@ -31,6 +31,13 @@
      EJS 用 with(locals)，不能宣告和 local 同名的 const；
      非必定存在的 local 一律走 locals.xxx。 */
   const bhIntro = (u && u.intro) ? u.intro.split('\n')[0].slice(0, 200) : '';
+  /* #wretch-crumb：原站是 Yahoo 的 CSRF token。本站靠 cookie 的 SameSite=lax，
+     沒有那套 token，所以自己發一組同格式的（**只輸出、不驗證**）；
+     後端把真正的 session token 放進 res.locals.crumb 之後這裡自動改用它。
+     以前這裡是空字串，值換成我們自己的才和另外兩支外框一致。 */
+  const bhCrumb = locals.crumb ||
+    ('&.c=' + (locals.me ? 'u' + me.id : 'g') + Math.random().toString(36).slice(2, 12)
+     + '&.t=' + Math.floor(Date.now() / 1000));
 %><!DOCTYPE html>
 <html lang="zh-Hant">
 <head>
@@ -52,8 +59,10 @@
 </head>
 <%# body 上那三個 return false 是原站防右鍵／防拖曳／防選取的設定，照抄 %>
 <body id="blog_main" onDragStart="return false" onContextmenu="return false" onSelectStart="return false" class="yui-skin-sam">
-<!-- nv hugewrepper --><div id="hugewrapper"><input id="wretch-crumb" type="hidden" value="">
-<input id="static-path" type="hidden" value="/img/wretch2012/blog/">
+<!-- nv hugewrepper --><div id="hugewrapper"><input id="wretch-crumb" type="hidden" value="<%= bhCrumb %>">
+<%# #static-path 是「素材根」（原站 l.yimg.com/e/serv/common/），不是服務層路徑。
+    以前這裡寫成 /img/wretch2012/blog/，語意不對，改成和另外兩支一樣的 CDN。 %>
+<input id="static-path" type="hidden" value="<%= CDN %>">
 <%- include('kukubar2012', { kkService: 'blog' }) %>
 <div id="bigcontainer" style="position: relative !important; zoom:1 !important;" >
 <div id="container1">

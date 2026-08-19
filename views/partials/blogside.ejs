@@ -59,7 +59,7 @@
 <div id="boxMySpace">
  <div class="boxMySpace0">
   <div class="sidetitle">
-   <%= u.nick %> 的小站  </div>
+   <%- include('vipicon2012', { viUser: u, viStyle: 'auth' }) %><%= u.nick %> 的小站  </div>
  </div>
  <div class="boxMySpace1">
   <div class="side">
@@ -69,27 +69,41 @@
     </a>
    </div>
 
-   <div id="service">
-    <ul id="serviceList">
-     <li><a class="mySpaceLink" id="linkMypage" href="/<%= u.name %>">MyPage</a></li>
-     <li><a class="mySpaceLink" id="linkAlbum" href="/<%= u.name %>/album">相簿</a></li>
-     <li><a class="mySpaceLink" id="linkBlog" href="/<%= u.name %>/blog">網誌</a></li>
-     <li><a class="mySpaceLink" id="linkGbook" href="/<%= u.name %>/guestbook">留言板</a></li>
-     <li><a class="mySpaceLink" id="linkUser" href="/<%= u.name %>/card">名片</a></li>
-     <li><a class="mySpaceLink" id="linkFriend" href="/<%= u.name %>/friends">好友</a></li>
-    </ul>
+   <%# 這個網誌的站內分類（原版 #blogCategory：連到網誌總站的該分類熱門榜）。
+       users 表沒有「這個網誌屬於哪一類」的欄位，所以只在後端把它放進
+       locals.blogTopic 時才印——原站沒設分類的使用者同樣整塊不印。 %>
+   <% if (locals.blogTopic) { %>
+   <div id="blogCategory">
+    <span>站內分類：</span>
+    <a href="/blogs?topic=<%= encodeURIComponent(blogTopic) %>"><%= blogTopic %></a>
+   </div>
+   <% } %>
 
+   <div id="service">
+    <%# 七顆服務鈕（第七顆是影音，網址照約定的 /:user/video），
+        四種變體集中在 partials/myspace2012.ejs %>
+    <%- include('myspace2012', { msUser: u, msVariant: 'blog',
+          msLabels: ['MyPage','相簿','網誌','留言板','名片','好友','影音'] }) %>
+
+    <%# 原站對未登入訪客也照樣印這一格（存檔就是爬蟲的登出狀態），
+        點下去才導到登入頁——所以 li.boxAddFriendLink 永遠輸出。 %>
     <ul id="interactionList">
      <% if (me && !isOwner) { %>
      <li class="boxAddFriendLink"><form method="post" action="/<%= u.name %>/friend"><button class="mySpaceLink" id="link_addfriend"><%= isFriend ? '取消好友' : '加入好友名單' %></button></form></li>
+     <% } else if (!me) { %>
+     <li class="boxAddFriendLink"><a class="mySpaceLink" id="link_addfriend" href="/login">加入好友名單</a></li>
      <% } %>
      <% if (isOwner) { %>
-     <li class="boxAddFriendLink"><a class="mySpaceLink" href="/<%= u.name %>/blog/new">發表文章</a></li>
+     <li class="boxAddFriendLink"><a class="mySpaceLink" id="link_addfriend" href="/<%= u.name %>/blog/new">發表文章</a></li>
      <li class="boxAddFriendLink"><a class="mySpaceLink" href="/<%= u.name %>/settings">網誌樣式</a></li>
      <li class="boxAddFriendLink"><a class="mySpaceLink" href="/<%= u.name %>/settings">網誌設定</a></li>
      <% } %>
     </ul>
    </div>
+   <%# 「去逛好友的網誌」下拉。原站好友 0 人時也照樣輸出，只有佔位那一行。 %>
+   <%- include('friendlist2012', {
+         flFriends: (typeof friends !== 'undefined' && friends) ? friends : [],
+         flLabel: "- Friends' Blog -", flGo: '/blog' }) %>
   </div>
  </div>
 </div>

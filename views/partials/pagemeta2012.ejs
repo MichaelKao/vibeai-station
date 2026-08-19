@@ -1,0 +1,45 @@
+<%
+  /* 隱藏的頁面 metadata 區塊（原站的 RAPID hidden area）
+     ─────────────────────────────────────────────────────────────
+     原版逐字（assets_src2/html/album_album_list.html:583-592，`</body>` 前）：
+
+       <!-- Start of hidden area for RAPID -->
+       <div style="display:none">
+       <span id="rapid_wid"><a>leepeihsuam</a></span>
+       …
+       </div>
+       <script src="http://us.js.yimg.com/lib/rapid/rapid_2.4.0.js"></script>
+       <!-- End of hidden area for RAPID -->
+
+     為什麼保留這個區塊、卻不保留它的 script：
+     這幾個 span 是「這一頁在講誰、哪一本、公不公開」的機器可讀標記，
+     原站拿它餵 Yahoo 的 RAPID／YWA 分析 SDK。標記本身是版面的一部分
+     （每一頁欄位組合都不同，是頁面身分的一部分），SDK 不是。
+     所以：**DOM 逐字照做、值換成本站自己的資料、一行 Yahoo 網址都不留**。
+     沒有任何 script，也沒有任何對外請求。
+
+     每頁欄位不同（實測，別互抄）：
+       相簿列表 wid / vip_status / privacy / ov_status                     （4）
+       單本相簿 wid / vip_status / cat / privacy / album / location / ov_status（7）
+       網誌     ov_status / ytalent                                        （2）
+       留言板・名片・好友・單張照片：原版就沒有這個區塊，不要硬加
+
+     ── include 參數 ──────────────────────────────────────────────
+       pm  物件，key 是 `rapid_` 後面那一截，value 是要印的值。
+           **順序照物件的宣告順序**（原版的順序有意義，照抄）。
+           空物件或沒傳就整塊不輸出。
+
+     呼叫範例（註解裡不能寫 EJS 的輸出標記，掃描器會把它當成真的標記）：
+       include('pagemeta2012', { pm: {
+         wid: u.name, vip_status: (u.vip || 0),
+         privacy: 0, ov_status: (me ? 'log' : 'unlog') + '_NPO' } })
+
+     EJS 用 with(locals)：內部變數一律加 pm 前綴，避免和 local 撞名（TDZ）。 */
+  const pmEntries = Object.entries(locals.pm || {});
+%><% if (pmEntries.length) { %>
+<!-- Start of hidden area for page metadata -->
+<div style="display:none">
+<% pmEntries.forEach(function(e){ %><span id="rapid_<%= e[0] %>"><a><%= e[1] %></a></span>
+<% }) %></div>
+<!-- End of hidden area for page metadata -->
+<% } %>

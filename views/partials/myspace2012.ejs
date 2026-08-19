@@ -1,0 +1,72 @@
+<%
+  /* 個人站頂端導覽 [ MyPage | album | blog | guestbook | User | Friend | Video ]
+     ═══════════════════════════════════════════════════════════════════════
+     七顆連結的 id 全站一致（linkMypage / linkAlbum / linkBlog / linkGbook /
+     linkUser / linkFriend / linkVideo），但**外包的 DOM 每個服務都不一樣**，
+     所以這支不是「一種 DOM 套五個地方」，而是把四種變體集中在一處，
+     由 msVariant 選。四份逐字來源：
+
+       card   gb_user_a000000010_20120531.html:96-105
+              <font class="small-c">[ 帳號的 <a>…</a><span>&nbsp;&nbsp;|&nbsp;</span>… ]</font>
+       album  album_index_a000000jay.html:163-176
+              <div class="small-c" id="MySpace"><span>[ 帳號 的</span>…<span>]</span></div>
+       friend gb_friend_a000001_20131226.html:170-178
+              <ul id="serviceList"><li><a id="linkX">…</a></li>…</ul>
+       blog   blog_2012_default_skin_afuuu.html:1695-1709
+              <ul id="serviceList"><li><a class="mySpaceLink" id="linkX">…</a></li>…</ul>
+              （外面的 #service 與後面的 ul#interactionList 由呼叫端自己開，
+                因為 interactionList 的內容跟登入狀態有關，屬於呼叫端的事）
+       gb     gb_guestbook_a000000010_20131226.html:381-389
+              <ul id="myService"><li id="myMypage">…</li>…<li id="myVideo">…</li></ul>
+              （留言板側欄這一組的 id 完全不同，是 my* 不是 link*）
+
+     第七顆 Video 指 /:user/video —— 影音服務本站有（另一位 agent 正在做後端），
+     所以這裡直接接約定好的網址，不再像以前那樣指 /help。
+
+     ── include 參數 ──────────────────────────────────────────────────────
+       msUser     必填。站主物件（要有 .name）
+       msVariant  'card' | 'album' | 'friend' | 'blog' | 'gb'，預設 'card'
+       msLabels   七顆的文字，預設照原版的英文。
+                  網誌／留言板側欄現有的中文是 blog.md 6-C【推】的刻意決定，
+                  那兩處呼叫時自己傳中文進來，不要在這裡改預設值。
+
+     EJS 用 with(locals)：內部變數一律加 ms 前綴，避免和 local 撞名（TDZ）。 */
+  const msU   = locals.msUser;
+  const msV   = locals.msVariant || 'card';
+  const msL   = locals.msLabels || ['MyPage','album','blog','guestbook','User','Friend','Video'];
+  const msN   = '/' + msU.name;
+  const msIt  = [
+    ['linkMypage', msN,               msL[0], 'myMypage'],
+    ['linkAlbum',  msN + '/album',    msL[1], 'myAlbum' ],
+    ['linkBlog',   msN + '/blog',     msL[2], 'myBlog'  ],
+    ['linkGbook',  msN + '/guestbook',msL[3], 'myGbook' ],
+    ['linkUser',   msN + '/card',     msL[4], 'myUser'  ],
+    ['linkFriend', msN + '/friends',  msL[5], 'myFriend'],
+    ['linkVideo',  msN + '/video',    msL[6], 'myVideo' ],
+  ];
+%><% if (msV === 'card') { %>
+    <font class="small-c">
+      [ <%= msU.name %>的      <% msIt.forEach(function(it, i){ %><a id="<%= it[0] %>" href="<%= it[1] %>"><%= it[2] %></a><% if (i < 6) { %><span>&nbsp;&nbsp;|&nbsp;</span>
+      <% } %><% }) %>
+      ]
+    </font>
+<% } else if (msV === 'album') { %>
+  <div class="small-c" id="MySpace">
+    <span>[ <%= msU.name %> 的</span>
+    <% msIt.forEach(function(it, i){ %><a id="<%= it[0] %>" href="<%= it[1] %>"><%= it[2] %></a><% if (i < 6) { %><span>&nbsp;&nbsp;|&nbsp;</span>
+    <% } %><% }) %>
+    <span>]</span>
+  </div>
+<% } else if (msV === 'friend') { %>
+          <ul id="serviceList">
+<% msIt.forEach(function(it){ %>            <li><a id="<%= it[0] %>" href="<%= it[1] %>"><%= it[2] %></a></li>
+<% }) %>          </ul>
+<% } else if (msV === 'blog') { %>
+    <ul id="serviceList">
+<% msIt.forEach(function(it){ %>     <li><a class="mySpaceLink" id="<%= it[0] %>" href="<%= it[1] %>"><%= it[2] %></a></li>
+<% }) %>    </ul>
+<% } else { %>
+      <ul id="myService">
+<% msIt.forEach(function(it){ %>        <li id="<%= it[3] %>"><a href="<%= it[1] %>"><%= it[2] %></a></li>
+<% }) %>      </ul>
+<% } %>

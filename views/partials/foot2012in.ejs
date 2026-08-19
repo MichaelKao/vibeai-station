@@ -2,8 +2,29 @@
   /* 內頁頁尾：#kukubar-lower ＋ #footer-switch（assets_src2/spec/chrome.md 第 5.2、6.2 節）
      這支收掉 partials/head2012in.ejs 開的 #bigcontainer 與 #hugewrapper。
 
-     文案逐字照抄，連結改指本站的頁。三處刻意偏離，理由寫在旁邊。 */
-%></div><!-- /#bigcontainer -->
+     文案逐字照抄，連結改指本站的頁。三處刻意偏離，理由寫在旁邊。
+
+     另外收 #extraDiv：原站在 #container **之外**、#bigcontainer 之內還有幾個
+     空的裝飾掛點（見 partials/extradiv2012.ejs 的說明）。每頁個數不同：
+       好友   8（原版 1-4 在 #container 內、5-8 在外）
+       留言板 4（1-2 由 partials/gbfoot.ejs 在 #container 裡出，這裡出 3-4）
+       名片   0（原版真的一個都沒有）
+     ⚠ 好友頁這裡先把 1-8 都出在 #container 外面 —— views/friends.ejs 不是這一輪
+       能動的檔案，等它自己在 #container 裡出 1-4 之後，改成
+       include('partials/foot2012in', { extraFrom: 5 }) 就會回到原版的位置。
+
+     為什麼不看 page：`page` 是呼叫端傳給 head2012in 的 include 參數，
+     EJS 的 include 資料只在那一支裡面有效，這支收不到，只能靠 res.locals 分辨。 */
+  const w2Kind  = locals.nav === 'card' ? 'card'
+                : (locals.fans !== undefined || locals.relName !== undefined) ? 'friend'
+                                                                             : 'gb';
+  const w2ExDef = w2Kind === 'friend' ? [1, 8]
+                : w2Kind === 'card'   ? [1, 0]
+                                      : [3, 4];
+%><%- include('extradiv2012', {
+      edFrom: locals.extraFrom || w2ExDef[0],
+      edTo:   locals.extraTo   === undefined ? w2ExDef[1] : locals.extraTo }) %>
+</div><!-- /#bigcontainer -->
 </div><!-- /#hugewrapper -->
 
 <div id="kukubar-lower" class="kukubar-bar">
@@ -100,6 +121,16 @@
   if (sw && lower) sw.addEventListener('click', function(){
     lower.classList.toggle('hidden-footer');
     sw.parentNode.classList.toggle('off');
+  });
+
+  /* select#friendlist 的跳頁：原站是 meetfriend.js 的 MeetFriend() 加一行 inline onChange。
+     本站統一用 data-user-go（partials/friendlist2012.ejs 產的），
+     跟 foot2012_site.ejs／blog2012_foot.ejs 是同一套約定。 */
+  document.addEventListener('change', function(e){
+    var s = e.target;
+    if (!s || s.tagName !== 'SELECT') return;
+    var go = s.getAttribute('data-user-go');
+    if (go !== null && s.value) location.href = '/' + encodeURIComponent(s.value) + go;
   });
 })();
 </script>

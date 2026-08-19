@@ -64,6 +64,17 @@ ok('好友看得到', (await get(`/alpha/album/${aid}`,C)).status===200);
 ok('好友限定不出現在總站', !(await text('/albums')).includes('我的旅行'));
 await post(`/alpha/album/${aid}/edit`,{title:'我的旅行'},A);
 
+console.log('\n=== 相片牆 ===');
+// 相片牆是原站的 VIP 功能（album/display.php?style=angel|taylor）。
+// 驗行為：兩種模式都要把整本照片連出來，而且權限跟相簿本身一樣嚴。
+{
+  const wall = await text(`/alpha/album/${aid}/wall`,A);
+  ok('相片牆（瀑布）列出整本照片', new Set(wall.match(/\/alpha\/photo\/\d+/g)||[]).size===3);
+  const mosaic = await text(`/alpha/album/${aid}/wall?style=angel`,A);
+  ok('相片牆（馬賽克）列出整本照片', new Set(mosaic.match(/\/alpha\/photo\/\d+/g)||[]).size===3);
+  ok('相片牆吃相簿密碼', (await get(`/alpha/album/${secretId}/wall`,C)).status===302);
+}
+
 console.log('\n=== 網誌 ===');
 await post('/alpha/blog/new',{title:'第一篇',body:'內容內容內容',category:'心情',topic:'心情',mood:'開心',weather:'晴'},A);
 await post('/alpha/blog/new',{title:'鎖起來',body:'SECRETTEXT',category:'心情',pass:'8888'},A);
@@ -107,6 +118,30 @@ ok('悄悄話對外隱藏', !gb.includes('HIDDENMSG'));
 ok('板主看得到悄悄話', (await text('/alpha/guestbook',A)).includes('HIDDENMSG'));
 ok('系統訊息本人限定', (await get('/alpha/guestbook?tab=sys',Bc)).status===403);
 ok('系統訊息有通知', (await text('/alpha/guestbook?tab=sys',A)).includes('你有新的留言'));
+// 原版一頁 10 則。驗行為（不數 DOM）：灌到 15 則之後最舊那則要被擠到第二頁。
+for(let i=0;i<12;i++) await post('/alpha/guestbook',{author:'路人',body:'GBMSG'+i},null);
+ok('留言板一頁 10 則', !(await text('/alpha/guestbook')).includes('GBMSG0') &&
+   (await text('/alpha/guestbook?p=2')).includes('GBMSG0'));
+// 站方公告（原版的 #tab_bulletin）：人人可見，跟只有本人看得到的系統訊息是兩回事
+await post('/admin/notice',{body:'[公告] 測試站方公告'},A);
+{
+  const bt = await text('/alpha/guestbook?tab=bulletin');
+  ok('站方公告頁籤匿名可見', (await get('/alpha/guestbook?tab=bulletin')).status===200);
+  ok('站方公告頁籤看得到公告', bt.includes('測試站方公告'));
+  // 這格接的是 notices 不是 guestbook：最新那則留言不該出現在公告頁籤
+  ok('站方公告頁籤不混到留言', !bt.includes('GBMSG11'));
+}
+
+// 留言者要連得回他自己的小站（原版每則留言的暱稱與大頭貼都是連結，
+// 認證章 .vip_icon 也掛在那裡）。登入留言存 author_id，訪客留言存 NULL。
+await post('/alpha/guestbook',{body:'BRAVOSAYS'},Bc);
+{
+  const g = await text('/alpha/guestbook');
+  ok('登入留言連得回留言者的小站', g.includes('href="/bravo/guestbook"'));
+  // 上面那 12 則是沒登入灌的，不該生出帳號連結
+  ok('訪客留言沒有帳號連結', !g.includes('/路人/guestbook'));
+}
+
 
 console.log('\n=== 名片 / 好友 / 動態 ===');
 await post('/alpha/card',{realname:'王小明',sex:'男生',zodiac:'雙子座',blood:'O',city:'台北',hobby:'攝影'},A);
@@ -120,13 +155,67 @@ ok('好友分組', (await text('/alpha/friends')).includes('同學'));
 ok('好友動態', (await text('/alpha/feed',A)).includes('好友動態'));
 ok('好友動態私密', (await get('/alpha/feed',Bc)).status===403);
 
+console.log('\n=== 好友頁四種關係 / 分類 / 搜尋 ===');
+// friends 是雙向邊，四種關係全部算得出來（原版的 #current_tag0..3）。
+// 目前 alpha → charlie 是單向。
+ok('我的好友（預設）', (await text('/alpha/friends')).includes('charlie'));
+ok('誰加我為好友（c=1）', (await text('/charlie/friends?c=1')).includes('alpha'));
+ok('互相（c=2）單向不算', !(await text('/alpha/friends?c=2')).includes('charlie'));
+await post('/alpha/friend',{},C);                     // charlie 回加 alpha
+ok('互相（c=2）回加之後成立', (await text('/alpha/friends?c=2')).includes('charlie'));
+await post('/bravo/friend',{},C);                     // charlie 也加 bravo，alpha 才有「好友的好友」
+{
+  const fof = await text('/alpha/friends?c=3');
+  ok('好友的好友（c=3）撈得到兩跳的人', fof.includes('bravo'));
+  ok('好友的好友（c=3）扣掉已經是好友的人', !fof.includes('charlie'));
+}
+ok('好友搜尋只比對帳號', (await text('/alpha/friends?search_id=charl')).includes('charlie') &&
+   !(await text('/alpha/friends?search_id=nobodyhere')).includes('charlie'));
+ok('好友分類篩選', (await text('/alpha/friends?cateSelect='+encodeURIComponent('同學'))).includes('charlie') &&
+   !(await text('/alpha/friends?cateSelect='+encodeURIComponent('同事'))).includes('charlie'));
+// 原站那張搜尋表單是 POST，導回 GET 才有得加書籤、才分得了頁
+ok('好友搜尋 POST 導回 GET', (await post('/alpha/friends',{search_id:'charl'},A)).headers.get('location')==='/alpha/friends?search_id=charl');
+
+console.log('\n=== 影音 ===');
+ok('新增影音', (await post('/alpha/video',{title:'測試影片',url:'https://www.youtube.com/watch?v=jNQXAC9IVRw'},A)).status===302);
+ok('影音列表內嵌影片', (await text('/alpha/video')).includes('jNQXAC9IVRw'));
+ok('非 YouTube 網址不收', (await post('/alpha/video',{title:'壞連結',url:'https://evil.example.com/a'},A)).status===302 &&
+   !(await text('/alpha/video')).includes('壞連結'));
+ok('非本人不能新增影音', (await post('/alpha/video',{title:'x',url:'https://youtu.be/jNQXAC9IVRw'},Bc)).status===403);
+{
+  const vpage = await text('/alpha/video',A);
+  const vid = (vpage.match(/\/alpha\/video\/(\d+)\/del/)||[])[1];
+  ok('站主可刪影音', !!vid && (await post(`/alpha/video/${vid}/del`,{},A)).status===302 &&
+     !(await text('/alpha/video')).includes('測試影片'));
+}
+
+console.log('\n=== 嘀咕 ===');
+ok('發嘀咕', (await post('/alpha/digu',{body:'DIGUTEST'},A)).status===302 &&
+   (await text('/alpha/digu')).includes('DIGUTEST'));
+ok('非本人不能發嘀咕', (await post('/alpha/digu',{body:'x'},Bc)).status===403);
+{
+  const n = t => +(t.match(/共有 (\d+) 則嘀咕/)||[0,0])[1];
+  const before = n(await text('/alpha/digu',A));
+  await post('/alpha/digu',{body:'   '},A);
+  ok('空白嘀咕不收', before === n(await text('/alpha/digu',A)));
+}
+
+console.log('\n=== 背景音樂偏好 ===');
+// 專案沒有 cookie-parser，偏好記在 session；畫面上怎麼呈現是 view 的事，這裡只驗行為
+{
+  const r = await get('/bgm?on=0&back=/alpha');
+  ok('關掉音樂會轉回原頁', r.status===302 && r.headers.get('location')==='/alpha');
+  ok('偏好有寫進 session（會發 cookie）', !!r.headers.getSetCookie()?.length);
+  ok('/bgm 擋開放轉址', (await get('/bgm?on=0&back=//evil.com')).headers.get('location')==='/');
+}
+
 console.log('\n=== 分類總站 ===');
 ok('相簿總站 24 類', (await text('/albums')).match(/\?topic=/g).length>=24);
 ok('網誌總站 12 類', (await text('/blogs')).match(/\?topic=/g).length>=12);
 ok('相簿分類篩選', (await text('/albums?topic='+encodeURIComponent('國內旅遊'))).includes('國內旅遊'));
 
 console.log('\n=== 無名風格網址 ===');
-for(const [u,exp] of [['/album/alpha','/alpha/album'],['/blog/alpha','/alpha/blog'],['/guestbook/alpha','/alpha/guestbook'],['/friend/alpha','/alpha/friends'],['/mypage/alpha','/alpha'],['/user/alpha','/alpha/card']]){
+for(const [u,exp] of [['/album/alpha','/alpha/album'],['/blog/alpha','/alpha/blog'],['/guestbook/alpha','/alpha/guestbook'],['/friend/alpha','/alpha/friends'],['/mypage/alpha','/alpha'],['/user/alpha','/alpha/card'],['/video/alpha','/alpha/video'],['/digu/alpha','/alpha/digu']]){
   const r=await get(u); ok('301 '+u, r.status===301 && r.headers.get('location')===exp, r.headers.get('location'));
 }
 
@@ -150,7 +239,7 @@ ok('非站長不能進後台', (await get('/admin',Bc)).status===403);   // alph
 ok('非本人不能刪相簿', (await post(`/alpha/album/${aid}/del`,{},Bc)).status===403);
 
 console.log('\n=== 全站頁面 ===');
-for(const p of ['/','/albums','/blogs','/rank','/search?q=a','/help','/login','/register','/alpha','/alpha/album','/alpha/blog','/alpha/guestbook','/alpha/card','/alpha/friends','/alpha/favs']){
+for(const p of ['/','/albums','/blogs','/rank','/search?q=a','/help','/login','/register','/alpha','/alpha/album','/alpha/blog','/alpha/guestbook','/alpha/card','/alpha/friends','/alpha/favs','/alpha/video','/alpha/digu']){
   ok('200 '+p, (await get(p)).status===200);
 }
 ok('404 不存在使用者', (await get('/nobodyhere')).status===404);

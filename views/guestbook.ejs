@@ -40,8 +40,12 @@
 
 <%- include('partials/gbtop', {
       head: u.nick + ' 的留言板',
+      /* 原版只有兩個頁籤：#tab_normal（留言）與 #tab_bulletin（站方公告，
+         發文者一律 wretchoffice、人人可見、會分頁）。我們的「系統訊息」是
+         站主一個人的私人信箱，語意不同，所以另外掛在後面、只有本人看得到。 */
       tabs: [
-        { href:'/'+u.name+'/guestbook', label:'留言板', on: tab==='list' },
+        { id:'tab_normal',   href:'/'+u.name+'/guestbook', label:'留言板', on: tab==='list' },
+        { id:'tab_bulletin', href:'/'+u.name+'/guestbook?tab=bulletin', label:'站方公告', on: tab==='bulletin' },
         ...(isOwner ? [{ href:'/'+u.name+'/guestbook?tab=sys',
                          label:'系統訊息' + (unread ? '('+unread+')' : ''), on: tab==='sys' }] : []),
       ] }) %>
@@ -50,13 +54,7 @@
 <%# ===== 系統訊息（站方通知、板主收到新留言的通知） ===== %>
 <div id="search">共 <b><%= total %></b> 則系統訊息</div>
 
-<% if (pages > 1) { %>
-<ul class="page_control">
-  <% if (page > 1) { %><a id="prev" href="?tab=sys&p=<%= page-1 %>">上一頁</a><% } %>
-  <% for (let i = 1; i <= pages; i++) { %><% if (i === page) { %><%= i %><% } else { %><a href="?tab=sys&p=<%= i %>"><%= i %></a><% } %><% } %>
-  <% if (page < pages) { %><a id="next" href="?tab=sys&p=<%= page+1 %>">下一頁</a><% } %>
-</ul>
-<% } %>
+<%- include('partials/gbpager', { gpPage: page, gpPages: pages, gpPos: 'top', gpHref: n => '?tab=sys&p=' + n }) %>
 
 <div id="msg_list">
   <% if (!sys.length) { %><div class="msg_body"><div class="w2-empty">沒有系統訊息</div></div><% } %>
@@ -76,13 +74,7 @@
   <% }) %>
 </div>
 
-<% if (pages > 1) { %>
-<ul class="page_control">
-  <% if (page > 1) { %><a id="prev" href="?tab=sys&p=<%= page-1 %>">上一頁</a><% } %>
-  <% for (let i = 1; i <= pages; i++) { %><% if (i === page) { %><%= i %><% } else { %><a href="?tab=sys&p=<%= i %>"><%= i %></a><% } %><% } %>
-  <% if (page < pages) { %><a id="next" href="?tab=sys&p=<%= page+1 %>">下一頁</a><% } %>
-</ul>
-<% } %>
+<%- include('partials/gbpager', { gpPage: page, gpPages: pages, gpPos: 'bottom', gpHref: n => '?tab=sys&p=' + n }) %>
 
 <% } else if (tab === 'new') { %>
 <%# ===== 我要留言 =====
@@ -142,13 +134,7 @@ document.addEventListener('click', function(e){
 <%# ===== 留言板本體 ===== %>
 <div id="search">共 <b><%= total %></b> 則留言</div>
 
-<% if (pages > 1) { %>
-<ul class="page_control">
-  <% if (page > 1) { %><a id="prev" href="?p=<%= page-1 %>">上一頁</a><% } %>
-  <% for (let i = 1; i <= pages; i++) { %><% if (i === page) { %><%= i %><% } else { %><a href="?p=<%= i %>"><%= i %></a><% } %><% } %>
-  <% if (page < pages) { %><a id="next" href="?p=<%= page+1 %>">下一頁</a><% } %>
-</ul>
-<% } %>
+<%- include('partials/gbpager', { gpPage: page, gpPages: pages, gpPos: 'top', gpHref: n => '?p=' + n }) %>
 
 <div id="msg_list">
   <% if (!msgs.length) { %><div class="msg_body"><div class="w2-empty">還沒有留言，來當第一個吧</div></div><% } %>
@@ -156,8 +142,11 @@ document.addEventListener('click', function(e){
   <ul class="msg_body">
     <li class="msg_content">
       <ul>
-        <li class="msg_img"><img src="/img/avatar.png" width="60" height="60" alt=""></li>
-        <li class="msg_man"><span>暱稱：</span><%= hide ? '悄悄話' : m.author %></li>
+        <%# 原版這兩格：大頭貼與暱稱都是連回留言者的小站，暱稱前面掛認證章
+            （gb_guestbook_a000000010_20131226.html:12441）。
+            訪客留言（author_id 是 NULL）就沒有帳號可以連，退回純文字＋預設頭像。 %>
+        <li class="msg_img"><% if (!hide && m.a_name) { %><a href="/<%= m.a_name %>/guestbook" target="_blank"><img src="<%= m.a_avatar %>" width="60" height="60" alt="<%= m.a_nick %>"></a><% } else { %><img src="/img/avatar.png" width="60" height="60" alt=""><% } %></li>
+        <li class="msg_man"><span>暱稱：</span><% if (hide) { %>悄悄話<% } else { %><%- include('partials/vipicon2012', { viUser: { vip: m.a_vip }, viStyle: 'auth' }) %><% if (m.a_name) { %><a href="/<%= m.a_name %>/guestbook" target="_blank"><%= m.author %></a><% } else { %><%= m.author %><% } %><% } %></li>
         <li class="msg_title"><span>主題：</span><strong><%= hide ? '悄悄話' : (m.subject || '無標題') %></strong><cite><% if (m.secret) { %><img src="/img/wretch2012/gb/lock.gif" width="21" height="16" alt="悄悄話"><% } %></cite></li>
         <li class="msg_date"><span>時間：</span><%= m.created %>
           &nbsp;<a href="#" class="reportlink" data-kind="guestbook" data-id="<%= m.id %>">檢舉</a></li>
@@ -186,13 +175,7 @@ document.addEventListener('click', function(e){
   <% }) %>
 </div>
 
-<% if (pages > 1) { %>
-<ul class="page_control">
-  <% if (page > 1) { %><a id="prev" href="?p=<%= page-1 %>">上一頁</a><% } %>
-  <% for (let i = 1; i <= pages; i++) { %><% if (i === page) { %><%= i %><% } else { %><a href="?p=<%= i %>"><%= i %></a><% } %><% } %>
-  <% if (page < pages) { %><a id="next" href="?p=<%= page+1 %>">下一頁</a><% } %>
-</ul>
-<% } %>
+<%- include('partials/gbpager', { gpPage: page, gpPages: pages, gpPos: 'bottom', gpHref: n => '?p=' + n }) %>
 
 <%# 檢舉：原站是跳到 cc.wretch.cc/help/prosecute.php 另一頁，本站同頁展開 %>
 <div id="reportbox" class="w2-report" style="display:none">

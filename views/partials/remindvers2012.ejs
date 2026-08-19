@@ -1,0 +1,81 @@
+<%
+  /* #remindvers —— 「換用新版相片頁」推銷浮層
+     ═══════════════════════════════════════════════════════════════════════
+     骨架逐字照 assets_src2/html/album_show_zh_kellyla.html（`.hidden` 包住的
+     那 38 行），節點與 class 一個不改：
+
+       .hidden > #remindvers.remindvers
+         > .hd > ul > li > .promimg
+                   > li > .promtxt + a.attnow + a.attlater
+         > .bd > .promtitl
+         > .ft > ul > li.lt > .rese + .promcom + span
+                   > li.md > .rese + .promsoc + span
+                   > li.rt > .rese + .promint + span
+
+     `.hd`/`.bd`/`.ft` 是 YUI 的 header/body/footer 慣例，
+     `.lt`/`.md`/`.rt` = left/middle/right，`.rese` 是三張 80×80 大圖的底座。
+     外框 696px。
+
+     ── 這一版**推銷的東西換掉了** ────────────────────────────────────────
+     原站這個浮層是在勸使用者從舊版 show.php 切到新版 SPP 相片頁。
+     我們沒有兩套相片頁，照抄那三句賣點等於憑空宣傳一個不存在的功能——
+     那就是假資料，WRETCH_2012.md §1-A 明講不做。
+     所以版位、DOM、素材、行為全部照原版，**文案改成推銷本站真的有的
+     「一頁瀏覽」**（src/server.js 的 ?all=1，整本大圖一次看完）。
+     這是刻意偏離，理由同廣告版位：節點是版面的一部分，內容換成我們自己的。
+
+     三張小標與三張大圖是**圖不是字**（原站就這樣），沿用原素材：
+       .promimg 319×257 switch_popup.png     .promtxt 291×154 ico_promtxt.png
+       .promtitl 252×14 ico_promtitl.png     .attnow  btn_trynow.png
+       .lt .rese icon_comments.png  .md .rese icon_social.png  .rt .rese icon_interface.png
+       .promcom ico_commen.png      .promsoc ico_social.png    .promint ico_interf.png
+     15 張全部已經在 public/img/wretch2012/album/。
+
+     原站靠 remindvers.js 決定跳不跳（那支 JS 沒有存檔），行為是
+     「看過就記住、按『一週後提醒我』就壓一週」。我們用 sessionStorage 做
+     最小等價行為，不寫 cookie（專案沒有 cookie-parser）。
+
+     ── include 參數 ──────────────────────────────────────────────────────
+       rvHref  「立即體驗」要去的網址（本站＝該相簿的一頁瀏覽）
+
+     EJS 用 with(locals)：內部變數一律加 rv 前綴，避免和 local 撞名（TDZ）。 */
+  const rvHref = locals.rvHref || '#';
+%>
+<div class="hidden">
+ <div id="remindvers" class="remindvers">
+  <div class="hd">
+   <ul>
+    <li>
+     <div class="promimg"></div>
+    </li>
+    <li>
+     <div class="promtxt"></div>
+     <a class="attnow" href="<%= rvHref %>">立即體驗</a>
+     <a class="attlater" href="#">一週後提醒我</a>
+    </li>
+   </ul>
+  </div>
+  <div class="bd">
+   <div class="promtitl"></div>
+  </div>
+  <div class="ft">
+   <ul>
+    <li class="lt">
+     <div class="rese"></div>
+     <div class="promcom"></div>
+     <span>整本相簿一次看完，不用一張一張點。</span>
+    </li>
+    <li class="md">
+     <div class="rese"></div>
+     <div class="promsoc"></div>
+     <span>大圖直接呈現，照片細節看得更清楚。</span>
+    </li>
+    <li class="rt">
+     <div class="rese"></div>
+     <div class="promint"></div>
+     <span>捲一次就看完，回頭找照片也更快。</span>
+    </li>
+   </ul>
+  </div>
+ </div>
+</div>

@@ -12,8 +12,10 @@
     撐出頁籤那條帶子——所以 a.message 一定要緊接在 ul#main_tab 後面，
     不放的話要改放同高的 .w2-tabband 空帶，不然頁籤會壓到內容上。
 
-    原站這裡還有 #ad_gbook（728×90 橫幅廣告，overwrite.css 用 !important 撐開 90px）。
-    本站不放廣告，整個節點不輸出，那 90px 也就不存在。
+    #ad_gbook（728×90，#container 的第一個子節點）：版位照原版做，
+    裡面換成本站自己的內容（站方公告／站內入口）。gb_overwrite.css 用
+    !important 把它撐成固定 90px，不做就是版面中間缺一塊、做空殼就是一個洞，
+    所以放我們真的有的東西。細節見 partials/adslot2012.ejs。
 
     呼叫端可傳：
       head       h1 文字（預設「暱稱 的小站」）
@@ -33,6 +35,10 @@
   ];
 %>
 <div id="container">
+<%- include('adslot2012', {
+      adId: 'ad_gbook',
+      adNotices: locals.notices || (locals.siteNotice ? [locals.siteNotice] : []),
+      adTopics: locals.blogTopics || locals.topics || [] }) %>
 
   <div id="header">
     <h1><a href="/<%= u.name %>"><%= locals.head || (u.nick + ' 的小站') %></a></h1>
@@ -43,7 +49,10 @@
     <div id="content">
 
       <ul id="main_tab">
-        <% gbTabs.forEach(function(t){ %><li class="<%= t.on ? 'hover' : '' %>"><a href="<%= t.href %>"><%= t.label %></a></li><% }) %>
+        <%# 原版留言板那兩個頁籤帶 id（tab_normal／tab_bulletin，
+            gb_guestbook_a000000010_20131226.html:9262）；其餘頁的頁籤沒有 id，
+            所以 t.id 是選填，沒給就不輸出 id 屬性。 %>
+        <% gbTabs.forEach(function(t){ %><li<% if (t.id) { %> id="<%= t.id %>"<% } %> class="<%= t.on ? 'hover' : '' %>"><a href="<%= t.href %>"><%= t.label %></a></li><% }) %>
       </ul>
       <% if (locals.noMessage) { %><span class="w2-tabband"></span><% } else { %>
       <a class="message" href="/<%= u.name %>/guestbook?tab=new">我要留言...</a>

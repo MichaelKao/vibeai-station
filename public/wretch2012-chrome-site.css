@@ -40,3 +40,36 @@
  * 也就是「不會動的跑馬燈」。這是刻意的簡化，不是漏做。
  */
 #kukubar-lower .right-side #text-carousel li a { white-space: nowrap; }
+
+/* --- 4. 站方公告 .announcement ------------------------------------------
+ * 這支現在三套外框都會載（相簿家族在 head2012_site.ejs 加的），
+ * 所以 kukubar 的共用規則寫在這裡。
+ * 我們 bundle 進來的是 2011 版 kukubar.css，沒有 .announcement
+ * ——那三條是 2013 版才加的（assets_src2/css/chrome_kukubar_20130903.css:781-790）。
+ * 多的那一條是「有公告就收起今日主題」：#infozone 只有 350×30 且 overflow:hidden，
+ * 兩行本來就會互相蓋掉。沒有公告時今日主題照常出現，才留得住 2012 的樣子。
+ */
+#kukubar-upper #infozone .announcement    { line-height: 30px; margin: 0; }
+#kukubar-upper #infozone .announcement a  { color: #e00; }
+#kukubar-upper #infozone .announcement ~ ul { display: none; }
+
+/* --- 5. 分享列：把兩個死掉的外掛換成不連外的節點 --------------------------
+ * 原站的 #share_facebook 是 facebook.com/plugins/like.php 的 <iframe>，
+ * .twitter-share-button 是 widgets.js 接管後渲染出來的按鈕。
+ * 兩個都會把每個訪客的瀏覽紀錄送給第三方，所以本站改成純 <a> 分享連結
+ * （DOM 位置、id、class、尺寸不變，見 partials/socialshare2012.ejs）。
+ * sharing.css 只給 `.social-wrapper iframe` 定過位置，換成 <a> 之後
+ * 那條規則就落空了，這裡補回同樣的位移與尺寸。
+ */
+.social-wrapper #share_facebook,
+.social-wrapper .twitter-share-button {
+  vertical-align: top; margin: 5px 0 0 5px; display: inline-block;
+  height: 21px; line-height: 21px; padding: 0 8px; box-sizing: border-box;
+  font-size: 11px; color: #4b4b4b; text-decoration: none;
+  border: 1px solid #ccc; border-radius: 3px; background: #f5f5f5;
+}
+.social-wrapper #share_facebook { width: 85px; text-align: center; }
+.social-wrapper #share_facebook:hover,
+.social-wrapper .twitter-share-button:hover { background: #e8e8e8; }
+/* Google+ 2019 年關站：.g-plusone 維持原版的空 div，不佔位、不連外 */
+.social-wrapper .social-gpluson .g-plusone { width: 0; height: 24px; }

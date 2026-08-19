@@ -1,6 +1,9 @@
 <%# 個人頁（留言板家族）外框的下半段 — 收掉 partials/gbtop.ejs 開的節點。
     #sidebar 一定要在 #main 裡面、#content 之後（理由見 partials/side.ejs 開頭）。
-    #footer 在版型裡是 958×30 的 footer.gif 收邊，高 50px，本來就沒有文字。 %>
+    #footer 在版型裡是 958×30 的 footer.gif 收邊，高 50px，本來就沒有文字。
+
+    #extraDiv1/2 是 #container 內、#footer 之後的裝飾掛點（3/4 在 #container 外，
+    由 foot2012in.ejs 出）——理由見 partials/extradiv2012.ejs。 %>
       </div><!-- /#mainSection -->
     </div><!-- /#content -->
 
@@ -10,4 +13,5 @@
   </div><!-- /#main -->
 
   <div id="footer"></div>
+<%- include('extradiv2012', { edFrom: 1, edTo: 2 }) %>
 </div><!-- /#container -->

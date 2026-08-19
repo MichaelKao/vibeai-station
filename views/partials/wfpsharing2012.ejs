@@ -1,0 +1,50 @@
+<%
+  /* .wfp-sharing —— 首頁的分享小列（FB／噗浪兩顆 16×16 圖示）
+     ═══════════════════════════════════════════════════════════════════════
+     骨架逐字照 assets_src2/html/index_20120610082113.html（首頁出現 6 次，
+     L214 / 386 / 400 / 530 / 562 / 595），兩種變體只差 .right / .left：
+
+       .wfp-sharing.clearfix > .right|.left
+         > .hd > span.bubble.off      「分享至」（滑到圖示上才由 JS 移過去顯示）
+         > .bd.clearfix.right|.left
+             > a.fb-sharing.share     （空元素，圖是 ico_sprite.png 的背景）
+             > a.plurk-sharing.share
+
+     三個位置的行為（public/wretch2012.css 的原始規則，不是我們寫的）：
+       #wfp-cover / #wfp-featured 的分享列 → 沒有 JS 也看得到
+       #wfp-today 的                        → display:none，要 JS 加 .sharing-on
+       span.bubble.off                      → opacity:0，佔位但看不見
+     所以靜態渲染出來就跟原版靜態畫面一模一樣，不需要補 JS。
+
+     原站的 href 是 Yahoo 的轉址追蹤網址（tw.rd.yahoo.com/referurl/...），
+     那台機器早就不在了。我們直接指分享目標本身：
+     FB 的 sharer.php 與噗浪的 /?qualifier=shares&status= 到今天都還能用
+     （使用者拍板：「能用的做真的」）。
+     絕對網址在瀏覽器端才補得出來（EJS 拿不到 host），做法照
+     views/partials/blog2012_foot.ejs 既有的 data-share／data-path 慣例。
+     **但 data-title 不能拿來放分享標題**——原站這個屬性放的是泡泡文字
+     （「分享至臉書」／「分享至噗浪」，JS 會把它寫進 span.bubble），
+     要照抄就得留給它。分享標題另外走 data-share-title，
+     首頁的 partials/foot2012.ejs 會優先讀那一個。
+
+     ── include 參數 ──────────────────────────────────────────────────────
+       wsSide   'right'（預設，今日主題與熱門活動）| 'left'（熱門相簿）
+       wsPath   要分享的站內路徑（不含 host）
+       wsTitle  分享標題
+
+     EJS 用 with(locals)：內部變數一律加 ws 前綴，避免和 local 撞名（TDZ）。 */
+  const wsSide = locals.wsSide === 'left' ? 'left' : 'right';
+  const wsPath = locals.wsPath || '/';
+  const wsTitle = locals.wsTitle || '';
+%><div class="wfp-sharing clearfix">
+    <div class="<%= wsSide %>">
+        <div class="hd">
+            <span class="bubble off">
+                分享至            </span>
+        </div>
+        <div class="bd clearfix <%= wsSide %>">
+            <a class="fb-sharing share" target="_blank" data-share="fb" data-path="<%= wsPath %>" data-share-title="<%= wsTitle %>" data-title="分享至臉書" title="分享至臉書" href="<%= wsPath %>"></a>
+            <a class="plurk-sharing share" target="_blank" data-share="plurk" data-path="<%= wsPath %>" data-share-title="<%= wsTitle %>" data-title="分享至噗浪" title="分享至噗浪" href="<%= wsPath %>"></a>
+        </div>
+    </div>
+</div>

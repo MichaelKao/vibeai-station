@@ -52,10 +52,24 @@ app.use(session({
 }));
 const upload = multer({storage:multer.memoryStorage(),limits:{fileSize:8*1024*1024,files:20},fileFilter:(r,f,cb)=>cb(null,/^image\/(jpeg|png|gif|webp)$/.test(f.mimetype))});
 
+// 站方公告：kukubar 的 <p class="announcement"> 與各頁的公告區都接這裡。
+// 每個請求都查一次太浪費（全站每一頁都要），用 30 秒的行程內快取——
+// 公告是站長偶爾才發一次的東西，晚 30 秒出現沒有人會發現。
+let noticeCache = { at: 0, rows: [] };
+async function siteNotices(){
+  if (Date.now() - noticeCache.at > 30_000)
+    noticeCache = { at: Date.now(), rows: await all('SELECT * FROM notices ORDER BY id DESC LIMIT 5') };
+  return noticeCache.rows;
+}
+
 // locals
 app.use(async (req,res,next)=>{
-  res.locals.me = req.session.uid ? await one('SELECT id,name,nick,avatar,admin FROM users WHERE id=?',req.session.uid) : null;
+  res.locals.me = req.session.uid ? await one('SELECT id,name,nick,avatar,admin,vip FROM users WHERE id=?',req.session.uid) : null;
   res.locals.u = null; res.locals.nav=''; res.locals.flash = req.session.flash; delete req.session.flash;
+  res.locals.notices = await siteNotices();      // 站方公告（.announcement）
+  // 背景音樂偏好（首頁 #wfp-bgm 的 .bgm-on）。原站寫 cookie mf，
+  // 本專案沒有 cookie-parser，記在 session 就好。預設開，對齊原版初始態。
+  res.locals.bgmOn = req.session.bgm !== 'off';
   res.locals.guest = req.session.guest || null;   // 訪客「記住我的資料」
   res.locals.render = render;   // 文章內文的安全格式化
   res.locals.safeCss = safeCss; // 使用者自訂 CSS 的過濾（見 format.js）
@@ -126,6 +140,13 @@ app.get('/search',async (req,res)=>{
     posts:k?await all(`SELECT p.*,u.name uname FROM posts p JOIN users u ON u.id=p.user_id WHERE p.title LIKE ? OR (p.pass='' AND p.body LIKE ?) LIMIT 30`,like,like):[]});
 });
 app.get('/help',(req,res)=>res.render('help'));
+
+// 背景音樂開關（首頁 #wfp-bgm）。原站是純前端＋cookie mf，
+// 本站沒有 cookie-parser，走 session；不靠 JS 也能切換，所以做成 GET + 轉回原頁。
+app.get('/bgm',(req,res)=>{
+  req.session.bgm = req.query.on==='1' ? 'on' : 'off';
+  res.redirect(safePath(req.query.back) || '/');
+});
 
 // 檢舉（無名各處都有「檢舉」連結，送到站長後台處理）
 app.post('/report',async (req,res)=>{
@@ -216,11 +237,17 @@ app.post('/admin/broadcast',requireAdmin,async (req,res)=>{
     await run('INSERT INTO sysmsg(user_id,title,body) VALUES(?,?,?)',u.id,title,body);
   flash(req,'已送出給所有站友'); res.redirect('/admin');
 });
-app.post('/admin/notice',requireAdmin,async (req,res)=>{ if(req.body.body?.trim()) await run('INSERT INTO notices(body) VALUES(?)',req.body.body.trim().slice(0,200)); res.redirect('/admin'); });
-app.post('/admin/notice/:id/del',requireAdmin,async (req,res)=>{ await run('DELETE FROM notices WHERE id=?',req.params.id); res.redirect('/admin'); });
+// 公告改完要順手作廢快取，否則站長剛發的公告要等 30 秒才看得到（看起來像沒存到）
+app.post('/admin/notice',requireAdmin,async (req,res)=>{ if(req.body.body?.trim()) await run('INSERT INTO notices(body) VALUES(?)',req.body.body.trim().slice(0,200)); noticeCache.at=0; res.redirect('/admin'); });
+app.post('/admin/notice/:id/del',requireAdmin,async (req,res)=>{ await run('DELETE FROM notices WHERE id=?',req.params.id); noticeCache.at=0; res.redirect('/admin'); });
 app.post('/admin/user/:id/admin',requireAdmin,async (req,res)=>{ // 設為／取消站長（不能取消自己，避免把自己鎖在外面）
   const id=Number(req.params.id);
   if(id!==res.locals.me.id) await run('UPDATE users SET admin=1-admin WHERE id=?',id);
+  res.redirect('/admin'); });
+// 認證／VIP 徽章（.vip_icon）：0 無、1 銀、2 金、3 白金。
+// 原站是付費制，本站沒有金流，改成站長手動掛給值得的帳號。
+app.post('/admin/user/:id/vip',requireAdmin,async (req,res)=>{
+  await run('UPDATE users SET vip=? WHERE id=?', Math.min(3,Math.max(0,+req.body.vip||0)), Number(req.params.id));
   res.redirect('/admin'); });
 app.post('/admin/user/:id/del',requireAdmin,async(req,res)=>{
   const id=Number(req.params.id);
@@ -234,7 +261,8 @@ app.post('/admin/user/:id/del',requireAdmin,async(req,res)=>{
 // ===== 無名小站風格網址 =====
 // 當年的格式是 /album/帳號、/blog/帳號、/guestbook/帳號、/friend/帳號、/mypage/帳號。
 // 這裡把它們轉到本站的 /帳號/... 結構，兩種網址都能用。
-const SECTION={album:'album',blog:'blog',guestbook:'guestbook',friend:'friends',mypage:'',user:'card'};
+const SECTION={album:'album',blog:'blog',guestbook:'guestbook',friend:'friends',mypage:'',user:'card',
+  video:'video',digu:'digu'};   // 影音與嘀咕的原站網址同樣是 /video/<帳號>、/digu/<帳號>
 for(const [seg,dest] of Object.entries(SECTION)){
   app.get(`/${seg}/:name`,async (req,res,next)=>{
     if(!await one('SELECT 1 FROM users WHERE name=?',req.params.name)) return next();
@@ -340,7 +368,9 @@ site.post('/friends/:fid/group',requireLogin,requireOwner,async (req,res)=>{
 site.get('/card',async (req,res)=>res.render('card',{nav:'card',
   zodiacs:ZODIACS,bloods:BLOODS,sexes:SEXES,cities:CITIES,
   visitors:await all('SELECT * FROM visitors WHERE user_id=? ORDER BY id DESC LIMIT 8',U(res).id),
-  friends:await all('SELECT u.name,u.nick FROM friends f JOIN users u ON u.id=f.friend_id WHERE f.user_id=? LIMIT 12',U(res).id)}));
+  // #friendlist 是分組下拉（optgroup label＝好友分類），所以一定要把 grp 帶出來；
+  // 原站那顆 select 是「全部好友」不是前 12 位，這裡只留一個防爆上限。
+  friends:await all("SELECT u.name,u.nick,u.avatar,COALESCE(NULLIF(f.grp,''),'好友') grp FROM friends f JOIN users u ON u.id=f.friend_id WHERE f.user_id=? ORDER BY grp, u.name LIMIT 300",U(res).id)}));
 site.post('/card',requireLogin,requireOwner,async (req,res)=>{
   const b=req.body, cut=(v,n)=>String(v||'').trim().slice(0,n);
   await run('UPDATE users SET realname=?,sex=?,birthday=?,zodiac=?,blood=?,city=?,job=?,school=?,hobby=?,motto=?,msn=?,homepage=? WHERE id=?',
@@ -351,9 +381,76 @@ site.post('/card',requireLogin,requireOwner,async (req,res)=>{
     U(res).id);
   flash(req,'名片已儲存'); res.redirect(`/${U(res).name}/card`);
 });
-site.get('/friends',async (req,res)=>res.render('friends',{nav:'user',
-  friends:await all("SELECT u.id,u.name,u.nick,u.avatar,u.intro,COALESCE(NULLIF(f.grp,''),'好友') grp FROM friends f JOIN users u ON u.id=f.friend_id WHERE f.user_id=? ORDER BY grp, f.created DESC",U(res).id),
-  fans:await all('SELECT u.name,u.nick,u.avatar FROM friends f JOIN users u ON u.id=f.user_id WHERE f.friend_id=? ORDER BY f.created DESC',U(res).id)}));
+// ===== 好友 =====
+// 原站 friend/<帳號> 用 &c=0..3 切四種關係（#condition 的 #current_tag0..3）：
+//   0 我的好友        1 誰加我為好友     2 互相是好友      3 好友的好友
+// friends 是雙向邊（user_id→friend_id），配上既有的 idx_friends_rev
+// 這四種都算得出來，不需要多加欄位。
+// 一頁 25 人：原始檔 gb_friend_a000001_20131226.html 的頁首 JS 寫死 paginator='25'。
+const FRIEND_PER = 25;
+const FRIEND_RELS = ['我的好友','誰加我為好友','互相是好友','好友的好友'];
+function friendQuery(uid, rel, cate, q){
+  const args=[]; let from, where, grp;
+  if(rel===1){                       // 誰加我為好友：反向邊
+    from='FROM friends f JOIN users u ON u.id=f.user_id';
+    where='f.friend_id=?'; args.push(uid); grp="'好友'";
+  } else if(rel===2){                // 互相：正向邊存在，且反向邊也存在
+    from='FROM friends f JOIN users u ON u.id=f.friend_id '
+       + 'JOIN friends b ON b.user_id=f.friend_id AND b.friend_id=f.user_id';
+    where='f.user_id=?'; args.push(uid); grp="COALESCE(NULLIF(f.grp,''),'好友')";
+  } else if(rel===3){                // 好友的好友：兩跳，扣掉自己與已經是好友的人
+    from='FROM friends f JOIN friends g ON g.user_id=f.friend_id JOIN users u ON u.id=g.friend_id';
+    where='f.user_id=? AND g.friend_id<>? AND g.friend_id NOT IN (SELECT friend_id FROM friends WHERE user_id=?)';
+    args.push(uid,uid,uid); grp="'好友的好友'";
+  } else {                           // 我的好友
+    from='FROM friends f JOIN users u ON u.id=f.friend_id';
+    where='f.user_id=?'; args.push(uid); grp="COALESCE(NULLIF(f.grp,''),'好友')";
+  }
+  // 分類只有「我加的」那兩種關係才有意義（grp 是站主自己打的分類名）
+  if(cate && (rel===0||rel===2)){ where+=" AND COALESCE(NULLIF(f.grp,''),'好友')=?"; args.push(cate); }
+  // #searchInput 原站只搜帳號（js_lang_searchTip = 'Search ID'），照做
+  if(q){ where+=' AND u.name LIKE ?'; args.push('%'+q+'%'); }
+  return {from,where,grp,args};
+}
+site.get('/friends',async (req,res)=>{
+  const uid=U(res).id;
+  const rel=[0,1,2,3].includes(+req.query.c)?+req.query.c:0;
+  const cate=(req.query.cateSelect||'').trim().slice(0,10);   // '' 或 '-1' 都代表全部
+  const q=(req.query.search_id||'').trim().slice(0,20);
+  const page=Math.max(1,+req.query.p||1);
+  const {from,where,grp,args}=friendQuery(uid,rel,cate==='-1'?'':cate,q);
+  // 好友的好友會透過不同的共同好友重複撈到同一個人，一定要 DISTINCT；
+  // 也因為 DISTINCT，排序只能用 SELECT 出來的欄位（PG 會擋 f.created）。
+  const total=(await one(`SELECT count(*) c FROM (SELECT DISTINCT u.id ${from} WHERE ${where}) t`,...args)).c;
+  const rows=await all(
+    `SELECT DISTINCT u.id,u.name,u.nick,u.avatar,u.intro,u.vip,${grp} grp ${from} WHERE ${where}
+     ORDER BY grp, u.name LIMIT ? OFFSET ?`, ...args, FRIEND_PER, (page-1)*FRIEND_PER);
+  const count=async r=>{ const x=friendQuery(uid,r,'','');
+    return (await one(`SELECT count(*) c FROM (SELECT DISTINCT u.id ${x.from} WHERE ${x.where}) t`,...x.args)).c; };
+  res.render('friends',{nav:'user',
+    rel, relName:FRIEND_RELS[rel], cate, q, page, per:FRIEND_PER, total,
+    pages:Math.ceil(total/FRIEND_PER),
+    rows,
+    friends:rows,     // 舊名，view 換過來之前先留著
+    // #cateSelect 的選項：本站沒有 group 表，option value 直接放分類名，-1＝全部
+    groups:await all("SELECT COALESCE(NULLIF(grp,''),'好友') g, count(*) n FROM friends WHERE user_id=? GROUP BY COALESCE(NULLIF(grp,''),'好友') ORDER BY g",uid),
+    counts:{ mine:await count(0), fans:await count(1), mutual:await count(2), fof:await count(3) },
+    // fans 是舊 view 那一整塊「誰加我為好友」。切了頁籤或下了篩選之後再印一份
+    // 沒篩過的名單會自相矛盾（畫面上明明篩掉了，下面又整批列出來），所以只在
+    // 預設、沒篩選的情況下才給。新 view 一律看 rows。
+    fans:(rel===0 && !cate && !q)
+      ? await all('SELECT u.name,u.nick,u.avatar FROM friends f JOIN users u ON u.id=f.user_id WHERE f.friend_id=? ORDER BY f.created DESC LIMIT 200',uid)
+      : []});
+});
+// 原站的搜尋表單是 method="post" action="/friend/<帳號>"。
+// 我們的清單是 GET（可加書籤、可分頁），所以 POST 進來就換成 query 再導回去。
+site.post('/friends',(req,res)=>{
+  const p=new URLSearchParams();
+  if(req.body.c) p.set('c',req.body.c);
+  if(req.body.cateSelect && req.body.cateSelect!=='-1') p.set('cateSelect',req.body.cateSelect);
+  if(req.body.search_id) p.set('search_id',req.body.search_id);
+  res.redirect(`/${U(res).name}/friends${p.toString()?'?'+p:''}`);
+});
 
 // 相簿
 site.get('/album',async (req,res)=>{
@@ -390,6 +487,16 @@ site.get('/album/:id/slide',albumOf,async (req,res)=>{
   if(!photos.length) return res.redirect(`/${U(res).name}/album/${a.id}`);
   res.render('slide',{nav:'album',album:a,photos,start:Math.max(1,Math.min(photos.length,+req.query.i||1))});
 });
+// 相片牆（原站 album/display.php?style=angel|taylor，單本相簿的 #photowall 兩顆連結）。
+// 原站是 VIP 限定，我們沒有付費制度，所有人都能看；權限沿用相簿本身那三道
+// （好友限定、密碼、站主），不另開後門。
+site.get('/album/:id/wall',albumOf,async (req,res)=>{
+  const a=res.locals.album;
+  if(!await albumAllowed(req,res)||!albumUnlocked(req,res)) return res.redirect(`/${U(res).name}/album/${a.id}`);
+  res.render('photowall',{nav:'album',album:a,
+    style: req.query.style==='angel' ? 'angel' : 'taylor',   // angel＝馬賽克、taylor＝瀑布
+    photos:await all('SELECT id,url,thumb,caption,width,height FROM photos WHERE album_id=? ORDER BY id',a.id)});
+});
 site.post('/album/:id/unlock',albumOf,(req,res)=>{ const a=res.locals.album; if(req.body.pass===a.pass){ req.session.unlocked=[...(req.session.unlocked||[]),a.id]; return res.redirect(`/${U(res).name}/album/${a.id}`);} res.render('album_lock',{nav:'album',album:a,err:'密碼錯誤'}); });
 site.post('/album/:id/edit',requireLogin,requireOwner,albumOf,async (req,res)=>{ await run('UPDATE albums SET title=?,descr=?,pass=?,topic=?,place=?,friends_only=? WHERE id=?',(req.body.title||res.locals.album.title).trim().slice(0,40),(req.body.descr||'').slice(0,200),(req.body.pass||'').slice(0,20),isAlbumTopic(req.body.topic)?req.body.topic:'',isPlace(req.body.place)?req.body.place:'',req.body.friends_only?1:0,res.locals.album.id); res.redirect(`/${U(res).name}/album/${res.locals.album.id}`); });
 site.post('/album/:id/del',requireLogin,requireOwner,albumOf,async(req,res)=>{ for(const p of await all('SELECT url,thumb FROM photos WHERE album_id=?',res.locals.album.id)){ await remove(p.url); if(p.thumb&&p.thumb!==p.url) await remove(p.thumb); } await run('DELETE FROM albums WHERE id=?',res.locals.album.id); res.redirect(`/${U(res).name}/album`); });
@@ -399,7 +506,10 @@ site.post('/album/:id/upload',requireLogin,requireOwner,albumOf,upload.array('ph
   const incoming=files.reduce((n,f)=>n+f.size,0);
   const err=await quotaError(U(res).id,incoming);
   if(err) return res.status(413).render('msg',{title:'空間不足',msg:err,back:`/${U(res).name}/album/${a.id}`});
-  for(const f of files){ const s=await save(f); if(!first) first=s.thumb; await run('INSERT INTO photos(album_id,url,thumb,caption,bytes) VALUES(?,?,?,?,?)',a.id,s.url,s.thumb,(req.body.caption||'').slice(0,100),s.bytes); }
+  // save() 回傳的尺寸與 EXIF 要一起寫進來，照片頁的 #exif 面板才有東西可印
+  for(const f of files){ const s=await save(f); if(!first) first=s.thumb;
+    await run('INSERT INTO photos(album_id,url,thumb,caption,bytes,width,height,taken,camera) VALUES(?,?,?,?,?,?,?,?,?)',
+      a.id,s.url,s.thumb,(req.body.caption||'').slice(0,100),s.bytes,s.width||0,s.height||0,s.taken||'',s.camera||''); }
   if(first && !a.cover) await run('UPDATE albums SET cover=? WHERE id=?',first,a.id);
   if(first) await act(U(res).id,'album',a.title,`/${U(res).name}/album/${a.id}`);
   flash(req,`上傳了 ${req.files?.length||0} 張照片`); res.redirect(`/${U(res).name}/album/${a.id}`);
@@ -445,6 +555,12 @@ const blogSide=async res=>({
   recentC:await all('SELECT c.author,c.post_id,p.title FROM comments c JOIN posts p ON p.id=c.post_id WHERE p.user_id=? ORDER BY c.id DESC LIMIT 5',U(res).id),
   months:await all("SELECT substr(created,1,7) ym, count(*) n FROM posts WHERE user_id=? GROUP BY ym ORDER BY ym DESC LIMIT 24",U(res).id),
   cal:await calendar(U(res).id, res.calYm),
+  // #blogCategory 是「這個網誌屬於哪個站內分類」，原版是站方給整個網誌貼的標籤
+  // （blog_2012_default_skin_afuuu.html:1690），不是單篇文章的 category。
+  // users 表沒有這個欄位，先從站主自己文章最常用的 topic 推導出來——
+  // 沒有任何文章設過 topic 就回空字串，整塊不印，跟原版一樣
+  // （blog_2013_index_treehouse16.html 那位沒設分類，該存檔就沒有這個節點）。
+  blogTopic:(await one("SELECT topic FROM posts WHERE user_id=? AND topic!='' GROUP BY topic ORDER BY count(*) DESC LIMIT 1",U(res).id))?.topic||'',
   moods:MOODS, weathers:WEATHERS, blogTopics:BLOG_TOPICS});
 site.get('/blog',async (req,res)=>{ const cat=req.query.cat, ym=/^\d{4}-\d{2}$/.test(req.query.ym||'')?req.query.ym:null, page=Math.max(1,+req.query.p||1), per=10;
   const day=/^\d{4}-\d{2}-\d{2}$/.test(req.query.d||'')?req.query.d:null;
@@ -455,7 +571,7 @@ site.get('/blog',async (req,res)=>{ const cat=req.query.cat, ym=/^\d{4}-\d{2}$/.
   if(ym){ where+=' AND substr(created,1,7)=?'; args.push(ym); }
   if(day){ where+=' AND substr(created,1,10)=?'; args.push(day); }
   const total=(await one(`SELECT count(*) c FROM posts WHERE ${where}`,...args)).c;
-  res.render('blog',{nav:'blog',cat,ym,day,page,pages:Math.ceil(total/per),...await blogSide(res),posts:await all(`SELECT p.*,(SELECT count(*) FROM comments WHERE post_id=p.id) nc FROM posts p WHERE ${where} ORDER BY id DESC LIMIT ? OFFSET ?`,...args,per,(page-1)*per)}); });
+  res.render('blog',{nav:'blog',cat,ym,day,page,pages:Math.ceil(total/per),...await blogSide(res),posts:await all(`SELECT p.*,(SELECT count(*) FROM comments WHERE post_id=p.id) nc,(SELECT count(*) FROM trackbacks WHERE post_id=p.id) tb FROM posts p WHERE ${where} ORDER BY id DESC LIMIT ? OFFSET ?`,...args,per,(page-1)*per)}); });
 // 搜尋這個網誌（側欄模組：☑標題 ☐內容）
 site.get('/blog/search',async (req,res)=>{
   const k=(req.query.q||'').trim(), inBody=req.query.body==='1';
@@ -554,25 +670,119 @@ site.post('/blog/:id/trackback',requireLogin,postOf,needUnlocked,async (req,res)
   const r=await run('INSERT INTO posts(user_id,title,body,category) VALUES(?,?,?,?)',me.id,'引用：'+p.title,`引用自 ${U(res).nick} 的文章《${p.title}》\n\n`+p.body.slice(0,300)+'…\n\n（原文：/'+U(res).name+'/blog/'+p.id+'）','引用');
   await run('INSERT INTO trackbacks(post_id,from_post) VALUES(?,?)',p.id,r.lastInsertRowid); res.redirect(`/${me.name}/blog/${r.lastInsertRowid}/edit`); });
 
+// ===== 影音 =====
+// 原站 www.wretch.cc/video/<帳號>（服務導覽第七顆 #linkVideo）。
+// 無名當年是自建的影音服務，我們沒有轉檔與串流，做「最小可用」：
+// 站主貼 YouTube 網址，站上用 <iframe> 內嵌。
+//
+// 只收得出 11 碼影片 id 的網址。理由是安全：id 會被拼進 iframe 的 src，
+// 放行任意字串等於讓使用者決定要內嵌哪一個網站。
+const ytId = s => {
+  const x=String(s||'').trim();
+  if(/^[\w-]{11}$/.test(x)) return x;
+  try{
+    const u=new URL(x);
+    if(!['http:','https:'].includes(u.protocol)) return '';
+    if(/(^|\.)youtu\.be$/i.test(u.hostname)) return (/^\/([\w-]{11})/.exec(u.pathname)||[])[1]||'';
+    if(/(^|\.)youtube(-nocookie)?\.com$/i.test(u.hostname)){
+      const v=u.searchParams.get('v'); if(v&&/^[\w-]{11}$/.test(v)) return v;
+      return (/^\/(?:embed|v|shorts)\/([\w-]{11})/.exec(u.pathname)||[])[1]||'';
+    }
+  }catch{}
+  return '';
+};
+site.get('/video',async (req,res)=>{
+  const page=Math.max(1,+req.query.p||1), per=12;
+  const total=(await one('SELECT count(*) c FROM videos WHERE user_id=?',U(res).id)).c;
+  res.render('video',{nav:'video',page,pages:Math.ceil(total/per),total,
+    videos:await all('SELECT * FROM videos WHERE user_id=? ORDER BY id DESC LIMIT ? OFFSET ?',U(res).id,per,(page-1)*per),
+    visitors:await all('SELECT * FROM visitors WHERE user_id=? ORDER BY id DESC LIMIT 8',U(res).id),
+    friends:await all('SELECT u.name,u.nick FROM friends f JOIN users u ON u.id=f.friend_id WHERE f.user_id=? LIMIT 12',U(res).id)});
+});
+site.post('/video',requireLogin,requireOwner,async (req,res)=>{
+  const vid=ytId(req.body.url), title=(req.body.title||'').trim().slice(0,60)||'未命名影片';
+  if(vid){
+    await run('INSERT INTO videos(user_id,title,vid,url,descr) VALUES(?,?,?,?,?)',
+      U(res).id,title,vid,'https://www.youtube.com/watch?v='+vid,(req.body.descr||'').trim().slice(0,200));
+    await act(U(res).id,'video',title,`/${U(res).name}/video`);
+  } else flash(req,'請貼上 YouTube 影片網址（例如 https://www.youtube.com/watch?v=…）');
+  res.redirect(`/${U(res).name}/video`);
+});
+site.post('/video/:id/del',requireLogin,requireOwner,async (req,res)=>{
+  await run('DELETE FROM videos WHERE id=? AND user_id=?',req.params.id,U(res).id);
+  res.redirect(`/${U(res).name}/video`); });
+
+// ===== 嘀咕 =====
+// 原站 www.wretch.cc/digu/<帳號>：噗浪式的一句話短訊息。
+// 留言板側欄的名片小卡（.myDigu .digu .digu_date）印的就是最新那一則。
+site.get('/digu',async (req,res)=>{
+  const page=Math.max(1,+req.query.p||1), per=20;
+  const total=(await one('SELECT count(*) c FROM digu WHERE user_id=?',U(res).id)).c;
+  res.render('digu',{nav:'digu',page,pages:Math.ceil(total/per),total,
+    digus:await all('SELECT * FROM digu WHERE user_id=? ORDER BY id DESC LIMIT ? OFFSET ?',U(res).id,per,(page-1)*per),
+    visitors:await all('SELECT * FROM visitors WHERE user_id=? ORDER BY id DESC LIMIT 8',U(res).id),
+    friends:await all('SELECT u.name,u.nick FROM friends f JOIN users u ON u.id=f.friend_id WHERE f.user_id=? LIMIT 12',U(res).id)});
+});
+site.post('/digu',requireLogin,requireOwner,async (req,res)=>{
+  const body=(req.body.body||'').trim().slice(0,140);   // 一句話，長度比照當年的微網誌
+  if(body){
+    await run('INSERT INTO digu(user_id,body) VALUES(?,?)',U(res).id,body);
+    await act(U(res).id,'digu',body,`/${U(res).name}/digu`);
+  }
+  res.redirect(`/${U(res).name}/digu`);
+});
+site.post('/digu/:id/del',requireLogin,requireOwner,async (req,res)=>{
+  await run('DELETE FROM digu WHERE id=? AND user_id=?',req.params.id,U(res).id);
+  res.redirect(`/${U(res).name}/digu`); });
+
 // 留言板
 // 留言板：頁籤 留言板 / 系統訊息 / 我要留言（同無名）
+// 站方公告在留言板 #tab_bulletin 頁籤裡是「一則一則」印的，DOM 有主題也有內容，
+// 但 notices 表只有 body 一欄。慣例上公告會寫成「[公告] …」，就拿方括號當主題；
+// 沒有前綴的就統一掛「站方公告」，不要讓主題那格空著。
+const bulletinRow = n => {
+  const m=/^\s*[[【]([^\]】]{1,20})[\]】]\s*([\s\S]*)$/.exec(n.body||'');
+  return { ...n, author:'無名小站', title: m?m[1]:'站方公告', body: m?m[2]:(n.body||'') };
+};
 site.get('/guestbook',async (req,res)=>{
-  const tab = req.query.tab==='sys' ? 'sys' : (req.query.tab==='new' ? 'new' : 'list');
-  const page=Math.max(1,+req.query.p||1),per=15;
+  const tab = ['sys','new','bulletin'].includes(req.query.tab) ? req.query.tab : 'list';
+  // 原版留言板一頁 10 則（gb_guestbook_a000000010_20131226.html 數得出來），
+  // 我們原本寫 15，分頁列的頁數就跟原版對不起來。
+  const page=Math.max(1,+req.query.p||1),per=10;
+  // 側欄那張名片小卡（#namecard）用得到：好友下拉 ＋ 最新一則嘀咕
+  const side={
+    gbFriends:await all("SELECT u.name,u.nick,COALESCE(NULLIF(f.grp,''),'好友') grp FROM friends f JOIN users u ON u.id=f.friend_id WHERE f.user_id=? ORDER BY grp, u.name LIMIT 300",U(res).id),
+    lastDigu:await one('SELECT * FROM digu WHERE user_id=? ORDER BY id DESC LIMIT 1',U(res).id),
+    bulletins:[], msgs:[], sys:[],
+  };
+  const unread = res.locals.isOwner ? (await one('SELECT count(*) c FROM sysmsg WHERE user_id=? AND seen=0',U(res).id)).c : 0;
   if(tab==='sys'){
+    // 私人系統通知：語意上就是站主一個人的信箱，維持只有本人看得到。
     if(!res.locals.isOwner) return res.status(403).render('msg',{title:'沒有權限',msg:'系統訊息只有本人看得到',back:`/${U(res).name}/guestbook`});
     const total=(await one('SELECT count(*) c FROM sysmsg WHERE user_id=?',U(res).id)).c;
     await run('UPDATE sysmsg SET seen=1 WHERE user_id=?',U(res).id);
-    return res.render('guestbook',{nav:'gb',tab,page,pages:Math.ceil(total/per),total,msgs:[],
+    return res.render('guestbook',{nav:'gb',tab,page,pages:Math.ceil(total/per),total,...side,
       sys:await all('SELECT * FROM sysmsg WHERE user_id=? ORDER BY id DESC LIMIT ? OFFSET ?',U(res).id,per,(page-1)*per),unread:0});
   }
+  if(tab==='bulletin'){
+    // 原版的 #tab_bulletin 是**站方公告**（發文者一律 wretchoffice），人人可見、會分頁。
+    // 跟上面那個私人信箱是兩回事，所以是兩個頁籤而不是把 sys 改掉。
+    const total=(await one('SELECT count(*) c FROM notices')).c;
+    return res.render('guestbook',{nav:'gb',tab,page,pages:Math.ceil(total/per),total,...side,unread,
+      bulletins:(await all('SELECT * FROM notices ORDER BY id DESC LIMIT ? OFFSET ?',per,(page-1)*per)).map(bulletinRow)});
+  }
   const total=(await one('SELECT count(*) c FROM guestbook WHERE user_id=?',U(res).id)).c;
-  res.render('guestbook',{nav:'gb',tab,page,pages:Math.ceil(total/per),total,sys:[],
-    unread: res.locals.isOwner ? (await one('SELECT count(*) c FROM sysmsg WHERE user_id=? AND seen=0',U(res).id)).c : 0,
-    msgs:await all('SELECT * FROM guestbook WHERE user_id=? ORDER BY id DESC LIMIT ? OFFSET ?',U(res).id,per,(page-1)*per)}); });
+  res.render('guestbook',{nav:'gb',tab,page,pages:Math.ceil(total/per),total,...side,unread,
+    // 帶出留言者的帳號／暱稱／大頭貼／認證狀態——原版那三樣都在留言的表頭
+    // （msg_img 的大頭貼、msg_man 的連結、.vip_icon）。LEFT JOIN：訪客留言沒有帳號。
+    msgs:await all(`SELECT g.*,au.name a_name,au.nick a_nick,au.avatar a_avatar,au.vip a_vip
+      FROM guestbook g LEFT JOIN users au ON au.id=g.author_id
+      WHERE g.user_id=? ORDER BY g.id DESC LIMIT ? OFFSET ?`,U(res).id,per,(page-1)*per)}); });
 site.post('/guestbook',async (req,res)=>{ const {author,subject,body,secret}=req.body; const who=res.locals.me?.nick||author;
   if(who?.trim()&&body?.trim()){
-    await run('INSERT INTO guestbook(user_id,author,subject,body,secret) VALUES(?,?,?,?,?)',U(res).id,who.trim().slice(0,20),(subject||'').trim().slice(0,40),body.trim().slice(0,500),secret?1:0);
+    // author_id 只有登入才有值：原版每一則留言的暱稱與大頭貼都連回留言者的小站，
+    // 認證章也掛在那裡。訪客留言留 NULL，view 就退回純文字。
+    await run('INSERT INTO guestbook(user_id,author,author_id,subject,body,secret) VALUES(?,?,?,?,?,?)',U(res).id,who.trim().slice(0,20),res.locals.me?.id||null,(subject||'').trim().slice(0,40),body.trim().slice(0,500),secret?1:0);
     // 通知板主有新留言：只有登入者會觸發，且 10 分鐘內只發一則，避免被灌爆
     if(res.locals.me && res.locals.me.id!==U(res).id &&
        !await one("SELECT 1 FROM sysmsg WHERE user_id=? AND created>datetime('now','localtime','-10 minutes')",U(res).id))

@@ -149,3 +149,11 @@ td#ad_banner, td#ad_word { height: 0; padding: 0; line-height: 0; }
 .w2a-lock       { width: 700px; margin: 0 auto; padding: 30px 0; background: #fff;
                   text-align: center; font-family: "新細明體"; font-size: 12px; }
 .w2a-lock .err  { color: #ff0000; }
+
+/* 圖片資訊（EXIF）面板 —— 原版沒有存檔，這一塊是自製的（見 views/photo.ejs 註解）。
+   預設收起，按「圖片資訊」或熱鍵 i 展開。外觀比照名片頁的 .sidetitle/.side 兩欄表，
+   那是 2012 這一代唯一有存檔的「欄位:值」樣式，不另外發明一套。 */
+#et.w2a-exif { display: none; margin: 8px auto; width: 400px; text-align: left; }
+#et.w2a-exif.open { display: block; }
+#et.w2a-exif td.sidetitle { width: 90px; color: #999; padding: 2px 6px; white-space: nowrap; }
+#et.w2a-exif td.side { background: #f6f6f6; padding: 2px 6px; }
