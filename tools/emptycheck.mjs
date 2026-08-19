@@ -26,7 +26,7 @@ const EMPTY_HINTS = [
 
 // 要掃的頁。分類頁用 ?topic= 逐一帶入，那是最容易整片空掉的地方。
 async function pages() {
-  const { ALBUM_TOPICS, BLOG_TOPICS } = await import('../src/taxonomy.js');
+  const { ALBUM_TOPICS, BLOG_TOPICS, PLACES } = await import('../src/taxonomy.js');
   const list = [
     ['首頁', '/'],
     ['相簿總站', '/albums'],
@@ -47,7 +47,42 @@ async function pages() {
   ];
   for (const t of ALBUM_TOPICS) list.push([`相簿分類:${t}`, '/albums?topic=' + encodeURIComponent(t)]);
   for (const t of BLOG_TOPICS) list.push([`網誌分類:${t}`, '/blogs?topic=' + encodeURIComponent(t)]);
+  for (const pl of PLACES) list.push([`相簿地區:${pl}`, '/albums?place=' + encodeURIComponent(pl)]);
   for (let c = 0; c <= 3; c++) list.push([`好友關係 c=${c}`, `/${DEMO}/friends?c=${c}`]);
+
+  // 站上真的存在的一本相簿／一張照片／一篇文章，拿來測「單一項目」那幾頁。
+  // 這些頁沒有列表頁那麼容易發現是空的，但點進去空空的一樣很傷。
+  // 注意：**不要**用樣板字串組正規式。樣板字串會把 \d 這種無效跳脫的反斜線吃掉，
+  // 組出來的 pattern 變成 (d+)，永遠比不到，這幾頁就會無聲無息地沒被檢查到。
+  // 用一般字串相接，反斜線才留得住。
+  const idRx = svc => new RegExp('/' + DEMO + '/' + svc + '/([0-9]+)', 'g');
+  try {
+    const alb = await (await fetch(`${BASE}/${DEMO}/album`)).text();
+    const aid = [...alb.matchAll(idRx('album'))].map(m => +m[1])[0];
+    if (aid) {
+      list.push(['單本相簿', `/${DEMO}/album/${aid}`]);
+      list.push(['一頁瀏覽', `/${DEMO}/album/${aid}?all=1`]);
+      list.push(['幻燈片', `/${DEMO}/album/${aid}/slide`]);
+      list.push(['相片牆(瀑布)', `/${DEMO}/album/${aid}/wall`]);
+      list.push(['相片牆(馬賽克)', `/${DEMO}/album/${aid}/wall?style=angel`]);
+      const det = await (await fetch(`${BASE}/${DEMO}/album/${aid}`)).text();
+      const pid = [...det.matchAll(idRx('photo'))].map(m => +m[1])[1];
+      if (pid) list.push(['單張照片', `/${DEMO}/photo/${pid}`]);
+    }
+    const bl = await (await fetch(`${BASE}/${DEMO}/blog`)).text();
+    const bid = [...bl.matchAll(idRx('blog'))].map(m => +m[1])[0];
+    if (bid) list.push(['單篇文章', `/${DEMO}/blog/${bid}`]);
+    // 月份彙整：拿站上真的有文章的月份
+    const ym = (bl.match(/\?ym=(\d{4}-\d{2})/) || [])[1];
+    if (ym) list.push([`月份彙整 ${ym}`, `/${DEMO}/blog?ym=${ym}`]);
+  } catch { }
+
+  // 搜尋關鍵字要挑站上真的有的（/search 只比對相簿標題與文章標題／內文），
+  // 拿「台灣」去測會查無結果——那是關鍵字選錯，不是站壞了。
+  list.push(['站內搜尋', '/search?q=' + encodeURIComponent('夜市')]);
+  list.push(['網誌搜尋', `/${DEMO}/blog/search?q=` + encodeURIComponent('的')]);
+  list.push(['網誌 RSS', `/${DEMO}/blog/rss`]);
+  list.push(['留言板 我要留言', `/${DEMO}/guestbook?tab=new`]);
   return list;
 }
 
@@ -88,13 +123,24 @@ for (const [name, url] of await pages()) {
   } catch (e) { bad.push([name, url, e.message]); continue; }
 
   const hit = EMPTY_HINTS.filter(h => html.includes(h));
-  const imgs = [...html.matchAll(/<img[^>]+src="([^"]+)"/g)].map(m => m[1]);
-  const real = imgs.filter(s => s.startsWith('/uploads/')).length;
-  const dflt = imgs.filter(s => s === '/img/avatar.png').length;
+  // 數 /uploads/ 出現幾次，不要只數 <img src>：幻燈片是把整本照片放進一段 JSON
+  // 給 JS 用的，只數 <img> 會誤判成「沒有照片」。
+  const real = (html.match(/\/uploads\//g) || []).length;
+  const dflt = (html.match(/\/img\/avatar\.png/g) || []).length;
 
-  const flag = hit.length ? '空狀態' : (real === 0 ? '沒有照片' : '');
+  // 頁面上真正指向站內內容的連結有幾條。用它來分辨兩種「出現空狀態字串」：
+  //   真的空   分類頁沒有任何相簿 → 連結數 0，要報
+  //   分區空   搜尋頁「找不到相符的站友」但相簿與文章有一堆 → 連結數很多，不用報
+  // 只比對整頁有沒有那幾個字，會把後者誤判成空頁。
+  const links = (html.match(/href="\/[^"]*\/(album|blog|photo|guestbook|video|digu)/g) || []).length;
+
+  // 這幾頁本來就不該有照片：說明頁是純文字、RSS 是 XML。
+  const NO_PHOTO_OK = ['服務說明', '網誌 RSS'];
+  const flag = (hit.length && links < 3 && real < 3) ? '空狀態'
+    : (real === 0 && !NO_PHOTO_OK.includes(name)) ? '沒有照片' : '';
   console.log(`${flag ? '! ' : '  '}${name.padEnd(18)} 照片 ${String(real).padStart(3)}`
     + `  預設頭像 ${String(dflt).padStart(2)}`
+    + `  連結 ${String(links).padStart(3)}`
     + (hit.length ? `  ← 出現：${hit.join('／')}` : ''));
   if (flag) bad.push([name, url, flag + (hit.length ? '：' + hit.join('／') : '')]);
 }

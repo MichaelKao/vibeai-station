@@ -35,6 +35,29 @@ if (reset) {
 
 const pick = (a, i) => a[i % a.length];
 
+// ---- 時間 ----
+// 站上的東西**不能全部都是今天建立的**。全部同一天的話，網誌的「文章日曆」
+// 只有一格有顏色、「月份彙整」只有一個月、相簿列表的日期整排一樣——
+// 那是一眼就看得出來的假資料。所以把時間攤在過去約兩年。
+//
+// 用固定的算式（不是亂數）算日期，重跑才會得到同樣的畫面，可以比對。
+// 格式要跟 src/db.js 的 created 欄位一致：台北時間的 'YYYY-MM-DD HH:MM:SS'。
+const DAY_MS = 86400000;
+const NOW_MS = Date.now();
+const stamp = (daysAgo, hourSeed = 0) => {
+  const t = NOW_MS - Math.round(daysAgo * DAY_MS)
+    - ((hourSeed * 7) % 24) * 3600000 - ((hourSeed * 13) % 60) * 60000;
+  return new Date(t).toLocaleString('sv-SE').slice(0, 19);
+};
+// 第 i 個項目要落在幾天前：越舊的東西越少，跟真的站一樣（最近比較活躍）。
+//
+// ⚠ 呼叫時記得**把序號倒過來**（例如 spread(total - seq, total)）。
+// 站上到處都是 ORDER BY id DESC，如果先插入的反而日期比較新，
+// 列表就會出現「8月9日、5月26日、6月5日」這種跳來跳去的順序，一眼就看得出是假的。
+// 倒過來之後「id 越大＝日期越新」，既有的排序查詢就都對得起來。
+const spread = (i, total, maxDays = 730) => Math.round(maxDays * Math.pow(i / Math.max(1, total), 1.6));
+
+
 // ---- 站友 ----
 const USERS = [
   ['vibeai', '站長', '這裡是站長的小站，有問題歡迎留言。', 1],
@@ -218,6 +241,7 @@ const ALBUMS = [
 // 用**連號**發樣板，不要用 (ui*3+i*7) 這種散列：散列會讓同一個標題在
 // 相簿總站的同一頁上出現好幾次（實測一頁 20 本裡有 5 組重複），看起來就很假。
 // 連號可以保證每個樣板都用過一輪，才開始第二輪。
+const TOTAL_ALBUMS = USERS.length * 4 + EXTRA_USERS.length;
 let albumSeq = 0;
 for (const [name] of [...USERS, ...EXTRA_USERS]) {
   const isMain = USERS.some(u => u[0] === name);
@@ -225,19 +249,27 @@ for (const [name] of [...USERS, ...EXTRA_USERS]) {
   for (let i = 0; i < n; i++) {
     const [title, descr, topic, place, keyword] = ALBUMS[albumSeq++ % ALBUMS.length];
     if (await one('SELECT 1 FROM albums WHERE user_id=? AND title=?', uid[name], title)) continue;
-    const a = await run(`INSERT INTO albums(user_id,title,descr,topic,place,views,featured)
-      VALUES(?,?,?,?,?,?,?)`, uid[name], title, descr, topic, place,
-      Math.floor(Math.random() * 5000), i === 0 && name === 'meimei' ? 1 : 0);
+    // 這本相簿是幾天前建的。照片再往前後散幾天，同一本裡的日期才不會一模一樣。
+    const albDays = spread(TOTAL_ALBUMS - albumSeq, TOTAL_ALBUMS);
+    // 上鎖與好友限定：原站這兩種狀態很常見，站上一本都沒有的話那兩條路徑
+    // （密碼頁、403）永遠看不到。每 11 本上鎖一本、每 13 本設好友限定一本。
+    const albPass = albumSeq % 11 === 4 ? '1234' : '';
+    const albFriendsOnly = albumSeq % 13 === 6 ? 1 : 0;
+    const a = await run(`INSERT INTO albums(user_id,title,descr,topic,place,views,featured,pass,friends_only,created)
+      VALUES(?,?,?,?,?,?,?,?,?,?)`, uid[name], title, descr, topic, place,
+      Math.floor(Math.random() * 5000), i === 0 && name === 'meimei' ? 1 : 0,
+      albPass, albFriendsOnly, stamp(albDays, albumSeq));
     const aid = Number(a.lastInsertRowid);
     let cover = '';
     for (let k = 0; k < (isMain ? 5 + (i % 4) : 3); k++) {
       const p = await photo(keyword, pick(TINTS, uid[name] + k));
       // save() 已經把尺寸與 EXIF 算好回傳，不接住的話 #exif 面板永遠是空的
       // （照片頁的「圖片資訊」就沒東西可印）。
-      await run(`INSERT INTO photos(album_id,url,thumb,caption,bytes,views,width,height,taken,camera)
-        VALUES(?,?,?,?,?,?,?,?,?,?)`,
+      await run(`INSERT INTO photos(album_id,url,thumb,caption,bytes,views,width,height,taken,camera,created)
+        VALUES(?,?,?,?,?,?,?,?,?,?,?)`,
         aid, p.url, p.thumb, pick(['這天天氣超好', '好吃！', '牠在生氣', '順便自拍一張', ''], k),
-        p.bytes, Math.floor(Math.random() * 300), p.width, p.height, p.taken, p.camera);
+        p.bytes, Math.floor(Math.random() * 300), p.width, p.height, p.taken, p.camera,
+        stamp(albDays - k * 0.12, albumSeq * 7 + k));
       if (!cover) cover = p.thumb;
     }
     await run('UPDATE albums SET cover=? WHERE id=?', cover, aid);
@@ -360,23 +392,43 @@ const POSTS = [
 // 主要帳號每人 4 篇、補充站友每人 1 篇，起始位置照 index 錯開，
 // 這樣 12 類每一類都有文章，/blogs 的分類頁與首頁名家專欄才不會有空分頁。
 // 同樣用連號，理由見上面相簿那段。
+// 迴響的人名與內容。原本只有 4 個名字 4 句話，整站翻下來每篇都是同樣那幾句，
+// 一眼就看得出是灌的。
+const COMMENT_NAMES = ['小明', '阿華', '路人甲', 'Tina', '小魚', '阿凱', '妮妮', '大熊',
+  '柚子', '球球', '路過的', '無名氏', '老朋友', '第一次來', 'Kevin', '小葵'];
+const COMMENT_BODIES = [
+  '搶頭香！', '坐沙發～', '推推推', '我也想去！', '寫得真好，收藏了。',
+  '請問那間在哪裡呀？', '看完好想出門喔', '這篇我看了三次', '同感 +1',
+  '照片拍得好美', '謝謝分享！', '哈哈哈這太真實了', '路過留個言，加油',
+  '剛好最近也在煩惱這個', '已分享給朋友看', '期待下一篇',
+];
+
+const TOTAL_POSTS = USERS.length * 4 + EXTRA_USERS.length;
 let postSeq = 0;
 for (const [name] of [...USERS, ...EXTRA_USERS]) {
   const n = USERS.some(u => u[0] === name) ? 4 : 1;
   for (let i = 0; i < n; i++) {
     const [title, body, category, topic] = POSTS[postSeq++ % POSTS.length];
     if (await one('SELECT 1 FROM posts WHERE user_id=? AND title=?', uid[name], title)) continue;
-    const r = await run(`INSERT INTO posts(user_id,title,body,category,topic,mood,weather,views,likes,featured)
-      VALUES(?,?,?,?,?,?,?,?,?,?)`, uid[name], title, body, category, topic,
+    // 文章日曆與月份彙整要看得出「這個站活了兩年」，日期就不能全部是今天。
+    const postDays = spread(TOTAL_POSTS - postSeq, TOTAL_POSTS);
+    // 上鎖文章：原站的「私密文章」很常見，站上一篇都沒有的話那條路徑看不到。
+    const postPass = postSeq % 17 === 8 ? '5678' : '';
+    const r = await run(`INSERT INTO posts(user_id,title,body,category,topic,mood,weather,views,likes,featured,pass,created)
+      VALUES(?,?,?,?,?,?,?,?,?,?,?,?)`, uid[name], title, body, category, topic,
       pick(['開心', '普通', '難過', '興奮'], i), pick(['晴天', '陰天', '雨天'], i),
       Math.floor(Math.random() * 20000), Math.floor(Math.random() * 300),
-      i === 0 && name === 'jaychou' ? 1 : 0);
+      i === 0 && name === 'jaychou' ? 1 : 0, postPass, stamp(postDays, postSeq));
     const pid = Number(r.lastInsertRowid);
-    for (let c = 0; c < (i % 4); c++)
-      await run('INSERT INTO comments(post_id,author,body,reply) VALUES(?,?,?,?)', pid,
-        pick(['小明', '阿華', '路人甲', 'Tina'], c),
-        pick(['搶頭香！', '坐沙發～', '推推推', '我也想去！'], c),
-        c === 0 ? '謝謝你的留言 :)' : '');
+    // 迴響：原本是 (i % 4)，四篇裡有一篇是 0 則，站上超過一半的文章都沒有迴響。
+    // 改成每篇至少 1 則。時間一定要在文章**之後**，不然「最新迴響」會排在文章前面。
+    for (let c = 0; c < 1 + ((postSeq + i) % 4); c++)
+      await run('INSERT INTO comments(post_id,author,body,email,homepage,reply,created) VALUES(?,?,?,?,?,?,?)', pid,
+        pick(COMMENT_NAMES, postSeq + c),
+        pick(COMMENT_BODIES, postSeq * 3 + c),
+        '', '',
+        c === 0 && postSeq % 3 === 0 ? '謝謝你的留言 :)' : '',
+        stamp(Math.max(0, postDays - 1 - c * 0.7), postSeq * 5 + c));
   }
 }
 // 上面那圈是「每人挑幾篇」，長文不一定會落在示範帳號身上。
@@ -386,10 +438,21 @@ for (const [name] of [...USERS, ...EXTRA_USERS]) {
   // 挑**最長**那一篇，不要用 POSTS[POSTS.length-1]——在陣列後面補文章的時候
   // 最後一筆就不是長文了，「(繼續閱讀)」那個結構會無聲無息地消失。
   const [title, body, category, topic] = POSTS.reduce((a, b) => b[1].length > a[1].length ? b : a);
-  if (!await one('SELECT 1 FROM posts WHERE user_id=? AND title=?', uid.meimei, title))
-    await run(`INSERT INTO posts(user_id,title,body,category,topic,mood,weather,views,likes)
-      VALUES(?,?,?,?,?,?,?,?,?)`, uid.meimei, title, body, category, topic, '開心', '晴',
-      Math.floor(Math.random() * 20000), Math.floor(Math.random() * 300));
+  if (!await one('SELECT 1 FROM posts WHERE user_id=? AND title=?', uid.meimei, title)) {
+    const r = await run(`INSERT INTO posts(user_id,title,body,category,topic,mood,weather,views,likes,created)
+      VALUES(?,?,?,?,?,?,?,?,?,?)`, uid.meimei, title, body, category, topic, '開心', '晴',
+      Math.floor(Math.random() * 20000), Math.floor(Math.random() * 300), stamp(9, 3));
+    // 這篇是額外補的，上面那圈的迴響／引用都不會落到它身上。
+    // 不補的話它是站上最顯眼的一篇（首頁、月份彙整都指過來），點進去卻整片空白。
+    const pid = Number(r.lastInsertRowid);
+    for (let c = 0; c < 4; c++)
+      await run('INSERT INTO comments(post_id,author,body,reply,created) VALUES(?,?,?,?,?)',
+        pid, pick(COMMENT_NAMES, c + 3), pick(COMMENT_BODIES, c * 4), c === 0 ? '謝謝！有空真的要去一趟。' : '',
+        stamp(8 - c * 0.5, c));
+    const other = await all('SELECT id FROM posts WHERE user_id!=? ORDER BY id LIMIT 2', uid.meimei);
+    for (const o of other)
+      await run('INSERT INTO trackbacks(post_id,from_post) VALUES(?,?)', pid, o.id);
+  }
 }
 // ---- 引用（轉貼）----
 // 網誌分享列上那顆「發文」鈕會帶一個數字泡泡（.bubble / .bubble-gradient），
@@ -421,10 +484,9 @@ for (const [name] of USERS) {
   // 「誰來我家」一頁 20 筆，只灌 5 筆而且都是同幾個人的話那一頁看起來像壞掉的。
   const ALL = [...USERS, ...EXTRA_USERS];
   for (let i = 0; i < 24; i++)
-    await run('INSERT INTO visitors(user_id,who) VALUES(?,?)', uid[name], pick(ALL, i * 5 + name.length)[0]);
-  const p = await one('SELECT id,title FROM posts WHERE user_id=? ORDER BY id DESC', uid[name]);
-  if (p) await run('INSERT INTO acts(user_id,kind,title,url) VALUES(?,?,?,?)',
-    uid[name], 'blog', p.title, `/${name}/blog/${p.id}`);
+    await run('INSERT INTO visitors(user_id,who,created) VALUES(?,?,?)',
+      uid[name], pick(ALL, i * 5 + name.length)[0], stamp(spread(24 - i, 24, 45), i * 3 + name.length));
+  // 好友動態（acts）改在後面統一種，這裡不再單獨插一筆（會重複）。
 }
 
 // ---- 留言板：補到看得見分頁列 ----
@@ -447,8 +509,9 @@ for (const [name] of [...USERS, ...EXTRA_USERS]) {
     // 留言者要是真的站友：原版每一則留言的暱稱與大頭貼都連回那個人的小站，
     // 認證章也掛在那裡。只存暱稱文字的話那三樣都做不出來。
     const gbFrom = pick(ALL_ACCOUNTS, i * 3 + 1);
-    await run('INSERT INTO guestbook(user_id,author,author_id,subject,body,secret,reply) VALUES(?,?,?,?,?,?,?)',
+    await run('INSERT INTO guestbook(user_id,author,author_id,subject,body,created,secret,reply) VALUES(?,?,?,?,?,?,?,?)',
       uid[name], gbFrom[1], uid[gbFrom[0]], pick(GB_SUBJECTS, i), pick(GB_BODIES, i),
+      stamp(spread(want - i, want, 400), i * 5 + name.length),
       // 悄悄話與板主回覆的間隔要互質且不同步：兩個都命中同一則的話，
       // 那則對訪客是隱藏的，.reply_content / .reply_word 就量不到
       // （17 與 9 會在 i=56 撞在一起，剛好落在第 1 頁）。
@@ -487,9 +550,9 @@ for (const [ui, [name]] of [...USERS, ...EXTRA_USERS].entries()) {
   for (let i = 0; i < want; i++) {
     const [title, vid, descr] = VIDEOS[(ui * 3 + i) % VIDEOS.length];
     if (await one('SELECT 1 FROM videos WHERE user_id=? AND vid=?', uid[name], vid)) continue;
-    await run('INSERT INTO videos(user_id,title,vid,url,descr,views) VALUES(?,?,?,?,?,?)',
+    await run('INSERT INTO videos(user_id,title,vid,url,descr,views,created) VALUES(?,?,?,?,?,?,?)',
       uid[name], title, vid, 'https://www.youtube.com/watch?v=' + vid, descr,
-      Math.floor(Math.random() * 3000));
+      Math.floor(Math.random() * 3000), stamp(spread(want - i, want, 300), ui * 4 + i));
   }
 }
 
@@ -507,7 +570,150 @@ for (const [ui, [name]] of [...USERS, ...EXTRA_USERS].entries()) {
   const want = name === 'meimei' ? DIGUS.length : (USERS.some(u => u[0] === name) ? 5 : 2);
   let have = (await one('SELECT count(*) c FROM digu WHERE user_id=?', uid[name])).c;
   for (let i = have; i < want; i++)
-    await run('INSERT INTO digu(user_id,body) VALUES(?,?)', uid[name], DIGUS[(ui * 4 + i) % DIGUS.length]);
+    await run('INSERT INTO digu(user_id,body,created) VALUES(?,?,?)',
+      uid[name], DIGUS[(ui * 4 + i) % DIGUS.length], stamp(spread(want - i, want, 90), ui * 6 + i));
+}
+
+// ---- 照片迴響 ----
+// 照片頁的「迴響」區之前完全沒有種，每張照片點進去都寫「還沒有人留下迴響」。
+// 原站的相簿是社交場，熱門照片下面一定有一串。挑一部分照片放，不要每張都有——
+// 每張都有反而假。
+{
+  const PHOTO_SAYS = ['這張構圖好棒！', '好想去這裡', '拍得好美～', '這是哪裡呀？',
+    '光線抓得真好', '推一個', '好可愛喔', '記得那天也太好玩', '借分享！', '這張我最喜歡'];
+  const photos = await all('SELECT id, created FROM photos ORDER BY id');
+  let n = 0;
+  for (const [i, ph] of photos.entries()) {
+    if (i % 3 === 2) continue;                 // 三張裡放兩張（每張都有反而假）
+    for (let c = 0; c < 1 + (i % 3); c++) {
+      // 時間直接跟著那張照片自己的建立時間往後推，不要另外算——
+      // 另外算的話迴響會比照片本身還早，畫面上看起來很怪。
+      const base = new Date(ph.created.replace(' ', 'T')).getTime();
+      const at = new Date(Math.min(NOW_MS, base + (1 + c) * 6 * 3600000))
+        .toLocaleString('sv-SE').slice(0, 19);
+      await run('INSERT INTO photo_comments(photo_id,author,body,created) VALUES(?,?,?,?)',
+        ph.id, pick(COMMENT_NAMES, i + c), pick(PHOTO_SAYS, i * 2 + c), at);
+      n++;
+    }
+  }
+  console.log(`照片迴響 ${n} 則`);
+}
+
+// ---- 系統訊息 ----
+// 留言板的「系統訊息」頁籤（只有本人看得到）。之前是空的，站主點進去像壞掉。
+// 原站這裡放的是「有人在你的板留言」「你的相簿被推薦」這類站方通知。
+{
+  const SYS = [
+    ['有人在你的留言板留言', '你有新的留言，快去看看吧。'],
+    ['你的相簿被推薦到首頁', '恭喜！你的相簿被站長選進首頁的熱門相簿。'],
+    ['有人把你加為好友', '有站友把你加入好友名單了。'],
+    ['你的文章被引用', '有人在自己的網誌引用了你的文章。'],
+    ['空間使用量提醒', '你的相簿空間已使用超過一半，記得整理一下。'],
+  ];
+  let n = 0;
+  for (const [ui, [name]] of [...USERS, ...EXTRA_USERS].entries()) {
+    const want = USERS.some(u => u[0] === name) ? 4 : 1;
+    for (let i = 0; i < want; i++) {
+      const [title, body] = SYS[(ui * 2 + i) % SYS.length];
+      await run('INSERT INTO sysmsg(user_id,title,body,seen,created) VALUES(?,?,?,?,?)',
+        uid[name], title, body, i === 0 ? 0 : 1, stamp(spread(want - i, want, 120), ui * 3 + i));
+      n++;
+    }
+  }
+  console.log(`系統訊息 ${n} 則`);
+}
+
+// ---- 檢舉 ----
+// 後台 /admin 的檢舉佇列。之前是空的，那一頁看起來像沒做完。
+// 放幾筆已處理與未處理的，站長進去才看得出這個流程長什麼樣。
+{
+  const REASONS = ['內容不妥', '疑似廣告', '照片非本人所有', '留言騷擾', '重複張貼'];
+  const posts = await all('SELECT id FROM posts ORDER BY id LIMIT 40');
+  let n = 0;
+  for (let i = 0; i < 6 && i < posts.length; i++) {
+    await run('INSERT INTO reports(kind,target_id,url,reason,reporter,done,created) VALUES(?,?,?,?,?,?,?)',
+      'post', posts[i * 5].id, '/blogs', pick(REASONS, i), pick(COMMENT_NAMES, i),
+      i % 3 === 0 ? 1 : 0, stamp(spread(6 - i, 6, 60), i * 11));
+    n++;
+  }
+  console.log(`檢舉 ${n} 筆`);
+}
+
+// ---- 好友動態 ----
+// 「好友動態」（/:user/feed）撈的是 acts。之前每人只有 1 筆，
+// 而且只有主要帳號有，登入後那一頁幾乎是空的。
+{
+  let n = 0;
+  for (const [name] of [...USERS, ...EXTRA_USERS]) {
+    const ps = await all('SELECT id,title,created FROM posts WHERE user_id=? ORDER BY id DESC LIMIT 3', uid[name]);
+    for (const [i, po] of ps.entries()) {
+      await run('INSERT INTO acts(user_id,kind,title,url,created) VALUES(?,?,?,?,?)',
+        uid[name], 'blog', po.title, `/${name}/blog/${po.id}`, po.created);
+      n++;
+    }
+    const as = await all('SELECT id,title,created FROM albums WHERE user_id=? ORDER BY id DESC LIMIT 2', uid[name]);
+    for (const al of as) {
+      await run('INSERT INTO acts(user_id,kind,title,url,created) VALUES(?,?,?,?,?)',
+        uid[name], 'album', al.title, `/${name}/album/${al.id}`, al.created);
+      n++;
+    }
+  }
+  console.log(`好友動態 ${n} 筆`);
+}
+
+// ---- 音樂盒 ----
+// 無名的個人站側欄有音樂盒（users.music，一行一個網址）。之前沒人設，
+// 那一格在每個人的站上都是空的，首頁的背景音樂開關也就沒有意義。
+// 用 archive.org 的公眾領域錄音（Internet Archive 的 Open Audio，可自由使用）。
+{
+  const TRACKS = [
+    'https://archive.org/download/78_the-blue-danube-waltz_johann-strauss/The%20Blue%20Danube%20Waltz.mp3',
+    'https://archive.org/download/CanonInDMajor/Canon%20in%20D%20Major.mp3',
+    'https://archive.org/download/MoonlightSonata_755/MoonlightSonata.mp3',
+  ];
+  let n = 0;
+  for (const [ui, [name]] of [...USERS, ...EXTRA_USERS].entries()) {
+    if (ui % 3) continue;                       // 三個人裡一個有音樂盒
+    await run('UPDATE users SET music=? WHERE id=?',
+      TRACKS.slice(0, 1 + (ui % TRACKS.length)).join('\n'), uid[name]);
+    n++;
+  }
+  console.log(`音樂盒 ${n} 人`);
+}
+
+// ---- 名片欄位補齊 ----
+// 名片頁有生日、真實姓名、MSN、個人網頁四欄一直是空的，那一頁看起來只填一半。
+{
+  const YEARS = [1985, 1988, 1990, 1992, 1995, 1998, 2000];
+  let n = 0;
+  for (const [ui, [name, nick]] of [...USERS, ...EXTRA_USERS].entries()) {
+    const y = YEARS[ui % YEARS.length];
+    const m = String(1 + (ui * 5) % 12).padStart(2, '0');
+    const d = String(1 + (ui * 7) % 28).padStart(2, '0');
+    await run('UPDATE users SET realname=?, birthday=?, msn=? WHERE id=?',
+      nick, `${y}-${m}-${d}`, `${name}@example.com`, uid[name]);
+    n++;
+  }
+  console.log(`名片欄位補齊 ${n} 人`);
+}
+
+// ---- 使用者自訂 CSS ----
+// 「使用者自訂 CSS」是無名的靈魂功能（WRETCH_2012.md §4-5），站上一個人都沒用
+// 的話等於這個功能沒被展示出來。給幾個人放一小段安全的樣式
+// （會過 src/format.js 的 safeCss()，角括號一律被拿掉）。
+{
+  const CSS = [
+    '/* 換個標題顏色 */\n#header h1 a { color: #c8508c; }',
+    '/* 加寬一點 */\n#content { line-height: 1.8; }',
+    '/* 淡一點的分隔線 */\nhr { border-color: #e8e8e8; }',
+  ];
+  let n = 0;
+  for (const [ui, [name]] of USERS.entries()) {
+    if (ui % 2) continue;
+    await run('UPDATE users SET css=? WHERE id=?', CSS[ui % CSS.length], uid[name]);
+    n++;
+  }
+  console.log(`自訂 CSS ${n} 人`);
 }
 
 // ---- 收藏 ----
