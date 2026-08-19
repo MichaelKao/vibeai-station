@@ -53,6 +53,22 @@ export function toPg(sql) {   // export 是為了讓 test_pg.mjs 能直接驗這
 // INSERT OR IGNORE 需要在句尾補 ON CONFLICT DO NOTHING
 const needsOnConflict = sql => /INSERT\s+OR\s+IGNORE/i.test(sql);
 
+// 這兩張表是「關聯表」，主鍵是兩個欄位合起來的，**沒有 id 欄位**：
+//   friends(user_id, friend_id, ...)  PRIMARY KEY(user_id, friend_id)
+//   favs(user_id, post_id, ...)       PRIMARY KEY(user_id, post_id)
+// PG 的 run() 會自動幫 INSERT 補 RETURNING id 好拿到新的主鍵，
+// 但對這兩張表補下去就會炸「column "id" does not exist」——
+// 加好友、收藏文章這兩個功能在 Postgres 上會直接 500。
+// （src/migrate-pg.js 的 SERIAL_TABLES 早就把這兩張表排除掉了，是同一個原因。）
+const TABLES_WITHOUT_ID = new Set(['friends', 'favs']);
+
+// 這句 INSERT 該不該補 RETURNING id。export 是為了讓 test_pg.mjs 直接驗。
+export function needsReturningId(sql) {
+  if (!/^\s*INSERT\s/i.test(sql) || /RETURNING/i.test(sql)) return false;
+  const m = /^\s*INSERT\s+(?:OR\s+\w+\s+)?INTO\s+["']?(\w+)/i.exec(sql);
+  return !(m && TABLES_WITHOUT_ID.has(m[1].toLowerCase()));
+}
+
 let impl;
 
 if (driver === 'postgres') {
@@ -82,10 +98,9 @@ if (driver === 'postgres') {
     all: async (sql, ...a) => (await query(sql, a)).rows,
     run: async (sql, ...a) => {
       // INSERT 需要回 id 的場合，自動補 RETURNING id
-      const isInsert = /^\s*INSERT\s/i.test(sql) && !/RETURNING/i.test(sql);
       let text = toPg(sql);
       if (needsOnConflict(sql)) text += ' ON CONFLICT DO NOTHING';
-      if (isInsert) text += ' RETURNING id';
+      if (needsReturningId(sql)) text += ' RETURNING id';
       const r = await pool.query(text, a);
       return { lastInsertRowid: r.rows?.[0]?.id, changes: r.rowCount };
     },

@@ -1,6 +1,6 @@
 // 驗 SQLite → Postgres 的 SQL 方言轉換。
 // 從本機連不到 Railway 內網的 Postgres，所以先把最容易出錯的這一層單獨驗過。
-import { toPg } from './src/db.js';
+import { toPg, needsReturningId } from './src/db.js';
 
 let pass = 0, fail = 0;
 const ok = (name, got, want) => {
@@ -98,6 +98,20 @@ ok('LIMIT ? OFFSET ? 排在最後面',
   ok('RedisStore 可建構且具備 express-session 介面',
     ['get','set','destroy','touch'].every(m => typeof store[m] === 'function'), true);
 }
+
+// ---- RETURNING id ----
+// friends / favs 是關聯表，主鍵是兩欄合起來的，沒有 id 欄位。
+// PG 的 run() 會自動補 RETURNING id 來取新主鍵，補到這兩張表上會直接炸
+// 「column "id" does not exist」——加好友與收藏文章在 Postgres 上會 500。
+// 本機是 SQLite 測不出來（SQLite 那邊根本不走這段），所以在這裡釘住。
+ok('一般表要補 RETURNING id', needsReturningId('INSERT INTO posts(user_id,title) VALUES(?,?)'), true);
+ok('friends 不可以補 RETURNING id', needsReturningId('INSERT INTO friends(user_id,friend_id,grp) VALUES(?,?,?)'), false);
+ok('favs 不可以補 RETURNING id', needsReturningId('INSERT INTO favs(user_id,post_id) VALUES(?,?)'), false);
+ok('INSERT OR IGNORE INTO friends 也不可以補',
+  needsReturningId('INSERT OR IGNORE INTO friends(user_id,friend_id,grp) VALUES(?,?,?)'), false);
+ok('已經自己寫了 RETURNING 就不要再補',
+  needsReturningId('INSERT INTO posts(title) VALUES(?) RETURNING id'), false);
+ok('SELECT 不是 INSERT', needsReturningId('SELECT * FROM friends'), false);
 
 console.log(`\n===== ${pass} passed, ${fail} failed =====`);
 process.exit(fail ? 1 : 0);

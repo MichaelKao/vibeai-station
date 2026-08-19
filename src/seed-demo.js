@@ -1,0 +1,45 @@
+// 正式站灌示範資料：SEED_DEMO=1 時，在服務**啟動之後**於背景跑 tools/seed-demo.mjs。
+//
+// 為什麼做成「服務自己跑」而不是本機執行：
+// Railway 的 Postgres 只有內網位址（*.railway.internal），本機根本連不到；
+// 而照片要走 storage.save() 上 R2，也需要容器裡那組 R2 憑證。
+// 做法與理由比照 src/migrate-pg.js，過程全部留在部署日誌裡可以事後稽核。
+//
+// 用法：
+//   1. railway variables --service station --set SEED_DEMO=1
+//   2. 等部署跑完，看 railway logs 追進度（照片要抓 ~300 張，大約 10–20 分鐘）
+//   3. 灌完之後把旗標關掉：railway variables --service station --set SEED_DEMO=0
+//
+// 安全性（這是會動到正式資料的東西，所以擋兩層）：
+//   - **users 表非空就整個跳過**，所以重跑不會把資料灌成兩倍，
+//     也不可能在有真實使用者之後把示範資料混進去
+//   - **絕對不傳 --reset**：那個旗標會清空所有表並刪掉檔案，正式站不能碰
+//   - 灌的過程出錯不影響站台運作，只記錄在日誌裡
+//   - 在 listen() 之後才啟動，而且是背景子行程，不會拖慢健康檢查
+
+import { spawn } from 'node:child_process';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { one } from './db.js';
+
+const HERE = path.dirname(fileURLToPath(import.meta.url));
+const SEED_SCRIPT = path.join(HERE, '..', 'tools', 'seed-demo.mjs');
+
+export async function seedDemoIfEmpty() {
+  const n = (await one('SELECT count(*) c FROM users')).c;
+  if (n > 0) {
+    console.log(`[seed] 資料庫已經有 ${n} 位使用者，跳過（要重灌請先自己清空）`);
+    return;
+  }
+
+  console.log('[seed] 資料庫是空的，開始灌示範資料——照片要上網抓，會跑一段時間');
+  const child = spawn(process.execPath, [SEED_SCRIPT], {
+    cwd: path.join(HERE, '..'),
+    env: process.env,          // DATABASE_URL / DB_DRIVER / R2_* 都要傳下去
+    stdio: ['ignore', 'inherit', 'inherit'],
+  });
+
+  child.on('error', e => console.error('[seed] 起不來：', e.message));
+  child.on('exit', code => console.log(
+    code === 0 ? '[seed] 完成。記得把 SEED_DEMO 設回 0' : `[seed] 失敗，離開碼 ${code}`));
+}

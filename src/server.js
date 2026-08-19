@@ -838,5 +838,15 @@ startVisitFlusher(async (userId, n) => {
 });
 
 const PORT=process.env.PORT||3000;
-app.listen(PORT,()=>console.log(
-  `vibeai 小站 → http://localhost:${PORT}　資料庫 ${driver}　session ${hasRedis?'redis':'memory'}`));
+app.listen(PORT,()=>{
+  console.log(`vibeai 小站 → http://localhost:${PORT}　資料庫 ${driver}　session ${hasRedis?'redis':'memory'}`);
+  // 灌示範資料（見 src/seed-demo.js 的用法與安全說明）。
+  // 一定要在 listen 之後才做：抓 ~300 張照片要十幾分鐘，
+  // 放在啟動流程裡會讓平台的健康檢查一直失敗，最後被判定部署失敗。
+  // users 表非空就會自己跳過，所以留著這段不會有副作用。
+  if (process.env.SEED_DEMO === '1') {
+    import('./seed-demo.js')
+      .then(m => m.seedDemoIfEmpty())
+      .catch(e => console.error('[seed] 出錯，站台照常運作：', e.message));
+  }
+});
