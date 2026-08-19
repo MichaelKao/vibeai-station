@@ -118,23 +118,24 @@ Facebook 頁面貼進文章帶進來的 class（`.MsoNormal` `.uiInfoTable` `.da
 > ⚠ **不准用 `overflow-x:hidden` 把問題藏起來**。那只會讓量測工具量不到，
 > 版面還是壞的而且內容會被裁掉。我一開始就是這樣偷懶，已經改掉了。
 
-### A-2. 2005 殘留清除（做到一半）
+### A-2. ~~2005 殘留清除~~ — **2026-08-19 清完了**
 
-全站已經**沒有任何頁面**載入 2005 的樣式或素材（實測 10 頁，2005 素材載入次數 0），
-`admin.ejs` 也已經改成 2012 外框。剩下的是**程式碼裡的殘骸**，不影響畫面但遲早有人踩到：
+整站現在**只有 2012**。清掉的東西（都在 git 歷史裡，要救得回來）：
 
-| 要清的 | 現況 |
+| 清掉的 | 原本是什麼 |
 |---|---|
-| `views/partials/head.ejs` `foot.ejs` `sitetop.ejs` `sitefoot.ejs` `pager.ejs` | **0 引用**，可直接刪 |
-| `public/style.css` | 2005 主樣式，0 頁面載入（只被 `partials/head.ejs` 引用） |
+| `views/partials/head.ejs` `foot.ejs` `sitetop.ejs` `sitefoot.ejs` `pager.ejs` | 2005 綠色 table 版的外框，最後一個使用者 `admin.ejs` 已改成 2012 |
+| `public/style.css` | 2005 主樣式，0 頁面載入 |
 | `public/img/wretch/`（166K） | 2005 素材集 |
-| `src/taxonomy.js` 的 `THEMES` / `isTheme` | 2005 的 `t-x-*` body class 換色機制，已被真正的版型切換取代，0 引用 |
-| `src/config.js` 的 `THEME_FOR` | 只有 `partials/head.ejs` 在呼叫 |
-| `views/home.ejs:44`、`views/index.ejs:70,91` | 回退路徑指向 `CDN + '/icon/user_cover.gif'`＝**2005 素材**。目前沒觸發（每個人都有大頭貼），是定時炸彈，要改指 2012 的圖 |
-| `attic/wretch-2005/`（286K） | 2005 版成果，使用者說不需要退到更舊 |
+| `attic/wretch-2005/`（286K） | 2005 版成果 |
+| `src/taxonomy.js` 的 `THEMES` / `isTheme` | 2005 的 `t-x-*` body class 換色機制，已被真正的版型切換取代 |
+| `src/config.js` 的 `THEME_FOR` / `ASSETS` / `CDN_VARS` | 同上，全部只服務 2005 那套 |
+| `views/{home,index,rank,search}.ejs` 的 5 處回退路徑 | 指向 `CDN + '/icon/user_cover.gif'`＝2005 素材，改指 `/img/wretch2012/blog/user_cover.gif` |
 
-**順序**：先改那三個回退路徑 → 再刪 partials → 再刪 style.css 與 img/wretch → 最後清死碼。
-刪之前一定要再跑一次 `grep -rn` 確認 0 引用（我留下的計數是 2026-08-19 當下的）。
+⚠ `src/config.js` 的 `CDN` 預設值也從 `/img/wretch` 改成 **`/img/wretch2012`**——
+它現在只服務 `#static-path` 那個 hidden input。**不要再把它指回 `/img/wretch`**，那個目錄已經不存在。
+
+驗證：22 頁全部 200、還原度八頁 100%、測試 141+29 全綠、uicheck 四頁 0 問題。
 
 ### B. 補更多原廠版型
 

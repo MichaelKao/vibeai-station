@@ -67,7 +67,7 @@
      整排卡通圖示會讓首頁看起來像沒載入完。 */
   const w2Cover = p => (p && p.pthumb) ? p.pthumb
     : (p && p.avatar && p.avatar !== '/img/avatar.png') ? p.avatar
-    : CDN + '/icon/user_cover.gif';
+    : '/img/wretch2012/blog/user_cover.gif';
   /* 某位站友能拿來當縮圖的圖：先找他公開的相簿封面，再找他的照片，
      都沒有就用無名的「沒有封面」預設圖。首頁 route 沒有給每位站友的代表圖，
      只能從已經拿到的 hotAlbums / newPhotos 裡挑。 */
@@ -88,7 +88,7 @@
     // 出現在熱門相簿或最新照片裡，只靠那兩個清單找的話大多會落到卡通預設圖。
     const av = w2Avatars.get(uname);
     if (av) return av;
-    return CDN + '/icon/user_cover.gif';
+    return '/img/wretch2012/blog/user_cover.gif';
   };
 
   /* 日期／日曆（#wfp-archive）：原站是 11 格，基準日 selected，往前推 10 天。

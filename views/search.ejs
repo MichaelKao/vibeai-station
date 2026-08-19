@@ -71,7 +71,7 @@
             <% albums.forEach(a => { %>
             <li>
               <a href="/<%= a.uname %>/album/<%= a.id %>" title="<%= a.title %>">
-                <img src="<%= a.cover || (CDN + '/icon/user_cover.gif') %>" alt="<%= a.title %>">
+                <img src="<%= a.cover || '/img/wretch2012/blog/user_cover.gif' %>" alt="<%= a.title %>">
               </a>
               <a class="t" href="/<%= a.uname %>/album/<%= a.id %>"><%= a.title %></a>
               <span class="n"><%= a.views %> 人次</span>

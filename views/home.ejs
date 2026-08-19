@@ -55,7 +55,7 @@
   <ul class="w2-grid">
     <% albums.forEach(a => { %>
     <li>
-      <a href="/<%= u.name %>/album/<%= a.id %>"><% if (a.cover) { %><img src="<%= a.cover %>" width="120" height="120" alt="<%= a.title %>"><% } else { %><img src="<%= CDN %>/icon/user_cover.gif" width="85" height="85" alt="<%= a.title %>"><% } %></a>
+      <a href="/<%= u.name %>/album/<%= a.id %>"><% if (a.cover) { %><img src="<%= a.cover %>" width="120" height="120" alt="<%= a.title %>"><% } else { %><img src="/img/wretch2012/blog/user_cover.gif" width="85" height="85" alt="<%= a.title %>"><% } %></a>
       <span class="w2-cap">
         <% if (a.pass) { %><img src="/img/wretch2012/gb/lock.gif" width="21" height="16" alt="上鎖"><% } %><a href="/<%= u.name %>/album/<%= a.id %>"><%= a.title %></a><br>
         <span class="w2-sub"><%= a.n %> 張<% if (isNew(a.created)) { %> NEW<% } %></span>

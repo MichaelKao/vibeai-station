@@ -8,8 +8,8 @@ import { hash, salt, check, requireLogin, requireOwner } from './auth.js';
 import { save, remove, hasR2, diskFree } from './storage.js';
 import { UPLOAD_DIR } from './paths.js';
 import { render, EMOTES, safeCss } from './format.js';
-import { SITE_NAME, SITE_DESC, SITE_LOGO, CDN, CDN_VARS, THEME_FOR } from './config.js';
-import { ALBUM_TOPICS, BLOG_TOPICS, PLACES, MOODS, WEATHERS, ZODIACS, BLOODS, SEXES, CITIES, THEMES, isAlbumTopic, isBlogTopic, isPlace, isTheme } from './taxonomy.js';
+import { SITE_NAME, SITE_DESC, SITE_LOGO, CDN } from './config.js';
+import { ALBUM_TOPICS, BLOG_TOPICS, PLACES, MOODS, WEATHERS, ZODIACS, BLOODS, SEXES, CITIES, isAlbumTopic, isBlogTopic, isPlace } from './taxonomy.js';
 import { SKINS, isSkin, skinCss } from './skins.js';
 
 const app = express();
@@ -75,7 +75,7 @@ app.use(async (req,res,next)=>{
   res.locals.safeCss = safeCss; // 使用者自訂 CSS 的過濾（見 format.js）
   // 站台識別與無名素材位置（views 全域可用，見 WRETCH_DOM.md）
   res.locals.SITE_NAME=SITE_NAME; res.locals.SITE_DESC=SITE_DESC; res.locals.SITE_LOGO=SITE_LOGO;
-  res.locals.CDN=CDN; res.locals.CDN_VARS=CDN_VARS; res.locals.THEME_FOR=THEME_FOR;
+  res.locals.CDN=CDN;
   next();
 });
 const flash=(req,m)=>{req.session.flash=m};

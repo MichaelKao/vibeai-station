@@ -53,7 +53,7 @@ const srv = spawn(process.execPath, ['src/server.js'], {
 
 // 等它真的起來再開始，不要用固定秒數賭
 const base = `http://localhost:${PORT}`;
-for (let i = 0; i < 40; i++) {
+for (let i = 0; i < 80; i++) {
   try { if ((await fetch(base + '/')).ok) break; } catch { }
   await sleep(500);
 }
@@ -64,10 +64,17 @@ for (const [name, file] of [['回歸測試', 'test_all.mjs'], ['SQL 方言', 'te
     env: { ...process.env, BASE: base, DATA_DIR: DIR }, encoding: 'utf8',
   });
   const out = (r.stdout || '') + (r.stderr || '');
-  const line = out.split('\n').filter(l => l.includes('passed')).pop() || '(沒有結果)';
+  const line = out.split('\n').filter(l => l.includes('passed')).pop();
   const fails = out.split('\n').filter(l => l.startsWith('! FAIL'));
-  console.log(`\n${name}：${line.trim()}`);
+  console.log(`\n${name}：${line ? line.trim() : '(沒有結果——測試根本沒跑完)'}`);
   for (const f of fails.slice(0, 20)) console.log('  ' + f.trim());
+  // ⚠「沒有結果」一定要當成失敗。本來寫成 `|| '(沒有結果)'`，只是印一行字、
+  // bad 沒有加，於是測試整支崩掉時這裡照樣印「全部通過」——
+  // 綠燈但其實沒跑，比紅燈還危險。實際發生過一次（server 還沒起來就開跑）。
+  if (!line) {
+    bad += 1;
+    console.log('  ' + out.trim().split('\n').slice(-8).join('\n  '));
+  }
   if (fails.length) bad += fails.length;
 }
 

@@ -54,7 +54,7 @@
               <a href="/<%= a.uname %>/album/<%= a.id %>" title="<%= a.title %>">
                 <%# 相簿封面有時候存的是原圖（src/server.js 的 /photo/:pid/cover），
                     比例不一定是正方，所以用 CSS 裁切而不是硬拉成 108×108。 %>
-                <img src="<%= a.cover || (CDN + '/icon/user_cover.gif') %>" alt="<%= a.title %>">
+                <img src="<%= a.cover || '/img/wretch2012/blog/user_cover.gif' %>" alt="<%= a.title %>">
               </a>
               <a class="t" href="/<%= a.uname %>/album/<%= a.id %>"><%= a.title %></a>
               <%# 一格只有 108px 寬。原本寫「第 N 名・1234 人次」，實測會折成兩行，
