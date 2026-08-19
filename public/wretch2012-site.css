@@ -234,3 +234,14 @@ html body #bg-wrapper #wfp-footer #wfp-lang { top: 24px; }   /* 跟著上移，�
 .w2-hala .w2-hala-body { font-size: 13px; line-height: 1.9; word-break: break-word; }
 .w2-halareply          { padding: 10px 0 4px; }
 .w2-halareply textarea { width: 100%; box-sizing: border-box; }
+
+/* 無名愛正妹（views/wretchgirl.ejs）。原站版面沒有存檔，照它的語意
+   （人物相簿的人氣榜）用站台既有的元件語言排。 */
+.w2-girlgrid      { margin: 0; padding: 8px 0 0; list-style: none; overflow: hidden; }
+.w2-girlgrid li   { float: left; width: 145px; margin: 0 10px 14px 0; font-size: 12px; }
+.w2-girlgrid img  { width: 145px; height: 110px; object-fit: cover; border: 1px solid #ddd; }
+.w2-girlmeta      { line-height: 1.6; padding-top: 3px; }
+.w2-rank          { display: inline-block; min-width: 18px; padding: 0 3px; margin-right: 3px;
+                    background: #7ab317; color: #fff; text-align: center; font-weight: bold; }
+.w2-voteform      { display: inline; }
+.w2-on            { font-weight: bold; color: #c8508c; }

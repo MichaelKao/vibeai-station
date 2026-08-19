@@ -1,0 +1,101 @@
+<%
+  /* 無名愛正妹 /svcs/wretch_girl
+     ─────────────────────────────────────────────────────────────
+     原站網址在 WRETCH_SPEC.md §6 的表裡。它是什麼，首頁的存檔講得很清楚——
+     index_20120610082113.html 裡有一段 featuredJSON.featured_beauty：
+
+       title:      "無名優質正妹"
+       more_title: "更多無名完美女孩在這！"
+       more_url:   /album/?func=hot&hid=0&class_id=9
+       content:    { 0: { title, pic_link, user_link, albumbook_url, link }, … }
+
+     也就是說它**不是獨立的相簿系統，是「人物相簿的人氣榜」**：
+     首頁那個模組是精選，「更多」就導到相簿總站的熱門模式篩人物分類。
+     這一頁照那個語意做。版面本身沒有存檔，用站台既有的元件語言組（§3-A）。
+
+     刻意偏離：原站只收「正妹」，本站男女兩個分類都收——只收單一性別
+     沒有功能上的必要，照抄反而是把當年的框架也一起搬過來。
+
+     資料來自 src/server.js 的 app.get('/svcs/wretch_girl')：
+       page / pages / total / topic / topics / photos（每筆帶 votes）。 */
+  const qs = (p, t) => '/svcs/wretch_girl?p=' + p + ((t ?? topic) ? '&topic=' + encodeURIComponent(t ?? topic) : '');
+%>
+<%- include('partials/head2012', { title: '愛正妹 - ' + SITE_NAME }) %>
+
+  <div class="bd big-bd clearfix">
+    <div class="main">
+
+      <div class="mod w2-auth">
+        <div class="hd"><h2>無名優質正妹</h2></div>
+        <div class="bd">
+
+          <p class="w2-blog-count">
+            依人氣排序，共 <b><%= total %></b> 張
+            　<a href="/svcs/wretch_girl"<%= topic ? '' : ' class="w2-on"' %>>全部</a>
+            <% topics.forEach(t => { %>　<a href="<%= qs(1, t) %>"<%= topic === t ? ' class="w2-on"' : '' %>><%= t %></a><% }) %>
+          </p>
+
+          <% if (!photos.length) { %>
+          <p>這個分類還沒有照片。到<a href="/albums">相簿總站</a>逛逛。</p>
+          <% } %>
+
+          <ul class="w2-girlgrid">
+            <% photos.forEach((p, i) => { %>
+            <li>
+              <a href="/<%= p.uname %>/photo/<%= p.id %>" title="<%= p.caption || p.atitle %>">
+                <img src="<%= p.thumb || p.url %>" alt="<%= p.caption || p.atitle %>">
+              </a>
+              <div class="w2-girlmeta">
+                <span class="w2-rank"><%= (page - 1) * 24 + i + 1 %></span>
+                <a class="uname" href="/<%= p.uname %>"><%= p.nick %></a>
+                <br><a href="/<%= p.uname %>/album/<%= p.aid %>"><%= p.atitle %></a>
+                <br><span class="w2-sub">人氣 <%= p.views %>　推 <%= p.votes %></span>
+                <% if (me) { %>
+                <form method="post" action="/svcs/wretch_girl/<%= p.id %>/vote" class="w2-voteform">
+                  <input type="submit" class="w2-btn" value="推">
+                </form>
+                <% } %>
+              </div>
+            </li>
+            <% }) %>
+          </ul>
+
+          <% if (pages > 1) { %>
+          <div class="w2-pager">
+            <% if (page > 1) { %><a href="<%= qs(page-1) %>">上一頁</a><% } %>
+            <% for (let i=1; i<=pages; i++) { %><% if (i === page) { %><b><%= i %></b><% } else { %><a href="<%= qs(i) %>"><%= i %></a><% } %><% } %>
+            <% if (page < pages) { %><a href="<%= qs(page+1) %>">下一頁</a><% } %>
+          </div>
+          <% } %>
+
+        </div>
+      </div>
+
+    </div>
+    <div class="side">
+      <div class="mod w2-auth-side">
+        <div class="hd"><h2>這是什麼</h2></div>
+        <div class="bd">
+          <p class="w2-msg">把站上「女生個人」「男生個人」分類的照片依人氣排出來。
+            登入之後可以推一票，一張照片一個人只能推一次。</p>
+        </div>
+      </div>
+      <div class="mod w2-auth-side">
+        <div class="hd"><h2>逛逛別的</h2></div>
+        <div class="bd">
+          <ul>
+            <li><a href="/albums">相簿總站</a></li>
+            <li><a href="/rank">人氣排行榜</a></li>
+            <li><a href="/hala">哈啦</a></li>
+            <li><a href="/join">揪團</a></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /#wrapper -->
+
+<div id="lower-wrapper" class="clearfix">
+  <div class="bd clearfix"></div>
+<%- include('partials/foot2012') %>

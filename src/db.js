@@ -60,7 +60,7 @@ const needsOnConflict = sql => /INSERT\s+OR\s+IGNORE/i.test(sql);
 // 但對這兩張表補下去就會炸「column "id" does not exist」——
 // 加好友、收藏文章這兩個功能在 Postgres 上會直接 500。
 // （src/migrate-pg.js 的 SERIAL_TABLES 早就把這兩張表排除掉了，是同一個原因。）
-const TABLES_WITHOUT_ID = new Set(['friends', 'favs', 'join_members']);
+const TABLES_WITHOUT_ID = new Set(['friends', 'favs', 'join_members', 'photo_votes']);
 
 // 這句 INSERT 該不該補 RETURNING id。export 是為了讓 test_pg.mjs 直接驗。
 export function needsReturningId(sql) {
@@ -202,6 +202,17 @@ export function schemaSql(forDriver = driver) {
       cat TEXT DEFAULT '', official INTEGER DEFAULT 0, views INTEGER DEFAULT 0, ${created}`),
     T('hala_posts', `id ${PK}, topic_id INTEGER REFERENCES hala_topics(id) ON DELETE CASCADE,
       ${fkUser}, author TEXT, body TEXT, ${created}`),
+    // 送禮物：原站在 bill.wretch.cc/gift.php?to=<帳號>（付費網域）。
+    // 我們沒有金流也不打算接，但「送一份禮物給某個人」這個功能本身不需要收錢，
+    // 所以照做，禮物改成站上自己的圖示，一律免費。
+    T('gifts', `id ${PK}, to_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+      from_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+      kind TEXT DEFAULT '', msg TEXT DEFAULT '', ${created}`),
+    // 愛正妹的投票：原站是 /svcs/wretch_girl/，首頁的「無名優質正妹」模組
+    // （featuredJSON.featured_beauty）就是它的精選，more_url 指向
+    // /album/?func=hot&hid=0&class_id=9，也就是「相簿總站的熱門榜、篩人物分類」。
+    T('photo_votes', `photo_id INTEGER REFERENCES photos(id) ON DELETE CASCADE,
+      ${fkUser}, ${created}, PRIMARY KEY(photo_id,user_id)`),
     // 影音（原站 www.wretch.cc/video/<帳號>，導覽第七顆 #linkVideo）。
     // 我們沒有轉檔與串流，做「最小可用」：存 YouTube 影片 id，用 <iframe> 內嵌。
     // vid 存純 id 而不是整條網址——內嵌網址要自己組，把 id 單獨存起來才不會
@@ -238,6 +249,8 @@ export function schemaSql(forDriver = driver) {
     CREATE INDEX IF NOT EXISTS idx_jmembers_join ON join_members(join_id);
     CREATE INDEX IF NOT EXISTS idx_hala_topics   ON hala_topics(id DESC);
     CREATE INDEX IF NOT EXISTS idx_hala_posts    ON hala_posts(topic_id, id);
+    CREATE INDEX IF NOT EXISTS idx_gifts_to      ON gifts(to_id, id DESC);
+    CREATE INDEX IF NOT EXISTS idx_pvotes_photo  ON photo_votes(photo_id);
     CREATE INDEX IF NOT EXISTS idx_videos_user   ON videos(user_id, id DESC);
     CREATE INDEX IF NOT EXISTS idx_digu_user     ON digu(user_id, id DESC);
   `);

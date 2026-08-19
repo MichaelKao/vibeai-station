@@ -72,6 +72,12 @@ const AUDIT = `(() => {
     const t = el.textContent.trim();
     if (!t) continue;
     if ([...el.children].some(c => getComputedStyle(c).display.startsWith('block'))) continue;
+    // 圖片替換文字（text-indent 推很遠 / font-size:0 / 透明字）本來就是要把字藏起來，
+    // 那是 2000 年代標準手法，不是被切掉。導覽列的「手機(NEW)」徽章就是這樣做的
+    // （.new span{text-indent:999em;overflow:hidden}＋sprite，而且那條 CSS 是從
+    // 原站原始檔產生的），每一頁都會被誤報一次。
+    const ti = parseFloat(cs.textIndent);
+    if (Math.abs(ti) > 99 || parseFloat(cs.fontSize) === 0) continue;
     if (el.scrollHeight > el.clientHeight + 12 || el.scrollWidth > el.clientWidth + 12)
       out.clipped.push({ sel: sel(el), t: t.slice(0, 40) });
   }

@@ -29,7 +29,7 @@ if (reset) {
   }
   for (const t of ['photo_comments', 'photos', 'albums', 'comments', 'trackbacks', 'favs',
     'posts', 'guestbook', 'visitors', 'friends', 'acts', 'sysmsg', 'reports', 'notices',
-    'videos', 'digu', 'join_members', 'joins', 'hala_posts', 'hala_topics', 'users'])
+    'videos', 'digu', 'join_members', 'joins', 'hala_posts', 'hala_topics', 'gifts', 'photo_votes', 'users'])
     await run(`DELETE FROM ${t}`);
   console.log(`已清空（順便刪掉 ${gone} 個舊檔案）`);
 }
@@ -869,6 +869,49 @@ for (const [ui, [name]] of [...USERS, ...EXTRA_USERS].entries()) {
       spread(USERTOPICS.length - i, USERTOPICS.length, 120), i * 13 + 3);
 
   console.log(`哈啦 ${nT} 個主題 / ${nP} 則回覆`);
+}
+
+// ---- 禮物 ----
+// 原站的送禮物在付費網域上，我們照做但一律免費（見 src/server.js 的 GIFTS）。
+// 沒有種子的話每個人的名片都寫「還沒有收到禮物」。
+{
+  if ((await one('SELECT count(*) c FROM gifts')).c) console.log('禮物已經有了，跳過');
+  else {
+    const KINDS = ['flower', 'cake', 'coffee', 'heart', 'star', 'gift'];
+    const WORDS = ['生日快樂！', '謝謝你的分享', '照片拍得真好', '', '加油！', '好久不見'];
+    const ALLU = [...USERS, ...EXTRA_USERS];
+    let n = 0;
+    for (const [ui, [name]] of ALLU.entries()) {
+      for (let k = 0; k < 1 + (ui % 3); k++) {
+        const from = ALLU[(ui * 7 + k * 5 + 1) % ALLU.length][0];
+        if (from === name) continue;
+        await run('INSERT INTO gifts(to_id,from_id,kind,msg,created) VALUES(?,?,?,?,?)',
+          uid[name], uid[from], pick(KINDS, ui + k), pick(WORDS, ui * 2 + k),
+          stamp(spread(3 - k, 3, 200), ui * 3 + k));
+        n++;
+      }
+    }
+    console.log(`禮物 ${n} 份`);
+  }
+}
+
+// ---- 愛正妹的推票 ----
+// 沒有票的話那一頁全部是 0，排序看不出差別。
+{
+  if ((await one('SELECT count(*) c FROM photo_votes')).c) console.log('推票已經有了，跳過');
+  else {
+    const ALLU = [...USERS, ...EXTRA_USERS];
+    const rows = await all(`SELECT p.id FROM photos p JOIN albums a ON a.id=p.album_id
+      WHERE a.pass='' AND a.friends_only=0 AND a.topic IN ('女生個人','男生個人') ORDER BY p.id`);
+    let n = 0;
+    for (const [i, r] of rows.entries())
+      for (let k = 0; k < (i % 7); k++) {
+        await run('INSERT OR IGNORE INTO photo_votes(photo_id,user_id) VALUES(?,?)',
+          r.id, uid[ALLU[(i * 5 + k * 3) % ALLU.length][0]]);
+        n++;
+      }
+    console.log(`推票 ${n} 張`);
+  }
 }
 
 // ---- 收藏 ----

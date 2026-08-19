@@ -169,6 +169,37 @@ ok('揪團總站', (await get('/join')).status===200);
   ok('額滿擋在後端', (await post('/join/'+jid+'/in',{},C)).status===409);
 }
 
+console.log('\n=== 哈啦 / 愛正妹 / 送禮物 ===');
+// 哈啦：原站網址 /hala/viewtopic.php?t=<id> 也要通，站上其他頁面連的就是那個形狀
+ok('哈啦總站', (await get('/hala')).status===200);
+{
+  await post('/hala',{title:'測試主題',body:'內容內容',cat:'測試'},A);
+  const list = await text('/hala');
+  ok('開主題', list.includes('測試主題'));
+  const tid = Math.max(...[...list.matchAll(/\/hala\/(\d+)/g)].map(m=>+m[1]));
+  ok('原站網址 viewtopic.php 也通', (await get('/hala/viewtopic.php?t='+tid)).status===200);
+  await post('/hala/'+tid+'/reply',{body:'我來回覆'},Bc);
+  ok('回覆主題', (await text('/hala/'+tid)).includes('我來回覆'));
+  ok('未登入不能開主題', (await post('/hala',{title:'不該出現',body:'x'},null)).status===302 &&
+     !(await text('/hala')).includes('不該出現'));
+}
+
+// 愛正妹：人物分類的人氣榜。原站是 /svcs/wretch_girl/，首頁的 featured_beauty
+// 模組 more_url 指向相簿總站的熱門模式篩人物分類，語意一樣。
+ok('愛正妹', (await get('/svcs/wretch_girl')).status===200);
+ok('愛正妹分類篩選', (await get('/svcs/wretch_girl?topic='+encodeURIComponent('女生個人'))).status===200);
+ok('未登入不能推票', (await post('/svcs/wretch_girl/1/vote',{},null)).status===302);
+
+// 送禮物：原站在付費網域，我們不接金流但功能照做
+{
+  ok('送禮物', (await post('/bravo/gift',{kind:'flower',msg:'測試禮物'},A)).status===302);
+  const card = await text('/bravo/card');
+  ok('禮物出現在對方名片上', card.includes('測試禮物') && card.includes('阿發'));
+  ok('對方收到系統訊息', (await text('/bravo/guestbook?tab=sys',Bc)).includes('有人送你一份禮物'));
+  ok('不能送給自己', (await post('/alpha/gift',{kind:'flower'},A)).status===400);
+  ok('未登入不能送', (await post('/bravo/gift',{kind:'flower'},null)).status===302);
+}
+
 console.log('\n=== 名片 / 好友 / 動態 ===');
 await post('/alpha/card',{realname:'王小明',sex:'男生',zodiac:'雙子座',blood:'O',city:'台北',hobby:'攝影'},A);
 const card=await text('/alpha/card');

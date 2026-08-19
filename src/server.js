@@ -365,6 +365,42 @@ app.post('/join/:id/in',requireLogin,async (req,res)=>{
   res.redirect('/join/'+j.id);
 });
 
+// ===== 無名愛正妹 /svcs/wretch_girl =====
+// 原站網址在 WRETCH_SPEC.md §6 的表裡；首頁的「無名優質正妹」模組
+// （index_20120610082113.html 的 featuredJSON.featured_beauty）就是它的精選，
+// 那組 JSON 的 more_url 指向 /album/?func=hot&hid=0&class_id=9——
+// 也就是「相簿總站的熱門榜、篩人物分類」。所以它不是獨立的相簿系統，
+// 是**人物相簿的人氣榜**。這一頁照那個語意做：把人物分類的照片依人氣排，
+// 登入之後可以推一票。版面沒有存檔，用站台既有的元件語言組（§3-A）。
+//
+// 原站這裡只有「正妹」，本站男女兩個分類都收——原站那個只收女生的設計
+// 沒有必要照抄，功能是一樣的。
+const GIRL_TOPICS = ['女生個人', '男生個人'];
+app.get('/svcs/wretch_girl',async (req,res)=>{
+  const page=Math.max(1,+req.query.p||1), per=24;
+  const topic=GIRL_TOPICS.includes(req.query.topic)?req.query.topic:null;
+  const where=`a.pass='' AND a.friends_only=0 AND a.topic IN (${GIRL_TOPICS.map(()=>'?').join(',')})`
+    + (topic?' AND a.topic=?':'');
+  const args=[...GIRL_TOPICS, ...(topic?[topic]:[])];
+  const total=(await one(`SELECT count(*) c FROM photos p JOIN albums a ON a.id=p.album_id WHERE ${where}`,...args)).c;
+  res.render('wretchgirl',{ page, pages:Math.ceil(total/per), total, topic, topics:GIRL_TOPICS,
+    photos:await all(`SELECT p.id,p.thumb,p.url,p.caption,p.views,a.title atitle,a.id aid,
+        u.name uname,u.nick,a.topic,
+        (SELECT count(*) FROM photo_votes WHERE photo_id=p.id) votes
+      FROM photos p JOIN albums a ON a.id=p.album_id JOIN users u ON u.id=a.user_id
+      WHERE ${where} ORDER BY votes DESC, p.views DESC, p.id DESC LIMIT ? OFFSET ?`,
+      ...args,per,(page-1)*per) });
+});
+// 推一票。原站沒有這個（它只是排行榜），但「排行榜」要有人氣來源才活得起來，
+// 用推票比單純看瀏覽數更像當年那個氛圍。一人一張照片只能推一次。
+app.post('/svcs/wretch_girl/:pid/vote',requireLogin,async (req,res)=>{
+  const p=await one(`SELECT p.id FROM photos p JOIN albums a ON a.id=p.album_id
+    WHERE p.id=? AND a.pass='' AND a.friends_only=0`,req.params.pid);
+  if(p) await run('INSERT OR IGNORE INTO photo_votes(photo_id,user_id) VALUES(?,?)',p.id,res.locals.me.id);
+  res.redirect(req.get('referer')&&req.get('referer').includes('/svcs/wretch_girl')
+    ? '/svcs/wretch_girl' : '/svcs/wretch_girl');
+});
+
 // ===== 哈啦論壇 =====
 // 原站是 www.wretch.cc/hala/viewtopic.php?t=65131 這種 phpBB 式的討論區。
 // 存檔裡它一律是被當成**官方說明文**連進去的：相簿頁的「RSS HOWTO」、
@@ -426,7 +462,7 @@ app.post('/hala/:id/reply',requireLogin,async (req,res)=>{
 
 // ===== 個人小站 =====
 const RESERVED=new Set(['login','register','logout','rank','search','help','admin','uploads','img','style.css','favicon.ico',
-  'join','hala',
+  'join','hala','svcs',
   ...Object.keys(SECTION)]);
 const site=express.Router({mergeParams:true});
 autoAsync(site);   // 個人小站的路由同樣需要 async 錯誤轉交（理由見檔頭 wrapAsync）
@@ -531,11 +567,41 @@ site.post('/friends/:fid/group',requireLogin,requireOwner,async (req,res)=>{
   await run('UPDATE friends SET grp=? WHERE user_id=? AND friend_id=?',(req.body.grp||'好友').trim().slice(0,10)||'好友',U(res).id,req.params.fid);
   res.redirect(`/${U(res).name}/friends`); });
 site.get('/card',async (req,res)=>res.render('card',{nav:'card',
+  // 收到的禮物顯示在名片頁（原站的送禮物就是掛在個人資料上）
+  gifts:await all(`SELECT g.kind,g.msg,g.created,u2.name fname,u2.nick fnick
+    FROM gifts g JOIN users u2 ON u2.id=g.from_id WHERE g.to_id=? ORDER BY g.id DESC LIMIT 12`,U(res).id),
+  giftKinds:GIFTS,
   zodiacs:ZODIACS,bloods:BLOODS,sexes:SEXES,cities:CITIES,
   visitors:await all('SELECT * FROM visitors WHERE user_id=? ORDER BY id DESC LIMIT 8',U(res).id),
   // #friendlist 是分組下拉（optgroup label＝好友分類），所以一定要把 grp 帶出來；
   // 原站那顆 select 是「全部好友」不是前 12 位，這裡只留一個防爆上限。
   friends:await all("SELECT u.name,u.nick,u.avatar,COALESCE(NULLIF(f.grp,''),'好友') grp FROM friends f JOIN users u ON u.id=f.friend_id WHERE f.user_id=? ORDER BY grp, u.name LIMIT 300",U(res).id)}));
+// ===== 送禮物 =====
+// 原站在 bill.wretch.cc/gift.php?to=<帳號>（WRETCH_SPEC.md §6），那是**付費網域**。
+// 我們沒有金流也不打算接，但「送一份禮物給某個人」這件事本身不需要收錢——
+// 少做的理由只有金流，功能沒有理由跟著少。所以照做，禮物是站上自己的圖示，一律免費。
+//
+// 禮物會出現在對方的名片頁，並送一則系統訊息通知他。
+const GIFTS = [
+  ['flower', '花'], ['cake', '蛋糕'], ['coffee', '咖啡'],
+  ['heart', '愛心'], ['star', '星星'], ['gift', '禮物盒'],
+];
+const isGift = k => GIFTS.some(g => g[0] === k);
+site.post('/gift',requireLogin,async (req,res)=>{
+  const u=U(res), me=res.locals.me;
+  if(me.id===u.id)
+    return res.status(400).render('msg',{title:'送不出去',msg:'不能送禮物給自己啦。',back:'/'+u.name+'/card'});
+  const kind=isGift(req.body.kind)?req.body.kind:'flower';
+  const msg=(req.body.msg||'').trim().slice(0,60);
+  await run('INSERT INTO gifts(to_id,from_id,kind,msg) VALUES(?,?,?,?)',u.id,me.id,kind,msg);
+  // 對方要知道有人送他東西，不然禮物躺在名片頁沒人發現
+  const label=(GIFTS.find(g=>g[0]===kind)||GIFTS[0])[1];
+  await run('INSERT INTO sysmsg(user_id,title,body) VALUES(?,?,?)',
+    u.id,'有人送你一份禮物',`${me.nick} 送了你一個${label}${msg?'，並說：'+msg:'。'}`);
+  flash(req,`送出了一個${label}`);
+  res.redirect('/'+u.name+'/card');
+});
+
 site.post('/card',requireLogin,requireOwner,async (req,res)=>{
   const b=req.body, cut=(v,n)=>String(v||'').trim().slice(0,n);
   await run('UPDATE users SET realname=?,sex=?,birthday=?,zodiac=?,blood=?,city=?,job=?,school=?,hobby=?,motto=?,msn=?,homepage=? WHERE id=?',

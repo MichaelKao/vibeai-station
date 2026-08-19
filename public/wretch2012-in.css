@@ -222,3 +222,8 @@ html body div#bigcontainer div#container div#main div#sidebar ul li#ad_lrec div 
 /* ===== 名片頁專屬（補結構用，由名片 agent 維護） ===== */
 /* ===== 好友頁專屬（補結構用，由好友 agent 維護） ===== */
 /* ===== 個人站共用（補結構用） ===== */
+
+/* 送禮物（views/card.ejs）。原站在付費網域上，我們照做但不收錢。 */
+.w2-gifts        { margin: 0; padding: 0; list-style: none; }
+.w2-gifts li     { padding: 2px 0; line-height: 1.7; }
+.w2-giftmsg      { color: #666; }

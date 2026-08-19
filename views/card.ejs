@@ -128,6 +128,39 @@
 </form>
 <% } %>
 
+<%# 送禮物。原站在 bill.wretch.cc/gift.php?to=<帳號>（付費網域），
+    我們沒有金流也不接，但這個功能本身不需要收錢，所以照做、一律免費。
+    收到的禮物就掛在名片上，跟原站一樣。 %>
+<table class="w2-card" width="600" border="0" cellpadding="0" cellspacing="1">
+  <tr><td class="sidetitle" align="center" colspan="2">禮物</td></tr>
+  <tr><td class="sidetitle" align="right" valign="top">收到的：</td>
+      <td class="side" width="450">
+        <% if (!gifts.length) { %>還沒有收到禮物 &nbsp;
+        <% } else { %>
+        <ul class="w2-gifts">
+          <% gifts.forEach(g => { %>
+          <li><img src="/img/wretch2012/gb/Smileys/<%= g.kind === 'heart' ? 'lovestruck' : g.kind === 'cake' ? 'happy' : g.kind === 'star' ? 'bigdrin' : 'biggrin' %>.gif" width="18" height="18" alt="">
+            <a href="/<%= g.fname %>"><%= g.fnick %></a>
+            <% if (g.msg) { %><span class="w2-giftmsg">「<%= g.msg %>」</span><% } %>
+            <span class="w2-sub"><%= g.created.slice(5,10) %></span></li>
+          <% }) %>
+        </ul>
+        <% } %>
+      </td></tr>
+  <% if (me && !isOwner) { %>
+  <tr><td class="sidetitle" align="right">送一個：</td>
+      <td class="side" width="450">
+        <form method="post" action="/<%= u.name %>/gift">
+          <select name="kind">
+            <% giftKinds.forEach(k => { %><option value="<%= k[0] %>"><%= k[1] %></option><% }) %>
+          </select>
+          <input type="text" name="msg" size="24" maxlength="60" placeholder="說句話（可留空）">
+          <input type="submit" value="送出">
+        </form>
+      </td></tr>
+  <% } %>
+</table>
+
 <table width="600" border="0" cellpadding="0" cellspacing="0">
   <tr><td>
     <div class="powered">POWERED BY <a href="/">無名小站</a></div>
