@@ -60,7 +60,7 @@ const needsOnConflict = sql => /INSERT\s+OR\s+IGNORE/i.test(sql);
 // 但對這兩張表補下去就會炸「column "id" does not exist」——
 // 加好友、收藏文章這兩個功能在 Postgres 上會直接 500。
 // （src/migrate-pg.js 的 SERIAL_TABLES 早就把這兩張表排除掉了，是同一個原因。）
-const TABLES_WITHOUT_ID = new Set(['friends', 'favs']);
+const TABLES_WITHOUT_ID = new Set(['friends', 'favs', 'join_members']);
 
 // 這句 INSERT 該不該補 RETURNING id。export 是為了讓 test_pg.mjs 直接驗。
 export function needsReturningId(sql) {
@@ -189,6 +189,12 @@ export function schemaSql(forDriver = driver) {
     T('reports', `id ${PK}, kind TEXT, target_id INTEGER, url TEXT, reason TEXT,
       reporter TEXT, done INTEGER DEFAULT 0, ${created}`),
     T('notices', `id ${PK}, body TEXT, ${created}`),
+    // 揪團：原站導覽列有這個服務，但整個服務 archive.org 一份存檔都沒有，
+    // 所以是本站自製的最小可用版本（見 views/joins.ejs 的說明）。
+    T('joins', `id ${PK}, ${fkUser}, title TEXT, descr TEXT DEFAULT '',
+      place TEXT DEFAULT '', when_text TEXT DEFAULT '', quota INTEGER DEFAULT 0, ${created}`),
+    T('join_members', `join_id INTEGER REFERENCES joins(id) ON DELETE CASCADE,
+      ${fkUser}, ${created}, PRIMARY KEY(join_id,user_id)`),
     // 影音（原站 www.wretch.cc/video/<帳號>，導覽第七顆 #linkVideo）。
     // 我們沒有轉檔與串流，做「最小可用」：存 YouTube 影片 id，用 <iframe> 內嵌。
     // vid 存純 id 而不是整條網址——內嵌網址要自己組，把 id 單獨存起來才不會
@@ -221,6 +227,8 @@ export function schemaSql(forDriver = driver) {
     CREATE INDEX IF NOT EXISTS idx_favs_user     ON favs(user_id, created DESC);
     CREATE INDEX IF NOT EXISTS idx_acts_user     ON acts(user_id, id DESC);
     CREATE INDEX IF NOT EXISTS idx_sysmsg_user   ON sysmsg(user_id, id DESC);
+    CREATE INDEX IF NOT EXISTS idx_joins_user    ON joins(user_id, id DESC);
+    CREATE INDEX IF NOT EXISTS idx_jmembers_join ON join_members(join_id);
     CREATE INDEX IF NOT EXISTS idx_videos_user   ON videos(user_id, id DESC);
     CREATE INDEX IF NOT EXISTS idx_digu_user     ON digu(user_id, id DESC);
   `);

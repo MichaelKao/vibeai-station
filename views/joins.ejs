@@ -1,0 +1,108 @@
+<%
+  /* 揪團總站 /join
+     ─────────────────────────────────────────────────────────────
+     原站導覽列的「揪團」指向 http://www.wretch.cc/join/。
+     **那一頁與整個揪團服務 archive.org 都沒有存檔**，連規格書也沒有，
+     所以這是本站自製的最小可用版本，照 WRETCH_2012.md §3-A 標明刻意偏離：
+     用站台既有的元件語言組，不自創新的視覺。
+
+     做成什麼：「發起一個活動、其他人按參加」。欄位就四個
+     （標題／說明／地點／時間），加一個人數上限。
+     報名截止、留言、私密團這些先不做——沒有原始規格可以照，
+     多做等於自己發明無名沒有的東西。
+
+     資料來自 src/server.js 的 app.get('/join')：
+       page / pages / total / joins（每筆多帶 n＝目前參加人數）。 */
+  const qs = p => '/join?p=' + p;
+%>
+<%- include('partials/head2012', { title: '揪團 - 無名小站' }) %>
+
+  <div class="bd big-bd clearfix">
+    <div class="main">
+
+      <div class="mod w2-auth">
+        <div class="hd"><h2>最新揪團</h2></div>
+        <div class="bd">
+
+          <p class="w2-blog-count">共 <b><%= total %></b> 個團</p>
+
+          <% if (!joins.length) { %>
+          <p>還沒有人揪團。<a href="/register">開一個帳號</a>，第一團就是你的。</p>
+          <% } %>
+
+          <ol class="w2-bloglist w2-joinlist">
+            <% joins.forEach(j => { %>
+            <li>
+              <a class="thumbnail" href="/join/<%= j.id %>"><img src="<%= j.avatar %>" width="85" height="85" alt="<%= j.nick %>"></a>
+              <div class="content">
+                <p class="meta">
+                  <a class="uname" href="/<%= j.uname %>"><%= j.nick %></a>
+                  <span class="topic"><%= j.place %></span>
+                </p>
+                <h3><a class="skin-main-link" href="/join/<%= j.id %>"><%= j.title %></a></h3>
+                <p class="description"><%= j.descr %></p>
+                <p class="stat">
+                  <span>時間: <%= j.when_text %></span>
+                  <span>已參加: <%= j.n %><% if (j.quota) { %> / <%= j.quota %><% } %> 人</span>
+                </p>
+              </div>
+            </li>
+            <% }) %>
+          </ol>
+
+          <% if (pages > 1) { %>
+          <div class="w2-pager">
+            <% if (page > 1) { %><a href="<%= qs(page-1) %>">上一頁</a><% } %>
+            <% for (let i=1; i<=pages; i++) { %><% if (i === page) { %><b><%= i %></b><% } else { %><a href="<%= qs(i) %>"><%= i %></a><% } %><% } %>
+            <% if (page < pages) { %><a href="<%= qs(page+1) %>">下一頁</a><% } %>
+          </div>
+          <% } %>
+
+        </div>
+      </div>
+
+    </div>
+    <div class="side">
+
+      <% if (me) { %>
+      <div class="mod w2-auth-side">
+        <div class="hd"><h2>我要揪團</h2></div>
+        <div class="bd">
+          <form method="post" action="/join" class="w2-joinform">
+            <p><input type="text" name="title" placeholder="要做什麼？" maxlength="40" required></p>
+            <p><input type="text" name="place" placeholder="在哪裡" maxlength="20"></p>
+            <p><input type="text" name="when_text" placeholder="什麼時候" maxlength="20"></p>
+            <p><input type="number" name="quota" placeholder="人數上限（可留空）" min="0" max="999"></p>
+            <p><textarea name="descr" rows="3" maxlength="200" placeholder="說明"></textarea></p>
+            <p><input type="submit" value="發起"></p>
+          </form>
+        </div>
+      </div>
+      <% } else { %>
+      <div class="mod w2-auth-side">
+        <div class="hd"><h2>我要揪團</h2></div>
+        <div class="bd"><p><a href="/login?next=%2Fjoin">登入</a>之後就可以發起活動。</p></div>
+      </div>
+      <% } %>
+
+      <div class="mod w2-auth-side">
+        <div class="hd"><h2>逛逛別的</h2></div>
+        <div class="bd">
+          <ul>
+            <li><a href="/rank">人氣排行榜</a></li>
+            <li><a href="/albums">相簿總站</a></li>
+            <li><a href="/blogs">網誌總站</a></li>
+            <li><a href="/video">影音</a></li>
+            <li><a href="/digu">嘀咕</a></li>
+          </ul>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+</div><!-- /#wrapper -->
+
+<div id="lower-wrapper" class="clearfix">
+  <div class="bd clearfix"></div>
+<%- include('partials/foot2012') %>

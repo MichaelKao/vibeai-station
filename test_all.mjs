@@ -145,6 +145,30 @@ await post('/alpha/guestbook',{body:'BRAVOSAYS'},Bc);
 }
 
 
+console.log('\n=== 站台層級的服務目錄：影音 / 嘀咕 / 揪團 ===');
+// 這三顆在導覽列上，之前全部指到 /help（等於三個死連結）。
+// 原站的網址就是 /video/ /join/ /digu/，這裡沿用單數形。
+ok('影音總站', (await get('/video')).status===200);
+ok('嘀咕總站', (await get('/digu')).status===200);
+ok('揪團總站', (await get('/join')).status===200);
+{
+  // 揪團：發起 → 別人參加 → 取消 → 額滿擋下（額滿一定要擋在後端，
+  // 前端只是不畫那顆鈕，直接送 POST 一樣進得來）
+  const before = await text('/join');
+  await post('/join',{title:'測試揪團',descr:'說明',place:'台北',when_text:'週六',quota:'2'},A);
+  const list = await text('/join');
+  ok('發起揪團', list.includes('測試揪團') && !before.includes('測試揪團'));
+  const jid = Math.max(...[...list.matchAll(/\/join\/(\d+)/g)].map(m=>+m[1]));
+  ok('未登入不能發起', (await post('/join',{title:'不該出現'},null)).status===302 &&
+     !(await text('/join')).includes('不該出現'));
+  ok('別人可以參加', (await post('/join/'+jid+'/in',{},Bc)).status===302);
+  ok('參加之後名單有他', (await text('/join/'+jid)).includes('布拉'));
+  ok('再按一次是取消參加', (await post('/join/'+jid+'/in',{},Bc)).status===302 &&
+     !(await text('/join/'+jid)).includes('布拉'));
+  await post('/join/'+jid+'/in',{},Bc);          // quota=2：發起人 + bravo = 滿
+  ok('額滿擋在後端', (await post('/join/'+jid+'/in',{},C)).status===409);
+}
+
 console.log('\n=== 名片 / 好友 / 動態 ===');
 await post('/alpha/card',{realname:'王小明',sex:'男生',zodiac:'雙子座',blood:'O',city:'台北',hobby:'攝影'},A);
 const card=await text('/alpha/card');

@@ -31,6 +31,9 @@ async function pages() {
     ['首頁', '/'],
     ['相簿總站', '/albums'],
     ['網誌總站', '/blogs'],
+    ['影音總站', '/video'],
+    ['嘀咕總站', '/digu'],
+    ['揪團總站', '/join'],
     ['排行榜', '/rank'],
     ['服務說明', '/help'],
     ['MyPage', `/${DEMO}`],
@@ -83,6 +86,11 @@ async function pages() {
   list.push(['網誌搜尋', `/${DEMO}/blog/search?q=` + encodeURIComponent('的')]);
   list.push(['網誌 RSS', `/${DEMO}/blog/rss`]);
   list.push(['留言板 我要留言', `/${DEMO}/guestbook?tab=new`]);
+  try {
+    const jl = await (await fetch(`${BASE}/join`)).text();
+    const j = [...jl.matchAll(/\/join\/([0-9]+)/g)].map(m => +m[1])[0];
+    if (j) list.push(['單一揪團', `/join/${j}`]);
+  } catch { }
   return list;
 }
 
@@ -123,9 +131,11 @@ for (const [name, url] of await pages()) {
   } catch (e) { bad.push([name, url, e.message]); continue; }
 
   const hit = EMPTY_HINTS.filter(h => html.includes(h));
-  // 數 /uploads/ 出現幾次，不要只數 <img src>：幻燈片是把整本照片放進一段 JSON
-  // 給 JS 用的，只數 <img> 會誤判成「沒有照片」。
-  const real = (html.match(/\/uploads\//g) || []).length;
+  // 數「內容圖」出現幾次，不要只數 <img src>：
+  //   /uploads/     站上自己的照片。幻燈片是把整本放進一段 JSON 給 JS 用的，
+  //                 只數 <img> 會把它誤判成沒有照片
+  //   i.ytimg.com   影音的縮圖直接用 YouTube 的，不會落在 /uploads/
+  const real = (html.match(/\/uploads\/|i\.ytimg\.com/g) || []).length;
   const dflt = (html.match(/\/img\/avatar\.png/g) || []).length;
 
   // 頁面上真正指向站內內容的連結有幾條。用它來分辨兩種「出現空狀態字串」：

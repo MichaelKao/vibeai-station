@@ -286,8 +286,78 @@ for(const [seg,dest] of Object.entries(SECTION)){
   });
 }
 
+// ===== 站台層級的服務目錄：影音 / 嘀咕 / 揪團 =====
+// 原站導覽列的這三顆分別指向 /video/、/digu/、/join/（把 Yahoo 的轉址網址剝掉
+// 就是這三個），但**三個服務首頁 archive.org 都沒有存檔**，所以是自製的，
+// 照 WRETCH_2012.md §3-A 標明刻意偏離。之前這三顆都指到 /help，等於是死連結。
+//
+// 網址沿用原站的單數形（/video 不是 /videos）。`video` 與 `digu` 本來就在
+// SECTION 裡（那是 /video/<帳號> 這種舊網址的轉址），所以已經是保留字；
+// `join` 要另外加進 RESERVED，不然會有人註冊得到這個帳號名把整頁蓋掉。
+app.get('/video',async (req,res)=>{
+  const page=Math.max(1,+req.query.p||1), per=20;
+  const total=(await one('SELECT count(*) c FROM videos')).c;
+  res.render('videos',{ page, pages:Math.ceil(total/per), total,
+    videos:await all(`SELECT v.*,u.name uname,u.nick FROM videos v JOIN users u ON u.id=v.user_id
+      ORDER BY v.id DESC LIMIT ? OFFSET ?`,per,(page-1)*per),
+    hot:await all(`SELECT v.id,v.title,v.views,u.name uname FROM videos v JOIN users u ON u.id=v.user_id
+      ORDER BY v.views DESC LIMIT 10`) });
+});
+
+app.get('/digu',async (req,res)=>{
+  const page=Math.max(1,+req.query.p||1), per=30;
+  const total=(await one('SELECT count(*) c FROM digu')).c;
+  res.render('digus',{ page, pages:Math.ceil(total/per), total,
+    digus:await all(`SELECT d.*,u.name uname,u.nick,u.avatar FROM digu d JOIN users u ON u.id=d.user_id
+      ORDER BY d.id DESC LIMIT ? OFFSET ?`,per,(page-1)*per) });
+});
+
+app.get('/join',async (req,res)=>{
+  const page=Math.max(1,+req.query.p||1), per=20;
+  const total=(await one('SELECT count(*) c FROM joins')).c;
+  res.render('joins',{ page, pages:Math.ceil(total/per), total,
+    joins:await all(`SELECT j.*,u.name uname,u.nick,u.avatar,
+        (SELECT count(*) FROM join_members WHERE join_id=j.id) n
+      FROM joins j JOIN users u ON u.id=j.user_id ORDER BY j.id DESC LIMIT ? OFFSET ?`,per,(page-1)*per) });
+});
+app.get('/join/:id',async (req,res,next)=>{
+  const j=await one(`SELECT j.*,u.name uname,u.nick FROM joins j JOIN users u ON u.id=j.user_id WHERE j.id=?`,req.params.id);
+  if(!j) return next();
+  res.render('join',{ j,
+    members:await all(`SELECT u.name,u.nick,u.avatar,u.intro FROM join_members m JOIN users u ON u.id=m.user_id
+      WHERE m.join_id=? ORDER BY m.created`,j.id),
+    joined:res.locals.me?!!await one('SELECT 1 FROM join_members WHERE join_id=? AND user_id=?',j.id,res.locals.me.id):false });
+});
+app.post('/join',requireLogin,async (req,res)=>{
+  const t=(req.body.title||'').trim().slice(0,40);
+  if(!t) return res.redirect('/join');
+  const r=await run(`INSERT INTO joins(user_id,title,descr,place,when_text,quota) VALUES(?,?,?,?,?,?)`,
+    res.locals.me.id, t, (req.body.descr||'').trim().slice(0,200),
+    (req.body.place||'').trim().slice(0,20), (req.body.when_text||'').trim().slice(0,20),
+    Math.max(0,Math.min(999,+req.body.quota||0)));
+  // 發起人自動算一個參加者，不然剛開的團會顯示 0 人
+  await run('INSERT OR IGNORE INTO join_members(join_id,user_id) VALUES(?,?)',Number(r.lastInsertRowid),res.locals.me.id);
+  res.redirect('/join/'+Number(r.lastInsertRowid));
+});
+app.post('/join/:id/in',requireLogin,async (req,res)=>{
+  const j=await one('SELECT * FROM joins WHERE id=?',req.params.id);
+  if(!j) return res.redirect('/join');
+  const mine=await one('SELECT 1 FROM join_members WHERE join_id=? AND user_id=?',j.id,res.locals.me.id);
+  if(mine){
+    await run('DELETE FROM join_members WHERE join_id=? AND user_id=?',j.id,res.locals.me.id);
+  } else {
+    // 額滿的判斷一定要在後端做：前端只是不畫那顆鈕，直接送 POST 一樣進得來。
+    const n=(await one('SELECT count(*) c FROM join_members WHERE join_id=?',j.id)).c;
+    if(j.quota && n>=j.quota)
+      return res.status(409).render('msg',{title:'人數已滿',msg:'這個團已經額滿了。',back:'/join/'+j.id});
+    await run('INSERT OR IGNORE INTO join_members(join_id,user_id) VALUES(?,?)',j.id,res.locals.me.id);
+  }
+  res.redirect('/join/'+j.id);
+});
+
 // ===== 個人小站 =====
 const RESERVED=new Set(['login','register','logout','rank','search','help','admin','uploads','img','style.css','favicon.ico',
+  'join',
   ...Object.keys(SECTION)]);
 const site=express.Router({mergeParams:true});
 autoAsync(site);   // 個人小站的路由同樣需要 async 錯誤轉交（理由見檔頭 wrapAsync）

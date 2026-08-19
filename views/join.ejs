@@ -1,0 +1,88 @@
+<%
+  /* 單一揪團 /join/:id
+     ─────────────────────────────────────────────────────────────
+     跟 views/joins.ejs 同一個理由：原站的揪團服務沒有任何存檔，這是自製的
+     最小可用版本（WRETCH_2012.md §3-A 的「救不回來就自己補、標明偏離」）。
+
+     資料來自 src/server.js 的 app.get('/join/:id')：j / members / joined。 */
+%>
+<%- include('partials/head2012', { title: j.title + ' - 揪團 - 無名小站' }) %>
+
+  <div class="bd big-bd clearfix">
+    <div class="main">
+
+      <div class="mod w2-auth">
+        <div class="hd"><h2><%= j.title %></h2></div>
+        <div class="bd">
+
+          <table class="w2-card" width="100%" border="0" cellpadding="0" cellspacing="1">
+            <tr><td class="sidetitle" align="right">發起人：</td>
+                <td class="side"><a href="/<%= j.uname %>"><%= j.nick %></a></td></tr>
+            <tr><td class="sidetitle" align="right">地點：</td>
+                <td class="side"><%= j.place || '—' %></td></tr>
+            <tr><td class="sidetitle" align="right">時間：</td>
+                <td class="side"><%= j.when_text || '—' %></td></tr>
+            <tr><td class="sidetitle" align="right">人數：</td>
+                <td class="side"><%= members.length %><% if (j.quota) { %> / <%= j.quota %><% } %> 人</td></tr>
+            <tr><td class="sidetitle" align="right">說明：</td>
+                <td class="side" style="white-space:pre-wrap"><%= j.descr %></td></tr>
+            <tr><td class="sidetitle" align="right">發起於：</td>
+                <td class="side"><%= j.created.slice(0, 16) %></td></tr>
+          </table>
+
+          <p class="w2-joinbtn">
+            <% if (!me) { %>
+              <a href="/login?next=<%= encodeURIComponent('/join/' + j.id) %>">登入之後就可以參加</a>
+            <% } else if (String(j.user_id) === String(me.id)) { %>
+              <span class="w2-note">你是發起人</span>
+            <% } else { %>
+              <%# 額滿的判斷放在後端（src/server.js 的 POST /join/:id/in），
+                  這裡只是不要給一顆按了註定失敗的鈕。 %>
+              <% if (!joined && j.quota && members.length >= j.quota) { %>
+                <span class="w2-note">人數已滿</span>
+              <% } else { %>
+              <form method="post" action="/join/<%= j.id %>/in">
+                <input type="submit" value="<%= joined ? '取消參加' : '我要參加' %>">
+              </form>
+              <% } %>
+            <% } %>
+          </p>
+
+          <div class="w2-h3">參加的人（<%= members.length %>）</div>
+          <% if (!members.length) { %><p>還沒有人參加，當第一個吧。</p><% } %>
+          <ol class="w2-bloglist">
+            <% members.forEach(m => { %>
+            <li>
+              <a class="thumbnail" href="/<%= m.name %>"><img src="<%= m.avatar %>" width="85" height="85" alt="<%= m.nick %>"></a>
+              <div class="content">
+                <h3><a class="skin-main-link" href="/<%= m.name %>"><%= m.nick %></a></h3>
+                <p class="description"><%= m.intro || '' %></p>
+              </div>
+            </li>
+            <% }) %>
+          </ol>
+
+        </div>
+      </div>
+
+    </div>
+    <div class="side">
+      <div class="mod w2-auth-side">
+        <div class="hd"><h2>逛逛別的</h2></div>
+        <div class="bd">
+          <ul>
+            <li><a href="/join">回揪團總站</a></li>
+            <li><a href="/rank">人氣排行榜</a></li>
+            <li><a href="/albums">相簿總站</a></li>
+            <li><a href="/blogs">網誌總站</a></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /#wrapper -->
+
+<div id="lower-wrapper" class="clearfix">
+  <div class="bd clearfix"></div>
+<%- include('partials/foot2012') %>

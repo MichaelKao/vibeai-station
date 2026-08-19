@@ -28,7 +28,7 @@ if (reset) {
   }
   for (const t of ['photo_comments', 'photos', 'albums', 'comments', 'trackbacks', 'favs',
     'posts', 'guestbook', 'visitors', 'friends', 'acts', 'sysmsg', 'reports', 'notices',
-    'videos', 'digu', 'users'])
+    'videos', 'digu', 'join_members', 'joins', 'users'])
     await run(`DELETE FROM ${t}`);
   console.log(`已清空（順便刪掉 ${gone} 個舊檔案）`);
 }
@@ -483,7 +483,10 @@ for (const [name] of USERS) {
         uid[name], uid[other], pick(['好友', '同學', '同事', '網友'], other.length));
   // 「誰來我家」一頁 20 筆，只灌 5 筆而且都是同幾個人的話那一頁看起來像壞掉的。
   const ALL = [...USERS, ...EXTRA_USERS];
-  for (let i = 0; i < 24; i++)
+  // 「補到 24 筆」而不是「再灌 24 筆」：這個腳本在正式站會被重跑
+  // （SEED_DEMO=force），無條件插入的話每跑一次就多一倍。
+  const haveV = (await one('SELECT count(*) c FROM visitors WHERE user_id=?', uid[name])).c;
+  for (let i = haveV; i < 24; i++)
     await run('INSERT INTO visitors(user_id,who,created) VALUES(?,?,?)',
       uid[name], pick(ALL, i * 5 + name.length)[0], stamp(spread(24 - i, 24, 45), i * 3 + name.length));
   // 好友動態（acts）改在後面統一種，這裡不再單獨插一筆（會重複）。
@@ -582,6 +585,10 @@ for (const [ui, [name]] of [...USERS, ...EXTRA_USERS].entries()) {
   const PHOTO_SAYS = ['這張構圖好棒！', '好想去這裡', '拍得好美～', '這是哪裡呀？',
     '光線抓得真好', '推一個', '好可愛喔', '記得那天也太好玩', '借分享！', '這張我最喜歡'];
   const photos = await all('SELECT id, created FROM photos ORDER BY id');
+  // 已經有照片迴響就整段跳過——重跑不要再疊一輪
+  if ((await one('SELECT count(*) c FROM photo_comments')).c) {
+    console.log('照片迴響已經有了，跳過');
+  } else {
   let n = 0;
   for (const [i, ph] of photos.entries()) {
     if (i % 3 === 2) continue;                 // 三張裡放兩張（每張都有反而假）
@@ -597,6 +604,7 @@ for (const [ui, [name]] of [...USERS, ...EXTRA_USERS].entries()) {
     }
   }
   console.log(`照片迴響 ${n} 則`);
+  }
 }
 
 // ---- 系統訊息 ----
@@ -610,6 +618,8 @@ for (const [ui, [name]] of [...USERS, ...EXTRA_USERS].entries()) {
     ['你的文章被引用', '有人在自己的網誌引用了你的文章。'],
     ['空間使用量提醒', '你的相簿空間已使用超過一半，記得整理一下。'],
   ];
+  if ((await one('SELECT count(*) c FROM sysmsg')).c) { console.log('系統訊息已經有了，跳過'); }
+  else {
   let n = 0;
   for (const [ui, [name]] of [...USERS, ...EXTRA_USERS].entries()) {
     const want = USERS.some(u => u[0] === name) ? 4 : 1;
@@ -621,6 +631,7 @@ for (const [ui, [name]] of [...USERS, ...EXTRA_USERS].entries()) {
     }
   }
   console.log(`系統訊息 ${n} 則`);
+  }
 }
 
 // ---- 檢舉 ----
@@ -628,6 +639,8 @@ for (const [ui, [name]] of [...USERS, ...EXTRA_USERS].entries()) {
 // 放幾筆已處理與未處理的，站長進去才看得出這個流程長什麼樣。
 {
   const REASONS = ['內容不妥', '疑似廣告', '照片非本人所有', '留言騷擾', '重複張貼'];
+  if ((await one('SELECT count(*) c FROM reports')).c) console.log('檢舉已經有了，跳過');
+  else {
   const posts = await all('SELECT id FROM posts ORDER BY id LIMIT 40');
   let n = 0;
   for (let i = 0; i < 6 && i < posts.length; i++) {
@@ -637,12 +650,15 @@ for (const [ui, [name]] of [...USERS, ...EXTRA_USERS].entries()) {
     n++;
   }
   console.log(`檢舉 ${n} 筆`);
+  }
 }
 
 // ---- 好友動態 ----
 // 「好友動態」（/:user/feed）撈的是 acts。之前每人只有 1 筆，
 // 而且只有主要帳號有，登入後那一頁幾乎是空的。
 {
+  if ((await one('SELECT count(*) c FROM acts')).c) console.log('好友動態已經有了，跳過');
+  else {
   let n = 0;
   for (const [name] of [...USERS, ...EXTRA_USERS]) {
     const ps = await all('SELECT id,title,created FROM posts WHERE user_id=? ORDER BY id DESC LIMIT 3', uid[name]);
@@ -659,6 +675,7 @@ for (const [ui, [name]] of [...USERS, ...EXTRA_USERS].entries()) {
     }
   }
   console.log(`好友動態 ${n} 筆`);
+  }
 }
 
 // ---- 音樂盒 ----
@@ -714,6 +731,44 @@ for (const [ui, [name]] of [...USERS, ...EXTRA_USERS].entries()) {
     n++;
   }
   console.log(`自訂 CSS ${n} 人`);
+}
+
+// ---- 揪團 ----
+// 原站導覽列有這個服務但整個服務沒有存檔，是本站自製的（見 views/joins.ejs）。
+// 沒有種子資料的話 /join 點進去是空的，跟之前那三顆死連結沒兩樣。
+{
+  const JOINS = [
+    ['週末陽明山健行', '走擎天崗那條，中午在山上吃便當。新手可以來，速度會等大家。', '台北', '這週六 08:00', 12],
+    ['台南美食兩天一夜', '牛肉湯、鹹粥、蝦仁飯一次吃完。住青旅平分。', '台南', '下個月 15-16 日', 8],
+    ['夜衝九份看夜景', '開車去，可以載三個人。回程大概兩點。', '新北', '這週五晚上', 4],
+    ['羽球固定團', '每週三晚上，缺三個人。程度不拘，主要是流汗。', '台中', '每週三 19:00', 10],
+    ['桌遊之夜', '新買了幾款，找人開箱。有零食。', '台北', '這週日 14:00', 6],
+    ['溪頭一日遊', '走妖怪村那條，順便吃竹筒飯。', '南投', '下週六', 20],
+    ['讀書會：這個月讀散文', '一個月一本，輪流導讀。線上線下都可以。', '線上', '每月最後一個週日', 15],
+    ['淡水河濱夜騎', '從關渡騎到漁人碼頭，回程吃阿給。', '新北', '這週四 20:00', 0],
+    ['攝影外拍：老城區', '拍街景跟老房子，互相看照片。', '台北', '下週日 15:00', 6],
+    ['一起看球賽', '找個運動酒吧，人多比較好玩。', '高雄', '週六晚上', 0],
+  ];
+  let n = 0, m = 0;
+  const ALLU = [...USERS, ...EXTRA_USERS];
+  for (const [i, [title, descr, place, when, quota]] of JOINS.entries()) {
+    const host = ALLU[(i * 3) % ALLU.length][0];
+    if (await one('SELECT 1 FROM joins WHERE title=?', title)) continue;
+    const r = await run(
+      'INSERT INTO joins(user_id,title,descr,place,when_text,quota,created) VALUES(?,?,?,?,?,?,?)',
+      uid[host], title, descr, place, when, quota, stamp(spread(JOINS.length - i, JOINS.length, 60), i * 5));
+    const jid = Number(r.lastInsertRowid);
+    n++;
+    // 發起人自己算一個，再拉幾個人進來——空的團看起來跟沒開一樣。
+    // 有人數上限的就不要塞爆，不然畫面上會出現「12 / 8 人」。
+    const want = Math.min(quota || 9, 2 + (i % 5));
+    for (let k = 0; k < want; k++) {
+      const who = k === 0 ? host : ALLU[(i * 7 + k * 5) % ALLU.length][0];
+      await run('INSERT OR IGNORE INTO join_members(join_id,user_id) VALUES(?,?)', jid, uid[who]);
+      m++;
+    }
+  }
+  console.log(`揪團 ${n} 團 / 參加 ${m} 人次`);
 }
 
 // ---- 收藏 ----
