@@ -497,6 +497,21 @@ for(const p of ['/alpha/album/abc','/alpha/photo/abc','/alpha/blog/abc','/join/a
   ok('404 非數字編號 '+p, (await get(p)).status===404);
 }
 
+console.log('\n=== 設定頁的回饋 ===');
+// 三種失敗原本都是靜靜地 302 回原頁，使用者只看到「什麼都沒發生」
+ok('訂閱沒填名稱會講原因', await (async()=>{
+  await post('/alpha/subs',{title:'',url:'https://example.com/rss'},A);
+  return (await text('/alpha/settings',A)).includes('請填來源名稱');
+})());
+ok('訂閱網址不合法會講原因', await (async()=>{
+  await post('/alpha/subs',{title:'內網',url:'http://127.0.0.1:9/x'},A);
+  return (await text('/alpha/settings',A)).includes('網址不能用');
+})());
+ok('自訂欄位沒填標題會講原因', await (async()=>{
+  await post('/alpha/folders',{title:'',body:'x'},A);
+  return (await text('/alpha/settings',A)).includes('請填欄位標題');
+})());
+
 console.log('\n=== 檢舉與通知 ===');
 // 檢舉四個入口原本都是 <a href="#"> ＋ display:none 的表單，kind/target 靠 JS 填，
 // **關掉 JS 就完全不能檢舉**。原站的檢舉本來就是跳到另一頁，不靠 JS。

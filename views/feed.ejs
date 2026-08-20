@@ -13,7 +13,7 @@
 
 <div class="msg_body">
   <% if (!acts.length) { %>
-  <div class="w2-empty">好友還沒有新動態。<br>先去加幾個好友吧！</div>
+  <div class="w2-empty">好友還沒有新動態。<% if (!(locals.friends && friends.length)) { %><br>先去加幾個好友吧！<% } %></div>
   <% } else { %>
   <table class="w2-rows">
     <% acts.forEach(a => { %>

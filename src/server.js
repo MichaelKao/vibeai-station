@@ -352,6 +352,13 @@ app.post('/admin/user/:id/del',requireAdmin,async(req,res)=>{
   if(id!==res.locals.me.id){
     for(const p of await all('SELECT p.url,p.thumb FROM photos p JOIN albums a ON a.id=p.album_id WHERE a.user_id=?',id)){ await remove(p.url); if(p.thumb&&p.thumb!==p.url) await remove(p.thumb); }
     const av=await one('SELECT avatar FROM users WHERE id=?',id); if(av?.avatar?.startsWith('/uploads/')||av?.avatar?.startsWith('http')) await remove(av.avatar);
+    // ⚠ friends **沒有外鍵**（user_id 只是一個 INTEGER），所以刪帳號不會連動。
+    // 不自己清的話會留下孤兒列：別人的 MyPage 還寫「好友 N 人」但點進去少一個、
+    // 「誰來我家」連到 404 的帳號，而且啟動時的分組搬移也會被它絆倒
+    // （那個坑已經讓正式站掛過兩次，見 src/db.js 的 backfillGroups）。
+    // 兩個方向都要清：他加的、以及加他的。
+    await run('DELETE FROM friends WHERE user_id=? OR friend_id=?',id,id);
+    await run('DELETE FROM visitors WHERE who=(SELECT name FROM users WHERE id=?)',id);
     await run('DELETE FROM users WHERE id=?',id);
   }
   res.redirect('/admin'); });
@@ -718,10 +725,18 @@ async function refreshSubs(uid){
   }
 }
 site.post('/subs',requireLogin,requireOwner,async (req,res)=>{
-  const u=U(res), title=(req.body.title||'').trim().slice(0,30), url=subUrlOk((req.body.url||'').trim());
-  if(title && url && (await one('SELECT count(*) c FROM subs WHERE user_id=?',u.id)).c < SUB_MAX){
+  const u=U(res), title=cut((req.body.title||'').trim(),30), url=subUrlOk((req.body.url||'').trim());
+  // ⚠ 被拒的時候一定要講原因。原本三種失敗（沒填名稱、網址不合法、超過上限）
+  // 都是靜靜地 302 回原頁，使用者只看到「什麼都沒發生」，
+  // 完全不知道是自己打錯還是站壞了。
+  const n = (await one('SELECT count(*) c FROM subs WHERE user_id=?',u.id)).c;
+  if(!title) flash(req,'請填來源名稱');
+  else if(!url) flash(req,'網址不能用：只收 http/https，而且不能指向內部位址');
+  else if(n >= SUB_MAX) flash(req,`訂閱最多 ${SUB_MAX} 個，請先取消一個`);
+  else {
     await run('INSERT INTO subs(user_id,title,url) VALUES(?,?,?)',u.id,title,url);
     refreshSubs(u.id).catch(()=>{});     // 不擋這一次的回應
+    flash(req,'訂閱好了，下次進網誌頁就會去抓最新一則');
   }
   res.redirect(`/${u.name}/settings#subs`);
 });
@@ -736,10 +751,15 @@ site.post('/subs/:id/del',requireLogin,requireOwner,async (req,res)=>{
 // 上限 8 個：原站沒有上限，但側欄只有 200px 寬，再多就變成一條沒有盡頭的長廊。
 const FOLDER_MAX = 8;
 site.post('/folders',requireLogin,requireOwner,async (req,res)=>{
-  const u=U(res), title=(req.body.title||'').trim().slice(0,30), body=(req.body.body||'').slice(0,5000);
-  if(title && (await one('SELECT count(*) c FROM folders WHERE user_id=?',u.id)).c < FOLDER_MAX){
+  const u=U(res), title=cut((req.body.title||'').trim(),30), body=(req.body.body||'').slice(0,5000);
+  // 被拒時要講原因，不要靜靜地把使用者送回原頁（同 /subs 的理由）
+  const n = (await one('SELECT count(*) c FROM folders WHERE user_id=?',u.id)).c;
+  if(!title) flash(req,'請填欄位標題');
+  else if(n >= FOLDER_MAX) flash(req,`自訂欄位最多 ${FOLDER_MAX} 塊，請先刪掉一塊`);
+  else {
     const seq=((await one('SELECT max(seq) m FROM folders WHERE user_id=?',u.id))?.m ?? 0)+1;
     await run('INSERT INTO folders(user_id,title,body,seq) VALUES(?,?,?,?)',u.id,title,body,seq);
+    flash(req,'欄位新增好了，去網誌頁看看側欄');
   }
   res.redirect(`/${u.name}/settings#folders`);
 });

@@ -94,7 +94,11 @@ if (!process.env.SKIP_PG) {
   if (!hasDocker) {
     console.log('\nPostgres 行為：(略過——這台機器沒有可用的 Docker)');
   } else {
-    const CN = 'vibeai-runtests-pg', PGPORT = '55433', APPPORT = '3151';
+    // ⚠ 容器名與埠都要**每次不同**。多代理稽核時會有幾十個代理同時開自己的
+    // Postgres 容器，固定名稱與固定埠會互相搶——症狀是 test_all 第一步
+    // 「註冊三個帳號」就失敗（連到別人的資料庫），整串連鎖紅燈。
+    const rnd = Math.floor(Math.random() * 9000) + 1000;
+    const CN = 'vibeai-runtests-pg-' + rnd, PGPORT = String(50000 + rnd), APPPORT = String(3900 + (rnd % 90));
     spawnSync('docker', ['rm', '-f', CN], { encoding: 'utf8' });
     spawnSync('docker', ['run', '-d', '--name', CN, '-e', 'POSTGRES_PASSWORD=pw',
       '-e', 'POSTGRES_DB=w2', '-p', PGPORT + ':5432', 'postgres:16-alpine'], { encoding: 'utf8' });
@@ -111,13 +115,26 @@ if (!process.env.SKIP_PG) {
     spawnSync('docker', ['exec', CN, 'psql', '-U', 'postgres', '-c', 'CREATE DATABASE ' + DBNAME], { encoding: 'utf8' });
     const PGURL = 'postgresql://postgres:pw@127.0.0.1:' + PGPORT + '/' + DBNAME;
     const pgEnv = { ...process.env, DB_DRIVER: 'postgres', DATABASE_URL: PGURL, PORT: APPPORT };
-    const pgSrv = spawn(process.execPath, ['src/server.js'], { env: pgEnv, stdio: 'ignore' });
+    // stderr 收起來：server 起不來的時候要看得到原因，
+    // 不然只會看到 test_all 整串連鎖紅燈，完全不知道是它根本沒起來。
+    const pgSrv = spawn(process.execPath, ['src/server.js'], { env: pgEnv, stdio: ['ignore', 'ignore', 'pipe'] });
+    let pgErr = '';
+    pgSrv.stderr.on('data', d => { pgErr += d; });
     const pgBase = 'http://127.0.0.1:' + APPPORT;
-    for (let i = 0; i < 60; i++) {
-      try { if ((await fetch(pgBase + '/')).ok) break; } catch { }
+    let pgUp = false;
+    for (let i = 0; i < 90; i++) {
+      try { if ((await fetch(pgBase + '/')).ok) { pgUp = true; break; } } catch { }
       await sleep(500);
     }
-    for (const [name, file] of [['回歸測試（Postgres）', 'test_all.mjs'], ['Postgres 行為', 'test_pgbehavior.mjs']]) {
+    // ⚠ 起不來就**直接說起不來**，不要讓 test_all 跑下去。
+    // 那樣只會得到「註冊三個帳號 FAIL」開頭的一整串連鎖紅燈，
+    // 看起來像剛把註冊功能改壞了，實際上是 server 根本沒在那個埠上。
+    if (!pgUp) {
+      bad += 1;
+      console.log(`\nPostgres 測試：**server 沒起來**（${pgBase}），跳過。`);
+      console.log('  ' + (pgErr.trim().split('\n').slice(-8).join('\n  ') || '(沒有錯誤輸出)'));
+    }
+    for (const [name, file] of pgUp ? [['回歸測試（Postgres）', 'test_all.mjs'], ['Postgres 行為', 'test_pgbehavior.mjs']] : []) {
       const r = spawnSync(process.execPath, [file], { env: { ...pgEnv, BASE: pgBase }, encoding: 'utf8' });
       const out = (r.stdout || '') + (r.stderr || '');
       const line = out.split('\n').filter(l => l.includes('passed')).pop();
