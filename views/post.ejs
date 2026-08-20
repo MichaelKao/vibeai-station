@@ -124,7 +124,12 @@
             <div class="posted">
             <a href="/<%= u.name %>/blog"><%= u.name %></a> at <a href="/blogs">無名小站</a> at <%= wTime(post.created) %> post            | <a href="<%= here %>#postComments">回應(<%= comments.length %>)</a>
             | <a href="<%= here %>#trackbacks">引用(<%= trackbacks.length %>)</a>
-            | <% if (me) { %><form method="post" action="<%= here %>/fav"><button id="showCollector"><%= faved ? '取消收藏' : '收藏' %>(<%= favN %>)</button></form><% } else { %><a href="/login?next=<%= encodeURIComponent(here) %>" id="showCollector">收藏(<%= favN %>)</a><% } %>
+            <%# 原版這裡是 `<a href="javascript:void(0)" id="showCollector">Collection(0)</a>`
+                （blog_2013_article_a0000000_32846743.html:369）——它的工作是**開啟
+                「誰來收藏」彈窗**，不是收藏本身；收藏是上面 .innertext 裡那顆
+                #collectbtn。我原本把兩件事併成一顆送出鈕，結果彈窗只能用 hover 開、
+                移開又關不掉，觸控與鍵盤更是完全打不開。照原版拆回兩顆。 %>
+            | <a href="javascript:void(0)" id="showCollector" role="button" tabindex="0">收藏(<%= favN %>)</a>
             | <a href="#" class="reportlink" data-kind="post" data-id="<%= post.id %>">檢舉</a>
                       </div>
 
@@ -165,22 +170,37 @@
     var btn = document.getElementById('showCollector');
     var box = document.getElementById('friend-picker');
     if (!btn || !box) return;
-    function place(e) {
+    /* ⚠ 座標要用 **offsetParent 相對**的，不是頁面絕對座標。
+       #friend-picker 是 position:absolute，它的定位基準是最近的 positioned 祖先
+       ——在網誌頁那是 #bigcontainer（position:relative）。
+       用 window.scrollY + rect.top 會多算 offsetParent 的位移，彈窗往下偏。 */
+    function place() {
       var r = btn.getBoundingClientRect();
-      box.style.left = (window.scrollX + r.left) + 'px';
-      box.style.top  = (window.scrollY + r.bottom + 4) + 'px';
-      box.style.visibility = 'visible';
+      var op = box.offsetParent || document.body;
+      var o = op.getBoundingClientRect();
+      box.style.left = (r.left - o.left) + 'px';
+      box.style.top = (r.bottom - o.top + 4) + 'px';
     }
-    /* 按鈕在已登入時是 <button type=submit>（收藏／取消收藏），
-       那一顆本來的工作不能搶——用右邊那個數字沒辦法分開，
-       所以改成：按住 Shift 或直接點數字旁的標題都能開。
-       未登入時它是 <a>，點了會導去登入頁，同樣不攔。
-       這裡只攔一種情況：滑鼠移上去就先算好位置，點「誰來收藏」標題才開。 */
-    btn.addEventListener('mouseenter', place);
-    btn.addEventListener('mouseenter', function () { box.style.visibility = 'visible'; });
-    box.addEventListener('mouseleave', function () { box.style.visibility = 'hidden'; });
-    var close = document.getElementById('friend-picker-closebtn');
-    if (close) close.addEventListener('click', function () { box.style.visibility = 'hidden'; });
+    function open() { place(); box.style.visibility = 'visible'; }
+    function close() { box.style.visibility = 'hidden'; }
+    function toggle(e) {
+      if (e) e.preventDefault();
+      box.style.visibility === 'visible' ? close() : open();
+    }
+    /* 用**點擊**開關，不要用 hover：hover 在觸控裝置上根本觸發不了，
+       而且滑鼠移開就關會讓人來不及點裡面的頭像。
+       鍵盤也要能操作（btn 有 tabindex），所以 Enter/空白鍵一起接。 */
+    btn.addEventListener('click', toggle);
+    btn.addEventListener('keydown', function (e) {
+      if (e.key === 'Enter' || e.key === ' ') toggle(e);
+    });
+    var closeBtn = document.getElementById('friend-picker-closebtn');
+    if (closeBtn) closeBtn.addEventListener('click', close);
+    /* 點外面、按 Esc 都要關得掉——不然那個白盒子會一直蓋住底下的內容 */
+    document.addEventListener('click', function (e) {
+      if (box.style.visibility === 'visible' && !box.contains(e.target) && e.target !== btn) close();
+    });
+    document.addEventListener('keydown', function (e) { if (e.key === 'Escape') close(); });
   })();
   </script>
 <% } %>

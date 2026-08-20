@@ -184,3 +184,13 @@ html > body #content #push button.push { margin: 0 0 0 2px; }
 .w2b-map-albums li { display: inline-block; width: 76px; margin: 0 6px 6px 0;
                      text-align: center; font-size: 11px; vertical-align: top; }
 .w2b-map-albums img { border: 1px solid #ddd; }
+
+/* 「誰來收藏」彈窗在窄螢幕：原版 friend_picker.css 給它寫死 405px 寬。
+ * 它平常是 visibility:hidden，但 **hidden 仍然佔位、仍然撐出捲動寬度**，
+ * 於是手機版的文章頁莫名其妙多出 17px 的橫向捲軸。
+ * 只在窄螢幕放開寬度；桌機維持原版尺寸不動。
+ * ⚠ 不要去改 public/wretch2012-blog.css——那支是 build 產生的原檔逐字複製。
+ */
+@media (max-width: 999px) {
+  #friend-picker { width: auto !important; max-width: 100%; }
+}

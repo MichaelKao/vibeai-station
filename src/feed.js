@@ -131,7 +131,16 @@ function parseFirstItem(xml) {
   return {
     title: pick('title').slice(0, 120),
     url: subUrlOk(link) || '',
-    date: (pick('pubDate') || pick('updated') || pick('published')).slice(0, 40),
+    // 日期正規化成 YYYY-MM-DD。RSS 的 pubDate 是 RFC-822、Atom 是 ISO-8601，
+    // 兩種長度不一樣——側欄如果盲切前 16 個字，非 RFC-822 的來源會印出
+    // 「(2026-08-20  05:0)」這種切壞的字串。在抓回來的時候就統一格式。
+    date: (() => {
+      const raw = (pick(pubDate) || pick(updated) || pick(published)).slice(0, 60);
+      const t = Date.parse(raw);
+      return Number.isNaN(t)
+        ? raw.slice(0, 10)
+        : new Date(t).toLocaleDateString(sv-SE, { timeZone: Asia/Taipei });
+    })(),
   };
 }
 

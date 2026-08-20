@@ -261,7 +261,7 @@
         </div>
         <div class="boxRssList1">
           <div class="side">
-<% subs.forEach(s => { %>            <span id="boxRssEntryTitle" ><%= s.title %></span>(<%= (s.last_date || '').slice(0,16) %>)<br />
+<% subs.forEach(s => { %>            <span id="boxRssEntryTitle" ><%= s.title %></span>(<%= (s.last_date || '').slice(0,10) %>)<br />
             <span id="boxRssEntryBody" ><% if (s.last_url) { %><a target="_blank" rel="noopener nofollow" href="<%= s.last_url %>"><%= s.last_title %></a><% } else { %><%= s.last_title %><% } %> </span><br />
 <% }) %>          </div>
         </div>

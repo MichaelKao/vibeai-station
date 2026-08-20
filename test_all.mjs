@@ -94,6 +94,17 @@ ok('好友限定擋訪客', (await get(`/alpha/album/${aid}`)).status===403);
 await post('/charlie/friend',{},A);
 ok('好友看得到', (await get(`/alpha/album/${aid}`,C)).status===200);
 ok('好友限定不出現在總站', !(await text('/albums')).includes('我的旅行'));
+// ⚠ 好友限定要擋的不只是「看」，還有「留言」。
+// 相簿頁／幻燈片／相片牆／照片頁四個入口都查了 albumAllowed，
+// 唯獨 POST /photo/:pid/comment 只查了密碼——非好友看不到照片卻留得了言。
+// 多代理稽核實測寫得進 photo_comments。
+ok('好友限定擋非好友留言', await (async()=>{
+  await post(`/alpha/album/${aid}/edit`,{title:'我的旅行',friends_only:'1'},A);
+  const r = await post('/alpha/photo/1/comment',{body:'非好友的留言'},Bc);
+  const seen = (await text('/alpha/photo/1',A)).includes('非好友的留言');
+  await post(`/alpha/album/${aid}/edit`,{title:'我的旅行'},A);   // 改回公開
+  return r.status===403 && !seen;
+})());
 await post(`/alpha/album/${aid}/edit`,{title:'我的旅行'},A);
 
 console.log('\n=== 相片牆 ===');
@@ -122,6 +133,27 @@ ok('月份彙整', bl.includes('月份彙整'));
 ok('上鎖文章不外洩', !bl.includes('SECRETTEXT') && bl.includes('[鎖]'));
 ok('上鎖文章要密碼', (await text('/alpha/blog/2',Bc)).includes('這篇文章有上鎖'));
 ok('搜尋不外洩鎖文', !(await text('/search?q=SECRETTEXT')).includes('鎖起來'));
+// ⚠ 排行榜曾經漏掉這個過濾：它照抄整列（含 body），而 rank.ejs 會把 body
+// 印成 .description，於是**未登入的人在排行榜就讀得到密碼文章的內文**。
+// 首頁／總站／搜尋／四支 RSS 都有濾，只有排行榜沒有。多代理稽核抓到的。
+ok('排行榜不外洩鎖文內文', !(await text('/rank')).includes('SECRETTEXT'));
+// 長內文：宣稱五萬字，但 urlencoded 的預設上限只有 100KB，
+// 中文一個字 urlencode 後 9 bytes ＝ 一萬一千字就爆，整篇文章消失。
+ok('兩萬中文字的文章存得進去', await (async()=>{
+  const long='中'.repeat(20000);
+  const r=await post('/alpha/blog/new',{title:'長文測試',body:long,category:'心情'},A);
+  return r.status===302;
+})());
+// 錯誤頁**絕對不能**把伺服器路徑與堆疊印出來。
+// body-parser 在設定 res.locals 之前跑，錯誤頁少了 SITE_NAME 會二次拋錯、
+// 掉到 Express 預設頁，把 C:\... 與 node_modules 結構全印給使用者看。
+ok('超過上限的內容回 413 而不是裸堆疊', await (async()=>{
+  const huge='中'.repeat(200000);      // urlencode 後約 1.8MB，一定超過 1mb 上限
+  const r=await post('/alpha/blog/new',{title:'爆量',body:huge},A);
+  const t=await r.text();
+  return r.status===413 && !t.includes('node_modules') && !/[A-Za-z]:\\/.test(t);
+})());
+ok('排行榜不列出鎖文標題', !(await text('/rank')).includes('鎖起來'));
 ok('未解鎖不能迴響', (await post('/alpha/blog/2/comment',{body:'x'},Bc)).status===302 &&
    !(await text('/alpha/blog/2',A)).includes('>x<'));
 ok('未解鎖不能引用', (await post('/alpha/blog/2/trackback',{},Bc)).status===302 &&
@@ -421,6 +453,22 @@ ok('迴響 RSS', (await text('/alpha/blog/comments.rss')).includes('<rss version
 for(const p of ['/alpha/album/abc','/alpha/photo/abc','/alpha/blog/abc','/join/abc','/hala/abc']){
   ok('404 非數字編號 '+p, (await get(p)).status===404);
 }
+
+console.log('\n=== 查詢字串的邊界輸入 ===');
+// ⚠ `Math.max(1,+p||1)` 擋不住 Infinity：`+'1e999'` 是 Infinity，
+// Math.max(1,Infinity) 還是 Infinity，綁進 SQL 的 LIMIT/OFFSET 就 500。全站 14 處分頁都中。
+for(const p of ['/alpha/blog?p=1e999','/alpha/guestbook?p=1e999','/alpha/friends?p=Infinity',
+                '/alpha/blog?p=-1','/alpha/blog?p=0','/alpha/blog?p=abc','/albums?p=1e999']){
+  ok('分頁參數亂給不會 500 '+p, (await get(p)).status<500);
+}
+// ⚠ Express 仍會把 `?cat[]=x` 解析成陣列，陣列綁進 SQL 會拋 datatype mismatch → 500
+for(const p of ['/alpha/blog?cat[]=x','/alpha/blog?ym[]=x','/alpha/blog?d[]=x',
+                '/search?q[]=x','/alpha/blog?cal[]=x','/hala/viewtopic.php?t[]=1']){
+  ok('陣列語法不會 500 '+p, (await get(p)).status<500);
+}
+// /hala/viewtopic.php 不帶 t 曾經把 undefined 綁進 SQL
+ok('viewtopic.php 不帶參數不會 500', (await get('/hala/viewtopic.php')).status<500);
+ok('viewtopic.php 空參數是 404', (await get('/hala/viewtopic.php?t=')).status===404);
 
 console.log(`\n===== ${pass} passed, ${fail} failed =====`);
 process.exit(fail?1:0);
