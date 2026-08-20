@@ -199,6 +199,57 @@
   input[type=number], input[type=date], textarea, select {
     max-width: 100%; box-sizing: border-box;
   }
+  /* ── 9. 窄螢幕下「容器高度沒跟著長」造成的重疊 ──────────────────
+   * 這一類的症狀是「連結看得到卻按不到」，不是跑版，
+   * uicheck 量不到（沒有橫向溢出），要用 tools/clickcheck.mjs 才抓得出來。 */
+
+  /* 導覽列六顆在窄螢幕會換成兩排，但 #wfp-navigation 的高度還是原本一排的 36px，
+     第二排（揪團／嘀咕／手機）就整排掉到 #wfp-cover 底下被蓋住、按不到。 */
+  #wfp-navigation, #wfp-navigation nav, #wfp-navigation nav ul,
+  #wfp-universal-header, #wfp-universal-header header { height: auto !important; }
+
+  /* 相簿總站：搜尋列在原版是絕對定位在 80px 高的 #header 裡。
+     上面第 1-B 節把它改回正常流之後它變成 691px 高，
+     卻還擠在只有 80px 的 #header 裡——溢出來的部分蓋住底下整個左欄與中欄，
+     33 條連結全部按不到。#header 要跟著內容長。
+     只挑 #container1／#container2 底下的，個人小站那些 #header 不受影響
+     （那邊的 #header 是有底圖的招牌，放開高度會塌）。 */
+  #container1 #header, #container2 #header { height: auto !important; }
+
+  /* 頁首那條「目前共 N 位站友…」是 position:absolute; top:10px; left:45%
+     （head2012.ejs 照原版寫的）。970px 寬時它落在頁首正中間的空白處，
+     窄螢幕下 45% 只剩 169px，整條就壓在右上角的「Yahoo!奇摩」「服務說明」上，
+     那兩個連結變成按不到。改回正常流，讓它自己排一行。 */
+  #wfp-universal-header .hd ul li a[href="/rank"] {
+    position: static !important; left: auto !important; top: auto !important;
+    display: block; text-align: center;
+  }
+
+  /* 站友卡：大頭貼的連結是絕對定位、鋪滿整張卡，窄螢幕下會蓋住底下的
+     站名與名片連結。讓它回到正常流，三個連結就各自佔一塊。 */
+  #wfp-celebrity li a.image, #wfp-celebrity li .thumb a,
+  #wfp-celebrity li > a:first-child {
+    position: static !important;
+  }
+
+  /* 熱門相簿的格子：說明條 .panel 是 position:absolute; bottom:0 疊在照片上，
+     格子本身寫死高度。窄螢幕下照片被縮放、格子高度沒跟著變，
+     說明條裡的站名與名片連結就落在照片的框裡被蓋住、按不到。
+     讓格子跟著內容長、說明條回到正常流排在照片下面。 */
+  #wfp-featured .featured-photos li { height: auto !important; }
+  #wfp-featured .featured-photos li .panel { position: static !important; }
+
+  /* 首頁側欄的站方公告區：.annoad3 寫死 height:60px（原版是三個 85px 的廣告位），
+     我們塞的是真的公告內容，窄螢幕下文字會換行、撐破那 60px，
+     於是公告清單壓在上面那排連結上，兩邊都按不到。讓它跟著內容長。 */
+  /* ⚠ overflow 要維持 hidden：那不是為了裁切，是為了**包住裡面的浮動框**
+     （三個 85px 的格子是 float）。改成 visible 會讓容器高度塌成 0，
+     底下的公告清單整個往上疊、兩邊的連結都按不到——我自己踩過這一步。
+     只放開高度就好。 */
+  #wfp-announcement, #wfp-announcement .annoad3 {
+    height: auto !important; overflow: hidden;
+  }
+
 
   /* ── 6. 第二輪：uicheck 在 375px 量出來、上面沒蓋到的寫死寬度 ────
    * 這一批的共同點：選擇器比第 1 節那批更深（例如 `#wfp-cover .tack .title`），

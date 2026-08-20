@@ -13,3 +13,6 @@ assets_src2/cdx/
 # agent 留下的暫存腳本
 _*.mjs
 _r.json
+
+# Railway API token（本機用，絕對不要進版控）
+.railway-token
