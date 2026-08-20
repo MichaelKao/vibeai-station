@@ -576,6 +576,24 @@ for(const p of ['/alpha/blog?cat[]=x','/alpha/blog?ym[]=x','/alpha/blog?d[]=x',
 ok('viewtopic.php 不帶參數不會 500', (await get('/hala/viewtopic.php')).status<500);
 ok('viewtopic.php 空參數是 404', (await get('/hala/viewtopic.php?t=')).status===404);
 
+console.log('\n=== 搜尋的萬用字元要逸出 ===');
+// ⚠ LIKE 的 % 與 _ 是萬用字元。不逸出的話，使用者打一個 % 就等於
+// 「比對全部」，整個站的帳號、公開相簿、公開文章一次全撈回來。
+// 逸出與 ESCAPE 是一組的：只逸出字串、SQL 裡不寫 ESCAPE，反斜線會被
+// 當成普通字元，「50%」反而變成搜「50\%」而搜不到，比不逸出還糟。
+// 這一組在 Postgres 上也要跑——toPg() 會把 LIKE 翻成 ILIKE，
+// ESCAPE 子句得跟著一起被翻對。
+{
+  const cnt = async q => {
+    const h = await text('/search?q=' + encodeURIComponent(q));
+    return [...h.matchAll(/<h2>(?:站友|相簿|網誌)（(\d+)）<\/h2>/g)].reduce((n,m)=>n+ +m[1],0);
+  };
+  const wild = await cnt('%'), real = await cnt('alpha');
+  ok(`搜一個 % 不會把整個站撈回來（${wild} 筆）`, wild === 0);
+  ok(`正常的字還是搜得到（alpha ${real} 筆）`, real > 0);
+  ok('搜一個底線也不會把整個站撈回來', (await cnt('_')) === 0);
+}
+
 console.log('\n=== 上限在併發下守得住（不能是先讀再寫）===');
 // ⚠ 這一組專打「先 SELECT count 再 INSERT」的寫法。循序測試永遠會過——
 // 只有同時送才會露出破綻：讀完到寫入之間的空隙讓多個請求一起通過檢查。

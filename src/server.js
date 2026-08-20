@@ -128,6 +128,12 @@ async function quotaError(uid, incoming){
     return '伺服器儲存空間不足，暫時無法上傳。已通知站長，請稍後再試。';
   return null;
 }
+// 搜尋字串裡的 LIKE 萬用字元要逸出，不然使用者打 % 會變成「比對全部」、
+// 打 _ 會變成「任一個字」，搜「100%」會撈回整個資料庫。反斜線自己也要逸出。
+// ⚠ 兩個資料庫的 LIKE 預設都**沒有逸出字元**，所以每一句 LIKE 都要跟著寫
+// ESCAPE，不然這裡加的反斜線會被當成普通字元，使用者搜「50%」反而變成
+// 搜「50\%」而搜不到——比不逸出更糟。逸出與 ESCAPE 是一組的，不能只做一半。
+const likeArg = v => '%' + String(v).replace(/[\\%_]/g, c => '\\' + c) + '%';
 // 只允許站內相對路徑（擋 javascript:、//evil.com、/\evil.com）
 const safePath = v => { const x=String(v||'').trim();
   return (x.startsWith('/') && !x.startsWith('//') && !x.startsWith('/\\')) ? x.slice(0,300) : ''; };
@@ -187,17 +193,17 @@ app.get('/rank',async (req,res)=>res.render('rank',{
   // 只有這一支漏掉（多代理稽核抓到的）。相簿那一行本來就有濾，照它寫。
   posts: await all(`SELECT p.*,u.name uname,u.nick FROM posts p JOIN users u ON u.id=p.user_id WHERE p.pass='' ORDER BY p.views DESC LIMIT 30`)}));
 app.get('/search',async (req,res)=>{
-  const k=qs1(req.query.q).trim(), like=`%${k}%`;
+  const k=qs1(req.query.q).trim(), like=likeArg(k);
   // 三區的 WHERE 條件抽出來共用，count 與清單才不會分歧。
   // ⚠ 分歧的後果不只是數字不準：posts 那條的 `pass=''` 少寫一次，
   // 數字就會把上鎖文章算進去，變成另一種外洩。
   const W = {
-    users:  { from:'FROM users', where:'name LIKE ? OR nick LIKE ?', args:[like,like] },
+    users:  { from:'FROM users', where:"name LIKE ? ESCAPE '\\' OR nick LIKE ? ESCAPE '\\'", args:[like,like] },
     albums: { from:'FROM albums a JOIN users u ON u.id=a.user_id',
-              where:"a.pass='' AND a.friends_only=0 AND a.title LIKE ?", args:[like] },
+              where:"a.pass='' AND a.friends_only=0 AND a.title LIKE ? ESCAPE '\\'", args:[like] },
     // 上鎖文章不讓內文被搜出來，只比對標題
     posts:  { from:'FROM posts p JOIN users u ON u.id=p.user_id',
-              where:"p.title LIKE ? OR (p.pass='' AND p.body LIKE ?)", args:[like,like] },
+              where:"p.title LIKE ? ESCAPE '\\' OR (p.pass='' AND p.body LIKE ? ESCAPE '\\')", args:[like,like] },
   };
   const cnt = async s => k ? (await one(`SELECT count(*) c ${s.from} WHERE ${s.where}`,...s.args)).c : 0;
   res.render('search',{k,
@@ -496,8 +502,8 @@ app.get('/hala',async (req,res)=>{
   // 但種子重灌之後主題 id 會變，寫死 id 會指到別篇。改成用關鍵字找官方主題，
   // 找得到就直接導過去，找不到就退回論壇首頁——連結永遠不會落空。
   if(req.query.q){
-    const hit=await one("SELECT id FROM hala_topics WHERE official=1 AND (title LIKE ? OR cat LIKE ?) ORDER BY id LIMIT 1",
-      '%'+qs1(req.query.q)+'%','%'+qs1(req.query.q)+'%');
+    const hit=await one("SELECT id FROM hala_topics WHERE official=1 AND (title LIKE ? ESCAPE '\\' OR cat LIKE ? ESCAPE '\\') ORDER BY id LIMIT 1",
+      likeArg(qs1(req.query.q)),likeArg(qs1(req.query.q)));
     if(hit) return res.redirect('/hala/'+hit.id);
   }
   const page=pageNo(req.query.p), per=20;
@@ -968,7 +974,7 @@ function friendQuery(uid, rel, cate, q){
     else { where+=' AND COALESCE(f.group_id,0)=?'; args.push(+cate); }
   }
   // #searchInput 原站只搜帳號（js_lang_searchTip = 'Search ID'），照做
-  if(q){ where+=' AND u.name LIKE ?'; args.push('%'+q+'%'); }
+  if(q){ where+=" AND u.name LIKE ? ESCAPE '\\'"; args.push(likeArg(q)); }
   return {from,where,grp,args};
 }
 site.get('/friends',async (req,res)=>{
@@ -1313,10 +1319,10 @@ site.get('/blog',async (req,res)=>{ const cat=qs1(req.query.cat)||null, ym=/^\d{
 // 搜尋這個網誌（側欄模組：☑標題 ☐內容）
 site.get('/blog/search',async (req,res)=>{
   const k=qs1(req.query.q).trim(), inBody=req.query.body==='1';
-  const like=`%${k}%`;
+  const like=likeArg(k);
   const rows = k ? await all(
-    inBody ? "SELECT * FROM posts WHERE user_id=? AND pass='' AND (title LIKE ? OR body LIKE ?) ORDER BY id DESC LIMIT 50"
-           : "SELECT * FROM posts WHERE user_id=? AND (title LIKE ?) ORDER BY id DESC LIMIT 50",
+    inBody ? "SELECT * FROM posts WHERE user_id=? AND pass='' AND (title LIKE ? ESCAPE '\\' OR body LIKE ? ESCAPE '\\') ORDER BY id DESC LIMIT 50"
+           : "SELECT * FROM posts WHERE user_id=? AND (title LIKE ? ESCAPE '\\') ORDER BY id DESC LIMIT 50",
     ...(inBody ? [U(res).id,like,like] : [U(res).id,like])) : [];
   res.render('blog_search',{nav:'blog',k,inBody,rows,...await blogSide(res)});
 });
