@@ -105,6 +105,15 @@
   .comments-form, .comment-input {
     width: auto !important; max-width: 100% !important; box-sizing: border-box;
   }
+
+  /* 知名站友卡的站名 h3 有 overflow:hidden ＝ 自成 BFC，
+     於是它會避開左邊那張大頭貼的浮動框，在 320px 下被壓成 37px 寬、字被切掉。
+     （跟 #wfp-hybrid .bd 同一個成因，見上面第 7 節。）
+     拿掉 overflow 讓它回到一般區塊，字就能繞著浮動框排。 */
+  #wfp-celebrity .bd ul li h3,
+  #wfp-celebrity .bd ul li h4 {
+    width: auto !important; overflow: visible !important; height: auto !important;
+  }
   #wfp-cover .stack .block a { width: auto !important; height: auto !important; }
 
   /* 熱門相簿的格子：原本是固定寬並排，改成自動換行 */
