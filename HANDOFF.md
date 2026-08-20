@@ -39,6 +39,7 @@ pnpm dev                             # http://localhost:3000
 | RWD | 完成。**桌機零影響**（1000px 以上一條規則都不生效），320〜1440 八個寬度、28 頁全部零問題 |
 | 回歸測試 | **174 項全綠**（`node tools/runtests.mjs`，會自己開乾淨資料庫） |
 | SQL 方言測試 | **29 項全綠** |
+| 啟動搬移測試 | **8 項全綠**（`test_migrate.mjs`，孤兒列／冪等／預設組）|
 | SSRF 防護測試 | **36 項全綠**（`test_ssrf.mjs`，私有網段／IPv4-mapped／十進位 loopback／轉址繞過） |
 | 按鈕全覆蓋 | **136 個表單**、三種身分、零錯誤（`node tools/buttoncheck.mjs`） |
 
@@ -247,6 +248,10 @@ railway variables --service station --set SEED_DEMO=0        # 灌完關掉
 | **`overflow` 會讓元素自己縮** | `overflow:hidden` 使元素自成 BFC，而 **BFC 會主動避開浮動框**。於是 width 明明是 auto、盒子卻只有 37px。這是 RWD 最不直覺的一類，查半天都在看 width |
 | **量測工具看不到偽元素** | uicheck 的「超寬元素」只走真實節點，`::after{width:408px}` 一律漏掉。頁面還在橫向捲、清單卻是空的，就是它 |
 | **鎖文標題本來就會出現在列表** | 原站的列表印鎖文標題加一個鎖頭圖，只有內容要密碼。所以「整頁不能出現鎖文標題」這種斷言是錯的，要驗的是**那一區**有沒有列它、以及內文有沒有外洩 |
+| **加外鍵的新表，先想「舊表有沒有孤兒列」** | `friends` 沒有外鍵（`user_id INTEGER`，沒有 REFERENCES），帳號刪掉會留下孤兒列；新加的 `friend_groups.user_id` 有外鍵，搬移時拿孤兒列的 user_id 去 INSERT 就違反外鍵 → `await migrate()` 在頂層拋 → 行程結束 → **連 listen 都沒跑到 → 502**。正式站因此掛了兩次，而本機四種組態全部重現不出來（乾淨的測試資料沒有孤兒列）。三道防線：WHERE 加 EXISTS 濾掉孤兒、改集合式 SQL、整支包 try/catch（搬移失敗絕不可以讓站起不來）。`test_migrate.mjs` 已釘住 |
+| **啟動時的搬移不要一列一個來回** | 本機量到 44 個分組要送 176 次查詢；正式站量級更大又跨區，健康檢查會等不到 listen。要寫成集合式 SQL |
+| **revert 之後再 merge 回來會靜悄悄少檔案** | main 上的 revert 刪了檔，分支從那之後沒再碰它們，git 判定「一邊刪、一邊沒動」＝維持刪除。只有兩邊都改過的檔才會報衝突，其餘直接不見。要用 `git checkout <分支> -- .` 把整棵樹取回來 |
+| **沒有平台日誌就只能用回退反推** | `railway login` 是互動式的，非互動 shell 登不進去（`Cannot login in non-interactive mode`）。診斷正式站專屬問題的替代路徑：**在本機刻意製造正式站才有的資料狀態**（被刪的帳號、孤兒列、舊 schema），比猜快得多 |
 | **Express 4 不接住 async handler 的錯誤** | 那是 Express 5 才有的行為。沒有 `wrapAsync` 的話，任何 DB 錯誤都會變成 unhandled rejection，請求永遠掛著。已在 `src/server.js` 註冊層處理 |
 | **`one(...).c` 加 await 的陷阱** | `await one(...).c` 會先對 Promise 取屬性得到 undefined 再 await，**不拋錯**，只是所有計數變空。要寫成 `(await one(...)).c`。全檔有 24 處 |
 | **connect-redis 是具名匯出** | v7 起沒有 default。寫錯會讓正式站起不來，而且**本機測不出來**（沒有 REDIS_URL 就提早 return，那段程式碼從沒被執行）。`test_pg.mjs` 已加測試釘住 |
