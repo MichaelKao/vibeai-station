@@ -181,6 +181,12 @@
     table-layout: auto;
   }
   /* 縮圖列那種一排五格的，改成可以換行 */
+
+  /* 廣告版位的內層寫死 700px（wretch2012-album-in.css §1，為了讓站方公告
+     那三排字有真的高度可站）。窄螢幕下它會把外層那張 <table width="700">
+     一起撐回 700——`table{width:auto!important}` 也擋不住，
+     因為表格的 min-content 就是被這個子元素決定的。 */
+  td#ad_banner .w2-ad-in, td#ad_word .w2-ad-in { width: auto !important; max-width: 100% !important; }
   #ad_square, #ad_square tbody, #ad_square tr { display: block; }
   #ad_square td { display: inline-block; width: auto !important; }
 
