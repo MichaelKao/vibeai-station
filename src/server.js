@@ -700,6 +700,29 @@ site.post('/settings',requireLogin,requireOwner,upload.single('avatar'),async(re
 //   3. 逾時 6 秒、只讀前 256KB，避免對方餵一條無止盡的串流把行程卡死
 //   4. 每個來源最多 30 分鐘抓一次，抓失敗就沿用上一次的結果，側欄不會忽然空掉
 const SUB_MAX = 5;
+
+// ===== 逐鍵互斥鎖 =====
+// 為什麼需要：「檢查數量再新增」在併發下守不住上限。把兩件事合成一句
+// INSERT ... SELECT ... WHERE (SELECT count(*) …) < N 在 SQLite 上有效
+// （寫入本來就序列化），但在 **Postgres 上無效**——預設的 READ COMMITTED
+// 隔離級別下，同時跑的多句都看不見彼此還沒提交的列，於是同時送 12 個
+// 全部通過檢查、12 筆一起進去（實測數字就是 12 與 11）。
+//
+// 徹底的做法是 (user_id, seq) 唯一索引 + 撞鍵重試，但那要對正式站既有的
+// 資料補 seq、而且既有列已經有重複值，加索引會直接失敗。這個站是綁 Volume
+// 的單一實例（Railway 的 volume 不能跨區複製，錯誤訊息就是這麼說的），
+// 所以同一個行程內序列化就足夠。⚠ 哪天真的要跑多副本，這道鎖就不夠了，
+// 那時要改成資料庫層的約束或 advisory lock。
+const _locks = new Map();
+function withLock(key, fn){
+  const prev = _locks.get(key) || Promise.resolve();
+  // 不管 fn 成功或失敗都要往下傳，否則一次例外會把這個鍵永遠卡住
+  const mine = prev.then(fn, fn);
+  // 佇列見底就把鍵刪掉，不然 Map 會隨著使用者數量單向長大
+  const done = mine.catch(() => {}).then(() => { if (_locks.get(key) === done) _locks.delete(key); });
+  _locks.set(key, done);
+  return mine;
+}
 // SSRF 防護與抓取全部在 src/feed.js（那支的檔頭寫了為什麼「檢查網址字串」不夠）。
 // 側欄要用的時候才更新，而且 30 分鐘內不重抓。
 // 放在 render 之前 await 會讓每一頁網誌都等外部網站——所以**不等**：
@@ -719,14 +742,23 @@ site.post('/subs',requireLogin,requireOwner,async (req,res)=>{
   // ⚠ 被拒的時候一定要講原因。原本三種失敗（沒填名稱、網址不合法、超過上限）
   // 都是靜靜地 302 回原頁，使用者只看到「什麼都沒發生」，
   // 完全不知道是自己打錯還是站壞了。
-  const n = (await one('SELECT count(*) c FROM subs WHERE user_id=?',u.id)).c;
   if(!title) flash(req,'請填來源名稱');
   else if(!url) flash(req,'網址不能用：只收 http/https，而且不能指向內部位址');
-  else if(n >= SUB_MAX) flash(req,`訂閱最多 ${SUB_MAX} 個，請先取消一個`);
   else {
-    await run('INSERT INTO subs(user_id,title,url) VALUES(?,?,?)',u.id,title,url);
-    refreshSubs(u.id).catch(()=>{});     // 不擋這一次的回應
-    flash(req,'訂閱好了，下次進網誌頁就會去抓最新一則');
+    // ⚠ 上限要在**同一句 SQL 裡**檢查，不能先 SELECT count 再 INSERT。
+    // 讀完到寫入之間有空隙，同時送兩個表單（或按兩下）就能一起通過檢查、
+    // 一起寫進去，於是實際筆數超過上限。這是稽核在 /subs 與 /folders
+    // 兩處都抓到的同一個型態。INSERT ... SELECT ... WHERE 兩個驅動都支援，
+    // 靠回傳的 changes 知道有沒有被上限擋下來。⚠ 光是這一句在 Postgres 上
+    // **還不夠**（見 withLock 的註解），所以外面再包一道逐使用者的互斥鎖。
+    const r = await withLock('subs:'+u.id, () => run(
+      'INSERT INTO subs(user_id,title,url) SELECT ?,?,? WHERE (SELECT count(*) FROM subs WHERE user_id=?) < ?',
+      u.id, title, url, u.id, SUB_MAX));
+    if (!r.changes) flash(req,`訂閱最多 ${SUB_MAX} 個，請先取消一個`);
+    else {
+      refreshSubs(u.id).catch(()=>{});     // 不擋這一次的回應
+      flash(req,'訂閱好了，下次進網誌頁就會去抓最新一則');
+    }
   }
   res.redirect(`/${u.name}/settings#subs`);
 });
@@ -743,13 +775,20 @@ const FOLDER_MAX = 8;
 site.post('/folders',requireLogin,requireOwner,async (req,res)=>{
   const u=U(res), title=cut((req.body.title||'').trim(),30), body=(req.body.body||'').slice(0,5000);
   // 被拒時要講原因，不要靜靜地把使用者送回原頁（同 /subs 的理由）
-  const n = (await one('SELECT count(*) c FROM folders WHERE user_id=?',u.id)).c;
   if(!title) flash(req,'請填欄位標題');
-  else if(n >= FOLDER_MAX) flash(req,`自訂欄位最多 ${FOLDER_MAX} 塊，請先刪掉一塊`);
   else {
-    const seq=((await one('SELECT max(seq) m FROM folders WHERE user_id=?',u.id))?.m ?? 0)+1;
-    await run('INSERT INTO folders(user_id,title,body,seq) VALUES(?,?,?,?)',u.id,title,body,seq);
-    flash(req,'欄位新增好了，去網誌頁看看側欄');
+    // 上限與 seq 都在同一句 SQL 裡算，外面再包一道 withLock（理由見上面）。
+    // ⚠ 上限是硬的，seq 不是：Postgres 的預設隔離級別下，同時跑的兩句
+    // 看不見彼此還沒提交的列，所以併發新增仍然可能拿到一樣的 seq
+    // （實測 12 個併發 → 8 筆、只有 5 個不同的 seq）。這不影響正確性，
+    // 因為兩處讀取都是 `ORDER BY seq,id`，id 是決勝條件、順序仍然固定。
+    const r = await withLock('folders:'+u.id, () => run(
+      `INSERT INTO folders(user_id,title,body,seq)
+       SELECT ?,?,?,(SELECT COALESCE(max(seq),0)+1 FROM folders WHERE user_id=?)
+       WHERE (SELECT count(*) FROM folders WHERE user_id=?) < ?`,
+      u.id, title, body, u.id, u.id, FOLDER_MAX));
+    if (!r.changes) flash(req,`自訂欄位最多 ${FOLDER_MAX} 塊，請先刪掉一塊`);
+    else flash(req,'欄位新增好了，去網誌頁看看側欄');
   }
   res.redirect(`/${u.name}/settings#folders`);
 });

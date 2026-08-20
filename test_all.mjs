@@ -576,5 +576,22 @@ for(const p of ['/alpha/blog?cat[]=x','/alpha/blog?ym[]=x','/alpha/blog?d[]=x',
 ok('viewtopic.php 不帶參數不會 500', (await get('/hala/viewtopic.php')).status<500);
 ok('viewtopic.php 空參數是 404', (await get('/hala/viewtopic.php?t=')).status===404);
 
+console.log('\n=== 上限在併發下守得住（不能是先讀再寫）===');
+// ⚠ 這一組專打「先 SELECT count 再 INSERT」的寫法。循序測試永遠會過——
+// 只有同時送才會露出破綻：讀完到寫入之間的空隙讓多個請求一起通過檢查。
+// 稽核在 /subs 與 /folders 兩處抓到同一個型態，修法是把判斷與寫入合成
+// 一句 INSERT ... SELECT ... WHERE，靠回傳的 changes 判斷有沒有被擋。
+{
+  await post('/register',{name:'limitq',nick:'限量',pass:'test1234',pass2:'test1234'});
+  const L = await login('limitq');
+  // 一次送 12 個，遠超過兩邊的上限（folders 8、subs 5）
+  await Promise.all([...Array(12)].map((_,i)=>post('/limitq/folders',{title:'f'+i,body:'x'},L)));
+  const fn = ((await text('/limitq/settings',L)).match(/\/folders\/\d+\/del/g)||[]).length;
+  ok(`併發新增自訂欄位不會超過 8（實際 ${fn}）`, fn>0 && fn<=8);
+  await Promise.all([...Array(12)].map((_,i)=>post('/limitq/subs',{title:'s'+i,url:'https://example.com/rss'+i},L)));
+  const sn = ((await text('/limitq/settings',L)).match(/\/subs\/\d+\/del/g)||[]).length;
+  ok(`併發訂閱不會超過 5（實際 ${sn}）`, sn>0 && sn<=5);
+}
+
 console.log(`\n===== ${pass} passed, ${fail} failed =====`);
 process.exit(fail?1:0);
