@@ -52,6 +52,13 @@
                   <span class="w2b-hint">會出現在網誌總站</span></td>
               </tr>
               <tr>
+                <%# 地區：給側欄那顆「看地圖」用的。相簿早就有這個欄位，
+                    文章沒有的話「看地圖」就沒有東西可看。白名單同一份（PLACES）。 %>
+                <th><label for="ed_place">地區</label></th>
+                <td><select id="ed_place" name="place"><option value="">（不指定）</option><% (locals.places || []).forEach(pl=>{ %><option <%= post && post.place===pl ? 'selected' : '' %>><%= pl %></option><% }) %></select>
+                  <span class="w2b-hint">會出現在<a href="/<%= u.name %>/blog/map">看地圖</a></span></td>
+              </tr>
+              <tr>
                 <th><label for="ed_pass">密碼</label></th>
                 <td><input id="ed_pass" name="pass" size="14" maxlength="20" value="<%= post ? post.pass : '' %>">
                   <span class="w2b-hint">留空＝公開；設了密碼別人要輸入才看得到</span></td>

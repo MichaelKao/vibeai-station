@@ -162,3 +162,25 @@ html > body #content #push button.push { margin: 0 0 0 2px; }
 @media (max-width: 999px) {
   #description2 .description { width: auto; max-width: 100%; }
 }
+
+/* --- 誰來收藏 -------------------------------------------------------------
+ * 樣式**不在這裡**：原站有專屬的 friend_picker.css，已經加進
+ * tools/build-css2012.mjs 的 wretch2012-blog.css bundle 裡了。
+ * 這裡只補兩條原站靠 JS 補的：關閉鈕的外觀，以及格子裡的名字要能換行。
+ */
+#friend-picker-closebtn { float: right; margin-right: 6px; color: #666;
+                          text-decoration: none; font-size: 14px; line-height: 18px; }
+.friend-picker-cell #label { display: block; font-size: 11px; word-break: break-all; }
+
+/* --- 看地圖 ---------------------------------------------------------------
+ * 零存檔（只有 WRETCH_SPEC.md 兩行文字轉寫），整頁自製。
+ * 配色沿用 skin117 既有色盤，不新增視覺語言。
+ */
+.w2b-map-note    { color: #666; font-size: 11px; }
+.w2b-map-group   { margin: 0 0 18px; }
+.w2b-map-place   { margin: 0 0 6px; padding: 3px 0; font-size: 13px; font-weight: bold;
+                   border-bottom: 1px solid #ddd; }
+.w2b-map-albums  { margin: 0 0 8px; padding: 0; list-style: none; }
+.w2b-map-albums li { display: inline-block; width: 76px; margin: 0 6px 6px 0;
+                     text-align: center; font-size: 11px; vertical-align: top; }
+.w2b-map-albums img { border: 1px solid #ddd; }

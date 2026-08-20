@@ -114,11 +114,14 @@
           <input type="hidden" name="c" value="<%= rel %>">
           <ul class="inline">
             <li class="il">
+              <%# option value 是**分組 id**，跟原站一樣
+                  （gb_friend_a000000000aa_20131225.html:187 的 value 是 8/3/1/7/4，
+                  稀疏、不照排序；0 固定是 Default group、-1 是「全部」）。 %>
               <select class="selectBox" id="cateSelect" name="cateSelect">
                 <% groups.forEach(g => { %>
-                <option value="<%= g.g %>"<%= cate === g.g ? ' selected' : '' %>><%= g.g %>（<%= g.n %>）</option>
+                <option value="<%= g.id %>"<%= cate === String(g.id) ? ' selected' : '' %>><%= g.name %>（<%= g.n %>）</option>
                 <% }) %>
-                <option value="-1"<%= cate ? '' : ' selected' %>>－全部－</option>
+                <option value="-1"<%= cate === '' ? ' selected' : '' %>>－全部－</option>
               </select>
             </li>
             <li class="il">
@@ -206,6 +209,41 @@
     </div>
     <% } %>
 
+    <% if (isOwner && rel === 0) { %>
+    <%# 分組本身的管理。原站的分組是一等公民（#cateSelect 的 option value 是
+        group id，存檔實證 gb_friend_a000000000aa_20131225.html:187），
+        所以改名一次全組跟著改。那幾個管理畫面在 /admin/friend/ 底下、沒有存檔，
+        版面是本站自己排的。 %>
+    <div class="w2-panel">
+      <div class="w2-h3">分類管理</div>
+      <table class="w2-rows">
+        <% groups.filter(g => g.id !== 0).forEach(g => { %>
+        <tr>
+          <td width="200">
+            <form method="post" action="/<%= u.name %>/friendgroups/<%= g.id %>/edit">
+              <input type="text" name="name" value="<%= g.name %>" size="10" maxlength="20">
+              <input type="submit" value="改名">
+            </form>
+          </td>
+          <td><%= g.n %> 位
+            <form method="post" action="/<%= u.name %>/friendgroups/<%= g.id %>/del"
+                  onsubmit="return confirm('刪除這個分類？裡面的好友會退回預設分類，人不會被刪。')">
+              <button class="w2-linkbtn" type="submit">刪除分類</button></form>
+          </td>
+        </tr>
+        <% }) %>
+        <tr>
+          <td colspan="2">
+            <form method="post" action="/<%= u.name %>/friendgroups">
+              <input type="text" name="name" placeholder="新分類名稱" size="10" maxlength="20">
+              <input type="submit" value="新增分類">
+            </form>
+          </td>
+        </tr>
+      </table>
+    </div>
+    <% } %>
+
     <% if (isOwner && rows.length && rel === 0) { %>
     <%# 原站的好友分類是在 /admin/friend/ 改的，那幾頁沒有存檔。
         本站就地做一張表，欄位 name 對得上 POST /:name/friends/:fid/group。 %>
@@ -217,8 +255,14 @@
           <td width="200"><a href="/<%= f.name %>"><%= f.nick %></a>
             <span class="font_cate">(<%= f.name %>)</span></td>
           <td>
+            <%# 改成下拉：分組現在是真的東西（friend_groups），不是每個人身上的字串。
+                打錯一個字就多一組的問題也一併消失了。 %>
             <form method="post" action="/<%= u.name %>/friends/<%= f.id %>/group">
-              <input type="text" name="grp" value="<%= f.grp %>" size="8" maxlength="10">
+              <select name="group_id">
+                <% groups.forEach(g => { %>
+                <option value="<%= g.id %>"<%= f.grp === g.name ? ' selected' : '' %>><%= g.name %></option>
+                <% }) %>
+              </select>
               <input type="submit" value="改分類">
             </form>
           </td>

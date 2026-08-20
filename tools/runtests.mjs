@@ -59,7 +59,7 @@ for (let i = 0; i < 80; i++) {
 }
 
 let bad = 0;
-for (const [name, file] of [['回歸測試', 'test_all.mjs'], ['SQL 方言', 'test_pg.mjs']]) {
+for (const [name, file] of [['回歸測試', 'test_all.mjs'], ['SQL 方言', 'test_pg.mjs'], ['SSRF 防護', 'test_ssrf.mjs']]) {
   const r = spawnSync(process.execPath, [file], {
     env: { ...process.env, BASE: base, DATA_DIR: DIR }, encoding: 'utf8',
   });
