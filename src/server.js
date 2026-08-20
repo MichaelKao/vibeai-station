@@ -246,17 +246,27 @@ const ADMIN_USERS = new Set((process.env.ADMIN_USERS||'').split(',').map(s=>s.tr
 app.get('/register',(req,res)=>res.render('register',{err:null,form:{}}));
 app.post('/register',async (req,res)=>{
   const {name='',nick='',pass='',pass2=''}=req.body;
-  const err = !/^[a-z0-9_]{3,20}$/i.test(name)?'帳號限 3~20 位英數字或底線':!nick.trim()?'請填暱稱':pass.length<4?'密碼至少 4 碼':pass!==pass2?'兩次密碼不一致':await one('SELECT 1 FROM users WHERE name=?',name)?'這個帳號已經有人用了':null;
+  const err = !/^[a-z0-9_]{3,20}$/i.test(name)?'帳號限 3~20 位英數字或底線':!nick.trim()?'請填暱稱':pass.length<4?'密碼至少 4 碼':pass!==pass2?'兩次密碼不一致':await one('SELECT 1 FROM users WHERE name=?',String(name||'').toLowerCase())?'這個帳號已經有人用了':null;
   if(err) return res.render('register',{err,form:req.body});
   const s=salt(), low=name.toLowerCase();
   const first=!await one('SELECT 1 FROM users');
-  const r=await run('INSERT INTO users(name,pass,salt,nick,admin) VALUES(?,?,?,?,?)',low,hash(pass,s),s,nick.trim().slice(0,20),(first||ADMIN_USERS.has(low))?1:0);
+  // ⚠ 上面那個「這個帳號有人用了嗎」是先查再插，兩個請求同時進來就會都查到「沒人用」
+  // （表單被雙擊就會發生）。Postgres 有 lower(name) 的唯一索引會擋下第二個，
+  // 但那是一個 23505 例外 → 未攔就是 500。攔下來當成「已經有人用了」。
+  let r;
+  try {
+    r=await run('INSERT INTO users(name,pass,salt,nick,admin) VALUES(?,?,?,?,?)',low,hash(pass,s),s,cut(nick.trim(),20),(first||ADMIN_USERS.has(low))?1:0);
+  } catch (e) {
+    if (/duplicate key|UNIQUE constraint/i.test(e.message))
+      return res.render('register',{err:'這個帳號已經有人用了',form:req.body});
+    throw e;
+  }
   await run('INSERT INTO albums(user_id,title) VALUES(?,?)',r.lastInsertRowid,'我的相簿');
   req.session.uid=Number(r.lastInsertRowid); flash(req,'歡迎加入 vibeai 小站！'); res.redirect('/'+name.toLowerCase());
 });
 app.get('/login',(req,res)=>res.render('login',{err:null,next:req.query.next||''}));
 app.post('/login',async (req,res)=>{
-  const u=await one('SELECT * FROM users WHERE name=?',req.body.name||'');
+  const u=await one('SELECT * FROM users WHERE name=?',String(req.body.name||'').toLowerCase());
   if(!check(u,req.body.pass||'')) return res.render('login',{err:'帳號或密碼錯誤',next:req.body.next||''});
   if(ADMIN_USERS.has(u.name) && !u.admin) await run('UPDATE users SET admin=1 WHERE id=?',u.id); // ADMIN_USERS 名單登入即補站長權限
   req.session.uid=u.id; res.redirect(safePath(req.body.next) || '/'+u.name);
@@ -325,12 +335,12 @@ const SECTION={album:'album',blog:'blog',guestbook:'guestbook',friend:'friends',
   video:'video',digu:'digu'};   // 影音與嘀咕的原站網址同樣是 /video/<帳號>、/digu/<帳號>
 for(const [seg,dest] of Object.entries(SECTION)){
   app.get(`/${seg}/:name`,async (req,res,next)=>{
-    if(!await one('SELECT 1 FROM users WHERE name=?',req.params.name)) return next();
+    if(!await one('SELECT 1 FROM users WHERE name=?',String(req.params.name||'').toLowerCase())) return next();
     const qs=req.originalUrl.includes('?')?'?'+req.originalUrl.split('?')[1]:'';
     res.redirect(301,`/${req.params.name}${dest?'/'+dest:''}${qs}`);
   });
   app.get(`/${seg}/:name/*`,async (req,res,next)=>{
-    if(!await one('SELECT 1 FROM users WHERE name=?',req.params.name)) return next();
+    if(!await one('SELECT 1 FROM users WHERE name=?',String(req.params.name||'').toLowerCase())) return next();
     res.redirect(301,`/${req.params.name}${dest?'/'+dest:''}/${req.params[0]}`);
   });
 }
@@ -542,14 +552,14 @@ autoAsync(site);   // 個人小站的路由同樣需要 async 錯誤轉交（理
 // 同樣的道理，任何人手打 /meimei/photo/abc 也會讓正式站噴 500 而不是 404。
 // 在 router 層一次擋掉：不是純數字就 next('route')，讓它落到 404 那一支。
 // 新增數字參數時記得把名字加進這個清單。
-for (const p of ['id', 'pid', 'cid', 'aid']) {
+for (const p of ['id', 'pid', 'cid', 'aid', 'fid']) {
   const guard = (req, res, next, val) => /^[0-9]+$/.test(String(val)) ? next() : next('route');
   site.param(p, guard);
   app.param(p, guard);
 }
 app.use('/:name',async (req,res,next)=>{
   if(RESERVED.has(req.params.name)) return next();
-  const u=await one('SELECT * FROM users WHERE name=?',req.params.name); if(!u) return next();
+  const u=await one('SELECT * FROM users WHERE name=?',String(req.params.name||'').toLowerCase()); if(!u) return next();
   res.locals.u=u; res.locals.isOwner=res.locals.me?.id===u.id;
   // 版型：無名的個人頁長相由站主選的版型決定（見 src/skins.js）。
   // view 用 skinCss('album'|'blog'|'guestbook'|'user'|'friend') 取自己那一支。
@@ -1404,6 +1414,10 @@ site.get('/guestbook',async (req,res)=>{
   const unread = res.locals.isOwner ? (await one('SELECT count(*) c FROM sysmsg WHERE user_id=? AND seen=0',U(res).id)).c : 0;
   if(tab==='sys'){
     // 私人系統通知：語意上就是站主一個人的信箱，維持只有本人看得到。
+    // 沒登入的人要導去登入頁（帶 next 回來），不要直接 403。
+    // 站上其他站主專用的頁（設定、發文、好友動態）都是這個行為，
+    // 只有這裡回 403，訪客會以為「我沒有權限」而不是「我要先登入」。
+    if(!res.locals.me) return res.redirect('/login?next='+encodeURIComponent(req.originalUrl));
     if(!res.locals.isOwner) return res.status(403).render('msg',{title:'沒有權限',msg:'系統訊息只有本人看得到',back:`/${U(res).name}/guestbook`});
     const total=(await one('SELECT count(*) c FROM sysmsg WHERE user_id=?',U(res).id)).c;
     await run('UPDATE sysmsg SET seen=1 WHERE user_id=?',U(res).id);

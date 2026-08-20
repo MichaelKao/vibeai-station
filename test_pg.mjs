@@ -113,5 +113,32 @@ ok('已經自己寫了 RETURNING 就不要再補',
   needsReturningId('INSERT INTO posts(title) VALUES(?) RETURNING id'), false);
 ok('SELECT 不是 INSERT', needsReturningId('SELECT * FROM friends'), false);
 
+// ── LIKE → ILIKE ────────────────────────────────────────────────────────
+// SQLite 的 LIKE 對 ASCII 大小寫不分，Postgres 的 LIKE **分**。
+// 站上所有搜尋都用 LIKE，不轉的話同一個關鍵字本機搜得到、正式站搜不到
+// （多代理稽核在正式站實測 /search?q=AHUA 回 0 筆）。
+ok('LIKE 轉成 ILIKE',
+  toPg('SELECT * FROM users WHERE name LIKE ?'),
+  'SELECT * FROM users WHERE name ILIKE $1');
+ok('小寫的 like 也要轉',
+  toPg('SELECT 1 WHERE a like ?'),
+  'SELECT 1 WHERE a ILIKE $1');
+ok('LIKE 出現多次都要轉',
+  toPg('SELECT 1 WHERE a LIKE ? OR b LIKE ?'),
+  'SELECT 1 WHERE a ILIKE $1 OR b ILIKE $2');
+
+// ── 搬移清單不能漏表 ────────────────────────────────────────────────────
+// 漏表是「安靜的資料遺失」：搬移照跑、筆數報表照樣印一致，
+// 因為它只比對清單裡的表。曾經漏掉 folders/subs/friend_groups/gifts/photo_votes。
+{
+  const { MIGRATE_TABLES } = await import('./src/migrate-pg.js');
+  const { schemaSql } = await import('./src/db.js');
+  const declared = new Set();
+  for (const sql of schemaSql('postgres'))
+    for (const m of sql.matchAll(/CREATE TABLE IF NOT EXISTS (\w+)\(/g)) declared.add(m[1]);
+  const missing = [...declared].filter(t => !MIGRATE_TABLES.includes(t));
+  ok('搬移清單涵蓋所有資料表', missing.join(',') || '(無)', '(無)');
+}
+
 console.log(`\n===== ${pass} passed, ${fail} failed =====`);
 process.exit(fail ? 1 : 0);

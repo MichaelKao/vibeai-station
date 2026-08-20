@@ -44,6 +44,15 @@ export function toPg(sql) {   // export 是為了讓 test_pg.mjs 能直接驗這
 
   s = s.replace(/INSERT\s+OR\s+IGNORE\s+INTO/gi, 'INSERT INTO');
 
+  // LIKE → ILIKE（大小寫不分的比對）
+  //
+  // SQLite 的 LIKE 對 ASCII 本來就大小寫不分，Postgres 的 LIKE 則是**分**的。
+  // 站上所有的搜尋（站內搜尋、網誌內搜尋、好友搜尋）都用 LIKE，
+  // 所以同一個關鍵字在本機搜得到、在正式站搜不到——多代理稽核在正式站
+  // 實測 /search?q=AHUA 回 0 筆，改小寫才有結果。
+  // ILIKE 是 Postgres 的擴充，語意剛好等同 SQLite 的 LIKE。
+  s = s.replace(/\bLIKE\b/gi, 'ILIKE');
+
   // ? → $1 $2 …（字串常值裡的問號本專案沒有，不特別處理）
   let i = 0;
   s = s.replace(/\?/g, () => '$' + (++i));
@@ -73,6 +82,17 @@ let impl;
 
 if (driver === 'postgres') {
   const { default: pg } = await import('pg');
+
+  // ⚠⚠ Postgres 的 int8（bigint）預設會回**字串**，不是數字。
+  // `count(*)` 與 `SUM(...)` 的型別都是 int8，所以：
+  //   ('11531') + 41333  →  '1153141333'      ← 字串相接，不是加法
+  // 相簿配額因此永遠判定「空間不足」——**使用者上傳第一張之後就再也傳不上去**，
+  // 而且訊息還自相矛盾（說用了 0.01 MB 卻說會超過 1024 MB）。
+  // 留言板的「系統訊息(0)」多印一組括號也是同一個根因。
+  // 這一行讓 int8 回 number，一次治好所有拿 count/SUM 去算術的地方。
+  // （站上的計數不可能超過 Number.MAX_SAFE_INTEGER，轉 number 是安全的。）
+  pg.types.setTypeParser(20, v => v === null ? null : Number(v));
+
   const pool = new pg.Pool({
     connectionString: PG_URL,
     max: +(process.env.PG_POOL_MAX || 10),

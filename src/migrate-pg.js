@@ -18,14 +18,35 @@
 import fs from 'node:fs';
 import { schemaSql } from './db.js';
 
-// 依存關係順序：被外鍵參照的表要先搬
-const TABLES = [
+// 依存關係順序：被外鍵參照的表要先搬。
+// ⚠ 新增資料表時**一定要同步加進這裡**。漏了的話搬移會安靜地把那張表整個丟掉，
+// 而且下面的筆數報表還是印「一致」——因為它只比對這張清單裡的表。
+// 曾經漏掉 folders / subs / friend_groups / gifts / photo_votes 五張，
+// 使用者的側欄自訂欄位、訂閱、好友分組會永久消失。
+// 底下的 assertNoMissingTable() 就是為了讓這種疏漏當場失敗而不是靜靜發生。
+export const MIGRATE_TABLES = [
   'users', 'albums', 'photos', 'photo_comments', 'posts', 'comments', 'trackbacks',
-  'guestbook', 'visitors', 'friends', 'favs', 'acts', 'sysmsg', 'reports', 'notices',
-  'videos', 'digu', 'joins', 'join_members', 'hala_topics', 'hala_posts',
+  'guestbook', 'visitors', 'friend_groups', 'friends', 'favs', 'acts', 'sysmsg',
+  'reports', 'notices', 'videos', 'digu', 'joins', 'join_members',
+  'hala_topics', 'hala_posts', 'gifts', 'photo_votes', 'folders', 'subs',
 ];
 // 用 IDENTITY 主鍵的表，搬完要把序列推到 max(id)，否則之後 INSERT 會撞主鍵
-const SERIAL_TABLES = TABLES.filter(t => !['friends', 'favs', 'join_members'].includes(t));
+// 沒有 id 欄位的關聯表不用推序列（推了會找不到那個序列而報錯）。
+// 這份清單要跟 src/db.js 的 TABLES_WITHOUT_ID 一致。
+const TABLES = MIGRATE_TABLES;
+const SERIAL_TABLES = TABLES.filter(t => !['friends', 'favs', 'join_members', 'photo_votes'].includes(t));
+
+// 搬移清單漏表是「安靜的資料遺失」——報表照樣印一致，因為它只看清單裡的表。
+// 拿 schemaSql 產生的建表語句反推真正的表名，跟清單對差集，缺了就直接失敗。
+function assertNoMissingTable() {
+  const declared = new Set();
+  for (const sql of schemaSql('postgres'))
+    for (const m of sql.matchAll(/CREATE TABLE IF NOT EXISTS (\w+)\(/g)) declared.add(m[1]);
+  const missing = [...declared].filter(t => !TABLES.includes(t));
+  if (missing.length) throw new Error(
+    `[migrate] 搬移清單漏了這些表：${missing.join(', ')}。`
+    + '請把它們加進 src/migrate-pg.js 的 TABLES（注意外鍵依存順序），否則搬移會靜靜地把資料丟掉。');
+}
 
 export async function migrateSqliteToPg({ sqlitePath, pgUrl }) {
   if (!fs.existsSync(sqlitePath)) {
@@ -36,11 +57,15 @@ export async function migrateSqliteToPg({ sqlitePath, pgUrl }) {
   const { default: pg } = await import('pg');
   const pool = new pg.Pool({
     connectionString: pgUrl,
-    ssl: /\.railway\.internal(:|$|\/)/.test(pgUrl) ? false
+    // localhost 與 railway 內網都不走 TLS（比照 src/db.js 的判斷）。
+    // 少了 localhost 這一條，本機拿 Docker 的 Postgres 測搬移會直接連不上。
+    ssl: /\.railway\.internal(:|$|\/)/.test(pgUrl) || /^postgres(ql)?:\/\/[^@]*@?(localhost|127\.0\.0\.1)/.test(pgUrl)
+      ? false
       : { rejectUnauthorized: process.env.PGSSL_INSECURE !== '1' },
   });
 
   try {
+    assertNoMissingTable();          // 清單漏表就在這裡失敗，不要搬到一半才發現
     // 目標端建表（用 PG 方言，與站台目前跑哪個驅動無關）
     for (const sql of schemaSql('postgres')) await pool.query(sql);
     console.log('[migrate] Postgres 建表完成');
@@ -73,7 +98,13 @@ export async function migrateSqliteToPg({ sqlitePath, pgUrl }) {
       const ph = cols.map((_, i) => '$' + (i + 1)).join(',');
 
       for (const r of rows)
-        await pool.query(`INSERT INTO ${t}(${list}) VALUES(${ph}) ON CONFLICT DO NOTHING`,
+        // ⚠ id 欄位是 GENERATED ALWAYS AS IDENTITY（db.js 的 PK），
+        // Postgres **拒絕**明寫值進去，會拋
+        // `cannot insert a non-DEFAULT value into column "id"`——
+        // 搬移在第一張表就整個炸掉，而錯誤又被外面的 try/catch 吞成一行日誌，
+        // 站台就這樣起在一個空的資料庫上。
+        // OVERRIDING SYSTEM VALUE 才能把原本的 id 一起搬過去（搬移就是要保留 id）。
+        await pool.query(`INSERT INTO ${t}(${list}) OVERRIDING SYSTEM VALUE VALUES(${ph}) ON CONFLICT DO NOTHING`,
           cols.map(c => r[c]));
 
       const got = (await pool.query(`SELECT count(*)::int c FROM ${t}`)).rows[0].c;

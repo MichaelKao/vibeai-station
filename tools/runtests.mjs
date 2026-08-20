@@ -84,6 +84,47 @@ srv.kill();
 // ownerflow.mjs **自己開站**（它要一個乾淨的資料庫走建立／刪除的流程），
 // 所以不能塞進上面那個共用 BASE 的清單，要等這支 server 收掉之後再跑。
 // 用 SKIP_BROWSER=1 可以跳過（例如在沒有 Chrome 的機器上）。
+// ── Postgres 行為（要一個真的 Postgres）────────────────────────────────
+// 為什麼一定要跑這一段：test_all 對兩個驅動都是全綠，**但正式站在 Postgres 上
+// 壞掉的東西它一個都抓不到**（帳號大小寫、count/SUM 的型別、LIKE 的大小寫）。
+// 多代理稽核在 Postgres 上挖出四個高嚴重度問題時，回歸網是 199 passed / 0 failed。
+// 有 Docker 就自動開一個拋棄式的 Postgres 跑；沒有就跳過並明講（不要靜靜略過）。
+if (!process.env.SKIP_PG) {
+  const hasDocker = spawnSync('docker', ['info'], { encoding: 'utf8' }).status === 0;
+  if (!hasDocker) {
+    console.log('\nPostgres 行為：(略過——這台機器沒有可用的 Docker)');
+  } else {
+    const CN = 'vibeai-runtests-pg', PGPORT = '55433', APPPORT = '3151';
+    spawnSync('docker', ['rm', '-f', CN], { encoding: 'utf8' });
+    spawnSync('docker', ['run', '-d', '--name', CN, '-e', 'POSTGRES_PASSWORD=pw',
+      '-e', 'POSTGRES_DB=w2', '-p', PGPORT + ':5432', 'postgres:16-alpine'], { encoding: 'utf8' });
+    for (let i = 0; i < 40; i++) {
+      if (spawnSync('docker', ['exec', CN, 'pg_isready', '-q'], { encoding: 'utf8' }).status === 0) break;
+      await sleep(1000);
+    }
+    const PGURL = 'postgresql://postgres:pw@127.0.0.1:' + PGPORT + '/w2';
+    const pgEnv = { ...process.env, DB_DRIVER: 'postgres', DATABASE_URL: PGURL, PORT: APPPORT };
+    const pgSrv = spawn(process.execPath, ['src/server.js'], { env: pgEnv, stdio: 'ignore' });
+    const pgBase = 'http://127.0.0.1:' + APPPORT;
+    for (let i = 0; i < 60; i++) {
+      try { if ((await fetch(pgBase + '/')).ok) break; } catch { }
+      await sleep(500);
+    }
+    for (const [name, file] of [['回歸測試（Postgres）', 'test_all.mjs'], ['Postgres 行為', 'test_pgbehavior.mjs']]) {
+      const r = spawnSync(process.execPath, [file], { env: { ...pgEnv, BASE: pgBase }, encoding: 'utf8' });
+      const out = (r.stdout || '') + (r.stderr || '');
+      const line = out.split('\n').filter(l => l.includes('passed')).pop();
+      const fails = out.split('\n').filter(l => l.startsWith('! FAIL'));
+      console.log(`\n${name}：${line ? line.trim() : '(沒有結果——測試根本沒跑完)'}`);
+      for (const f of fails.slice(0, 20)) console.log('  ' + f.trim());
+      if (!line) { bad += 1; console.log('  ' + out.trim().split('\n').slice(-8).join('\n  ')); }
+      if (fails.length) bad += fails.length;
+    }
+    pgSrv.kill();
+    spawnSync('docker', ['rm', '-f', CN], { encoding: 'utf8' });
+  }
+}
+
 if (!process.env.SKIP_BROWSER) {
   await sleep(800);
   const r = spawnSync(process.execPath, ['tools/ownerflow.mjs'], {
