@@ -153,6 +153,11 @@
   #searchForm { height: auto !important; }
   /* 左欄的 Conditions／Categories／Locations 堆疊後改成橫向排列，
      不然 24 個分類會變成很長的一直條 */
+  /* 左欄的 Conditions／Categories／Locations 堆疊後改成橫向排列，
+     不然 24 個分類會變成很長的一直條。
+     ⚠ 但**手機直立不能這樣做**：inline-block 之後這幾塊會跟隔壁的
+     .services_link 疊在一起，「Hot」頁籤只剩下緣幾像素點得到。
+     600px 以下改回一塊一行（見下面 599 那個區塊）。 */
   #browse_album > li { display: inline-block; vertical-align: top; margin-right: 12px; }
   /* #header 的 960×80 底圖與絕對定位的搜尋列在窄視窗會互相疊 */
   #header, #footer, #ft { width: auto !important; min-width: 0 !important; max-width: 100%; box-sizing: border-box; }
@@ -215,6 +220,15 @@
      只挑 #container1／#container2 底下的，個人小站那些 #header 不受影響
      （那邊的 #header 是有底圖的招牌，放開高度會塌）。 */
   #container1 #header, #container2 #header { height: auto !important; }
+
+  /* 相簿總站左欄的兩塊（.services_link 的服務連結、.sideII 的 Hot/New 頁籤）
+     在窄螢幕會上下疊在一起，「Hot」只剩下緣幾像素點得到。
+     兩塊都讓它們回到正常流、高度跟著內容長。 */
+  #container1 .services_link, #container1 .services_link ul,
+  #container1 .sideII, #container1 .sideII ul,
+  #container1 .left_column dl, #container1 .left_column dd {
+    height: auto !important; position: static !important; float: none !important;
+  }
 
   /* 頁首那條「目前共 N 位站友…」是 position:absolute; top:10px; left:45%
      （head2012.ejs 照原版寫的）。970px 寬時它落在頁首正中間的空白處，
@@ -371,6 +385,9 @@
 
 /* 真正的窄螢幕（手機直立）再收一次 */
 @media (max-width: 599px) {
+
+  /* 見上面：橫向排列在手機直立會跟 .services_link 疊在一起 */
+  #browse_album > li { display: block; margin-right: 0; }
   /* 導覽列六顆擠成兩排 */
   nav li a, #nav li a { padding-left: 8px; padding-right: 8px; font-size: 12px; }
 
