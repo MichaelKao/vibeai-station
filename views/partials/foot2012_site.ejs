@@ -185,8 +185,9 @@
     if (q) { location.href = q + encodeURIComponent(v); }
   });
 
-  /* 社群分享列：分享網址要「絕對網址」，EJS 拿不到 host，
-     所以 DOM 先寫 data-share / data-path / data-title，這裡補上 location.origin。
+  /* 社群分享列：分享網址要「絕對網址」。href 在伺服器端就已經組好了
+     （socialshare2012.ejs 用 res.locals.origin），沒有 JS 也分享得出去；
+     這裡只是拿 location.origin 再覆寫一次。
      只有還活著的服務才接：fb / plurk / tw(X)。
      Yahoo 即時通（.yim）與 Google+ 已停止服務，DOM 照留但不連外。 */
   document.querySelectorAll('a[data-share]').forEach(function(a){

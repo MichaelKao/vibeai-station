@@ -31,9 +31,10 @@
        不連外**。.g-plusone 維持原版的空 div 與 data-* 屬性，
        .yim 的 href 指回本頁（原站是 ymsgr: 協定，現在按了只會跳出錯誤對話框）。
 
-     絕對網址：EJS 拿不到 host，所以 fb / plurk / tw 三顆先寫
-     data-share / data-path / data-title，由頁尾那段 JS 補上 location.origin
-     （foot2012_site.ejs、blog2012_foot.ejs 都有同一段）。
+     絕對網址：fb / plurk / tw 三顆的 href 在**伺服器端**就組好了
+     （res.locals.origin = req.protocol + host，跟 RSS 同一套），
+     所以沒有 JS 也分享得出去。data-share / data-path / data-title 照留，
+     頁尾那段 JS 會再覆寫一次（foot2012_site.ejs、blog2012_foot.ejs 都有）。
 
      ── include 參數 ──────────────────────────────────────────────────────
        ssPath    必填。要分享的站內路徑（`/meimei/blog/12`），不含 host
@@ -65,6 +66,16 @@
   const ssP     = locals.ssPath;
   const ssT     = locals.ssTitle || '';
   const ssRb    = locals.ssReblog || {};
+  /* 分享網址在**伺服器端**就組好，不要只靠頁尾的 JS。
+     原本三顆的 href 是站內相對路徑，JS 沒跑（或使用者在 JS 補完之前就按了）
+     就會把 /jaychou/blog/20 送去 Facebook——那是打不開的網址。
+     res.locals.origin 是 req.protocol + host（跟 RSS 同一套），
+     所以這裡拿得到 host，上面那段「EJS 拿不到 host」的說明已經過時。
+     data-share / data-path 保留：頁尾那段 JS 還會再覆寫一次。 */
+  const ssAbs   = (locals.origin || '') + ssP;
+  const ssFb    = 'https://www.facebook.com/sharer/sharer.php?u=' + encodeURIComponent(ssAbs);
+  const ssPlurk = 'https://www.plurk.com/?qualifier=shares&status=' + encodeURIComponent(ssAbs + ' (' + ssT + ')');
+  const ssTw    = 'https://twitter.com/intent/tweet?url=' + encodeURIComponent(ssAbs) + '&text=' + encodeURIComponent(ssT);
   /* 泡泡的有無看的是「被轉貼過幾次」：原版有轉貼才印 span.bubble，
      一次都沒有就給外框掛 .bubble-none（blog_2012_default_skin_afuuu.html
      兩種都有：@11991 是 3 次的泡泡、@30396 是 bubble-none）。
@@ -75,8 +86,8 @@
 <div class="social-wrapper">
 <div class="social-widget">
   <div class="bd">
-      <a class="fb" title="分享在我的Facebook" target="_blank" data-share="fb" data-path="<%= ssP %>" data-title="<%= ssT %>" href="<%= ssP %>">分享在我的Facebook</a>
-      <a class="plurk" title="分享在我的Plurk" target="_blank" data-share="plurk" data-path="<%= ssP %>" data-title="<%= ssT %>" href="<%= ssP %>">分享在我的Plurk</a>
+      <a class="fb" title="分享在我的Facebook" target="_blank" data-share="fb" data-path="<%= ssP %>" data-title="<%= ssT %>" href="<%= ssFb %>" rel="noopener">分享在我的Facebook</a>
+      <a class="plurk" title="分享在我的Plurk" target="_blank" data-share="plurk" data-path="<%= ssP %>" data-title="<%= ssT %>" href="<%= ssPlurk %>" rel="noopener">分享在我的Plurk</a>
       <%# Yahoo 即時通已停止服務：外觀與 class 照留，href 指回本頁，不連外 %>
       <a class="yim" title="分享在我的即時通" rel="nofollow" href="<%= ssP %>">分享在我的即時通</a>
   </div>
@@ -102,8 +113,8 @@
   <div class="social-gpluson">
     <div class="g-plusone" data-count="false" data-annotation="none" expandTo="top" data-size="Medium" data-style="vertical-align:middle;" data-href="<%= ssP %>"></div>
   </div>
-  <a class="twitter-share-button" data-count="none" data-url="<%= ssP %>" data-share="tw" data-path="<%= ssP %>" data-title="<%= ssT %>" target="_blank" rel="noopener" href="<%= ssP %>">分享到 X</a>
-  <a class="fixinline" id="share_facebook" data-share="fb" data-path="<%= ssP %>" data-title="<%= ssT %>" target="_blank" rel="noopener" href="<%= ssP %>">Facebook</a>
+  <a class="twitter-share-button" data-count="none" data-url="<%= ssP %>" data-share="tw" data-path="<%= ssP %>" data-title="<%= ssT %>" target="_blank" rel="noopener" href="<%= ssTw %>">分享到 X</a>
+  <a class="fixinline" id="share_facebook" data-share="fb" data-path="<%= ssP %>" data-title="<%= ssT %>" target="_blank" rel="noopener" href="<%= ssFb %>">Facebook</a>
 </div>
 <% } %>
 </div>

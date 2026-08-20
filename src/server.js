@@ -91,6 +91,14 @@ async function siteNotices(){
 app.use(async (req,res,next)=>{
   res.locals.me = req.session.uid ? await one('SELECT id,name,nick,avatar,admin,vip FROM users WHERE id=?',req.session.uid) : null;
   res.locals.u = null; res.locals.nav=''; res.locals.flash = req.session.flash; delete req.session.flash;
+  // 站台自己的絕對網址。分享列與「引用網址」原本只印站內相對路徑，
+  // 靠頁尾那段 JS 補 location.origin——**沒有 JS 就複製到一段沒用的路徑**
+  // （貼到 Plurk 上是 /jaychou/blog/20，誰都打不開）。RSS 那邊早就用
+  // req.protocol + host 組絕對網址了，這裡把同一個值攤成 view 的 local，
+  // 讓伺服器端就印對，JS 只是錦上添花。
+  // ⚠ req.protocol 要對，得靠 trust proxy——Railway 在前面擋一層 TLS，
+  // 沒設的話這裡會印出 http:// 而使用者實際上走的是 https。
+  res.locals.origin = `${req.protocol}://${req.get('host')}`;
   res.locals.notices = await siteNotices();      // 站方公告（.announcement）
   // 背景音樂偏好（首頁 #wfp-bgm 的 .bgm-on）。原站寫 cookie mf，
   // 本專案沒有 cookie-parser，記在 session 就好。預設開，對齊原版初始態。

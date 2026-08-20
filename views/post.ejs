@@ -221,7 +221,12 @@
     <%# ── (a) 引用網址 ─────────────────────────────────────── %>
     <div class="trackback-url">
       [引用網址]
-      <input type="text" id="trackback_url" data-path="<%= here %>" value="<%= here %>">
+      <%# ⚠ value 要是**絕對網址**。原本印 here（站內相對路徑），靠頁尾的 JS
+          補上 location.origin；JS 沒跑（或使用者在 JS 補完之前就按了複製）
+          就會複製到「/jaychou/blog/20」這種貼到哪裡都打不開的東西。
+          origin 是 res.locals 攤出來的（req.protocol + host，跟 RSS 同一套）。
+          data-path 保留，頁尾那段 JS 還在用。 %>
+      <input type="text" id="trackback_url" data-path="<%= here %>" value="<%= origin + here %>">
       <input type="button" id="trackback_copy" value="複製引用網址">
     </div>
 
