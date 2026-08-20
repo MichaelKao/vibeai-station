@@ -136,13 +136,10 @@ if (driver === 'postgres') {
   // 稽核實測：兩個實例對同一個檔案寫入時，**約 51% 的寫入直接失敗**
   // （同樣負載下 Postgres 是 0 錯誤）。設成 5 秒，讓它等一下再重試。
   db.exec('PRAGMA journal_mode=WAL; PRAGMA foreign_keys=ON; PRAGMA busy_timeout=5000;');
-  const __fs = await import('node:fs');
-  const __log = process.env.SQLLOG;
-  const __t = (k, sql) => { if (__log) { try { __fs.appendFileSync(__log, k + '|' + String(sql).replace(/\s+/g, ' ').slice(0, 180) + '\n'); } catch {} } };
   impl = {
-    one: async (sql, ...a) => { __t('one', sql); return db.prepare(sql).get(...a); },
-    all: async (sql, ...a) => { __t('all', sql); return db.prepare(sql).all(...a); },
-    run: async (sql, ...a) => { __t('run', sql); return db.prepare(sql).run(...a); },
+    one: async (sql, ...a) => db.prepare(sql).get(...a),
+    all: async (sql, ...a) => db.prepare(sql).all(...a),
+    run: async (sql, ...a) => db.prepare(sql).run(...a),
     exec: async sql => db.exec(sql),
     close: async () => db.close(),
   };

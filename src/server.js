@@ -1076,7 +1076,22 @@ site.get('/album/:id/wall',albumOf,async (req,res)=>{
 });
 site.post('/album/:id/unlock',albumOf,(req,res)=>{ const a=res.locals.album; if(req.body.pass===a.pass){ req.session.unlocked=[...(req.session.unlocked||[]),a.id]; return res.redirect(`/${U(res).name}/album/${a.id}`);} res.render('album_lock',{nav:'album',album:a,err:'密碼錯誤'}); });
 site.post('/album/:id/edit',requireLogin,requireOwner,albumOf,async (req,res)=>{ await run('UPDATE albums SET title=?,descr=?,pass=?,topic=?,place=?,friends_only=? WHERE id=?',cut((req.body.title||'').trim()||res.locals.album.title, 40),(req.body.descr||'').slice(0,200),(req.body.pass||'').slice(0,20),isAlbumTopic(req.body.topic)?req.body.topic:'',isPlace(req.body.place)?req.body.place:'',req.body.friends_only?1:0,res.locals.album.id); res.redirect(`/${U(res).name}/album/${res.locals.album.id}`); });
-site.post('/album/:id/del',requireLogin,requireOwner,albumOf,async(req,res)=>{ for(const p of await all('SELECT url,thumb FROM photos WHERE album_id=?',res.locals.album.id)){ await remove(p.url); if(p.thumb&&p.thumb!==p.url) await remove(p.thumb); } await run('DELETE FROM albums WHERE id=?',res.locals.album.id); res.redirect(`/${U(res).name}/album`); });
+// ⚠ 順序是「先刪資料庫的列，再刪檔案」，不能反過來。
+// 反過來寫的話，只要 DELETE 因為任何原因失敗（連線斷、鎖、外鍵），
+// 列還在、檔案已經沒了 → 相簿裡整排破圖，而且救不回來。
+// 現在這個順序最壞的情況是留下沒人參照的檔案：浪費磁碟，但畫面是對的，
+// 而且掃一次就能清掉。兩害相權取其輕。
+site.post('/album/:id/del',requireLogin,requireOwner,albumOf,async(req,res)=>{
+  const id=res.locals.album.id;
+  const files=await all('SELECT url,thumb FROM photos WHERE album_id=?',id);
+  await run('DELETE FROM albums WHERE id=?',id);
+  for(const p of files){
+    // 單一檔案刪不掉不該讓整個請求變成 500——列已經刪了，畫面是對的。
+    await remove(p.url).catch(()=>{});
+    if(p.thumb&&p.thumb!==p.url) await remove(p.thumb).catch(()=>{});
+  }
+  res.redirect(`/${U(res).name}/album`);
+});
 site.post('/album/:id/upload',requireLogin,requireOwner,albumOf,upload.array('photos',20),async(req,res)=>{
   const a=res.locals.album; let first=null;
   const files=req.files||[];
@@ -1095,9 +1110,21 @@ site.post('/album/:id/upload',requireLogin,requireOwner,albumOf,upload.array('ph
       if (e && e.code === 'BAD_IMAGE') { rejected.push(`${f.originalname}：${e.message}`); continue; }
       throw e;
     }
-    if(!first) first=s.thumb; okN++;
-    await run('INSERT INTO photos(album_id,url,thumb,caption,bytes,width,height,taken,camera) VALUES(?,?,?,?,?,?,?,?,?)',
-      a.id,s.url,s.thumb,cut(req.body.caption||'',100),s.bytes,s.width||0,s.height||0,s.taken||'',s.camera||''); }
+    // ⚠ 檔案已經落地了，這時 INSERT 還是有可能失敗——最典型的是**相簿在
+    // 上傳進行到一半時被刪掉**（自己開兩個分頁、或刪除與上傳同時送出）：
+    // album_id 指向一個已經不存在的列，外鍵擋下來，整個請求變成 500，
+    // 而剛寫進去的原圖與縮圖沒有人參照，就永遠留在磁碟上。
+    // 接住它：把這一張的檔案清掉，當成「這張收不了」，其餘照收。
+    try {
+      await run('INSERT INTO photos(album_id,url,thumb,caption,bytes,width,height,taken,camera) VALUES(?,?,?,?,?,?,?,?,?)',
+        a.id,s.url,s.thumb,cut(req.body.caption||'',100),s.bytes,s.width||0,s.height||0,s.taken||'',s.camera||'');
+    } catch (e) {
+      await remove(s.url).catch(()=>{});
+      if (s.thumb && s.thumb !== s.url) await remove(s.thumb).catch(()=>{});
+      rejected.push(`${f.originalname}：這本相簿已經不在了`);
+      continue;
+    }
+    if(!first) first=s.thumb; okN++; }
   if(first && !a.cover) await run('UPDATE albums SET cover=? WHERE id=?',first,a.id);
   if(first) await act(U(res).id,'album',a.title,`/${U(res).name}/album/${a.id}`);
   // 訊息要講**實際成功的張數**，不是收到幾個檔。
@@ -1174,7 +1201,10 @@ site.post('/photo/:pid/crop',requireLogin,requireOwner,async (req,res)=>{
 });
 site.post('/photo/:pid/caption',requireLogin,requireOwner,async (req,res)=>{ await run('UPDATE photos SET caption=? WHERE id=? AND album_id IN (SELECT id FROM albums WHERE user_id=?)',(req.body.caption||'').slice(0,100),req.params.pid,U(res).id); res.redirect(`/${U(res).name}/photo/${req.params.pid}`); });
 site.post('/photo/:pid/cover',requireLogin,requireOwner,async (req,res)=>{ const p=await one('SELECT * FROM photos WHERE id=?',req.params.pid); if(p) await run('UPDATE albums SET cover=? WHERE id=? AND user_id=?',p.url,p.album_id,U(res).id); res.redirect(`/${U(res).name}/photo/${req.params.pid}`); });
-site.post('/photo/:pid/del',requireLogin,requireOwner,async(req,res)=>{ const p=await one('SELECT p.* FROM photos p JOIN albums a ON a.id=p.album_id WHERE p.id=? AND a.user_id=?',req.params.pid,U(res).id); if(p){ await remove(p.url); if(p.thumb&&p.thumb!==p.url) await remove(p.thumb); await run('DELETE FROM photos WHERE id=?',p.id);
+site.post('/photo/:pid/del',requireLogin,requireOwner,async(req,res)=>{ const p=await one('SELECT p.* FROM photos p JOIN albums a ON a.id=p.album_id WHERE p.id=? AND a.user_id=?',req.params.pid,U(res).id); if(p){ await run('DELETE FROM photos WHERE id=?',p.id);
+  // 先刪列再刪檔（理由見 /album/:id/del 上面那段）。刪不掉檔案只是留下孤兒，
+  // 反過來則是列還在、圖沒了＝破圖。
+  await remove(p.url).catch(()=>{}); if(p.thumb&&p.thumb!==p.url) await remove(p.thumb).catch(()=>{});
   // 封面可能是大圖也可能是縮圖（上傳存縮圖、「設為封面」存大圖），兩種都要比對，
   // 不然刪掉當封面的那張之後，相簿封面會指到已經刪掉的檔＝破圖。
   // 換上去的也用縮圖，跟上傳時的慣例一致。
