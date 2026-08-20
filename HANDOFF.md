@@ -1,6 +1,6 @@
 # 交接：接下來要做什麼
 
-> 最後更新：2026-08-19（傍晚）。換機器接手時先讀這份，再讀 `WRETCH_2012.md`（復刻契約）。
+> 最後更新：2026-08-20。換機器接手時先讀這份，再讀 `WRETCH_2012.md`（復刻契約）。
 
 ---
 
@@ -36,8 +36,8 @@ pnpm dev                             # http://localhost:3000
 | 影音／嘀咕／揪團／哈啦／愛正妹 | 完成。導覽列與頁尾都接得到，原站網址 `/hala/viewtopic.php?t=` 也通 |
 | 送禮物 | 完成。原站在付費網域，我們不接金流但功能照做，一律免費 |
 | 四種 RSS | 網誌／相簿／留言板／迴響，悄悄話與上鎖內容都不外流 |
-| RWD | **桌機零影響**（1000px 以上一條規則都不生效），窄螢幕還沒收乾淨，見待辦 A |
-| 回歸測試 | **141 項全綠**（`node tools/runtests.mjs`，會自己開乾淨資料庫） |
+| RWD | 完成。**桌機零影響**（1000px 以上一條規則都不生效），320〜1440 八個寬度、28 頁全部零問題 |
+| 回歸測試 | **149 項全綠**（`node tools/runtests.mjs`，會自己開乾淨資料庫） |
 | SQL 方言測試 | **29 項全綠** |
 
 > ⚠ `test_all.mjs` **要對一個乾淨的資料庫跑**（它第一步就是註冊 alpha/bravo/charlie，
@@ -95,28 +95,34 @@ Facebook 頁面貼進文章帶進來的 class（`.MsoNormal` `.uiInfoTable` `.da
 
 ## 2. 待辦（依優先序）
 
-### A. RWD 收尾 —— **下一個接手的人從這裡開始**
+### A. ~~RWD 收尾~~ — **2026-08-20 收完了**
 
 `public/wretch2012-rwd.css` 是**刻意加的響應式圖層**（原站沒有 RWD，2012 是 970px 固定寬，
 導覽列那顆「手機(NEW)」連的是另一個獨立的行動版活動頁）。整支包在
 `@media (max-width:999px)` 裡，**1000px 以上一條都不生效**，桌機逐像素不變。
 
-實測狀態（`MSYS_NO_PATHCONV=1 VW=<寬> node tools/uicheck.mjs <網址…>`）：
+實測狀態（`MSYS_NO_PATHCONV=1 BASE=<站台> VW=<寬> node tools/uicheck.mjs <網址…>`）：
 
 | 寬度 | 結果 |
 |---|---|
-| 1280 / 1440 | **16 頁全部零問題** ✅ |
-| 768 | `/albums` 溢出 192px、留言板 190px |
-| 375 | 首頁 266px、`/albums` 585px、個人相簿 195px、個人網誌 375px |
+| 320 / 375 / 414 / 600 / 768 / 1024 / 1280 / 1440 | **28 頁全部零問題** ✅ |
 
-已知根因（就從這幾個下手）：
-- `/albums` **根本沒吃到 `wretch2012-rwd.css`**（它走自己的 head），這個最好修也最有效
-- skin 版型的 `hr{width:700px}`（產生檔，要在 rwd 那層蓋掉）
-- `table[width]` 縮不到 min-content 以下
-- `#ad_square` 690px
+這一輪補掉的四類元凶（都是拿瀏覽器實量出來的，不是猜的）：
+
+| 類型 | 例子 | 為什麼難找 |
+|---|---|---|
+| 寫死寬度 | `#rss-bar .inner` 500、`#msg_list` 604、`#mainSection` 604、`.total-comments-div` 300 | 好找，但選擇器要夠深才蓋得過 |
+| 寫死位移 | `#header h1{left:300px}`、`a.message{left:470px}`、分頁列 `margin-left:375px` | 元素寬度是對的，**位置**才是錯的，「超寬元素」清單抓不到 |
+| padding | `#wfp-cover .stack .title{padding-left:439px}` | **`width:auto` 蓋不掉 padding**，box-sizing 之下盒子照樣被撐回 439 |
+| BFC 避讓 | `#wfp-hybrid .bd`、`#wfp-celebrity h3`（都有 `overflow:hidden`） | 最不直覺：width 明明是 auto，盒子卻自己縮了。`overflow` 讓它自成 BFC，而 **BFC 會主動避開浮動框** |
+| 偽元素 | `.stack .block::after` 寫死 408px | uicheck 的「超寬元素」只走真實節點，**偽元素量不到**，要掃 `scrollWidth` 才找得到 |
 
 > ⚠ **不准用 `overflow-x:hidden` 把問題藏起來**。那只會讓量測工具量不到，
-> 版面還是壞的而且內容會被裁掉。我一開始就是這樣偷懶，已經改掉了。
+> 版面還是壞的而且內容會被裁掉。
+
+> 迭代工具：`tools/rwdprobe.mjs`。它開**正式站**的頁面、注入**本機**那份 CSS 再量，
+> 所以不必等部署、也不必本機有種子資料就能改一輪量一輪。
+> 改完務必確認「那一頁真的有載到 rwd css」——不然是注入讓它過的，部署後照樣壞。
 
 ### A-2. ~~2005 殘留清除~~ — **2026-08-19 清完了**
 
@@ -135,7 +141,23 @@ Facebook 頁面貼進文章帶進來的 class（`.MsoNormal` `.uiInfoTable` `.da
 ⚠ `src/config.js` 的 `CDN` 預設值也從 `/img/wretch` 改成 **`/img/wretch2012`**——
 它現在只服務 `#static-path` 那個 hidden input。**不要再把它指回 `/img/wretch`**，那個目錄已經不存在。
 
-驗證：22 頁全部 200、還原度八頁 100%、測試 141+29 全綠、uicheck 四頁 0 問題。
+驗證：22 頁全部 200、還原度八頁 100%、測試 149+29 全綠、uicheck 28 頁 0 問題。
+
+### E. 正式站的禮物種子 —— **下一個接手的人從這裡開始**
+
+`tools/emptycheck.mjs` 對正式站跑，全站只剩**一個**空模組：每個人的名片都寫
+「還沒有收到禮物」。禮物功能本身是好的（`test_all.mjs` 有五項在驗：送禮物／
+出現在對方名片／對方收到系統訊息／不能送給自己／未登入不能送），
+純粹是**正式站的資料是 2026-08-19 灌的，而禮物那一塊是之後才加進種子腳本的**。
+
+補法就是待辦 D 那一套（種子腳本每一塊都先查再插，重跑只會補上缺的）：
+
+```bash
+railway login                                                # ⚠ CLI 目前是未授權狀態
+railway variables --service station --set SEED_DEMO=force
+railway logs                                                 # 禮物那塊很快，其餘會整片跳過
+railway variables --service station --set SEED_DEMO=0
+```
 
 ### B. 補更多原廠版型
 
@@ -191,6 +213,11 @@ railway variables --service station --set SEED_DEMO=0        # 灌完關掉
 
 | 坑 | 說明 |
 |---|---|
+| **具名路由會被同層的 `:id` 吃掉，而且只有正式站會爆** | `/album/rss` 註冊在 `/album/:id` 後面，`rss` 就被當成相簿編號送進 SQL。**SQLite 只是靜靜回空**（看起來像 404，本機完全測不出來），**Postgres 直接拋 invalid input syntax for integer → 500**。全站每個帳號的相簿 RSS 都掛了一整天沒人發現。現在 router 層擋掉非數字的 id/pid/cid/aid |
+| **`width:auto` 治不好所有的「太寬」** | 三個例外：①`padding-left:439px` 這種 padding 比容器還寬，box-sizing 之下盒子照樣被撐回去 ②`left:300px` 這種位移，元素寬度是對的、位置才是錯的 ③`overflow:hidden` 讓元素自成 BFC，**BFC 會主動避開浮動框**，於是 width 明明是 auto 盒子卻自己縮成 37px。前兩個要連 padding／left 一起歸零，第三個要拿掉 overflow 或清掉浮動 |
+| **量測工具看不到偽元素** | `uicheck.mjs` 的「超寬元素」只走真實節點，`.block::after{width:408px}` 這種一律漏掉。頁面明明還在橫向捲、清單卻是空的，就是它。改掃 `scrollWidth` 才找得到 |
+| **對正式站跑工具前先確認工具認得正式站** | `emptycheck.mjs` 只認 `/uploads/` 的照片，正式站照片在 R2，於是**整排誤報「沒有照片」**——差點照著這份假報告去重灌種子。看到「幾乎每一頁都有問題」，先懷疑工具 |
+| **`--click` 與 `--dead` 會真的按下刪除鍵** | 那兩個模式只能對拋棄式資料庫跑。要驗正式站就用 `tools/linksweep.mjs`（只送 GET） |
 | **Express 4 不接住 async handler 的錯誤** | 那是 Express 5 才有的行為。沒有 `wrapAsync` 的話，任何 DB 錯誤都會變成 unhandled rejection，請求永遠掛著。已在 `src/server.js` 註冊層處理 |
 | **`one(...).c` 加 await 的陷阱** | `await one(...).c` 會先對 Promise 取屬性得到 undefined 再 await，**不拋錯**，只是所有計數變空。要寫成 `(await one(...)).c`。全檔有 24 處 |
 | **connect-redis 是具名匯出** | v7 起沒有 default。寫錯會讓正式站起不來，而且**本機測不出來**（沒有 REDIS_URL 就提早 return，那段程式碼從沒被執行）。`test_pg.mjs` 已加測試釘住 |
@@ -218,6 +245,8 @@ railway variables --service station --set SEED_DEMO=0        # 灌完關掉
 |---|---|
 | `tools/fidelity.mjs --all` | **還原度量測**（離線，不靠 archive.org） |
 | `tools/uicheck.mjs` | **真的用瀏覽器檢查**：playwright-core 開系統 Chrome 把頁面畫出來，量橫向溢出（跑版）、超寬元素、壞圖、文字被切、JS 錯誤、失敗請求。`--click` 把站內連結全點一次；`--dead` **真的按下去**找「看起來能按、點了沒反應」的死控制項（按完看網址／DOM／請求有沒有變，三個都沒有才算死）。`VW=375` 之類可換視窗寬 |
+| `tools/linksweep.mjs` | **唯讀全站連結掃描**：廣度優先爬完整站，回報非 2xx／3xx 並印出「是哪一頁連過去的」。只送 GET，**對正式站跑是安全的**。相簿 RSS 全站 500 就是它抓到的 |
+| `tools/rwdprobe.mjs` | **RWD 迭代**：開正式站的頁面、注入本機那份 rwd css 再量，不必等部署也不必本機有種子資料 |
 | `tools/runtests.mjs` | **跑測試就用這支**：自己關掉佔埠的 server、開乾淨的 DATA_DIR、跑 test_all 與 test_pg |
 | `tools/emptycheck.mjs` | **空頁檢查**：掃全站每一頁（含 24 個相簿分類、12 個網誌分類），找出還印著「還沒有…」的模組、沒有照片的頁、以及純色色塊假照片。還原度 100% 不代表看起來不空，這兩支要一起跑 |
 | `tools/shot.mjs geo <原版> <我們> <選擇器清單>` | 幾何比對（要連 archive.org，會被限流） |

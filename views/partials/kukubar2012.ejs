@@ -50,10 +50,12 @@
             <ul class="dropdown <%= kkService %>-service">
                 <li class="album-index"><a class="bar-link" href="/albums">Album</a></li>
                 <li class="blog-index"><a class="bar-link" href="/blogs">Blog</a></li>
-                <%# 影音與嘀咕本站有（另一位 agent 正在做後端），指到約定好的網址 %>
-                <li class="video-index"><a class="bar-link" href="<%= locals.u ? '/'+u.name+'/video' : '/help' %>">Video</a></li>
-                <li class="digu-index"><a class="bar-link" href="<%= locals.u ? '/'+u.name+'/digu' : '/help' %>">Digu</a></li>
-                <li class="join-index"><a class="bar-link" href="/help">Join</a></li>
+                <%# 影音／嘀咕／揪團三個總站都做好了（/video /digu /join）。
+                    在某個人的小站裡看這條 bar 時指向「他的」影音與嘀咕，
+                    其餘情況指總站——原本這三顆全落到 /help，那是後端還沒做時的暫代。 %>
+                <li class="video-index"><a class="bar-link" href="<%= locals.u ? '/'+u.name+'/video' : '/video' %>">Video</a></li>
+                <li class="digu-index"><a class="bar-link" href="<%= locals.u ? '/'+u.name+'/digu' : '/digu' %>">Digu</a></li>
+                <li class="join-index"><a class="bar-link" href="/join">Join</a></li>
                 <li><a class="bar-link" href="/">Yahoo!</a></li>
                 <li><a class="bar-link" href="/help">Help</a></li>
                 <li><a class="bar-link" href="/help">Premium</a></li>

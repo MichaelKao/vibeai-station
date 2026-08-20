@@ -102,7 +102,16 @@ for (const u of urls) {
   const page = await ctx.newPage();
 
   const errs = [], bad = [];
-  page.on('console', m => { if (m.type() === 'error') errs.push(m.text().slice(0, 200)); });
+  // 第三方 iframe 自己噴的噪音，不是我們的頁面出錯。
+  // compute-pressure：YouTube 內嵌播放器對一個我們沒開放的 Permissions-Policy
+  // 送出請求，Chrome 就在 console 印一則 error。影音頁**間歇性**被判定成有問題
+  // （八輪裡中一次）就是這個——查了半天才發現訊息來自 iframe 裡面。
+  const NOISE = /compute-pressure|Permissions policy violation/;
+  page.on('console', m => {
+    if (m.type() !== 'error') return;
+    const t = m.text().slice(0, 200);
+    if (!NOISE.test(t)) errs.push(t);
+  });
   page.on('pageerror', e => errs.push('[未捕捉例外] ' + e.message.slice(0, 200)));
   page.on('requestfailed', r => bad.push(`${r.failure()?.errorText} ${r.url().slice(0, 100)}`));
   page.on('response', r => {
