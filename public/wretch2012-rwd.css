@@ -235,12 +235,6 @@
   }
   #footer-subscription ul, #footer-subscription li { float: none !important; }
 
-  /* 頁尾的中文／English 切換是 position:absolute（原站 970px 固定寬時，
-     它剛好落在頁尾的空白處）。窄螢幕頁尾整個重排之後，它會壓在頁尾連結上，
-     「中文」點下去其實是按到底下那條連結。改回正常流。 */
-  #wfp-lang { position: static !important; top: auto !important; margin: 6px 0; }
-  #wfp-lang ul { float: none !important; display: inline-block; }
-
   /* 個人小站（myspace 版型）：#header h1 是 658px 的招牌圖、#mainSection 寫死 604px。
      這兩個是留言板／收藏／訪客／首頁四頁在 768 與 375 溢出的元兇。 */
   #bigcontainer #header, #bigcontainer #header h1,
