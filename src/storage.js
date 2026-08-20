@@ -74,18 +74,57 @@ function readExif(buf){
 // 輸出的 JPEG 刻意**不**保留 EXIF：這條鏈有 .rotate()，把原本的方向標籤一起帶
 // 出去會讓部分瀏覽器再轉一次；而且 EXIF 裡可能有 GPS 座標，重新發佈等於幫
 // 使用者洩漏拍攝地點。#exif 面板要的資料改成解析後存進 photos 表。
+// 圖片解不開、或大到不合理，就是不收。丟這個錯，呼叫端回 4xx。
+export class BadImage extends Error {
+  constructor(msg){ super(msg); this.name = 'BadImage'; this.code = 'BAD_IMAGE'; }
+}
+
+// 像素上限。5000 萬約等於 8660×5770，比任何手機或單眼拍出來的都大。
+// 超過這個數字的「圖」不是照片，是拿來打人的。
+const MAX_PIXELS = 50e6;
+
 export async function save(file){
   const base = (process.env.R2_PREFIX||'station/') + crypto.randomUUID();
   let big = file.buffer, thumbBuf = null, meta = {};
+
+  // ⚠⚠ 這裡本來是一個「轉檔失敗就退回原圖，不擋使用者上傳」的 catch。
+  // 那一行讓兩種攻擊直接成立：
+  //
+  //   1. **Decompression bomb**：30000×30000 的 PNG 只有 109KB，
+  //      sharp 會拋 `Input image exceeds pixel limit`，被 catch 吞掉之後
+  //      **原始位元組原封不動落地，縮圖也 fallback 成同一份原檔**。
+  //      相簿頁是免登入的，那個 90px 的縮圖格指向它——
+  //      任何訪客要解出 9 億像素（約 900MB～3.6GB）才畫得出那個小格子。
+  //      同一顆炸彈設成大頭貼的話，會擴散到所有看得到那個人的頁面。
+  //   2. **偽造 MIME**：純文字、執行檔、0 byte 只要把 Content-Type 寫成
+  //      image/jpeg 就會落地，副檔名還照假 MIME 給，取回時 Content-Type
+  //      也是 image/jpeg，使用者看到滿頁破圖卻收到「上傳成功」。
+  //
+  // 正確的做法是**分辨兩種失敗**：
+  //   讀不懂 / 尺寸不合理  → 拒收（拋 BadImage），一個位元組都不要落地
+  //   只是壓縮那一步失敗   → 才可以退回原圖（那時候我們已經確認它是圖了）
+  const sharp = (await import('sharp')).default;
   try {
-    const sharp = (await import('sharp')).default;
-    const img = sharp(file.buffer, { animated: file.mimetype === 'image/gif' });
-    meta = await img.metadata();
+    meta = await sharp(file.buffer, { animated: file.mimetype === 'image/gif' }).metadata();
+  } catch (e) {
+    throw new BadImage('這個檔案不是圖片，或是已經損壞');
+  }
+  if (!meta.width || !meta.height) throw new BadImage('讀不出圖片尺寸');
+  // 動畫 GIF 的 height 是所有影格疊加的總高，要用 pageHeight 才是單格高度
+  const realHeight = meta.pageHeight || meta.height;
+  if (meta.width * realHeight > MAX_PIXELS)
+    throw new BadImage(`圖片太大了（${meta.width}×${realHeight} 像素）`);
+
+  try {
     if (file.mimetype !== 'image/gif') {
       big = await sharp(file.buffer).rotate().resize(1024, 1024, { fit:'inside', withoutEnlargement:true }).jpeg({ quality:86 }).toBuffer();
     }
     thumbBuf = await sharp(file.buffer).rotate().resize(90, 90, { fit:'cover', position:'centre' }).jpeg({ quality:82 }).toBuffer();
-  } catch { /* 轉檔失敗就退回原圖，不擋使用者上傳 */ }
+  } catch { /* 已經確認是合法圖片了，壓縮這一步失敗才退回原圖 */ }
+  // 縮圖是**一定要有**的：它出現在相簿列表、好友清單、留言板這些公開頁，
+  // fallback 成原圖等於把大圖送去當 90px 的格子用。
+  if (!thumbBuf) throw new BadImage('產生不出縮圖');
+  meta.height = realHeight;
   const isJpeg = big !== file.buffer;
   const url   = await put(base + (isJpeg ? '.jpg' : ext(file.mimetype)), big, isJpeg ? 'image/jpeg' : file.mimetype);
   const thumb = thumbBuf ? await put(base + '_t.jpg', thumbBuf, 'image/jpeg') : url;

@@ -640,10 +640,16 @@ site.get('/settings',requireLogin,requireOwner,async (req,res)=>res.render('sett
   subs:await all('SELECT * FROM subs WHERE user_id=? ORDER BY id',U(res).id)}));
 site.post('/settings',requireLogin,requireOwner,upload.single('avatar'),async(req,res)=>{
   const {nick,intro,music,css,css_blog,pass,pass2}=req.body, u=U(res);
-  let avatar=u.avatar; if(req.file){ const s=await save(req.file); avatar=s.thumb; await remove(u.avatar); }
+  let avatar=u.avatar, avatarErr='';
+  // 大頭貼走同一條 save()。它會出現在訪客記錄、好友清單、留言板、排行榜——
+  // 也就是**別人的頁面**上，所以壞圖的擴散面比相簿照片更廣，一定要擋住。
+  if(req.file){
+    try { const s=await save(req.file); avatar=s.thumb; await remove(u.avatar); }
+    catch (e) { if(e && e.code==='BAD_IMAGE') avatarErr=e.message; else throw e; }
+  }
   await run('UPDATE users SET nick=?,intro=?,music=?,css=?,css_blog=?,avatar=?,theme=? WHERE id=?',cut((nick||'').trim()||u.nick, 20),(intro||'').slice(0,500),cleanMusic(music),(css||'').slice(0,20000),(css_blog||'').slice(0,20000),avatar,isSkin(req.body.theme)?(req.body.theme||''):'',u.id);
   if(pass){ if(pass!==pass2) {flash(req,'兩次密碼不一致，其他設定已儲存');return res.redirect(`/${u.name}/settings`);} const s=salt(); await run('UPDATE users SET pass=?,salt=? WHERE id=?',hash(pass,s),s,u.id); }
-  flash(req,'設定已儲存'); res.redirect(`/${u.name}/settings`);
+  flash(req, avatarErr ? '設定已儲存，但大頭貼沒有換：'+avatarErr : '設定已儲存'); res.redirect(`/${u.name}/settings`);
 });
 
 // ── 我的訂閱（原站側欄的 #boxRssList）────────────────────────────────────
@@ -951,13 +957,30 @@ site.post('/album/:id/upload',requireLogin,requireOwner,albumOf,upload.array('ph
   const incoming=files.reduce((n,f)=>n+f.size,0);
   const err=await quotaError(U(res).id,incoming);
   if(err) return res.status(413).render('msg',{title:'空間不足',msg:err,back:`/${U(res).name}/album/${a.id}`});
-  // save() 回傳的尺寸與 EXIF 要一起寫進來，照片頁的 #exif 面板才有東西可印
-  for(const f of files){ const s=await save(f); if(!first) first=s.thumb;
+  // save() 回傳的尺寸與 EXIF 要一起寫進來，照片頁的 #exif 面板才有東西可印。
+  // ⚠ 讀不懂的檔案（偽造 MIME 的文字檔、執行檔、像素炸彈）會拋 BadImage，
+  // **一個位元組都不要落地、也不要寫進資料庫**。一批裡有壞的就只跳過那一張，
+  // 其餘照收——不要因為一張壞圖讓整批上傳白費。
+  let okN = 0; const rejected = [];
+  for(const f of files){
+    let s;
+    try { s = await save(f); }
+    catch (e) {
+      if (e && e.code === 'BAD_IMAGE') { rejected.push(`${f.originalname}：${e.message}`); continue; }
+      throw e;
+    }
+    if(!first) first=s.thumb; okN++;
     await run('INSERT INTO photos(album_id,url,thumb,caption,bytes,width,height,taken,camera) VALUES(?,?,?,?,?,?,?,?,?)',
-      a.id,s.url,s.thumb,(req.body.caption||'').slice(0,100),s.bytes,s.width||0,s.height||0,s.taken||'',s.camera||''); }
+      a.id,s.url,s.thumb,cut(req.body.caption||'',100),s.bytes,s.width||0,s.height||0,s.taken||'',s.camera||''); }
   if(first && !a.cover) await run('UPDATE albums SET cover=? WHERE id=?',first,a.id);
   if(first) await act(U(res).id,'album',a.title,`/${U(res).name}/album/${a.id}`);
-  flash(req,`上傳了 ${req.files?.length||0} 張照片`); res.redirect(`/${U(res).name}/album/${a.id}`);
+  // 訊息要講**實際成功的張數**，不是收到幾個檔。
+  // 原本印 req.files.length，於是整批都是壞檔時照樣說「上傳了 3 張照片」，
+  // 使用者回相簿頁看到空的還以為是站壞了。
+  flash(req, rejected.length
+    ? `上傳了 ${okN} 張照片；${rejected.length} 個檔案不能收（${rejected.slice(0,3).join('、')}）`
+    : `上傳了 ${okN} 張照片`);
+  res.redirect(`/${U(res).name}/album/${a.id}`);
 });
 site.get('/photo/:pid',async (req,res,next)=>{
   const p=await one('SELECT p.*,a.pass,a.friends_only,a.title atitle,a.id aid FROM photos p JOIN albums a ON a.id=p.album_id WHERE p.id=? AND a.user_id=?',req.params.pid,U(res).id); if(!p) return next();

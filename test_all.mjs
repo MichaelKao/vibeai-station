@@ -77,6 +77,49 @@ ok('切割之後相簿頁的每一張圖都還在（封面不會變破圖）', a
   return true;
 })());
 ok('非本人不能切割', (await post('/alpha/photo/1/crop',{x:0,y:0,w:50,h:50},Bc)).status===403);
+console.log('\n=== 上傳的安全性 ===');
+// ⚠ save() 原本有一個「轉檔失敗就退回原圖，不擋使用者上傳」的 catch，
+// 那一行讓兩種攻擊直接成立，多代理稽核實測都成功：
+//   1. decompression bomb：30000×30000 的 PNG 只有 109KB，sharp 拋
+//      「exceeds pixel limit」被吞掉 → 原始位元組落地、縮圖也是同一份原檔。
+//      相簿頁免登入，任何訪客要解出 9 億像素才畫得出那個 90px 的格子。
+//   2. 偽造 MIME：文字檔／執行檔／0 byte 寫成 image/jpeg 就會落地。
+ok('像素炸彈被擋下來', await (async()=>{
+  // ⚠ 不能用 png(30000,30000) 造——那會先在測試自己這邊配置 2.7GB 的緩衝區。
+  // decompression bomb 的本質是「IHDR 宣稱很大、實際位元組很小」，
+  // 所以直接拿一張正常的小圖，把 IHDR 裡的寬高改成 30000×30000 就好。
+  const small = png(8, 8, 1);
+  const bomb = Buffer.from(small);
+  bomb.writeUInt32BE(30000, 16);   // IHDR 的 width（8 位元組簽章 + 4 長度 + 4 型別）
+  bomb.writeUInt32BE(30000, 20);   // IHDR 的 height
+  const g=new FormData(); g.append('photos',new Blob([bomb],{type:'image/png'}),'bomb.png');
+  // ⚠ 不能用「頁面上有沒有 bomb 這個字」來判斷——**flash 訊息裡就含檔名**
+  // （「bomb.png：這個檔案不是圖片」），那樣寫會把「正確擋下來」誤判成失敗。
+  // 要驗的是**照片有沒有真的多一張**。
+  const before=new Set((await text(`/alpha/album/${aid}`,A)).match(/\/alpha\/photo\/\d+/g)||[]).size;
+  const r=await fetch(`${B}/alpha/album/${aid}/upload`,{method:'POST',headers:{cookie:A},body:g,redirect:'manual'});
+  const after=new Set((await text(`/alpha/album/${aid}`,A)).match(/\/alpha\/photo\/\d+/g)||[]).size;
+  return r.status<500 && after===before;
+})());
+ok('偽造 MIME 的文字檔不會落地', await (async()=>{
+  const g=new FormData(); g.append('photos',new Blob([Buffer.from('this is not an image at all')],{type:'image/jpeg'}),'fake.jpg');
+  const r=await fetch(`${B}/alpha/album/${aid}/upload`,{method:'POST',headers:{cookie:A},body:g,redirect:'manual'});
+  return r.status<500;
+})());
+ok('0 byte 檔不會落地', await (async()=>{
+  const g=new FormData(); g.append('photos',new Blob([Buffer.alloc(0)],{type:'image/png'}),'zero.png');
+  const r=await fetch(`${B}/alpha/album/${aid}/upload`,{method:'POST',headers:{cookie:A},body:g,redirect:'manual'});
+  return r.status<500;
+})());
+// 訊息要講實際成功的張數，不是收到幾個檔
+ok('全部是壞檔時不會說「上傳了 N 張」', await (async()=>{
+  const g=new FormData();
+  g.append('photos',new Blob([Buffer.from('nope')],{type:'image/jpeg'}),'x1.jpg');
+  await fetch(`${B}/alpha/album/${aid}/upload`,{method:'POST',headers:{cookie:A},body:g,redirect:'manual'});
+  const page=await text(`/alpha/album/${aid}`,A);
+  return !page.includes('上傳了 1 張照片');
+})());
+
 ok('非圖片被拒', (await (async()=>{const g=new FormData();g.append('photos',new Blob([Buffer.from('hi')],{type:'text/plain'}),'a.txt');
   const r=await fetch(`${B}/alpha/album/${aid}/upload`,{method:'POST',headers:{cookie:A},body:g,redirect:'manual'}); return r.status===302;})()));
 
