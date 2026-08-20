@@ -79,5 +79,24 @@ for (const [name, file] of [['回歸測試', 'test_all.mjs'], ['SQL 方言', 'te
 }
 
 srv.kill();
+
+// ── 瀏覽器流程（登入態）────────────────────────────────────────────────
+// ownerflow.mjs **自己開站**（它要一個乾淨的資料庫走建立／刪除的流程），
+// 所以不能塞進上面那個共用 BASE 的清單，要等這支 server 收掉之後再跑。
+// 用 SKIP_BROWSER=1 可以跳過（例如在沒有 Chrome 的機器上）。
+if (!process.env.SKIP_BROWSER) {
+  await sleep(800);
+  const r = spawnSync(process.execPath, ['tools/ownerflow.mjs'], {
+    env: { ...process.env, PORT: '3131', MSYS_NO_PATHCONV: '1' }, encoding: 'utf8',
+  });
+  const out = (r.stdout || '') + (r.stderr || '');
+  const line = out.split('\n').filter(l => l.includes('passed')).pop();
+  const fails = out.split('\n').filter(l => l.startsWith('! FAIL'));
+  console.log(`\n瀏覽器流程：${line ? line.trim() : '(沒有結果——測試根本沒跑完)'}`);
+  for (const f of fails.slice(0, 20)) console.log('  ' + f.trim());
+  if (!line) { bad += 1; console.log('  ' + out.trim().split('\n').slice(-8).join('\n  ')); }
+  if (fails.length) bad += fails.length;
+}
+
 console.log(bad ? `\n共 ${bad} 項失敗` : '\n全部通過');
 process.exit(bad ? 1 : 0);
