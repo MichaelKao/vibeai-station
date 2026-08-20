@@ -12,3 +12,4 @@ assets_src2/cdx/
 
 # agent 留下的暫存腳本
 _*.mjs
+_r.json
