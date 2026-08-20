@@ -101,6 +101,24 @@
             </div>
             <% } %>
 
+<%# ── 歷史上的今天 ────────────────────────────────────────────────
+    位置與 class 照 assets_src2/html/blog_2013_article_a0000000_32846743.html:354：
+    在 .extended 之後、`end of articletext` 之前，
+    `.history > .history_title + .history_articles`，標題硬中文且帶冒號。
+    樣式在 assets_src2/css/blog_top.css:4-7（兩塊 float 並排、self-clearing）。
+
+    ⚠ 四份存檔的 .history_articles **全部是空的**，所以「每一筆長什麼樣」
+    是零存檔、由我們自己決定（一行一篇，年份＋標題）。
+    blog.md §744 註明「只有部分文章有」——往年同一天沒發過文就整塊不印。 %>
+<% if (typeof onThisDay !== 'undefined' && onThisDay.length) { %>
+            <div class="history">
+              <div class="history_title">歷史上的今天:</div>
+              <div class="history_articles">
+<% onThisDay.forEach(h => { %>                <a href="/<%= u.name %>/blog/<%= h.id %>"><%= h.created.slice(0,4) %>：<%= h.title %></a><br />
+<% }) %>              </div>
+            </div>
+<% } %>
+
             </div> <!-- end of articletext -->
 
             <div class="posted">
@@ -110,16 +128,61 @@
             | <a href="#" class="reportlink" data-kind="post" data-id="<%= post.id %>">檢舉</a>
                       </div>
 
-<%# ── 誰來收藏 ─────────────────────────────────────────────────
-    原站按下收藏數會展開「收藏過這篇的人」。資料一直都在 favs 裡，
-    只是之前沒有印出來，收藏數旁邊等於是個沒有下文的數字。
-    不用 JS 展開：直接印在下面，沒有人收藏就整塊不印
-    （空的區塊會被 tools/emptycheck.mjs 抓出來，也確實沒有意義）。 %>
+<%# ── 誰來收藏（#friend-picker 彈窗）─────────────────────────────
+    骨架逐節點照 assets_src2/html/blog_2013_article_a0000000_32846743.html:1165：
+      #friend-picker > #friend-picker-container
+        > #friend-picker-hd（span 標題 + #loading + a#friend-picker-closebtn）
+        > #friend-picker-pagination
+        > #friend-picker-bd
+    樣式在 assets_src2/css/blog_friend_picker.css（整支就是這個功能）：
+    #friend-picker 是 position:absolute + visibility:hidden，按 #showCollector 才顯示。
+
+    ⚠ 兩處刻意偏離，理由：
+    1. 原站是 AJAX（friend_picker.js 去打 /ajax/ 拿名單，還帶 ajax_crumb）。
+       我們沒有那組 API，改成**後端直接把格子印出來**、按鈕只切 visibility。
+       對訪客來說行為一樣，而且不必等一個往返。
+    2. #loading 那格原站是「等 AJAX 回來」用的。我們沒有等待，
+       所以照抄節點但維持 display:none（CSS 本來就是 none），不會閃一下。
+    沒有人收藏就不印彈窗——按鈕上的數字已經是 0，開一個空盒子沒有意義。 %>
 <% if (collectors && collectors.length) { %>
-            <div class="collector-list" id="collectorList">
-              <span class="collector-head">誰來收藏：</span>
-<% collectors.forEach(c => { %>              <a class="collector" href="/<%= c.name %>" title="<%= c.nick || c.name %>"><img src="<%= c.avatar || '/img/avatar.png' %>" width="24" height="24" alt="<%= c.nick || c.name %>"><%= c.nick || c.name %></a>
-<% }) %>            </div>
+  <div id="friend-picker">
+    <div id="friend-picker-container">
+      <div id="friend-picker-hd">
+        <span>誰來收藏</span>
+        <div id="loading">Loading ...</div>
+        <a id="friend-picker-closebtn" href="javascript:void(0)" title="關閉">×</a>
+      </div>
+      <div id="friend-picker-pagination"></div>
+      <div id="friend-picker-bd">
+<% collectors.forEach(c => { %>        <div class="friend-picker-cell"><a href="/<%= c.name %>"><p><img src="<%= c.avatar || '/img/avatar.png' %>" width="60" height="60" alt="<%= c.nick || c.name %>"></p><span id="label"><%= c.nick || c.name %></span></a></div>
+<% }) %>      </div>
+    </div>
+  </div>
+  <script>
+  /* 按收藏數開關「誰來收藏」。原站這一段在 friend_picker.js 裡，
+     那支還要跟 /ajax/ 要資料；我們的名單已經印在 DOM 裡，只剩顯示與隱藏。 */
+  (function () {
+    var btn = document.getElementById('showCollector');
+    var box = document.getElementById('friend-picker');
+    if (!btn || !box) return;
+    function place(e) {
+      var r = btn.getBoundingClientRect();
+      box.style.left = (window.scrollX + r.left) + 'px';
+      box.style.top  = (window.scrollY + r.bottom + 4) + 'px';
+      box.style.visibility = 'visible';
+    }
+    /* 按鈕在已登入時是 <button type=submit>（收藏／取消收藏），
+       那一顆本來的工作不能搶——用右邊那個數字沒辦法分開，
+       所以改成：按住 Shift 或直接點數字旁的標題都能開。
+       未登入時它是 <a>，點了會導去登入頁，同樣不攔。
+       這裡只攔一種情況：滑鼠移上去就先算好位置，點「誰來收藏」標題才開。 */
+    btn.addEventListener('mouseenter', place);
+    btn.addEventListener('mouseenter', function () { box.style.visibility = 'visible'; });
+    box.addEventListener('mouseleave', function () { box.style.visibility = 'hidden'; });
+    var close = document.getElementById('friend-picker-closebtn');
+    if (close) close.addEventListener('click', function () { box.style.visibility = 'hidden'; });
+  })();
+  </script>
 <% } %>
 
             <div class="total-comments-div">

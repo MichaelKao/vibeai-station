@@ -166,26 +166,27 @@
       <br />
     </div>
 
-<%# ── #boxOnThisDay（歷史上的今天）────────────────────────────────
-    存檔裡沒有這一塊（blog.md 把它列在「後期才加上、寫死中文」那一組），
-    所以 id/class 是我們自己取的，但**三層結構照側欄的規矩**
-    （#boxXxx > .boxXxx0 > .sidetitle ／ .boxXxx1 > .side ＋ 尾巴一個 <br />），
-    這樣換版型時它跟其他模組一起變，不會變成唯一格格不入的一塊。
-    往年同一天沒發過文就整塊不印——空模組會被 tools/emptycheck.mjs 抓出來。 %>
-<% if (typeof onThisDay !== 'undefined' && onThisDay.length) { %>
-      <div id="boxOnThisDay">
-      <div class="boxOnThisDay0">
-        <div class="sidetitle">
-          歷史上的今天        </div>
-      </div>
-      <div class="boxOnThisDay1">
-        <div class="side">
-<% onThisDay.forEach(p=>{ %>          <a href="/<%= u.name %>/blog/<%= p.id %>"><%= p.created.slice(0,4) %> 年：<%= p.title %></a><br />
-<% }) %>        </div>
+<%# ── #boxFolder（使用者自訂欄位，可以有 N 個）─────────────────────
+    原版存檔實證見 assets_src2/spec/blog.md §1097：同一個 id 重複很多次，
+    原站就是這樣（【About Me】【線上人數】【FLAG COUNTER】…），照抄不改成 class。
+    `.side` 上那個 inline `style="width: 200px;"` 也照抄——
+    blog.md §168 已經指出它加上 12px border 會超出 200px 欄寬，那是原站的小 bug。
+
+    ⚠ 原站的自訂欄位可以塞任意 HTML（Facebook badge、廣告 iframe）。
+    我們不行：WRETCH_2012.md §4-4 規定使用者輸入一律逸出，
+    所以內容走站上通用的 render()（[img] [b] 連結那套），
+    貼得進去圖片與連結，貼不進去 <script>。 %>
+<% if (typeof folders !== 'undefined' && folders.length) { folders.forEach(fd => { %>
+      <div id="boxFolder">
+      <div class="boxFolder0"><div class="sidetitle"><%= fd.title %>          </div></div>
+      <div class="boxFolder1">
+        <div class="side" style="width: 200px; ">
+          <%- render(fd.body) %>
+        </div>
       </div>
       <br />
     </div>
-<% } %>
+<% }) } %>
 
 <%# ── #boxSearch ──────────────────────────────────────────────── %>
       <div id="boxSearch">

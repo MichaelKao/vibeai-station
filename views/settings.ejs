@@ -67,6 +67,40 @@
           <li><span>&nbsp;</span><input class="small-c" type="submit" value="儲存設定"></li>
         </ul>
       </form>
+
+      <%# ── 網誌側欄的自訂欄位（原站的 #boxFolder）──────────────────────
+          ⚠ 這一段**一定要在上面那個 <form> 外面**：HTML 不允許表單巢狀，
+          塞進去的話瀏覽器會把內層的 form 丟掉，按鈕全部變成送出外層那一份
+          （＝按「刪除欄位」其實是在存設定）。 %>
+      <div class="w2-h3" id="folders">網誌側欄自訂欄位</div>
+      <div class="w2-sub">
+        原站叫「自訂欄位」，可以在網誌側欄多開幾塊自己的區塊（About Me、線上人數…）。
+        原站能貼任意 HTML，本站一律逸出，改用站上通用的標記：
+        <code>[img]網址[/img]</code>、<code>[b]粗體[/b]</code>、網址會自動變連結。
+        最多 <%= 8 %> 塊。
+      </div>
+      <ul class="w2-form">
+<% (locals.folders || []).forEach(fd => { %>
+        <li>
+          <form method="post" action="/<%= u.name %>/folders/<%= fd.id %>/edit">
+            <input type="text" name="title" value="<%= fd.title %>" maxlength="30" size="20">
+            <textarea class="small-c" name="body" cols="50" rows="3" maxlength="5000"><%= fd.body %></textarea>
+            <input class="small-c" type="submit" value="儲存">
+          </form>
+          <form method="post" action="/<%= u.name %>/folders/<%= fd.id %>/del"
+                onsubmit="return confirm('刪除這個欄位？')"><button class="w2-linkbtn" type="submit">刪除</button></form>
+        </li>
+<% }) %>
+<% if ((locals.folders || []).length < 8) { %>
+        <li>
+          <form method="post" action="/<%= u.name %>/folders">
+            <input type="text" name="title" placeholder="欄位標題，例如【About Me】" maxlength="30" size="20">
+            <textarea class="small-c" name="body" cols="50" rows="3" maxlength="5000" placeholder="內容。可用 [img]網址[/img] 放圖，網址會自動變連結"></textarea>
+            <input class="small-c" type="submit" value="新增欄位">
+          </form>
+        </li>
+<% } %>
+      </ul>
     </div>
   </div>
 </div>

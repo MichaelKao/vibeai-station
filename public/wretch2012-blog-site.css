@@ -164,13 +164,10 @@ html > body #content #push button.push { margin: 0 0 0 2px; }
 }
 
 /* --- 誰來收藏 -------------------------------------------------------------
- * 原站按下收藏數會展開「收藏過這篇的人」（blog.md 記為後期加上的功能，
- * 存檔裡沒有那一段 DOM，所以樣式是自己配的——配色從 skin117 既有的色盤挑，
- * 不新增視覺語言）。沒有人收藏時整塊不印，見 views/post.ejs。
+ * 樣式**不在這裡**：原站有專屬的 friend_picker.css，已經加進
+ * tools/build-css2012.mjs 的 wretch2012-blog.css bundle 裡了。
+ * 這裡只補兩條原站靠 JS 補的：關閉鈕的外觀，以及格子裡的名字要能換行。
  */
-.collector-list { margin: 4px 0 8px; line-height: 28px; }
-.collector-head { color: #999; font-size: 12px; margin-right: 4px; }
-.collector      { display: inline-block; margin-right: 8px; font-size: 12px;
-                  text-decoration: none; vertical-align: middle; }
-.collector img  { vertical-align: middle; margin-right: 3px; border: 1px solid #ddd; }
-.collector:hover { text-decoration: underline; }
+#friend-picker-closebtn { float: right; margin-right: 6px; color: #666;
+                          text-decoration: none; font-size: 14px; line-height: 18px; }
+.friend-picker-cell #label { display: block; font-size: 11px; word-break: break-all; }

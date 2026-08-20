@@ -184,6 +184,12 @@ export function schemaSql(forDriver = driver) {
       ${created}, PRIMARY KEY(user_id,friend_id)`),
     T('favs', `${fkUser}, post_id INTEGER REFERENCES posts(id) ON DELETE CASCADE,
       ${created}, PRIMARY KEY(user_id,post_id)`),
+    // 網誌側欄的自訂欄位。原站叫 #boxFolder，同一個 id 可以重複很多次
+    // （blog.md §1097 有存檔實證：【About Me】【線上人數】【FLAG COUNTER】…）。
+    // 原站可以塞任意 HTML（Facebook badge、廣告 iframe），
+    // 我們照 WRETCH_2012.md §4-4「使用者輸入一律逸出」走 render()，
+    // 允許的是站上通用那套標記（[img] [b] 連結…），不是原生 HTML。
+    T('folders', `id ${PK}, ${fkUser}, title TEXT, body TEXT, seq INTEGER DEFAULT 0, ${created}`),
     T('acts', `id ${PK}, ${fkUser}, kind TEXT, title TEXT, url TEXT, ${created}`),
     T('sysmsg', `id ${PK}, ${fkUser}, title TEXT, body TEXT, seen INTEGER DEFAULT 0, ${created}`),
     T('reports', `id ${PK}, kind TEXT, target_id INTEGER, url TEXT, reason TEXT,
@@ -243,6 +249,14 @@ export function schemaSql(forDriver = driver) {
     CREATE INDEX IF NOT EXISTS idx_visitors_user ON visitors(user_id, id DESC);
     CREATE INDEX IF NOT EXISTS idx_friends_rev   ON friends(friend_id);
     CREATE INDEX IF NOT EXISTS idx_favs_user     ON favs(user_id, created DESC);
+    -- 反向查詢：「這篇文章有誰收藏」（單篇文章頁的「誰來收藏」彈窗）。
+    -- 主鍵是 (user_id, post_id)，開頭不是 post_id，所以這個方向用不到主鍵索引，
+    -- 沒有這一條就是每開一篇文章全表掃一次 favs。
+    CREATE INDEX IF NOT EXISTS idx_favs_post     ON favs(post_id, created DESC);
+    -- 好友頁的分組篩選（?cateSelect=）
+    CREATE INDEX IF NOT EXISTS idx_friends_grp   ON friends(user_id, grp);
+    -- 側欄自訂欄位：每一頁網誌都要撈一次
+    CREATE INDEX IF NOT EXISTS idx_folders_user  ON folders(user_id, seq);
     CREATE INDEX IF NOT EXISTS idx_acts_user     ON acts(user_id, id DESC);
     CREATE INDEX IF NOT EXISTS idx_sysmsg_user   ON sysmsg(user_id, id DESC);
     CREATE INDEX IF NOT EXISTS idx_joins_user    ON joins(user_id, id DESC);

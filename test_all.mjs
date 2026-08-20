@@ -107,7 +107,16 @@ ok('暱稱連個人網頁', p1.includes('https://ex.com'));
 ok('板主回覆', (await post('/alpha/blog/1/comment/1/reply',{reply:'謝謝'},A)).status===302 &&
    (await text('/alpha/blog/1')).includes('板主回覆'));
 ok('收藏', (await post('/alpha/blog/1/fav',{},Bc)).status===302 && (await text('/bravo/favs')).includes('第一篇'));
-ok('誰來收藏列出收藏者', (await text('/alpha/blog/1')).includes('誰來收藏'));
+ok('誰來收藏用原版 #friend-picker 結構', (await text('/alpha/blog/1')).includes('friend-picker-bd'));
+ok('誰來收藏列出收藏者', (await text('/alpha/blog/1')).includes('friend-picker-cell'));
+
+console.log('\n=== 側欄自訂欄位（boxFolder）===');
+ok('新增自訂欄位', (await post('/alpha/folders',{title:'【About Me】',body:'我是阿發'},A)).status===302 && (await text('/alpha/blog')).includes('【About Me】'));
+ok('自訂欄位內容有印出來', (await text('/alpha/blog')).includes('我是阿發'));
+ok('自訂欄位用 boxFolder 結構', (await text('/alpha/blog')).includes('boxFolder'));
+ok('自訂欄位逸出 HTML', (await post('/alpha/folders',{title:'XSS',body:'<script>alert(1)</script>'},A)).status===302 && !(await text('/alpha/blog')).includes('<script>alert(1)'));
+ok('非本人不能新增自訂欄位', (await post('/alpha/folders',{title:'壞人',body:'x'},Bc)).status===403);
+
 ok('推薦', (await post('/alpha/blog/1/like',{},Bc)).status===302);
 ok('引用', (await post('/alpha/blog/1/trackback',{},Bc)).status===302 && (await text('/alpha/blog/1')).includes('引用'));
 

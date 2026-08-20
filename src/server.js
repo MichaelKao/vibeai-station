@@ -572,13 +572,38 @@ site.get('/visitors',async (req,res)=>{
     friends:await all('SELECT u.name,u.nick FROM friends f JOIN users u ON u.id=f.friend_id WHERE f.user_id=? LIMIT 12',U(res).id)});
 });
 // 個人設定
-site.get('/settings',requireLogin,requireOwner,(req,res)=>res.render('settings',{nav:'user',themes:SKINS}));
+site.get('/settings',requireLogin,requireOwner,async (req,res)=>res.render('settings',{nav:'user',themes:SKINS,
+  folders:await all('SELECT * FROM folders WHERE user_id=? ORDER BY seq,id',U(res).id)}));
 site.post('/settings',requireLogin,requireOwner,upload.single('avatar'),async(req,res)=>{
   const {nick,intro,music,css,css_blog,pass,pass2}=req.body, u=U(res);
   let avatar=u.avatar; if(req.file){ const s=await save(req.file); avatar=s.thumb; await remove(u.avatar); }
   await run('UPDATE users SET nick=?,intro=?,music=?,css=?,css_blog=?,avatar=?,theme=? WHERE id=?',(nick||u.nick).trim().slice(0,20),(intro||'').slice(0,500),cleanMusic(music),(css||'').slice(0,20000),(css_blog||'').slice(0,20000),avatar,isSkin(req.body.theme)?(req.body.theme||''):'',u.id);
   if(pass){ if(pass!==pass2) {flash(req,'兩次密碼不一致，其他設定已儲存');return res.redirect(`/${u.name}/settings`);} const s=salt(); await run('UPDATE users SET pass=?,salt=? WHERE id=?',hash(pass,s),s,u.id); }
   flash(req,'設定已儲存'); res.redirect(`/${u.name}/settings`);
+});
+
+// 網誌側欄的自訂欄位（原站的 #boxFolder，可以有很多個）。
+// 原站能塞任意 HTML；我們照契約 §4-4 一律逸出，內容走站上通用的 render()
+// （[img] [b] 連結那套），所以貼得進去圖片與連結，貼不進去 <script>。
+// 上限 8 個：原站沒有上限，但側欄只有 200px 寬，再多就變成一條沒有盡頭的長廊。
+const FOLDER_MAX = 8;
+site.post('/folders',requireLogin,requireOwner,async (req,res)=>{
+  const u=U(res), title=(req.body.title||'').trim().slice(0,30), body=(req.body.body||'').slice(0,5000);
+  if(title && (await one('SELECT count(*) c FROM folders WHERE user_id=?',u.id)).c < FOLDER_MAX){
+    const seq=((await one('SELECT max(seq) m FROM folders WHERE user_id=?',u.id))?.m ?? 0)+1;
+    await run('INSERT INTO folders(user_id,title,body,seq) VALUES(?,?,?,?)',u.id,title,body,seq);
+  }
+  res.redirect(`/${u.name}/settings#folders`);
+});
+site.post('/folders/:id/edit',requireLogin,requireOwner,async (req,res)=>{
+  const u=U(res);
+  await run('UPDATE folders SET title=?,body=? WHERE id=? AND user_id=?',
+    (req.body.title||'').trim().slice(0,30)||'自訂欄位',(req.body.body||'').slice(0,5000),req.params.id,u.id);
+  res.redirect(`/${u.name}/settings#folders`);
+});
+site.post('/folders/:id/del',requireLogin,requireOwner,async (req,res)=>{
+  await run('DELETE FROM folders WHERE id=? AND user_id=?',req.params.id,U(res).id);
+  res.redirect(`/${U(res).name}/settings#folders`);
 });
 // 刪除自己的帳號（需再次輸入密碼），連同照片一起清掉
 site.post('/settings/delete',requireLogin,requireOwner,async(req,res)=>{
@@ -823,6 +848,8 @@ const blogSide=async res=>({
   recentC:await all('SELECT c.author,c.post_id,p.title FROM comments c JOIN posts p ON p.id=c.post_id WHERE p.user_id=? ORDER BY c.id DESC LIMIT 5',U(res).id),
   months:await all("SELECT substr(created,1,7) ym, count(*) n FROM posts WHERE user_id=? GROUP BY ym ORDER BY ym DESC LIMIT 24",U(res).id),
   cal:await calendar(U(res).id, res.calYm),
+  // 側欄自訂欄位（原站的 #boxFolder，可以有很多個）
+  folders:await all('SELECT * FROM folders WHERE user_id=? ORDER BY seq,id',U(res).id),
   // 「歷史上的今天」：往年同月同日發過的文（blog.md 記為後期加上的側欄模組）。
   // created 是 'YYYY-MM-DD HH:MM:SS' 字串，substr(created,6,5) 就是 'MM-DD'——
   // 兩個驅動都有 substr，不用寫方言分支（其他側欄查詢也是這樣切月份的）。
