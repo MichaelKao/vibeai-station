@@ -16,3 +16,7 @@ _r.json
 
 # Railway API token（本機用，絕對不要進版控）
 .railway-token
+
+# 大軍代理跑分析時留下的暫存腳本
+tmp_*.mjs
+tools/_*.mjs
