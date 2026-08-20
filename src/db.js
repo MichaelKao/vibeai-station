@@ -131,7 +131,11 @@ if (driver === 'postgres') {
 } else {
   const { DatabaseSync } = await import('node:sqlite');
   const db = new DatabaseSync(DB_PATH);
-  db.exec('PRAGMA journal_mode=WAL; PRAGMA foreign_keys=ON;');
+  // ⚠ busy_timeout 一定要設。SQLite 的預設是 **0**——只要另一個連線正在寫，
+  // 這一邊立刻回 SQLITE_BUSY，對使用者就是 500「database is locked」。
+  // 稽核實測：兩個實例對同一個檔案寫入時，**約 51% 的寫入直接失敗**
+  // （同樣負載下 Postgres 是 0 錯誤）。設成 5 秒，讓它等一下再重試。
+  db.exec('PRAGMA journal_mode=WAL; PRAGMA foreign_keys=ON; PRAGMA busy_timeout=5000;');
   impl = {
     one: async (sql, ...a) => db.prepare(sql).get(...a),
     all: async (sql, ...a) => db.prepare(sql).all(...a),
@@ -327,6 +331,11 @@ const ADD_COLUMNS = [
   // 我們原本只存 author 文字，連不回帳號，那三個東西就都做不出來。
   // 可為 NULL——訪客不登入也能留言，那種就沒有連結、沒有認證章。
   ['guestbook', 'author_id', 'INTEGER'],
+  // 迴響者的帳號。原版每一則迴響的暱稱與大頭貼都是連到那個人的小站
+  // （blog_2013_article_*.html 的 .bighead）。我們原本只存 author 文字，
+  // 連不回帳號，於是**每一則迴響的頭像都是預設圖、連結還指向文章作者**
+  // ——看起來像每則留言都是站主自己回的。可為 NULL（訪客不登入也能回應）。
+  ['comments', 'author_id', 'INTEGER'],
   // 原站的自訂 CSS 是**兩份**：f10.wretch.yimg.com/<帳號>/files/album.css 與 blog.css
   // （WRETCH_SPEC.md §6 最後兩行）。我們原本只有一份 users.css 套在每一頁上，
   // 想把相簿弄成一個樣、網誌弄成另一個樣的人做不到——那正是當年大家在玩的事。

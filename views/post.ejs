@@ -259,7 +259,13 @@
     <div class="comments-body">
       <a name="comment<%= c.id %>"></a>
       <ul class="comments-user">
-        <span><a target="_blank" href="<%= c.homepage || ('/' + u.name + '/blog') %>" class="bighead"><img src="<%= IMG %>/No_Login_90.gif" width="90" height="90" alt="<%= c.author %>"><cite></cite></a></span>
+        <%# 迴響者的頭像與連結。原版每一則都連到那個人的小站
+            （blog_2013_article_*.html 的 .bighead）。
+            ⚠ 原本這裡寫死 No_Login_90.gif、連結還 fallback 到**文章作者**的網誌，
+            於是每一則迴響看起來都像站主自己回的。
+            登入者連自己的小站、用自己的頭貼；訪客留自己填的個人網頁，
+            都沒有就維持原版的未登入圖（那才是真的「沒有帳號」）。 %>
+        <span><a target="_blank" href="<%= c.cname ? ('/' + c.cname) : (c.homepage || 'javascript:void(0)') %>" class="bighead"><img src="<%= c.cavatar || (IMG + '/No_Login_90.gif') %>" width="90" height="90" alt="<%= c.author %>"><cite></cite></a></span>
         <li class="comments-word">
           <p id="floor_<%= i+1 %>" class="cmt_floor"><%= i+1 %>樓</p>
           <p id="fhide_<%= i+1 %>" class="cmt_floor_hide"><%= floorAlias[i] || ((i+1) + '樓') %></p>

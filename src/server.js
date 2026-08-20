@@ -349,18 +349,8 @@ app.post('/admin/user/:id/vip',requireAdmin,async (req,res)=>{
   res.redirect('/admin'); });
 app.post('/admin/user/:id/del',requireAdmin,async(req,res)=>{
   const id=Number(req.params.id);
-  if(id!==res.locals.me.id){
-    for(const p of await all('SELECT p.url,p.thumb FROM photos p JOIN albums a ON a.id=p.album_id WHERE a.user_id=?',id)){ await remove(p.url); if(p.thumb&&p.thumb!==p.url) await remove(p.thumb); }
-    const av=await one('SELECT avatar FROM users WHERE id=?',id); if(av?.avatar?.startsWith('/uploads/')||av?.avatar?.startsWith('http')) await remove(av.avatar);
-    // ⚠ friends **沒有外鍵**（user_id 只是一個 INTEGER），所以刪帳號不會連動。
-    // 不自己清的話會留下孤兒列：別人的 MyPage 還寫「好友 N 人」但點進去少一個、
-    // 「誰來我家」連到 404 的帳號，而且啟動時的分組搬移也會被它絆倒
-    // （那個坑已經讓正式站掛過兩次，見 src/db.js 的 backfillGroups）。
-    // 兩個方向都要清：他加的、以及加他的。
-    await run('DELETE FROM friends WHERE user_id=? OR friend_id=?',id,id);
-    await run('DELETE FROM visitors WHERE who=(SELECT name FROM users WHERE id=?)',id);
-    await run('DELETE FROM users WHERE id=?',id);
-  }
+  // 站長刪別人與使用者自刪走**同一支** purgeUser()，不要各寫一份（會分岔）
+  if(id!==res.locals.me.id) await purgeUser(id);
   res.redirect('/admin'); });
 
 // ===== 無名小站風格網址 =====
@@ -773,13 +763,35 @@ site.post('/folders/:id/del',requireLogin,requireOwner,async (req,res)=>{
   await run('DELETE FROM folders WHERE id=? AND user_id=?',req.params.id,U(res).id);
   res.redirect(`/${U(res).name}/settings#folders`);
 });
+// 徹底刪掉一個帳號。**兩條路徑共用這一支**（站長在後台刪、使用者自己刪）。
+//
+// ⚠ 分成兩份寫是這個功能出過的最大問題：後台那條補了清理、自刪那條沒補，
+// 稽核報告直接把它列成「只修一半」。共用之後就不可能再分岔。
+//
+// 要清的不只是 users 那一列：
+//   friends / visitors  **沒有外鍵**（user_id 只是 INTEGER），不清會留孤兒列，
+//                       別人的頁面還寫「好友 N 人」、「誰來我家」連到 404 的帳號，
+//                       而且啟動時的分組搬移會被它絆倒（正式站為此掛過兩次）。
+//   guestbook / comments 的 author_id 指向這個人。**SQLite 會重用被刪掉的 id**，
+//                       下一個註冊的人就繼承了這些留言——別人的留言板上
+//                       會出現冒名的頭像與連結。所以要把參照打成 NULL。
+async function purgeUser(id){
+  for(const p of await all('SELECT p.url,p.thumb FROM photos p JOIN albums a ON a.id=p.album_id WHERE a.user_id=?',id)){
+    await remove(p.url); if(p.thumb&&p.thumb!==p.url) await remove(p.thumb); }
+  const u=await one('SELECT name,avatar FROM users WHERE id=?',id);
+  if(u?.avatar && u.avatar!=='/img/avatar.png') await remove(u.avatar);
+  await run('DELETE FROM friends WHERE user_id=? OR friend_id=?',id,id);
+  if(u?.name) await run('DELETE FROM visitors WHERE who=?',u.name);
+  await run('UPDATE guestbook SET author_id=NULL WHERE author_id=?',id);
+  await run('UPDATE comments SET author_id=NULL WHERE author_id=?',id);
+  await run('DELETE FROM users WHERE id=?',id);
+}
+
 // 刪除自己的帳號（需再次輸入密碼），連同照片一起清掉
 site.post('/settings/delete',requireLogin,requireOwner,async(req,res)=>{
   const u=await one('SELECT * FROM users WHERE id=?',U(res).id);
   if(!check(u,req.body.pass||'')){ flash(req,'密碼錯誤，帳號未刪除'); return res.redirect(`/${u.name}/settings`); }
-  for(const p of await all('SELECT p.url,p.thumb FROM photos p JOIN albums a ON a.id=p.album_id WHERE a.user_id=?',u.id)){ await remove(p.url); if(p.thumb&&p.thumb!==p.url) await remove(p.thumb); }
-  if(u.avatar && u.avatar!=='/img/avatar.png') await remove(u.avatar);
-  await run('DELETE FROM users WHERE id=?',u.id);
+  await purgeUser(u.id);
   req.session.destroy(()=>res.redirect('/'));
 });
 // 好友
@@ -1379,7 +1391,8 @@ site.get('/blog/:id',postOf,async (req,res)=>{ const p=res.locals.post;
     // 資料本來就在 favs 裡，只是之前沒有印出來。
     collectors:await all(`SELECT u.name,u.nick,u.avatar FROM favs f JOIN users u ON u.id=f.user_id
       WHERE f.post_id=? ORDER BY f.created DESC LIMIT 30`,p.id),
-    comments:await all('SELECT * FROM comments WHERE post_id=? ORDER BY id',p.id),
+    comments:await all(`SELECT c.*,cu.name cname,cu.avatar cavatar FROM comments c
+      LEFT JOIN users cu ON cu.id=c.author_id WHERE c.post_id=? ORDER BY c.id`,p.id),
     trackbacks:await all('SELECT t.*,p.title,p.id pid,u.name uname FROM trackbacks t JOIN posts p ON p.id=t.from_post JOIN users u ON u.id=p.user_id WHERE t.post_id=?',p.id),
     prev:await one('SELECT id,title FROM posts WHERE user_id=? AND id<? ORDER BY id DESC',U(res).id,p.id),next:await one('SELECT id,title FROM posts WHERE user_id=? AND id>? ORDER BY id',U(res).id,p.id)}); });
 site.get('/blog/:id/edit',requireLogin,requireOwner,postOf,async (req,res)=>res.render('post_edit',{nav:'blog',post:res.locals.post,photos:await myPhotos(res),emotes:EMOTES,...await blogSide(res)}));
@@ -1396,8 +1409,11 @@ site.post('/blog/:id/comment',postOf,needUnlocked,async (req,res)=>{
     const site1=(()=>{ try{ const x=String(b.homepage||'').trim(); if(!x) return '';
       return ['http:','https:'].includes(new URL(x).protocol)?x.slice(0,200):''; }catch{ return ''; } })();
     const email=/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test((b.email||'').trim())?b.email.trim().slice(0,60):'';
-    await run('INSERT INTO comments(post_id,author,body,email,homepage) VALUES(?,?,?,?,?)',
-      res.locals.post.id,(res.locals.me?.nick||b.author||'訪客').trim().slice(0,20),
+    // author_id：登入者才有。原版每一則迴響的暱稱與大頭貼都連到那個人的小站，
+    // 只存 author 文字的話連不回帳號（見 src/db.js 的 ADD_COLUMNS 說明）。
+    await run('INSERT INTO comments(post_id,author,author_id,body,email,homepage) VALUES(?,?,?,?,?,?)',
+      res.locals.post.id,cut((res.locals.me?.nick||b.author||'訪客').trim(),20),
+      res.locals.me?.id ?? null,
       b.body.trim().slice(0,1000), email, site1);
     if(b.remember) req.session.guest={author:(b.author||'').slice(0,20),email,homepage:site1};   // 記住我的資料
     else delete req.session.guest;

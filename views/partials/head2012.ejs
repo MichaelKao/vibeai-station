@@ -39,7 +39,10 @@
     **一定要放在所有版型與偏離層之後**才蓋得過那些寫死的 px 寬度，
     但要放在使用者自訂 CSS 之前——自訂 CSS 依契約 §4-5 永遠是最後一個。 %>
 <link rel="stylesheet" href="/wretch2012-rwd.css">
-<% if (u && u.css) { %><style><%- safeCss(u.css) %></style><% } %>
+<%# ⚠ 用 locals.u 不要用裸的 u。錯誤頁（msg.ejs）是在 body-parser 拋錯之後才 render 的，
+    那時候 res.locals 還沒被設好——裸的 u 會拋 "u is not defined"，
+    於是**錯誤頁自己再爆一次**，最後掉到純文字兜底，使用者看到一行沒有版型的裸字。 %>
+<% if (locals.u && locals.u.css) { %><style><%- safeCss(locals.u.css) %></style><% } %>
 </head>
 <body>
 <div id="bg-wrapper">
@@ -106,5 +109,5 @@
   <%# 原站的下推式廣告位（存檔時是空的，chameleon.css 給它 300px 高）。
       本站不放廣告，就拿來擺 flash 訊息。 %>
   <div id="push-down-ad">
-    <% if (flash) { %><p><%= flash %></p><% } %>
+    <% if (locals.flash) { %><p><%= locals.flash %></p><% } %>
   </div>

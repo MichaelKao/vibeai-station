@@ -20,6 +20,13 @@
      所以在 view 這一層依實際顯示的數字重排；撈出來的三十筆不變。 */
   const rkScore = p => p.views * 10 + p.likes * 50;
   const rkPosts = posts.slice().sort((a, b) => rkScore(b) - rkScore(a));
+  /* 摘要：先把 BBCode 標記拿掉再截斷，不然畫面上會直接看到 `[b]小丁[/b]`
+     （稽核在正式站的熱門網誌區抓到）。這是純文字摘要不是內文，
+     所以呼叫端維持逸出輸出（EJS 的逸出插值），這裡只清標記、不做 render。 */
+  const rkSummary = s => {
+    const t = String(s || '').replace(/\[\/?[^\]]{1,20}\]/g, '').trim();
+    return t.length > 80 ? t.slice(0, 80) + '…' : t;
+  };
 %>
 <%- include('partials/head2012', { title: '人氣排行 - 無名小站' }) %>
 
@@ -82,7 +89,14 @@
                   <span class="topic">得點 <%= rkScore(p) %></span>
                 </p>
                 <h3><a class="skin-main-link" href="/<%= p.uname %>/blog/<%= p.id %>"><%= p.title %></a></h3>
-                <p class="description"><%= p.body.length > 80 ? p.body.slice(0, 80) + '…' : p.body %></p>
+                <%# ⚠ 摘要要先把 BBCode 標記拿掉再截斷，不然畫面上會直接看到
+                    `[b]小丁[/b]` 這種東西（稽核在正式站的熱門網誌區抓到）。
+                    這裡是純文字摘要不是內文，所以維持逸出插值輸出，
+                    只把標記清掉，不做 render——摘要裡不需要粗體與圖片。 %>
+                <%# ⚠ 這裡在 forEach 迴圈裡，**不能用 const**——EJS 把整個樣板編成
+                    一個函式，迴圈第二圈就會撞「已經宣告過」而整頁 500。
+                    用一個在最上面定義好的輔助函式。 %>
+                <p class="description"><%= rkSummary(p.body) %></p>
               </div>
             </li>
             <% }) %>

@@ -91,7 +91,7 @@
     <% gb.forEach(m => { %>
     <tr>
       <td width="90" valign="top"><span class="w2-who"><%= m.author %></span></td>
-      <td valign="top"><span class="w2-sub"><%= m.subject || '無標題' %></span><br><%- render(m.body) %></td>
+      <td valign="top"><span class="w2-sub"><%= m.subject || '無標題' %></span><br><%- gbBody(m.body) %></td>
       <td class="w2-when" valign="top"><%= m.created.slice(0,16) %></td>
     </tr>
     <% }) %>
