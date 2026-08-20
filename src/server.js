@@ -542,7 +542,10 @@ site.get('/',async (req,res)=>{
   res.render('home',{nav:'user',
     albums:await all(`SELECT a.*,(SELECT count(*) FROM photos WHERE album_id=a.id) n FROM albums a WHERE user_id=? ORDER BY id DESC LIMIT 6`,u.id),
     posts:await all('SELECT * FROM posts WHERE user_id=? ORDER BY id DESC LIMIT 5',u.id),
-    visitors:await all('SELECT * FROM visitors WHERE user_id=? ORDER BY id DESC LIMIT 8',u.id),
+    // visitors 存的是「當時的帳號名」字串，不是外鍵：帳號被刪掉之後那一列還在，
+    // 側欄照樣連過去就是一條 404 死連結。這裡只列帳號還在的（側欄本來就只放最近幾位）。
+    // 完整的「誰來我家」那一頁不刪紀錄，改成不給連結，見 views/visitors.ejs。
+    visitors:await all('SELECT v.* FROM visitors v JOIN users x ON x.name=v.who WHERE v.user_id=? ORDER BY v.id DESC LIMIT 8',u.id),
     friends:await all('SELECT u.name,u.nick FROM friends f JOIN users u ON u.id=f.friend_id WHERE f.user_id=? LIMIT 12',u.id),
     gb:await all("SELECT * FROM guestbook WHERE user_id=? AND secret=0 ORDER BY id DESC LIMIT 3",u.id),
     // 統計數字（MyPage 上的「相簿 N 本・照片 N 張・網誌 N 篇」）

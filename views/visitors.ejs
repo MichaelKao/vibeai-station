@@ -21,13 +21,19 @@
 <div class="msg_body">
   <% if (!rows.length) { %><div class="w2-empty">目前還沒有人來過</div><% } else { %>
   <table class="w2-rows">
-    <% rows.forEach(v => { %>
+    <% rows.forEach(v => { /* visitors 存的是「當時的帳號名」字串，users 是 LEFT JOIN：
+         帳號後來被刪掉的話 nick 會是 null，再連過去就是一條 404 死連結
+         （tools/linksweep.mjs 抓到過 /test/visitors 連到已消失的帳號）。
+         紀錄照留，但不給連結。 */ %>
+    <% const gone = !v.nick %>
     <tr>
       <td width="60" align="center">
-        <a href="/<%= v.who %>"><img src="<%= v.avatar || '/img/avatar.png' %>" width="48" height="48" alt="<%= v.nick || v.who %>"></a>
+        <% if (gone) { %><img src="/img/avatar.png" width="48" height="48" alt="<%= v.who %>">
+        <% } else { %><a href="/<%= v.who %>"><img src="<%= v.avatar || '/img/avatar.png' %>" width="48" height="48" alt="<%= v.nick || v.who %>"></a><% } %>
       </td>
       <td>
-        <a href="/<%= v.who %>" class="w2-who"><%= v.nick || v.who %></a>
+        <% if (gone) { %><span class="w2-who"><%= v.who %></span>
+        <% } else { %><a href="/<%= v.who %>" class="w2-who"><%= v.nick %></a><% } %>
         <span class="w2-sub">(<%= v.who %>)</span>
       </td>
       <td class="w2-when"><%= v.created %></td>
