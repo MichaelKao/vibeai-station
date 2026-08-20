@@ -1013,7 +1013,7 @@ const blogSide=async res=>({
   // 沒有任何文章設過 topic 就回空字串，整塊不印，跟原版一樣
   // （blog_2013_index_treehouse16.html 那位沒設分類，該存檔就沒有這個節點）。
   blogTopic:(await one("SELECT topic FROM posts WHERE user_id=? AND topic!='' GROUP BY topic ORDER BY count(*) DESC LIMIT 1",U(res).id))?.topic||'',
-  moods:MOODS, weathers:WEATHERS, blogTopics:BLOG_TOPICS});
+  moods:MOODS, weathers:WEATHERS, blogTopics:BLOG_TOPICS, places:PLACES});
 site.get('/blog',async (req,res)=>{ const cat=req.query.cat, ym=/^\d{4}-\d{2}$/.test(req.query.ym||'')?req.query.ym:null, page=Math.max(1,+req.query.p||1), per=10;
   const day=/^\d{4}-\d{2}-\d{2}$/.test(req.query.d||'')?req.query.d:null;
   // 日曆顯示的月份：?cal= 優先，其次跟著目前篩選的月份／日期
@@ -1035,6 +1035,36 @@ site.get('/blog/search',async (req,res)=>{
   res.render('blog_search',{nav:'blog',k,inBody,rows,...await blogSide(res)});
 });
 // RSS
+// ── 看地圖 ───────────────────────────────────────────────────────────────
+// 原站網誌側欄的 boxDate 裡有一顆「看地圖」（WRETCH_SPEC.md:278、:382），
+// 但**整個功能零存檔**：assets_src2 與 assets_src 的 HTML/CSS 搜不到
+// 「看地圖」「map」「maps.google」任何一個，兩份完整的 #boxDate 逐字看過，
+// 裡面只有月份下拉。所以這一頁是自製的，不是照抄。
+//
+// ⚠ 而且不做「假地圖」：albums.place 與新加的 posts.place 是四選一的**地區分類**
+// （台灣／香港與澳門／中國／世界各地，src/taxonomy.js），**不是經緯度**。
+// 手上沒有座標，畫一張圖釘標記只會是編造。
+// 所以「看地圖」＝按地區把這個人的文章與相簿攤開來看。
+//
+// 路由順序：這一支在 /blog/:id 之前，但就算不小心排到後面也不會出事——
+// router 層的數字參數守門員會把 'map' 擋下來交給下一條（見檔案上方那段）。
+site.get('/blog/map',async (req,res)=>{
+  const uid=U(res).id, isOwner=res.locals.isOwner;
+  const groups=[];
+  for(const place of PLACES){
+    const posts=await all(
+      `SELECT id,title,created,place FROM posts WHERE user_id=? AND place=?`
+      + (isOwner?'':" AND pass=''") + ' ORDER BY id DESC LIMIT 20', uid, place);
+    // 相簿也一起攤出來：地區這個欄位相簿本來就有，只看文章會少一半
+    const albums=await all(
+      `SELECT id,title,cover,place,(SELECT count(*) FROM photos WHERE album_id=albums.id) n
+       FROM albums WHERE user_id=? AND place=?`
+      + (isOwner?'':" AND pass='' AND friends_only=0") + ' ORDER BY id DESC LIMIT 12', uid, place);
+    if(posts.length||albums.length) groups.push({place,posts,albums});
+  }
+  const none=(await one('SELECT count(*) c FROM posts WHERE user_id=? AND place=?',uid,'')).c;
+  res.render('blog_map',{nav:'blog',groups,none,...await blogSide(res)});
+});
 site.get('/blog/rss',async (req,res)=>{
   const u=U(res), origin=`${req.protocol}://${req.get('host')}`;
   const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&apos;'}[c]));
@@ -1113,7 +1143,7 @@ const myPhotos = async res => await all(`SELECT p.id,p.thumb,p.url FROM photos p
 site.get('/blog/new',requireLogin,requireOwner,async (req,res)=>res.render('post_edit',{nav:'blog',post:null,photos:await myPhotos(res),emotes:EMOTES,...await blogSide(res)}));
 site.post('/blog/new',requireLogin,requireOwner,async (req,res)=>{ const {title,body,category,mood,weather}=req.body;
   if(!title?.trim()||!body?.trim()) return res.redirect(`/${U(res).name}/blog/new`);
-  const r=await run('INSERT INTO posts(user_id,title,body,category,mood,weather,pass,topic) VALUES(?,?,?,?,?,?,?,?)',U(res).id,title.trim().slice(0,100),body.slice(0,50000),(category||'未分類').trim().slice(0,20)||'未分類',MOODS.includes(mood)?mood:'',WEATHERS.includes(weather)?weather:'',(req.body.pass||'').slice(0,20),isBlogTopic(req.body.topic)?req.body.topic:'');
+  const r=await run('INSERT INTO posts(user_id,title,body,category,mood,weather,pass,topic,place) VALUES(?,?,?,?,?,?,?,?,?)',U(res).id,title.trim().slice(0,100),body.slice(0,50000),(category||'未分類').trim().slice(0,20)||'未分類',MOODS.includes(mood)?mood:'',WEATHERS.includes(weather)?weather:'',(req.body.pass||'').slice(0,20),isBlogTopic(req.body.topic)?req.body.topic:'',isPlace(req.body.place)?req.body.place:'');
   await act(U(res).id,'blog',title.trim().slice(0,100),`/${U(res).name}/blog/${r.lastInsertRowid}`);
   res.redirect(`/${U(res).name}/blog/${r.lastInsertRowid}`); });
 const postOf=async (req,res,next)=>{ const p=await one('SELECT * FROM posts WHERE id=? AND user_id=?',req.params.id,U(res).id); if(!p) return next('route'); res.locals.post=p; next(); };
@@ -1139,7 +1169,7 @@ site.get('/blog/:id',postOf,async (req,res)=>{ const p=res.locals.post;
     prev:await one('SELECT id,title FROM posts WHERE user_id=? AND id<? ORDER BY id DESC',U(res).id,p.id),next:await one('SELECT id,title FROM posts WHERE user_id=? AND id>? ORDER BY id',U(res).id,p.id)}); });
 site.get('/blog/:id/edit',requireLogin,requireOwner,postOf,async (req,res)=>res.render('post_edit',{nav:'blog',post:res.locals.post,photos:await myPhotos(res),emotes:EMOTES,...await blogSide(res)}));
 site.post('/blog/:id/edit',requireLogin,requireOwner,postOf,async (req,res)=>{ const {title,body,category,mood,weather}=req.body;
-  await run('UPDATE posts SET title=?,body=?,category=?,mood=?,weather=?,pass=?,topic=? WHERE id=?',(title||res.locals.post.title).trim().slice(0,100),(body||'').slice(0,50000),(category||'未分類').trim().slice(0,20)||'未分類',MOODS.includes(mood)?mood:'',WEATHERS.includes(weather)?weather:'',(req.body.pass||'').slice(0,20),isBlogTopic(req.body.topic)?req.body.topic:'',res.locals.post.id);
+  await run('UPDATE posts SET title=?,body=?,category=?,mood=?,weather=?,pass=?,topic=?,place=? WHERE id=?',(title||res.locals.post.title).trim().slice(0,100),(body||'').slice(0,50000),(category||'未分類').trim().slice(0,20)||'未分類',MOODS.includes(mood)?mood:'',WEATHERS.includes(weather)?weather:'',(req.body.pass||'').slice(0,20),isBlogTopic(req.body.topic)?req.body.topic:'',isPlace(req.body.place)?req.body.place:'',res.locals.post.id);
   res.redirect(`/${U(res).name}/blog/${res.locals.post.id}`); });
 site.post('/blog/:id/del',requireLogin,requireOwner,postOf,async (req,res)=>{ await run('DELETE FROM posts WHERE id=?',res.locals.post.id); res.redirect(`/${U(res).name}/blog`); });
 // 上鎖文章：沒解鎖就不能回應、推薦、引用（引用會複製內文，等於繞過密碼）

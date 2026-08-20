@@ -1,0 +1,83 @@
+<%
+  /* 看地圖 /:name/blog/map
+     ═══════════════════════════════════════════════════════════════════════
+     【零存檔，整頁自製】
+     原站網誌側欄的 boxDate 裡有一顆「看地圖」，證據只有兩行文字轉寫
+     （WRETCH_SPEC.md:278 的模組表、:382 的螢幕截圖逐字行）。
+     assets_src2 與 assets_src 的 HTML/CSS 搜不到「看地圖」「map」「maps.google」
+     任何一個，兩份完整的 #boxDate 也逐字看過，裡面只有月份下拉。
+
+     ⚠ 而且**刻意不做假地圖**：
+     albums.place 與 posts.place 是四選一的**地區分類**
+     （台灣／香港與澳門／中國／世界各地，src/taxonomy.js 的 PLACES），
+     不是經緯度。手上沒有座標，畫一張圖釘標記出來只會是編造的東西。
+     所以這一頁＝按地區把這個人的文章與相簿攤開。
+
+     版面沿用網誌列表那一套（.date > .datediv 標題、.blogbody > .articletext），
+     不自創第二種頁框。 */
+  const IMG = '/img/wretch2012/blog';
+%>
+<%- include('partials/blog2012_head', { title: '看地圖 - ' + u.nick + ' - 無名小站',
+                                        artTitle: '看地圖', medium: '' }) %>
+
+<div id="content">
+<div class="blog" >
+
+      <div class="date">
+        <div class="datediv">
+          看地圖        </div>
+      </div>
+
+      <div class="blogbody">
+        <div class="blogbody2">
+          <div class="articletext" >
+            <br />
+            <p class="w2b-map-note">
+              按地區看 <%= u.nick %> 的文章與相簿。地區是發表時自己選的四個分類之一。
+            </p>
+
+<% if (!groups.length) { %>
+            <p>還沒有標上地區的文章或相簿。<% if (isOwner) { %>發表文章或編輯相簿時可以選地區。<% } %></p>
+<% } %>
+
+<% groups.forEach(g => { %>
+            <div class="w2b-map-group">
+              <h4 class="w2b-map-place"><%= g.place %></h4>
+
+<% if (g.albums.length) { %>
+              <ul class="w2b-map-albums">
+<% g.albums.forEach(a => { %>                <li><a href="/<%= u.name %>/album/<%= a.id %>"><img src="<%= a.cover || '/img/empty.png' %>" width="60" height="60" alt="<%= a.title %>"><br><%= a.title %>(<%= a.n %>)</a></li>
+<% }) %>              </ul>
+<% } %>
+
+<% if (g.posts.length) { %>
+              <table>
+<% g.posts.forEach(p => { %>                <tr>
+                  <td nowrap><%= p.created.slice(0,4) %>.<%= p.created.slice(5,7) %>.<%= p.created.slice(8,10) %>
+                    <a href="/<%= u.name %>/blog/<%= p.id %>"><%= p.title %></a></td>
+                </tr>
+<% }) %>              </table>
+<% } %>
+            </div>
+<% }) %>
+
+<% if (none) { %>
+            <p class="w2b-map-note">另外有 <%= none %> 篇文章沒有標地區。</p>
+<% } %>
+            <br />
+          </div>
+        </div>
+      </div>
+
+</div> <!-- end of class=blog -->
+</div> <!-- end of content -->
+
+<div id="links">
+
+  <div id="links2">
+  <%- include('partials/blogside') %>
+  </div> <!-- end of links2 -->
+
+</div> <!-- end of links -->
+
+<%- include('partials/blog2012_foot') %>

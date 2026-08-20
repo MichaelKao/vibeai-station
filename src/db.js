@@ -319,6 +319,12 @@ const ADD_COLUMNS = [
   //   2. backfillGroups() 靠它把既有資料搬進 friend_groups
   // 讀取一律以 group_id 為準，grp 只當歷史資料看。
   ['friends', 'group_id', 'INTEGER DEFAULT 0'],
+  // 文章的地區。原站網誌側欄 boxDate 裡有一顆「看地圖」（WRETCH_SPEC.md:278、:382），
+  // 但那個功能連一份 DOM 存檔都沒有，只有截圖上的四個字。
+  // 相簿早就有 place（四選一的地區分類，src/taxonomy.js 的 PLACES），
+  // 文章沒有——沒有地點資料的話「看地圖」就沒有東西可看。
+  // 補上同一組白名單，讓兩邊講同一種話。
+  ['posts', 'place', "TEXT DEFAULT ''"],
 ];
 
 export async function addColumns(forDriver = driver) {

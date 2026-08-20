@@ -119,6 +119,29 @@ ok('RSS 不含鎖文', !(await text('/alpha/blog/rss')).includes('SECRETTEXT'));
 ok('網誌搜尋(標題)', (await text('/alpha/blog/search?q=' + encodeURIComponent('第一'))).includes('找到 <b>1</b>'));
 ok('網誌搜尋(內容)', (await text('/alpha/blog/search?q=' + encodeURIComponent('內容內容') + '&body=1')).includes('找到 <b>1</b>'));
 
+console.log('\n=== 看地圖 ===');
+// 原站側欄 boxDate 那顆「看地圖」。功能零存檔，我們做成「按地區看文章與相簿」。
+ok('看地圖打得開', (await get('/alpha/blog/map')).status===200);
+ok('側欄有看地圖連結', (await text('/alpha/blog')).includes('/alpha/blog/map'));
+ok('文章可以標地區', await (async()=>{
+  await post('/alpha/blog/1/edit',{title:'第一篇',body:'內容內容內容',category:'心情',place:'台灣'},A);
+  const t=await text('/alpha/blog/map');
+  return t.includes('台灣') && t.includes('第一篇'); })());
+ok('地區擋亂值', await (async()=>{
+  await post('/alpha/blog/1/edit',{title:'第一篇',body:'內容內容內容',category:'心情',place:'火星'},A);
+  return !(await text('/alpha/blog/map')).includes('火星'); })());
+// 上鎖的文章不能因為換一個入口就外洩。
+// ⚠ 不能直接比對整頁有沒有「鎖起來」這三個字：**側欄的最新文章、頁首的
+// 今日主題、首頁好文本來就會印鎖文的標題**（原站也是這樣，列表印標題加一個
+// 鎖頭圖，內容才要密碼）。要驗的是「地圖那一區」有沒有把它列進去。
+ok('看地圖不外洩鎖文', await (async()=>{
+  await post('/alpha/blog/2/edit',{title:'鎖起來',body:'SECRETTEXT',category:'心情',pass:'8888',place:'台灣'},A);
+  const page=await text('/alpha/blog/map');
+  const zone=(page.match(/<div class="articletext"[\s\S]*?<\/div>\s*<\/div>\s*<\/div>/)||[''])[0];
+  return !zone.includes('鎖起來') && !page.includes('SECRETTEXT'); })());
+// 標回台灣，後面的測試（歷史上的今天等）才有一篇有地區的文章可看
+await post('/alpha/blog/1/edit',{title:'第一篇',body:'內容內容內容',category:'心情',place:'台灣'},A);
+
 console.log('\n=== 迴響 / 收藏 / 引用 ===');
 await post('/alpha/blog/1/comment',{author:'路人',email:'a@b.com',homepage:'https://ex.com',body:'搶頭香'},null);
 const p1=await text('/alpha/blog/1');
