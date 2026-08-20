@@ -45,6 +45,26 @@ const ph=await text('/alpha/photo/1',A);
 ok('照片導覽列', ph.includes('第一張')&&ph.includes('上一張')&&ph.includes('下一張')&&ph.includes('最後一張'));
 // 不綁 class 名稱（版面在復刻不同年代時會換）。驗行為：照片頁要連得到同本的其他照片。
 ok('照片縮圖列', new Set(ph.match(/\/alpha\/photo\/\d+/g)||[]).size>=3);
+
+// 切割照片（原站工具列的「切割照片(NEW)」）。上傳的測試圖是 300×220。
+ok('切割頁只有站主進得去', (await get('/alpha/photo/1/crop',A)).status===200 &&
+   (await get('/alpha/photo/1/crop',Bc)).status===403);
+ok('切割鈕只有站主看得到', (await text('/alpha/photo/1',A)).includes('切割照片') &&
+   !(await text('/alpha/photo/1',Bc)).includes('切割照片'));
+// 驗真的裁了：裁完會存成新檔（網址換掉），而且尺寸就是要求的 100×80。
+// 上傳的測試圖是 300×220，所以裁出來一定比原圖小。
+ok('切割真的裁了照片', await (async()=>{
+  // ⚠ 樣板那一行用的是**單引號**（id='DisplayImage' src='…'，照原版存檔的寫法），
+  // 正則只比對雙引號會永遠抓不到，看起來像功能壞了。
+  const grab = h => h.match(/id=['"]DisplayImage['"][^>]*src=['"]([^'"]+)['"]/)?.[1];
+  const before=grab(await text('/alpha/photo/1',A));
+  const r=await post('/alpha/photo/1/crop',{x:10,y:10,w:100,h:80},A);
+  const after=await text('/alpha/photo/1',A);
+  const url=grab(after);
+  return r.status===302 && !!url && url!==before && /100\s*[×x]\s*80/.test(after);
+})());
+ok('切割範圍太小被擋', (await post('/alpha/photo/1/crop',{x:0,y:0,w:2,h:2},A)).status===302);
+ok('非本人不能切割', (await post('/alpha/photo/1/crop',{x:0,y:0,w:50,h:50},Bc)).status===403);
 ok('非圖片被拒', (await (async()=>{const g=new FormData();g.append('photos',new Blob([Buffer.from('hi')],{type:'text/plain'}),'a.txt');
   const r=await fetch(`${B}/alpha/album/${aid}/upload`,{method:'POST',headers:{cookie:A},body:g,redirect:'manual'}); return r.status===302;})()));
 
@@ -109,6 +129,16 @@ ok('板主回覆', (await post('/alpha/blog/1/comment/1/reply',{reply:'謝謝'},
 ok('收藏', (await post('/alpha/blog/1/fav',{},Bc)).status===302 && (await text('/bravo/favs')).includes('第一篇'));
 ok('誰來收藏用原版 #friend-picker 結構', (await text('/alpha/blog/1')).includes('friend-picker-bd'));
 ok('誰來收藏列出收藏者', (await text('/alpha/blog/1')).includes('friend-picker-cell'));
+
+console.log('\n=== 我的訂閱（boxRssList）===');
+// 訂閱站內的 RSS：不必連外網，而且抓回來的東西是我們自己產的，內容可預期
+ok('訂閱站內 RSS', (await post('/alpha/subs',{title:'布拉的網誌',url:B+'/bravo/blog/rss'},A)).status===302);
+// SSRF：伺服器主動連使用者給的網址，是全站唯一一處，要擋內網與非 http 協定
+ok('擋掉內網位址（SSRF）', (await post('/alpha/subs',{title:'內網',url:'http://127.0.0.1:9/x'},A)).status===302 &&
+   !(await text('/alpha/settings',A)).includes('127.0.0.1:9'));
+ok('擋掉 file 協定', (await post('/alpha/subs',{title:'檔案',url:'file:///etc/passwd'},A)).status===302 &&
+   !(await text('/alpha/settings',A)).includes('file:///'));
+ok('非本人不能訂閱', (await post('/alpha/subs',{title:'壞人',url:'https://example.com/rss'},Bc)).status===403);
 
 console.log('\n=== 側欄自訂欄位（boxFolder）===');
 ok('新增自訂欄位', (await post('/alpha/folders',{title:'【About Me】',body:'我是阿發'},A)).status===302 && (await text('/alpha/blog')).includes('【About Me】'));

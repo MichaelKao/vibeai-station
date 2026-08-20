@@ -5,7 +5,7 @@ import path from 'node:path';
 import { one, all, run, migrate, driver } from './db.js';
 import { sessionStore, startVisitFlusher, bumpVisit, hasRedis } from './cache.js';
 import { hash, salt, check, requireLogin, requireOwner } from './auth.js';
-import { save, remove, hasR2, diskFree } from './storage.js';
+import { save, remove, hasR2, diskFree, readImage } from './storage.js';
 import { UPLOAD_DIR } from './paths.js';
 import { render, EMOTES, safeCss } from './format.js';
 import { SITE_NAME, SITE_DESC, SITE_LOGO, CDN } from './config.js';
@@ -573,13 +573,83 @@ site.get('/visitors',async (req,res)=>{
 });
 // 個人設定
 site.get('/settings',requireLogin,requireOwner,async (req,res)=>res.render('settings',{nav:'user',themes:SKINS,
-  folders:await all('SELECT * FROM folders WHERE user_id=? ORDER BY seq,id',U(res).id)}));
+  folders:await all('SELECT * FROM folders WHERE user_id=? ORDER BY seq,id',U(res).id),
+  subs:await all('SELECT * FROM subs WHERE user_id=? ORDER BY id',U(res).id)}));
 site.post('/settings',requireLogin,requireOwner,upload.single('avatar'),async(req,res)=>{
   const {nick,intro,music,css,css_blog,pass,pass2}=req.body, u=U(res);
   let avatar=u.avatar; if(req.file){ const s=await save(req.file); avatar=s.thumb; await remove(u.avatar); }
   await run('UPDATE users SET nick=?,intro=?,music=?,css=?,css_blog=?,avatar=?,theme=? WHERE id=?',(nick||u.nick).trim().slice(0,20),(intro||'').slice(0,500),cleanMusic(music),(css||'').slice(0,20000),(css_blog||'').slice(0,20000),avatar,isSkin(req.body.theme)?(req.body.theme||''):'',u.id);
   if(pass){ if(pass!==pass2) {flash(req,'兩次密碼不一致，其他設定已儲存');return res.redirect(`/${u.name}/settings`);} const s=salt(); await run('UPDATE users SET pass=?,salt=? WHERE id=?',hash(pass,s),s,u.id); }
   flash(req,'設定已儲存'); res.redirect(`/${u.name}/settings`);
+});
+
+// ── 我的訂閱（原站側欄的 #boxRssList）────────────────────────────────────
+// 原站訂的是站方公告那類外部 RSS，側欄印「來源名（日期）＋ 最新一則標題」。
+//
+// ⚠ 這是全站唯一一處「伺服器主動去連使用者給的網址」，所以規矩要嚴：
+//   1. 只收 http/https，擋掉 file: 與其他協定
+//   2. 擋掉指向內網的位址（127.*、10.*、192.168.*、169.254.* 與 localhost）——
+//      不擋的話任何人都能拿我們的伺服器去掃內網，這叫 SSRF
+//   3. 逾時 6 秒、只讀前 256KB，避免對方餵一條無止盡的串流把行程卡死
+//   4. 每個來源最多 30 分鐘抓一次，抓失敗就沿用上一次的結果，側欄不會忽然空掉
+const SUB_MAX = 5;
+const PRIVATE_HOST = /^(localhost$|127\.|10\.|192\.168\.|169\.254\.|0\.|\[?::1\]?$|172\.(1[6-9]|2[0-9]|3[01])\.)/i;
+function subUrlOk(raw){
+  let u; try { u = new URL(raw); } catch { return null; }
+  if(!['http:','https:'].includes(u.protocol)) return null;
+  if(PRIVATE_HOST.test(u.hostname)) return null;
+  return u.toString();
+}
+async function fetchFeed(url){
+  const ctl = new AbortController();
+  const timer = setTimeout(()=>ctl.abort(), 6000);
+  try {
+    const r = await fetch(url, { signal: ctl.signal, redirect: 'follow',
+      headers: { 'user-agent': 'vibeai-station/1.0 (+feed reader)' } });
+    if(!r.ok) return null;
+    // 只讀前 256KB：RSS 的第一個 <item> 一定在前面，不必把整份吃進來
+    const buf = await r.arrayBuffer();
+    const xml = Buffer.from(buf.slice(0, 256*1024)).toString('utf8');
+    // 不引 XML 解析器：RSS 與 Atom 的第一則用字串比對就夠，
+    // 而且抓進來的東西一律當成不可信的字串，只取文字、輸出時逸出。
+    const item = xml.match(/<(item|entry)[\s>][\s\S]*?<\/(item|entry)>/i)?.[0] || '';
+    const pick = (tag) => {
+      const m = item.match(new RegExp('<' + tag + '[^>]*>([\\s\\S]*?)</' + tag + '>', 'i'));
+      return m ? m[1].replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g, '$1').trim() : '';
+    };
+    const link = pick('link') || item.match(/<link[^>]*href="([^"]+)"/i)?.[1] || '';
+    return {
+      title: pick('title').slice(0, 120),
+      url: subUrlOk(link) || '',
+      date: (pick('pubDate') || pick('updated') || pick('published')).slice(0, 40),
+    };
+  } catch { return null; }
+  finally { clearTimeout(timer); }
+}
+// 側欄要用的時候才更新，而且 30 分鐘內不重抓。
+// 放在 render 之前 await 會讓每一頁網誌都等外部網站——所以**不等**：
+// 這一輪先把上次的結果印出去，順便在背景更新，下一次進來就是新的。
+async function refreshSubs(uid){
+  const rows = await all('SELECT * FROM subs WHERE user_id=?', uid);
+  for(const s of rows){
+    if(s.fetched && Date.now() - Date.parse(s.fetched) < 30*60*1000) continue;
+    const got = await fetchFeed(s.url);
+    if(got) await run('UPDATE subs SET last_title=?,last_url=?,last_date=?,fetched=? WHERE id=?',
+      got.title, got.url, got.date, new Date().toISOString(), s.id);
+    else await run('UPDATE subs SET fetched=? WHERE id=?', new Date().toISOString(), s.id);
+  }
+}
+site.post('/subs',requireLogin,requireOwner,async (req,res)=>{
+  const u=U(res), title=(req.body.title||'').trim().slice(0,30), url=subUrlOk((req.body.url||'').trim());
+  if(title && url && (await one('SELECT count(*) c FROM subs WHERE user_id=?',u.id)).c < SUB_MAX){
+    await run('INSERT INTO subs(user_id,title,url) VALUES(?,?,?)',u.id,title,url);
+    refreshSubs(u.id).catch(()=>{});     // 不擋這一次的回應
+  }
+  res.redirect(`/${u.name}/settings#subs`);
+});
+site.post('/subs/:id/del',requireLogin,requireOwner,async (req,res)=>{
+  await run('DELETE FROM subs WHERE id=? AND user_id=?',req.params.id,U(res).id);
+  res.redirect(`/${U(res).name}/settings#subs`);
 });
 
 // 網誌側欄的自訂欄位（原站的 #boxFolder，可以有很多個）。
@@ -819,6 +889,49 @@ site.get('/photo/:pid',async (req,res,next)=>{
     comments:await all('SELECT * FROM photo_comments WHERE photo_id=? ORDER BY id',p.id)});
 });
 site.post('/photo/:pid/comment',async (req,res)=>{ const p=await one('SELECT p.id,p.album_id,a.pass FROM photos p JOIN albums a ON a.id=p.album_id WHERE p.id=? AND a.user_id=?',req.params.pid,U(res).id); if(!p) return res.redirect('/'+U(res).name+'/album'); res.locals.album={id:p.album_id,pass:p.pass}; if(!albumUnlocked(req,res)) return res.status(403).render('msg',{title:'沒有權限',msg:'相簿已上鎖',back:'/'+U(res).name+'/album'}); if(req.body.body?.trim()) await run('INSERT INTO photo_comments(photo_id,author,body) VALUES(?,?,?)',p.id,(res.locals.me?.nick||req.body.author||'訪客').slice(0,20),req.body.body.trim().slice(0,300)); res.redirect(`/${U(res).name}/photo/${req.params.pid}`); });
+// ── 切割照片（原站照片頁工具列那顆「切割照片(NEW)」）────────────────────
+// 零存檔：assets_src2/spec/shot.md:493 的截圖逐字轉寫看得到這顆按鈕
+// （2012 英文版工具列「搜尋更多 切割照片(NEW) Report this Picture」），
+// 但整個切割介面連一份 HTML 都沒有存下來，所以下面的頁面是自製的，
+// 只有工具列那顆按鈕與 .newVideoUpdate 紅 NEW 章照 2013 中文版存檔的寫法。
+//
+// 行為：裁切**覆蓋原圖**，跟原站一樣（原站沒有「另存新檔」的說法）。
+// 舊檔案裁完就刪掉，不然每裁一次就多留一份沒人指向的檔案。
+site.get('/photo/:pid/crop',requireLogin,requireOwner,async (req,res,next)=>{
+  const p=await one(`SELECT p.*,a.title atitle,a.id aid FROM photos p JOIN albums a ON a.id=p.album_id
+    WHERE p.id=? AND a.user_id=?`,req.params.pid,U(res).id);
+  if(!p) return next();
+  res.render('photo_crop',{nav:'album',p});
+});
+site.post('/photo/:pid/crop',requireLogin,requireOwner,async (req,res)=>{
+  const u=U(res);
+  const p=await one(`SELECT p.* FROM photos p JOIN albums a ON a.id=p.album_id
+    WHERE p.id=? AND a.user_id=?`,req.params.pid,u.id);
+  if(!p) return res.redirect(`/${u.name}/album`);
+  const back=`/${u.name}/photo/${p.id}`;
+  const n=v=>Math.max(0,Math.round(+v||0));
+  const x=n(req.body.x), y=n(req.body.y), w=n(req.body.w), h=n(req.body.h);
+  // 太小的框直接退回。裁到 1×1 沒有意義，而且很容易是誤觸。
+  if(w<16||h<16){ flash(req,'切割範圍太小了'); return res.redirect(back); }
+  try{
+    const sharp=(await import('sharp')).default;
+    const src=await readImage(p.url);
+    const meta=await sharp(src).metadata();
+    // 夾在原圖範圍內：前端傳來的數字不可信，超出邊界 sharp 會直接拋錯
+    const cw=Math.min(w, (meta.width||0)-x), chh=Math.min(h, (meta.height||0)-y);
+    if(cw<16||chh<16){ flash(req,'切割範圍超出照片了'); return res.redirect(back); }
+    const buf=await sharp(src).extract({left:x,top:y,width:cw,height:chh}).jpeg({quality:88}).toBuffer();
+    const saved=await save({buffer:buf,mimetype:'image/jpeg'});
+    const oldUrl=p.url, oldThumb=p.thumb;
+    await run('UPDATE photos SET url=?,thumb=?,width=?,height=?,bytes=? WHERE id=?',
+      saved.url,saved.thumb,saved.width,saved.height,saved.bytes,p.id);
+    // 這張如果剛好是相簿封面，封面也要跟著換，不然封面會指到已刪的檔
+    await run('UPDATE albums SET cover=? WHERE id=? AND cover=?',saved.url,p.album_id,oldUrl);
+    await remove(oldUrl); if(oldThumb&&oldThumb!==oldUrl) await remove(oldThumb);
+    flash(req,'照片已切割');
+  }catch(e){ console.error(e); flash(req,'切割失敗，照片沒有變動'); }
+  res.redirect(back);
+});
 site.post('/photo/:pid/caption',requireLogin,requireOwner,async (req,res)=>{ await run('UPDATE photos SET caption=? WHERE id=? AND album_id IN (SELECT id FROM albums WHERE user_id=?)',(req.body.caption||'').slice(0,100),req.params.pid,U(res).id); res.redirect(`/${U(res).name}/photo/${req.params.pid}`); });
 site.post('/photo/:pid/cover',requireLogin,requireOwner,async (req,res)=>{ const p=await one('SELECT * FROM photos WHERE id=?',req.params.pid); if(p) await run('UPDATE albums SET cover=? WHERE id=? AND user_id=?',p.url,p.album_id,U(res).id); res.redirect(`/${U(res).name}/photo/${req.params.pid}`); });
 site.post('/photo/:pid/del',requireLogin,requireOwner,async(req,res)=>{ const p=await one('SELECT p.* FROM photos p JOIN albums a ON a.id=p.album_id WHERE p.id=? AND a.user_id=?',req.params.pid,U(res).id); if(p){ await remove(p.url); if(p.thumb&&p.thumb!==p.url) await remove(p.thumb); await run('DELETE FROM photos WHERE id=?',p.id); await run("UPDATE albums SET cover=COALESCE((SELECT url FROM photos WHERE album_id=? LIMIT 1),'') WHERE id=? AND cover=?",p.album_id,p.album_id,p.url); return res.redirect(`/${U(res).name}/album/${p.album_id}`);} res.redirect(`/${U(res).name}/album`); });
@@ -850,6 +963,14 @@ const blogSide=async res=>({
   cal:await calendar(U(res).id, res.calYm),
   // 側欄自訂欄位（原站的 #boxFolder，可以有很多個）
   folders:await all('SELECT * FROM folders WHERE user_id=? ORDER BY seq,id',U(res).id),
+  // 我的訂閱（原站的 #boxRssList）。這裡只讀資料庫裡上一次抓到的結果，
+  // **不等外部網站**——順手在背景更新，下一次進來就是新的。
+  // 直接 await 的話每一頁網誌都會被別人家的 RSS 拖慢。
+  subs:await (async () => {
+    const rows = await all("SELECT * FROM subs WHERE user_id=? AND last_title!='' ORDER BY id",U(res).id);
+    refreshSubs(U(res).id).catch(()=>{});
+    return rows;
+  })(),
   // 「歷史上的今天」：往年同月同日發過的文（blog.md 記為後期加上的側欄模組）。
   // created 是 'YYYY-MM-DD HH:MM:SS' 字串，substr(created,6,5) 就是 'MM-DD'——
   // 兩個驅動都有 substr，不用寫方言分支（其他側欄查詢也是這樣切月份的）。

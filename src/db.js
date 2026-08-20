@@ -190,6 +190,13 @@ export function schemaSql(forDriver = driver) {
     // 我們照 WRETCH_2012.md §4-4「使用者輸入一律逸出」走 render()，
     // 允許的是站上通用那套標記（[img] [b] 連結…），不是原生 HTML。
     T('folders', `id ${PK}, ${fkUser}, title TEXT, body TEXT, seq INTEGER DEFAULT 0, ${created}`),
+    // 網誌側欄的「我的訂閱」（原站 #boxRssList，assets_src/html/blog_home.html:341）。
+    // 原站顯示的是**站方公告**那類外部 RSS 的最新一則：來源名 +（日期）+ 條目標題連結。
+    // title 是來源名（＝側欄第一行那個 span），url 是 feed 網址；
+    // last_* 三欄是最近一次抓到的條目，抓不到就沿用上一次的，側欄不會忽然空掉。
+    T('subs', `id ${PK}, ${fkUser}, title TEXT, url TEXT,
+      last_title TEXT DEFAULT '', last_url TEXT DEFAULT '', last_date TEXT DEFAULT '',
+      fetched TEXT DEFAULT '', ${created}`),
     T('acts', `id ${PK}, ${fkUser}, kind TEXT, title TEXT, url TEXT, ${created}`),
     T('sysmsg', `id ${PK}, ${fkUser}, title TEXT, body TEXT, seen INTEGER DEFAULT 0, ${created}`),
     T('reports', `id ${PK}, kind TEXT, target_id INTEGER, url TEXT, reason TEXT,

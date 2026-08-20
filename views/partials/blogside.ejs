@@ -233,6 +233,37 @@
         <br />
       </div>
 
+<%# ── #boxRssList（我的訂閱）─────────────────────────────────────
+    骨架逐字照 assets_src/html/blog_home.html:341（注意是 assets_src，不是 src2——
+    assets_src2 那十份頁面沒有這個模組，blog.md §1271 有記這件事）：
+
+      #boxRssList > .boxRssList0 > .sidetitle
+                  > .boxRssList1 > .side
+        span#boxRssEntryTitle 來源名 (日期) <br />
+        span#boxRssEntryBody > a[target=_blank] 條目標題 <br />
+
+    兩個特徵照抄：
+      1. **末尾沒有 <br />**——其他每個模組都有，只有這一個沒有
+      2. id 重複用在多筆上（原站就是這樣寫，不是 class）
+    標題文字原檔是英文語系的 My subscription，中文對照表是「我的訂閱」
+    （WRETCH_SPEC.md:279），與其他模組一樣走中文。
+    位置也照原檔：夾在 #boxNewComment 與 #boxNewTrackback 之間。
+    沒有訂閱（或還沒抓到東西）就整塊不印。 %>
+<% if (typeof subs !== 'undefined' && subs.length) { %>
+      <div id="boxRssList">
+        <div class="boxRssList0">
+          <div class="sidetitle">
+            我的訂閱          </div>
+        </div>
+        <div class="boxRssList1">
+          <div class="side">
+<% subs.forEach(s => { %>            <span id="boxRssEntryTitle" ><%= s.title %></span>(<%= (s.last_date || '').slice(0,16) %>)<br />
+            <span id="boxRssEntryBody" ><% if (s.last_url) { %><a target="_blank" rel="noopener nofollow" href="<%= s.last_url %>"><%= s.last_title %></a><% } else { %><%= s.last_title %><% } %> </span><br />
+<% }) %>          </div>
+        </div>
+      </div>
+<% } %>
+
 <%# ── #boxNewTrackback ────────────────────────────────────────── %>
         <div id="boxNewTrackback">
         <div class="boxNewTrackback0">
