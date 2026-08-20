@@ -353,21 +353,41 @@ export async function addColumns(forDriver = driver) {
 // 為什麼不寫成一次性的 migration 腳本：本機 SQLite 與正式站 Postgres
 // 是各自獨立的資料庫，而且開發機隨時可能拿到一份舊的備份。
 // 每次啟動自我修復比「記得去跑那支腳本」可靠。
+// ⚠⚠ 這一支讓正式站掛過兩次（"Application failed to respond"），
+// 而且**本機四種組態都重現不出來**。真因與教訓寫在這裡，不要再犯：
+//
+//   `friends` 表**沒有外鍵**（`user_id INTEGER`，沒有 REFERENCES），
+//   所以帳號被刪掉之後，那個人的好友關係還留在表裡＝孤兒列。
+//   而新加的 `friend_groups.user_id` **有**外鍵。
+//   搬移時拿孤兒列的 user_id 去 INSERT friend_groups 就違反外鍵 → 拋錯 →
+//   `await migrate()` 在頂層拋 → 行程直接結束 → 連 listen 都沒跑到 → 502。
+//
+//   正式站有被刪掉的帳號（`/test/visitors` 曾經連到一個 404 的帳號就是證據），
+//   本機的測試資料沒有，所以怎麼試都是好的。
+//   **加外鍵的新表，一定要先想「舊表有沒有孤兒列」。**
+//
+// 三道防線，缺一不可：
+//   1. WHERE 條件加 `EXISTS (SELECT 1 FROM users …)`，孤兒列直接不處理
+//   2. 改成集合式 SQL（兩句），不再一列一個來回——
+//      原本 44 個分組要送 176 次查詢，正式站的量級更大，跨區延遲會很可觀
+//   3. 整支包在 try/catch：**搬移失敗絕對不可以讓站起不來**。
+//      分組沒搬成頂多是好友暫時都在預設組，站掛掉是另一個等級的事
 export async function backfillGroups() {
-  // 還留在舊寫法的好友：有文字組名、而且還沒指到任何分組
-  const rows = await all(
-    "SELECT DISTINCT user_id, grp FROM friends WHERE COALESCE(group_id,0)=0 AND COALESCE(grp,'')<>''");
-  for (const r of rows) {
-    // 「好友」是預設組（friends.grp 的 DEFAULT），對應原站的 group id 0，
-    // 不必替它建一筆分組——建了反而會讓每個人都多一組叫「好友」的東西。
-    if (r.grp === '好友') continue;
-    let g = await one('SELECT id FROM friend_groups WHERE user_id=? AND name=?', r.user_id, r.grp);
-    if (!g) {
-      await run('INSERT INTO friend_groups(user_id,name,ord) VALUES(?,?,?)', r.user_id, r.grp, 0);
-      g = await one('SELECT id FROM friend_groups WHERE user_id=? AND name=?', r.user_id, r.grp);
-    }
-    if (g) await run('UPDATE friends SET group_id=? WHERE user_id=? AND grp=? AND COALESCE(group_id,0)=0',
-      g.id, r.user_id, r.grp);
+  try {
+    // 「好友」是 friends.grp 的 DEFAULT，對應原站的 group id 0（Default group），
+    // 不必替它建分組——建了反而每個人都多一組叫「好友」的東西。
+    const WHERE = `COALESCE(f.group_id,0)=0 AND COALESCE(f.grp,'')<>'' AND f.grp<>'好友'
+      AND EXISTS (SELECT 1 FROM users u WHERE u.id=f.user_id)`;
+    await exec(`INSERT INTO friend_groups(user_id,name,ord)
+      SELECT DISTINCT f.user_id, f.grp, 0 FROM friends f
+      WHERE ${WHERE}
+        AND NOT EXISTS (SELECT 1 FROM friend_groups g WHERE g.user_id=f.user_id AND g.name=f.grp)`);
+    await exec(`UPDATE friends SET group_id=COALESCE(
+        (SELECT g.id FROM friend_groups g WHERE g.user_id=friends.user_id AND g.name=friends.grp), 0)
+      WHERE COALESCE(group_id,0)=0 AND COALESCE(grp,'')<>'' AND grp<>'好友'
+        AND EXISTS (SELECT 1 FROM users u WHERE u.id=friends.user_id)`);
+  } catch (e) {
+    console.error('[migrate] 好友分組搬移失敗，站台照常運作：', e.message);
   }
 }
 
