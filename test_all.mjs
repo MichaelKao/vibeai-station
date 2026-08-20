@@ -64,6 +64,18 @@ ok('切割真的裁了照片', await (async()=>{
   return r.status===302 && !!url && url!==before && /100\s*[×x]\s*80/.test(after);
 })());
 ok('切割範圍太小被擋', (await post('/alpha/photo/1/crop',{x:0,y:0,w:2,h:2},A)).status===302);
+// 相簿封面在上傳時存的是**縮圖**（first=s.thumb），但「設為封面」那支存的是大圖。
+// 切割與刪除只比對大圖的話，封面是縮圖的相簿會指到已經被刪掉的檔＝破圖。
+// tools/ownerflow.mjs 用真的瀏覽器抓到這個 404，這裡釘住。
+ok('切割之後相簿頁的每一張圖都還在（封面不會變破圖）', await (async()=>{
+  const page = await text(`/alpha/album/${aid}`,A);
+  const covers = [...page.matchAll(/src="(\/uploads\/[^"]+)"/g)].map(m=>m[1]);
+  for(const c of covers.slice(0,6)){
+    const r = await get(c);
+    if(r.status===404) return false;
+  }
+  return true;
+})());
 ok('非本人不能切割', (await post('/alpha/photo/1/crop',{x:0,y:0,w:50,h:50},Bc)).status===403);
 ok('非圖片被拒', (await (async()=>{const g=new FormData();g.append('photos',new Blob([Buffer.from('hi')],{type:'text/plain'}),'a.txt');
   const r=await fetch(`${B}/alpha/album/${aid}/upload`,{method:'POST',headers:{cookie:A},body:g,redirect:'manual'}); return r.status===302;})()));

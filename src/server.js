@@ -936,8 +936,13 @@ site.post('/photo/:pid/crop',requireLogin,requireOwner,async (req,res)=>{
     const oldUrl=p.url, oldThumb=p.thumb;
     await run('UPDATE photos SET url=?,thumb=?,width=?,height=?,bytes=? WHERE id=?',
       saved.url,saved.thumb,saved.width,saved.height,saved.bytes,p.id);
-    // 這張如果剛好是相簿封面，封面也要跟著換，不然封面會指到已刪的檔
-    await run('UPDATE albums SET cover=? WHERE id=? AND cover=?',saved.url,p.album_id,oldUrl);
+    // 這張如果剛好是相簿封面，封面也要跟著換，不然封面會指到已刪的檔。
+    // ⚠ 封面可能是**大圖也可能是縮圖**：上傳時存的是縮圖（`first=s.thumb`），
+    // 但「設為封面」那支存的是大圖（`cover=p.url`）。兩種都要比對，
+    // 只比大圖的話，封面是縮圖的相簿在切割之後就變成破圖
+    // ——tools/ownerflow.mjs 用真的瀏覽器抓到這個 404。
+    await run('UPDATE albums SET cover=? WHERE id=? AND (cover=? OR cover=?)',
+      saved.thumb,p.album_id,oldUrl,oldThumb);
     await remove(oldUrl); if(oldThumb&&oldThumb!==oldUrl) await remove(oldThumb);
     flash(req,'照片已切割');
   }catch(e){ console.error(e); flash(req,'切割失敗，照片沒有變動'); }
@@ -945,7 +950,11 @@ site.post('/photo/:pid/crop',requireLogin,requireOwner,async (req,res)=>{
 });
 site.post('/photo/:pid/caption',requireLogin,requireOwner,async (req,res)=>{ await run('UPDATE photos SET caption=? WHERE id=? AND album_id IN (SELECT id FROM albums WHERE user_id=?)',(req.body.caption||'').slice(0,100),req.params.pid,U(res).id); res.redirect(`/${U(res).name}/photo/${req.params.pid}`); });
 site.post('/photo/:pid/cover',requireLogin,requireOwner,async (req,res)=>{ const p=await one('SELECT * FROM photos WHERE id=?',req.params.pid); if(p) await run('UPDATE albums SET cover=? WHERE id=? AND user_id=?',p.url,p.album_id,U(res).id); res.redirect(`/${U(res).name}/photo/${req.params.pid}`); });
-site.post('/photo/:pid/del',requireLogin,requireOwner,async(req,res)=>{ const p=await one('SELECT p.* FROM photos p JOIN albums a ON a.id=p.album_id WHERE p.id=? AND a.user_id=?',req.params.pid,U(res).id); if(p){ await remove(p.url); if(p.thumb&&p.thumb!==p.url) await remove(p.thumb); await run('DELETE FROM photos WHERE id=?',p.id); await run("UPDATE albums SET cover=COALESCE((SELECT url FROM photos WHERE album_id=? LIMIT 1),'') WHERE id=? AND cover=?",p.album_id,p.album_id,p.url); return res.redirect(`/${U(res).name}/album/${p.album_id}`);} res.redirect(`/${U(res).name}/album`); });
+site.post('/photo/:pid/del',requireLogin,requireOwner,async(req,res)=>{ const p=await one('SELECT p.* FROM photos p JOIN albums a ON a.id=p.album_id WHERE p.id=? AND a.user_id=?',req.params.pid,U(res).id); if(p){ await remove(p.url); if(p.thumb&&p.thumb!==p.url) await remove(p.thumb); await run('DELETE FROM photos WHERE id=?',p.id);
+  // 封面可能是大圖也可能是縮圖（上傳存縮圖、「設為封面」存大圖），兩種都要比對，
+  // 不然刪掉當封面的那張之後，相簿封面會指到已經刪掉的檔＝破圖。
+  // 換上去的也用縮圖，跟上傳時的慣例一致。
+  await run("UPDATE albums SET cover=COALESCE((SELECT thumb FROM photos WHERE album_id=? LIMIT 1),'') WHERE id=? AND (cover=? OR cover=?)",p.album_id,p.album_id,p.url,p.thumb); return res.redirect(`/${U(res).name}/album/${p.album_id}`);} res.redirect(`/${U(res).name}/album`); });
 
 // 網誌
 // 文章日曆：回傳該月的格子，有發文的日期給連結（無名側欄的「文章日曆」）
