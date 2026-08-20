@@ -131,6 +131,17 @@
                 移開又關不掉，觸控與鍵盤更是完全打不開。照原版拆回兩顆。 %>
             | <a href="javascript:void(0)" id="showCollector" role="button" tabindex="0">收藏(<%= favN %>)</a>
             | <a href="/report?kind=post&amp;target=<%= post.id %>&amp;url=<%= encodeURIComponent(here) %>" class="reportlink" data-kind="post" data-id="<%= post.id %>">檢舉</a>
+            <%# 站長專用的「設為精選」。POST /admin/feature/:kind/:id 這支一直都在，
+                但唯一的入口是管理後台那個**要自己輸入編號**的表單——站長逛到一篇
+                想精選的文章，得先記住網址結尾的數字、回後台、再貼進去。
+                這裡直接給一顆鈕，back 帶回本頁（那支路由本來就吃 back）。
+                只有站長看得到；一般訪客與作者本人都不會看到這一節。 %>
+            <% if (locals.me && me.admin) { %>
+            | <form method="post" action="/admin/feature/post/<%= post.id %>" class="w2-inline-form">
+                <input type="hidden" name="back" value="<%= here %>">
+                <button type="submit" class="w2-linkbtn"><%= post.featured ? '取消精選' : '設為精選' %></button>
+              </form>
+            <% } %>
                       </div>
 
 <%# ── 誰來收藏（#friend-picker 彈窗）─────────────────────────────

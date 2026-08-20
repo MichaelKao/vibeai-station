@@ -194,3 +194,17 @@ html > body #content #push button.push { margin: 0 0 0 2px; }
 @media (max-width: 999px) {
   #friend-picker { width: auto !important; max-width: 100%; }
 }
+
+/* 站長在文章頁工具列上切換「精選」的那顆鈕。
+   POST /admin/feature/:kind/:id 這支路由一直都在，但唯一的入口是管理後台
+   那個要自己輸入編號的表單——站長逛到一篇想精選的文章，得先記住網址結尾的
+   數字、回後台、再貼進去。這裡把它做成工具列上的一個連結。
+   必須是 <form>（有副作用的動作不能用 GET 連結），但外觀要跟旁邊的
+   「收藏」「檢舉」一致，所以把 form 與 button 都去殼。
+   相簿頁那一顆同樣的東西在 wretch2012-album-in.css 的 .w2a-linkbtn。 */
+.w2-inline-form { display: inline; margin: 0; padding: 0; border: 0; }
+.w2-linkbtn {
+  display: inline; margin: 0; padding: 0; border: 0; background: none;
+  color: inherit; font: inherit; cursor: pointer;
+}
+.w2-linkbtn:hover { text-decoration: underline; }
