@@ -8,6 +8,7 @@ import { hash, salt, check, requireLogin, requireOwner } from './auth.js';
 import { save, remove, hasR2, diskFree, readImage } from './storage.js';
 import { UPLOAD_DIR } from './paths.js';
 import { render, EMOTES, safeCss } from './format.js';
+import { fetchFeed, subUrlOk } from './feed.js';
 import { SITE_NAME, SITE_DESC, SITE_LOGO, CDN } from './config.js';
 import { ALBUM_TOPICS, BLOG_TOPICS, PLACES, MOODS, WEATHERS, ZODIACS, BLOODS, SEXES, CITIES, isAlbumTopic, isBlogTopic, isPlace } from './taxonomy.js';
 import { SKINS, isSkin, skinCss } from './skins.js';
@@ -593,39 +594,7 @@ site.post('/settings',requireLogin,requireOwner,upload.single('avatar'),async(re
 //   3. 逾時 6 秒、只讀前 256KB，避免對方餵一條無止盡的串流把行程卡死
 //   4. 每個來源最多 30 分鐘抓一次，抓失敗就沿用上一次的結果，側欄不會忽然空掉
 const SUB_MAX = 5;
-const PRIVATE_HOST = /^(localhost$|127\.|10\.|192\.168\.|169\.254\.|0\.|\[?::1\]?$|172\.(1[6-9]|2[0-9]|3[01])\.)/i;
-function subUrlOk(raw){
-  let u; try { u = new URL(raw); } catch { return null; }
-  if(!['http:','https:'].includes(u.protocol)) return null;
-  if(PRIVATE_HOST.test(u.hostname)) return null;
-  return u.toString();
-}
-async function fetchFeed(url){
-  const ctl = new AbortController();
-  const timer = setTimeout(()=>ctl.abort(), 6000);
-  try {
-    const r = await fetch(url, { signal: ctl.signal, redirect: 'follow',
-      headers: { 'user-agent': 'vibeai-station/1.0 (+feed reader)' } });
-    if(!r.ok) return null;
-    // 只讀前 256KB：RSS 的第一個 <item> 一定在前面，不必把整份吃進來
-    const buf = await r.arrayBuffer();
-    const xml = Buffer.from(buf.slice(0, 256*1024)).toString('utf8');
-    // 不引 XML 解析器：RSS 與 Atom 的第一則用字串比對就夠，
-    // 而且抓進來的東西一律當成不可信的字串，只取文字、輸出時逸出。
-    const item = xml.match(/<(item|entry)[\s>][\s\S]*?<\/(item|entry)>/i)?.[0] || '';
-    const pick = (tag) => {
-      const m = item.match(new RegExp('<' + tag + '[^>]*>([\\s\\S]*?)</' + tag + '>', 'i'));
-      return m ? m[1].replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g, '$1').trim() : '';
-    };
-    const link = pick('link') || item.match(/<link[^>]*href="([^"]+)"/i)?.[1] || '';
-    return {
-      title: pick('title').slice(0, 120),
-      url: subUrlOk(link) || '',
-      date: (pick('pubDate') || pick('updated') || pick('published')).slice(0, 40),
-    };
-  } catch { return null; }
-  finally { clearTimeout(timer); }
-}
+// SSRF 防護與抓取全部在 src/feed.js（那支的檔頭寫了為什麼「檢查網址字串」不夠）。
 // 側欄要用的時候才更新，而且 30 分鐘內不重抓。
 // 放在 render 之前 await 會讓每一頁網誌都等外部網站——所以**不等**：
 // 這一輪先把上次的結果印出去，順便在背景更新，下一次進來就是新的。
@@ -690,8 +659,33 @@ site.post('/friend',requireLogin,async (req,res)=>{ const me=res.locals.me.id,u=
               else await run("INSERT OR IGNORE INTO friends(user_id,friend_id,grp) VALUES(?,?,?)",me,u,(req.body.grp||'好友').trim().slice(0,10)||'好友'); }
   res.redirect('/'+U(res).name); });
 // 好友分類（當年好友名單可以分組）
+// 把某位好友換到某一組。req.body.group_id 是分組 id，0＝預設組。
+// ⚠ 一定要驗那一組**是這個人自己的**——不驗的話，隨便填一個別人的分組 id
+// 就能把自己的好友掛到別人的分組上，畫面上還看得到別人的分組名。
 site.post('/friends/:fid/group',requireLogin,requireOwner,async (req,res)=>{
-  await run('UPDATE friends SET grp=? WHERE user_id=? AND friend_id=?',(req.body.grp||'好友').trim().slice(0,10)||'好友',U(res).id,req.params.fid);
+  const uid=U(res).id, gid=+req.body.group_id||0;
+  const ok = gid===0 || !!await one('SELECT 1 FROM friend_groups WHERE id=? AND user_id=?',gid,uid);
+  if(ok) await run('UPDATE friends SET group_id=? WHERE user_id=? AND friend_id=?',gid,uid,req.params.fid);
+  res.redirect(`/${U(res).name}/friends`); });
+
+// 分組本身的增／改名／刪。原站的分組是一等公民（#cateSelect 的 value 是 group id），
+// 改名一次全組跟著改——這正是「把組名存在每一筆好友身上」做不到的事。
+const FGROUP_MAX = 20;
+site.post('/friendgroups',requireLogin,requireOwner,async (req,res)=>{
+  const uid=U(res).id, name=(req.body.name||'').trim().slice(0,20);
+  if(name && (await one('SELECT count(*) c FROM friend_groups WHERE user_id=?',uid)).c < FGROUP_MAX
+      && !await one('SELECT 1 FROM friend_groups WHERE user_id=? AND name=?',uid,name))
+    await run('INSERT INTO friend_groups(user_id,name,ord) VALUES(?,?,?)',uid,name,0);
+  res.redirect(`/${U(res).name}/friends`); });
+site.post('/friendgroups/:id/edit',requireLogin,requireOwner,async (req,res)=>{
+  const name=(req.body.name||'').trim().slice(0,20);
+  if(name) await run('UPDATE friend_groups SET name=? WHERE id=? AND user_id=?',name,req.params.id,U(res).id);
+  res.redirect(`/${U(res).name}/friends`); });
+site.post('/friendgroups/:id/del',requireLogin,requireOwner,async (req,res)=>{
+  const uid=U(res).id;
+  // 刪組不刪人：組裡的好友退回預設組（原站的 Default group）
+  await run('UPDATE friends SET group_id=0 WHERE user_id=? AND group_id=?',uid,req.params.id);
+  await run('DELETE FROM friend_groups WHERE id=? AND user_id=?',req.params.id,uid);
   res.redirect(`/${U(res).name}/friends`); });
 site.get('/card',async (req,res)=>res.render('card',{nav:'card',
   // 收到的禮物顯示在名片頁（原站的送禮物就是掛在個人資料上）
@@ -747,6 +741,10 @@ site.post('/card',requireLogin,requireOwner,async (req,res)=>{
 // 一頁 25 人：原始檔 gb_friend_a000001_20131226.html 的頁首 JS 寫死 paginator='25'。
 const FRIEND_PER = 25;
 const FRIEND_RELS = ['我的好友','誰加我為好友','互相是好友','好友的好友'];
+// 分組名一律從 friend_groups 撈（group_id=0 就是原站的 Default group）。
+// ⚠ 這個子查詢要放在 SELECT 裡，不能 JOIN friend_groups——
+// rel=1/3 那兩種關係的 f 不是站主自己的那條邊，JOIN 會把筆數乘開。
+const GRP_NAME = "COALESCE((SELECT name FROM friend_groups WHERE id=f.group_id),'好友')";
 function friendQuery(uid, rel, cate, q){
   const args=[]; let from, where, grp;
   if(rel===1){                       // 誰加我為好友：反向邊
@@ -755,17 +753,19 @@ function friendQuery(uid, rel, cate, q){
   } else if(rel===2){                // 互相：正向邊存在，且反向邊也存在
     from='FROM friends f JOIN users u ON u.id=f.friend_id '
        + 'JOIN friends b ON b.user_id=f.friend_id AND b.friend_id=f.user_id';
-    where='f.user_id=?'; args.push(uid); grp="COALESCE(NULLIF(f.grp,''),'好友')";
+    where='f.user_id=?'; args.push(uid); grp=GRP_NAME;
   } else if(rel===3){                // 好友的好友：兩跳，扣掉自己與已經是好友的人
     from='FROM friends f JOIN friends g ON g.user_id=f.friend_id JOIN users u ON u.id=g.friend_id';
     where='f.user_id=? AND g.friend_id<>? AND g.friend_id NOT IN (SELECT friend_id FROM friends WHERE user_id=?)';
     args.push(uid,uid,uid); grp="'好友的好友'";
   } else {                           // 我的好友
     from='FROM friends f JOIN users u ON u.id=f.friend_id';
-    where='f.user_id=?'; args.push(uid); grp="COALESCE(NULLIF(f.grp,''),'好友')";
+    where='f.user_id=?'; args.push(uid); grp=GRP_NAME;
   }
-  // 分類只有「我加的」那兩種關係才有意義（grp 是站主自己打的分類名）
-  if(cate && (rel===0||rel===2)){ where+=" AND COALESCE(NULLIF(f.grp,''),'好友')=?"; args.push(cate); }
+  // 分類只有「我加的」那兩種關係才有意義。
+  // cate 是**分組 id**（原站 #cateSelect 的 option value 就是 group id，
+  // 0＝Default group、-1＝全部），不是分組名。
+  if(cate!=='' && (rel===0||rel===2)){ where+=' AND COALESCE(f.group_id,0)=?'; args.push(+cate||0); }
   // #searchInput 原站只搜帳號（js_lang_searchTip = 'Search ID'），照做
   if(q){ where+=' AND u.name LIKE ?'; args.push('%'+q+'%'); }
   return {from,where,grp,args};
@@ -773,7 +773,9 @@ function friendQuery(uid, rel, cate, q){
 site.get('/friends',async (req,res)=>{
   const uid=U(res).id;
   const rel=[0,1,2,3].includes(+req.query.c)?+req.query.c:0;
-  const cate=(req.query.cateSelect||'').trim().slice(0,10);   // '' 或 '-1' 都代表全部
+  // cateSelect 是分組 id：'' 或 '-1' 都代表全部，'0' 是預設組（原站的 Default group）
+  const cateRaw=(req.query.cateSelect||'').trim().slice(0,10);
+  const cate=/^-?\d+$/.test(cateRaw)?cateRaw:'';
   const q=(req.query.search_id||'').trim().slice(0,20);
   const page=Math.max(1,+req.query.p||1);
   const {from,where,grp,args}=friendQuery(uid,rel,cate==='-1'?'':cate,q);
@@ -791,7 +793,16 @@ site.get('/friends',async (req,res)=>{
     rows,
     friends:rows,     // 舊名，view 換過來之前先留著
     // #cateSelect 的選項：本站沒有 group 表，option value 直接放分類名，-1＝全部
-    groups:await all("SELECT COALESCE(NULLIF(grp,''),'好友') g, count(*) n FROM friends WHERE user_id=? GROUP BY COALESCE(NULLIF(grp,''),'好友') ORDER BY g",uid),
+    // #cateSelect 的選項。原站 option value 是分組 id，0＝Default group、-1＝全部
+    // （gb_friend_a000000000aa_20131225.html:187）。這裡照做。
+    // 預設組要單獨算：它沒有 friend_groups 那一列，group_id 就是 0。
+    groups:[
+      ...await all(`SELECT g.id, g.name,
+          (SELECT count(*) FROM friends f WHERE f.user_id=g.user_id AND f.group_id=g.id) n
+        FROM friend_groups g WHERE g.user_id=? ORDER BY g.ord, g.id`,uid),
+      { id:0, name:'預設分類',
+        n:(await one('SELECT count(*) c FROM friends WHERE user_id=? AND COALESCE(group_id,0)=0',uid)).c },
+    ],
     counts:{ mine:await count(0), fans:await count(1), mutual:await count(2), fof:await count(3) },
     // fans 是舊 view 那一整塊「誰加我為好友」。切了頁籤或下了篩選之後再印一份
     // 沒篩過的名單會自相矛盾（畫面上明明篩掉了，下面又整批列出來），所以只在

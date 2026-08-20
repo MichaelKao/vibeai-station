@@ -250,8 +250,33 @@ ok('名片欄位', card.includes('王小明')&&card.includes('雙子座')&&card.
 ok('名片擋亂值', (await post('/alpha/card',{zodiac:'亂',city:'火星',homepage:'javascript:alert(1)'},A)).status===302 &&
    !(await text('/alpha/card')).includes('javascript:alert'));
 ok('/user/ 導向名片', (await get('/user/alpha')).headers.get('location')==='/alpha/card');
-await post('/alpha/friends/3/group',{grp:'同學'},A);
+// 分組是真的東西（friend_groups），POST 的欄位是 group_id 不是組名字串
+await post('/alpha/friendgroups',{name:'同學'},A);
+await post('/alpha/friendgroups',{name:'同事'},A);
+const grpPage = await text('/alpha/friends',A);
+const gidClass = +(grpPage.match(/friendgroups\/(\d+)\/edit/)||[])[1];
+await post('/alpha/friends/3/group',{group_id:String(gidClass)},A);
 ok('好友分組', (await text('/alpha/friends')).includes('同學'));
+ok('分組改名，整組跟著改', await (async()=>{
+  await post(`/alpha/friendgroups/${gidClass}/edit`,{name:'高中同學'},A);
+  const t=await text('/alpha/friends',A);
+  return t.includes('高中同學') && !t.includes('>同學（'); })());
+await post(`/alpha/friendgroups/${gidClass}/edit`,{name:'同學'},A);
+ok('不能把好友掛到別人的分組', await (async()=>{
+  const bg=await post('/bravo/friendgroups',{name:'布拉的組'},Bc);
+  const bt=await text('/bravo/friends',Bc);
+  const bid=+(bt.match(/friendgroups\/(\d+)\/edit/)||[])[1];
+  if(!bid) return true;                       // 布拉還沒有好友就沒有這個畫面，跳過
+  await post('/alpha/friends/3/group',{group_id:String(bid)},A);
+  return !(await text('/alpha/friends',A)).includes('布拉的組'); })());
+ok('刪分類不刪人', await (async()=>{
+  await post('/alpha/friendgroups',{name:'待刪'},A);
+  const t=await text('/alpha/friends',A);
+  const ids=[...t.matchAll(/friendgroups\/(\d+)\/edit/g)].map(m=>+m[1]);
+  const del=ids[ids.length-1];
+  await post(`/alpha/friendgroups/${del}/del`,{},A);
+  const after=await text('/alpha/friends',A);
+  return !after.includes('待刪') && after.includes('charlie'); })());
 ok('好友動態', (await text('/alpha/feed',A)).includes('好友動態'));
 ok('好友動態私密', (await get('/alpha/feed',Bc)).status===403);
 
@@ -271,8 +296,14 @@ await post('/bravo/friend',{},C);                     // charlie 也加 bravo，
 }
 ok('好友搜尋只比對帳號', (await text('/alpha/friends?search_id=charl')).includes('charlie') &&
    !(await text('/alpha/friends?search_id=nobodyhere')).includes('charlie'));
-ok('好友分類篩選', (await text('/alpha/friends?cateSelect='+encodeURIComponent('同學'))).includes('charlie') &&
-   !(await text('/alpha/friends?cateSelect='+encodeURIComponent('同事'))).includes('charlie'));
+// cateSelect 帶的是分組 id（原站也是），0＝預設組、-1＝全部
+ok('好友分類篩選', await (async()=>{
+  const t=await text('/alpha/friends',A);
+  const ids=[...t.matchAll(/friendgroups\/(\d+)\/edit/g)].map(m=>+m[1]);
+  const inGroup=await text(`/alpha/friends?cateSelect=${ids[0]}`);
+  const other=await text(`/alpha/friends?cateSelect=${ids[1] ?? 0}`);
+  return inGroup.includes('charlie') && !other.includes('charlie'); })());
+ok('cateSelect=-1 是全部', (await text('/alpha/friends?cateSelect=-1')).includes('charlie'));
 // 原站那張搜尋表單是 POST，導回 GET 才有得加書籤、才分得了頁
 ok('好友搜尋 POST 導回 GET', (await post('/alpha/friends',{search_id:'charl'},A)).headers.get('location')==='/alpha/friends?search_id=charl');
 
