@@ -5,8 +5,16 @@
     有存檔可證的只有留言板側欄那張名片小卡上的三個 class：
       <p class="myDigu"><span class="digu">…</span><a class="digu_date">…</a></p>
     （gb_guestbook_a000000010_20131226.html，一次只印**最新一則**）
-    所以這一頁沿用同一組 class 名，讓側欄與列表頁講同一種話；
     外框走 2012 內頁 chrome，不自創第二種頁框。
+
+    ⚠ 但這一頁**不能**照抄 `.myDigu`：
+    原版那組 class 是給名片小卡用的，`.myDigu .digu_date` 是
+    `position:absolute; bottom:30px; left:110px`（wretch2012-gb.css:331）。
+    卡片上只有一則，絕對定位沒問題；列表頁有幾十則，**每一則的日期都會
+    疊在同一個座標上**，只有最上面那一個點得到，其餘全部被蓋住
+    （tools/clickcheck.mjs 在正式站量到 14 條連結互相覆蓋）。
+    所以列表頁改用自己的 `.w2-digu-row` / `.w2-digu-date`，
+    側欄那張卡片維持原版 class 不動。
 
     功能是「最小可用」：站主自己發一句話，訪客只看。
     原站的嘀咕有回應與轉噗，那些沒有存檔也沒有規格，不憑印象補。
@@ -86,9 +94,9 @@
         <% digus.forEach(d => { %>
         <tr id="d_<%= d.id %>">
           <td>
-            <p class="myDigu">
-              <span class="digu"><%- render(d.body) %></span>
-              <a class="digu_date" href="/<%= u.name %>/digu#d_<%= d.id %>"><%= d.created %></a>
+            <p class="w2-digu-row">
+              <span class="w2-digu-body"><%- render(d.body) %></span>
+              <a class="w2-digu-date" href="/<%= u.name %>/digu#d_<%= d.id %>"><%= d.created %></a>
             </p>
           </td>
           <% if (isOwner) { %>

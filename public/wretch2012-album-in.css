@@ -16,9 +16,20 @@
 
 /* --- 1. 廣告位 -----------------------------------------------------------
  * 原站 td#ad_banner 撐 700×90、td#ad_word 是一行文字廣告、頁尾還有 FOOT9。
- * 本站不放廣告。存檔快照裡這幾格本來就是空的，照抄只會得到空白，所以收掉高度。
+ *
+ * ⚠ 這裡本來是 `height:0; line-height:0`——當初的理由是「本站不放廣告，
+ * 存檔裡這幾格本來就是空的，照抄只會得到空白，所以收掉高度」。
+ * 後來版位改放**站方公告與站內連結**（partials/adslot2012.ejs）了，
+ * 這條卻沒跟著改：內容還在，高度是 0，於是「站方公告」「分類」「站內入口」
+ * 三排字**通通疊在同一行**，只有最上面那排點得到——
+ * tools/clickcheck.mjs 在正式站量到相簿頁 7 條連結互相覆蓋。
+ * 版位既然有真的內容，就要有真的高度。
  */
-td#ad_banner, td#ad_word { height: 0; padding: 0; line-height: 0; }
+td#ad_banner, td#ad_word { padding: 0; line-height: normal; height: auto; }
+/* 原站用 `html body table tbody tr td#ad_banner{display:inline!important}`
+   這種反擋廣告的寫法，蓋不掉也不必蓋——把內層當成真正的盒子就好。 */
+td#ad_banner .w2-ad-in { display: block; width: 700px; max-width: 100%; }
+td#ad_word   .w2-ad-in { display: block; }
 
 /* --- 2. flash 訊息 -------------------------------------------------------
  * 原站沒有這個東西（它用整頁跳轉的提示頁）。本站沿用既有的 flash 機制，

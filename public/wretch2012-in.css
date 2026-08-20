@@ -202,6 +202,17 @@ html body div#bigcontainer div#container div#main div#sidebar ul li#ad_lrec div 
 .myDigu .digu a { color: inherit; text-decoration: none; }
 .myDigu .digu a:hover { text-decoration: underline; }
 
+/* 嘀咕**列表頁**不能用 .myDigu ——那組是名片小卡的樣式，
+ * `.myDigu .digu_date` 是 position:absolute; bottom:30px; left:110px
+ * （wretch2012-gb.css:331）。卡片上只有一則所以沒事，列表頁有幾十則，
+ * **每一則的日期都會疊在同一個座標**，只有最上面那一則點得到。
+ * tools/clickcheck.mjs 在正式站量到 14 條連結互相覆蓋。
+ * 列表頁改用自己的 class（views/digu.ejs），樣式在這裡。 */
+.w2-digu-row  { margin: 0; padding: 2px 0; line-height: 1.5; }
+.w2-digu-body { display: block; }
+.w2-digu-date { font-size: 0.8em; color: #84aece; text-decoration: none; }
+.w2-digu-date:hover { text-decoration: underline; }
+
 /* --- 14. #msg_added 的「標籤欄」只該套在每一列的第一個 <span> -------------
  * 版型有一條 #msg_added li span{display:block;width:105px;float:left;
  * text-align:right;border-bottom:1px solid #b8d7f0}——那是給欄位名稱那一格用的，
