@@ -264,6 +264,14 @@
     height: auto !important; overflow: hidden;
   }
 
+  /* 公告區三格縮圖：原版 <img width=85 height=60>，但第 0 節那條
+     `img{height:auto}`（防止照片頂出容器）把高度改成依比例算，
+     寬螢幕的封面圖變成 85×30，格子高度對不上，連結的行框被擠到
+     父層外面、落進下面的公告清單裡，兩邊都點不到。
+     這三張是版位縮圖不是內容照片，維持原版尺寸就好。 */
+  #wfp-announcement .annoad3 p { height: auto !important; }
+  #wfp-announcement .annoad3 img { height: 60px !important; object-fit: cover; }
+
 
   /* ── 6. 第二輪：uicheck 在 375px 量出來、上面沒蓋到的寫死寬度 ────
    * 這一批的共同點：選擇器比第 1 節那批更深（例如 `#wfp-cover .tack .title`），
@@ -336,8 +344,17 @@
   /* 首頁「精選」模組：.hd 裡的 tabs 是 float，窄螢幕換行之後會往下長；
      .bd 有 overflow:hidden ＝ 自成 BFC，BFC 會**主動避開浮動框**，
      於是整個 .bd 被擠成 168px 寬、右移 191px。清掉浮動就好。 */
+  /* .hd 高度寫死（原版頁籤只有一排）。窄螢幕頁籤換行長高之後，
+     多出來的部分整個壓在 .bd 的文章連結上。高度要跟著內容長。 */
+  #wfp-hybrid .hd, #wfp-hybrid .tabs, #wfp-hybrid .tabs-list,
+  #wfp-hybrid .tabs-cell { height: auto !important; }
   #wfp-hybrid .hd { display: flow-root; }
   #wfp-hybrid .bd { clear: both !important; height: auto !important; }
+
+  /* 混合區頁籤的說明面板（.tabs-content）是 absolute，定位在頁籤格裡。
+     970px 時它剛好落在頁籤列自己的範圍內；窄螢幕頁籤換行之後，
+     它會往下蓋住 .bd 裡的文章連結。改回正常流，跟著頁籤排。 */
+  #wfp-hybrid .tabs .tabs-content { position: static !important; }
 
   /* myspace 版型的頁籤帶：`ul#main_tab` 是 position:absolute，
      靠 `a.message`（message.gif 120×39，高 55px）撐出帶子的高度，
