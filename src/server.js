@@ -823,6 +823,16 @@ const blogSide=async res=>({
   recentC:await all('SELECT c.author,c.post_id,p.title FROM comments c JOIN posts p ON p.id=c.post_id WHERE p.user_id=? ORDER BY c.id DESC LIMIT 5',U(res).id),
   months:await all("SELECT substr(created,1,7) ym, count(*) n FROM posts WHERE user_id=? GROUP BY ym ORDER BY ym DESC LIMIT 24",U(res).id),
   cal:await calendar(U(res).id, res.calYm),
+  // 「歷史上的今天」：往年同月同日發過的文（blog.md 記為後期加上的側欄模組）。
+  // created 是 'YYYY-MM-DD HH:MM:SS' 字串，substr(created,6,5) 就是 'MM-DD'——
+  // 兩個驅動都有 substr，不用寫方言分支（其他側欄查詢也是這樣切月份的）。
+  // 只排除「今年的今天」：那些就是今天剛發的，放進「歷史上」很怪。
+  onThisDay:await all(
+    "SELECT id,title,created FROM posts WHERE user_id=? AND substr(created,6,5)=? "
+    + "AND substr(created,1,4)!=? ORDER BY created DESC LIMIT 5",
+    U(res).id,
+    new Date().toLocaleDateString('sv-SE').slice(5),
+    new Date().toLocaleDateString('sv-SE').slice(0,4)),
   // 側欄「最新引用」：blogside.ejs 讀 locals.trackbacks，但一直沒人給它，
   // 所以站上明明有引用，那一格永遠印「尚無引用」。
   // 側欄「最新引用」＝**別人引用了我哪一篇**，所以要 join t.from_post
@@ -961,6 +971,10 @@ site.get('/blog/:id',postOf,async (req,res)=>{ const p=res.locals.post;
   res.render('post',{nav:'blog',post:p,...await blogSide(res),
     faved: res.locals.me?!!await one('SELECT 1 FROM favs WHERE user_id=? AND post_id=?',res.locals.me.id,p.id):false,
     favN: (await one('SELECT count(*) c FROM favs WHERE post_id=?',p.id)).c,
+    // 「誰來收藏」：原站按下收藏數會展開收藏過這篇的人（blog.md 列為後期功能）。
+    // 資料本來就在 favs 裡，只是之前沒有印出來。
+    collectors:await all(`SELECT u.name,u.nick,u.avatar FROM favs f JOIN users u ON u.id=f.user_id
+      WHERE f.post_id=? ORDER BY f.created DESC LIMIT 30`,p.id),
     comments:await all('SELECT * FROM comments WHERE post_id=? ORDER BY id',p.id),
     trackbacks:await all('SELECT t.*,p.title,p.id pid,u.name uname FROM trackbacks t JOIN posts p ON p.id=t.from_post JOIN users u ON u.id=p.user_id WHERE t.post_id=?',p.id),
     prev:await one('SELECT id,title FROM posts WHERE user_id=? AND id<? ORDER BY id DESC',U(res).id,p.id),next:await one('SELECT id,title FROM posts WHERE user_id=? AND id>? ORDER BY id',U(res).id,p.id)}); });

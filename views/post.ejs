@@ -110,6 +110,18 @@
             | <a href="#" class="reportlink" data-kind="post" data-id="<%= post.id %>">檢舉</a>
                       </div>
 
+<%# ── 誰來收藏 ─────────────────────────────────────────────────
+    原站按下收藏數會展開「收藏過這篇的人」。資料一直都在 favs 裡，
+    只是之前沒有印出來，收藏數旁邊等於是個沒有下文的數字。
+    不用 JS 展開：直接印在下面，沒有人收藏就整塊不印
+    （空的區塊會被 tools/emptycheck.mjs 抓出來，也確實沒有意義）。 %>
+<% if (collectors && collectors.length) { %>
+            <div class="collector-list" id="collectorList">
+              <span class="collector-head">誰來收藏：</span>
+<% collectors.forEach(c => { %>              <a class="collector" href="/<%= c.name %>" title="<%= c.nick || c.name %>"><img src="<%= c.avatar || '/img/avatar.png' %>" width="24" height="24" alt="<%= c.nick || c.name %>"><%= c.nick || c.name %></a>
+<% }) %>            </div>
+<% } %>
+
             <div class="total-comments-div">
 
     <%# ── (a) 引用網址 ─────────────────────────────────────── %>

@@ -162,3 +162,15 @@ html > body #content #push button.push { margin: 0 0 0 2px; }
 @media (max-width: 999px) {
   #description2 .description { width: auto; max-width: 100%; }
 }
+
+/* --- 誰來收藏 -------------------------------------------------------------
+ * 原站按下收藏數會展開「收藏過這篇的人」（blog.md 記為後期加上的功能，
+ * 存檔裡沒有那一段 DOM，所以樣式是自己配的——配色從 skin117 既有的色盤挑，
+ * 不新增視覺語言）。沒有人收藏時整塊不印，見 views/post.ejs。
+ */
+.collector-list { margin: 4px 0 8px; line-height: 28px; }
+.collector-head { color: #999; font-size: 12px; margin-right: 4px; }
+.collector      { display: inline-block; margin-right: 8px; font-size: 12px;
+                  text-decoration: none; vertical-align: middle; }
+.collector img  { vertical-align: middle; margin-right: 3px; border: 1px solid #ddd; }
+.collector:hover { text-decoration: underline; }
