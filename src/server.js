@@ -475,6 +475,21 @@ const RESERVED=new Set(['login','register','logout','rank','search','help','admi
   ...Object.keys(SECTION)]);
 const site=express.Router({mergeParams:true});
 autoAsync(site);   // 個人小站的路由同樣需要 async 錯誤轉交（理由見檔頭 wrapAsync）
+
+// 數字型路由參數的守門員。
+//
+// 為什麼要有這個：`/album/rss`、`/blog/new` 這種具名路由如果註冊在 `/album/:id`
+// 後面，就會被參數路由先接走，把 'rss' 當成編號送進 SQL。
+//   SQLite   靜靜回一列都沒有 → 看起來像 404，本機完全測不出來
+//   Postgres 直接拋 invalid input syntax for integer → **正式站 500**
+// 同樣的道理，任何人手打 /meimei/photo/abc 也會讓正式站噴 500 而不是 404。
+// 在 router 層一次擋掉：不是純數字就 next('route')，讓它落到 404 那一支。
+// 新增數字參數時記得把名字加進這個清單。
+for (const p of ['id', 'pid', 'cid', 'aid']) {
+  const guard = (req, res, next, val) => /^[0-9]+$/.test(String(val)) ? next() : next('route');
+  site.param(p, guard);
+  app.param(p, guard);
+}
 app.use('/:name',async (req,res,next)=>{
   if(RESERVED.has(req.params.name)) return next();
   const u=await one('SELECT * FROM users WHERE name=?',req.params.name); if(!u) return next();
@@ -702,7 +717,12 @@ site.get('/album',async (req,res)=>{
     albums:await all(`SELECT a.*,(SELECT count(*) FROM photos WHERE album_id=a.id) n FROM albums a WHERE user_id=? ORDER BY id DESC LIMIT ? OFFSET ?`,U(res).id,per,(page-1)*per)});
 });
 site.post('/album',requireLogin,requireOwner,async (req,res)=>{ const t=(req.body.title||'').trim().slice(0,40); if(t) await run('INSERT INTO albums(user_id,title,descr,pass,topic,place,friends_only) VALUES(?,?,?,?,?,?,?)',U(res).id,t,(req.body.descr||'').slice(0,200),(req.body.pass||'').slice(0,20),isAlbumTopic(req.body.topic)?req.body.topic:'',isPlace(req.body.place)?req.body.place:'',req.body.friends_only?1:0); res.redirect(`/${U(res).name}/album`); });
-const albumOf=async (req,res,next)=>{ const a=await one('SELECT * FROM albums WHERE id=? AND user_id=?',req.params.id,U(res).id); if(!a) return next('route'); res.locals.album=a; next(); };
+// ⚠ 先擋掉非數字的 :id 再查資料庫。
+// `/album/rss` 這種**同一層的具名路由**如果註冊在 `/album/:id` 後面，就會先被
+// 這一支接走、把 'rss' 當成相簿編號送進 SQL：SQLite 只是靜靜回空（看起來像 404），
+// **Postgres 會直接拋 invalid input syntax for integer 變成 500**——本機測不出來，
+// 只有正式站會爆。tools/linksweep.mjs 就是這樣抓到 /:name/album/rss 全站 500 的。
+const albumOf=async (req,res,next)=>{ if(!/^[0-9]+$/.test(req.params.id)) return next('route'); const a=await one('SELECT * FROM albums WHERE id=? AND user_id=?',req.params.id,U(res).id); if(!a) return next('route'); res.locals.album=a; next(); };
 const albumUnlocked=(req,res)=>!res.locals.album.pass||res.locals.isOwner||(req.session.unlocked||[]).includes(res.locals.album.id);
 // 好友限定（無名的「好友保護」）：只有站主本人與被站主加為好友的人看得到
 const albumAllowed=async (req,res)=>{

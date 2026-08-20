@@ -83,6 +83,28 @@
     width: auto !important; height: auto !important;
     margin: 8px 0 !important;
   }
+
+  /* ── 8. 320px（iPhone SE 直立）才現形的那批 ────────────────────── */
+
+  /* fieldset 的 min-width 預設是 min-content，裡面的輸入框有寫死寬度時
+     就會把 fieldset 撐開，width:auto 蓋不掉——要連 min-width 一起放掉。 */
+  fieldset { min-width: 0 !important; max-width: 100% !important; box-sizing: border-box; }
+  #searchForm input[type=text], #search_keyword, #inner-search-input {
+    width: 100% !important; min-width: 0 !important; box-sizing: border-box;
+  }
+
+  /* 相簿總站的關鍵字建議浮層寫死 340px */
+  #suggestMenu, #suggestMenu .bd { width: auto !important; max-width: 100% !important; }
+
+  /* 首頁站友介紹的引言塊寫死 296px ＋ 左右 padding，box-sizing 之外還會爆 */
+  .emphatic { width: auto !important; max-width: 100% !important; box-sizing: border-box; }
+
+  /* 網誌單篇的迴響／引用區整組寫死 300px */
+  .total-comments-div, .trackback-url, .trackbacks-head,
+  .comments-head, .comments-body, .comments-user, .comments-word,
+  .comments-form, .comment-input {
+    width: auto !important; max-width: 100% !important; box-sizing: border-box;
+  }
   #wfp-cover .stack .block a { width: auto !important; height: auto !important; }
 
   /* 熱門相簿的格子：原本是固定寬並排，改成自動換行 */
@@ -162,6 +184,100 @@
   input[type=number], input[type=date], textarea, select {
     max-width: 100%; box-sizing: border-box;
   }
+
+  /* ── 6. 第二輪：uicheck 在 375px 量出來、上面沒蓋到的寫死寬度 ────
+   * 這一批的共同點：選擇器比第 1 節那批更深（例如 `#wfp-cover .tack .title`），
+   * 所以 `.title{width:auto!important}` 贏不過它。
+   * 每一條都是 tools/rwdprobe.mjs 實際量出來的元兇，不是猜的。 */
+
+  /* 首頁：今日主題標題、站內搜尋、混合區雙欄、知名站友卡 */
+  #wfp-cover .title, #wfp-cover .tack .title,
+  #wfp-hybrid .main-content, #wfp-hybrid .sub-content,
+  #wfp-inner-search fieldset, #wfp-inner-search .search-input,
+  #wfp-inner-search span, #wfp-inner-search input,
+  #wfp-celebrity li, #wfp-celebrity li header,
+  #wfp-celebrity li hgroup, #wfp-celebrity li p {
+    width: auto !important; max-width: 100% !important;
+    min-width: 0 !important; box-sizing: border-box;
+  }
+  /* 雙欄與站友卡原本是 float 並排，縮寬之後要改直向堆疊 */
+  #wfp-hybrid .main-content, #wfp-hybrid .sub-content,
+  #wfp-inner-search .search-input, #wfp-inner-search span,
+  #wfp-celebrity li {
+    float: none !important;
+    margin-left: 0 !important; margin-right: 0 !important;
+  }
+
+  /* 頁尾 RSS 列：.inner 是 inline-block 寫死 500px，全站每一頁都有 */
+  #wfp-footer .inner, #rss-bar .inner, #wfp-universal-footer .inner {
+    width: auto !important; max-width: 100% !important;
+    display: block !important; box-sizing: border-box;
+  }
+
+  /* 相簿／網誌頁的訂閱面板（#footer-subscription 的 ul 寫死 370px） */
+  #footer-subscription, #footer-subscription .hd,
+  #footer-subscription ul, #footer-subscription li {
+    width: auto !important; max-width: 100% !important;
+    min-width: 0 !important; float: none !important; box-sizing: border-box;
+  }
+
+  /* 個人小站（myspace 版型）：#header h1 是 658px 的招牌圖、#mainSection 寫死 604px。
+     這兩個是留言板／收藏／訪客／首頁四頁在 768 與 375 溢出的元兇。 */
+  #bigcontainer #header, #bigcontainer #header h1,
+  #mainSection, #mainSection .hd, #subSection {
+    width: auto !important; max-width: 100% !important;
+    min-width: 0 !important; box-sizing: border-box;
+  }
+  #bigcontainer #header h1 { background-size: contain; overflow: hidden; }
+
+  /* 今日主題的標題用 padding-left:439px 把文字推到底圖右側。
+     box-sizing:border-box 之下，padding 比容器還寬就會把盒子撐回 439px——
+     width:auto 蓋不掉 padding，要連 padding 一起歸零。 */
+  #wfp-cover .stack .title { padding-left: 0 !important; text-align: left !important; }
+
+  /* myspace 版型的招牌是 position:relative + left:300px（讓開左側的頭像）。
+     窄螢幕堆疊之後那 300px 位移就是整頁右溢的來源。 */
+  #bigcontainer #header h1 { left: 0 !important; }
+
+  /* ── 7. 第三輪：BFC 縮排、寫死位移、剩下的固定寬欄 ────────────────
+   * 這三種在寬螢幕都看不出來，一縮窄就現形。 */
+
+  /* 首頁「精選」模組：.hd 裡的 tabs 是 float，窄螢幕換行之後會往下長；
+     .bd 有 overflow:hidden ＝ 自成 BFC，BFC 會**主動避開浮動框**，
+     於是整個 .bd 被擠成 168px 寬、右移 191px。清掉浮動就好。 */
+  #wfp-hybrid .hd { display: flow-root; }
+  #wfp-hybrid .bd { clear: both !important; height: auto !important; }
+
+  /* myspace 版型用 position:relative + left:470px 把「留言給我」按鈕
+     推到招牌右側；堆疊之後那個位移會戳出頁面。 */
+  #bigcontainer a.message,
+  #bigcontainer #header a[class*="msg"] { left: 0 !important; margin-left: 0 !important; }
+
+  /* 留言板的留言區寫死 604px 並且 float */
+  #msg_list, #msg_list_area, #comment_list {
+    width: auto !important; max-width: 100% !important;
+    float: none !important; box-sizing: border-box;
+  }
+
+  /* 分頁列用 margin-left 推到右欄底下（好友頁是 375px），堆疊後要歸零 */
+  [id^="pagelink"], .pagelink, #pagelink { margin-left: 0 !important; }
+
+  /* 熱門相簿格子上那層半透明說明條寫死 298px（原本一格就是 298 寬）。
+     格子縮小之後它還是 298，就從格子右緣戳出去。 */
+  #wfp-featured .featured-photos li .panel {
+    width: auto !important; max-width: 100% !important;
+    left: 0 !important; right: 0 !important; box-sizing: border-box;
+  }
+
+  /* 今日主題那三張照片的說明條是 ::after 偽元素、寫死 408px。
+     偽元素量不到「超寬元素」清單裡（那支只走真實節點），
+     是用 tools/_scan.mjs 掃 scrollWidth 才抓到的。 */
+  #wfp-cover .stack .block::after,
+  #wfp-cover .stack .gallery::after {
+    width: 100% !important; max-width: 100% !important;
+    left: 0 !important; box-sizing: border-box;
+  }
+  #wfp-cover .stack .gallery { width: auto !important; max-width: 100%; }
 }
 
 /* 真正的窄螢幕（手機直立）再收一次 */

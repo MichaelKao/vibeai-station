@@ -305,5 +305,16 @@ for(const p of ['/','/albums','/blogs','/rank','/search?q=a','/help','/login','/
 ok('404 不存在使用者', (await get('/nobodyhere')).status===404);
 ok('404 不存在文章', (await get('/alpha/blog/9999')).status===404);
 
+// 具名路由不能被同層的 :id 參數路由吃掉。
+// `/album/rss` 註冊在 `/album/:id` 之後，曾經讓 'rss' 被當成相簿編號送進 SQL：
+// SQLite 只是回空（測不出來），Postgres 直接 500。四支 RSS 都釘住。
+ok('相簿 RSS 沒被 /album/:id 吃掉', (await text('/alpha/album/rss')).includes('<rss version="2.0"'));
+ok('留言板 RSS', (await text('/alpha/guestbook/rss')).includes('<rss version="2.0"'));
+ok('迴響 RSS', (await text('/alpha/blog/comments.rss')).includes('<rss version="2.0"'));
+// 非數字的編號要是 404，不是把字串送進 SQL 讓 Postgres 拋型別錯誤（正式站 500）
+for(const p of ['/alpha/album/abc','/alpha/photo/abc','/alpha/blog/abc','/join/abc','/hala/abc']){
+  ok('404 非數字編號 '+p, (await get(p)).status===404);
+}
+
 console.log(`\n===== ${pass} passed, ${fail} failed =====`);
 process.exit(fail?1:0);

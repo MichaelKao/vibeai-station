@@ -135,7 +135,9 @@ for (const [name, url] of await pages()) {
   //   /uploads/     站上自己的照片。幻燈片是把整本放進一段 JSON 給 JS 用的，
   //                 只數 <img> 會把它誤判成沒有照片
   //   i.ytimg.com   影音的縮圖直接用 YouTube 的，不會落在 /uploads/
-  const real = (html.match(/\/uploads\/|i\.ytimg\.com/g) || []).length;
+  //   r2.dev        正式站的照片存在 Cloudflare R2，網址是 pub-….r2.dev，不是 /uploads/。
+  //                 少了這一條，對正式站跑會整排誤報「沒有照片」——照片其實都在。
+  const real = (html.match(/\/uploads\/|i\.ytimg\.com|r2\.dev\//g) || []).length;
   const dflt = (html.match(/\/img\/avatar\.png/g) || []).length;
 
   // 頁面上真正指向站內內容的連結有幾條。用它來分辨兩種「出現空狀態字串」：
