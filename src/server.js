@@ -48,7 +48,12 @@ app.use(session({
   store: await sessionStore(),          // 沒有 REDIS_URL 時回傳 undefined＝用預設 MemoryStore
   secret: process.env.SESSION_SECRET || 'vibeai-dev-secret',
   resave: false, saveUninitialized: false,
-  cookie: { maxAge: 30*864e5, httpOnly: true, sameSite: 'lax' },
+  // secure:'auto' ＝ 連線是 https 就標 Secure、是 http 就不標。
+  // 寫死 true 的話本機 http 會拿不到 cookie（登入完馬上又變登出，很難查）；
+  // 完全不寫的話正式站的 session cookie 會允許在 http 下送出。
+  // 'auto' 要靠上面那行 `app.set('trust proxy', 1)` 才判斷得出來——
+  // Railway 是反向代理，協定寫在 X-Forwarded-Proto 裡。
+  cookie: { maxAge: 30*864e5, httpOnly: true, sameSite: 'lax', secure: 'auto' },
 }));
 const upload = multer({storage:multer.memoryStorage(),limits:{fileSize:8*1024*1024,files:20},fileFilter:(r,f,cb)=>cb(null,/^image\/(jpeg|png|gif|webp)$/.test(f.mimetype))});
 
