@@ -454,6 +454,25 @@ for(const p of ['/alpha/album/abc','/alpha/photo/abc','/alpha/blog/abc','/join/a
   ok('404 非數字編號 '+p, (await get(p)).status===404);
 }
 
+console.log('\n=== 截斷與分頁 ===');
+// slice 用 UTF-16 code unit 數，emoji 佔兩個 unit，切在中間會留下孤兒代理對，
+// 存進資料庫再讀出來變成 U+FFFD（�），那個人的暱稱在全站每一頁都會壞掉。
+ok('暱稱截斷不會切壞 emoji', await (async()=>{
+  const nick='😀'.repeat(30);              // 30 個 emoji = 60 個 code unit
+  await post('/alpha/settings',{nick},A);
+  const t=await text('/alpha');
+  return !t.includes('�');
+})());
+await post('/alpha/settings',{nick:'阿發'},A);   // 改回來，後面的測試要用
+// 暱稱不能被清成空字串（註冊有擋，設定頁本來沒擋）
+ok('暱稱不能被清成空白', await (async()=>{
+  await post('/alpha/settings',{nick:'   '},A);
+  return (await text('/alpha')).includes('阿發');
+})());
+// 單本相簿的照片要分頁（原站的縮圖列網址就帶 &page=）
+ok('單本相簿有分頁參數且不會壞', (await get(`/alpha/album/${aid}?p=2`)).status===200);
+ok('一頁瀏覽不分頁', (await text(`/alpha/album/${aid}?all=1`,A)).includes('onepage'));
+
 console.log('\n=== 查詢字串的邊界輸入 ===');
 // ⚠ `Math.max(1,+p||1)` 擋不住 Infinity：`+'1e999'` 是 Infinity，
 // Math.max(1,Infinity) 還是 Infinity，綁進 SQL 的 LIMIT/OFFSET 就 500。全站 14 處分頁都中。

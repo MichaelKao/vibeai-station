@@ -31,6 +31,17 @@ export const EMOTES = [
 //   javascript: / vbscript: / data:text/html   url() 裡的可執行協定
 //   behavior: / -moz-binding                   把外部檔案綁成行為
 //   @import                                    可以再拉一份不受控的樣式進來
+// 依「字」截斷，不要用 String.prototype.slice。
+//
+// slice 是用 UTF-16 code unit 數的，emoji 與部分漢字佔兩個 unit，
+// 剛好切在中間就會留下一個**孤兒代理對**，存進資料庫再讀出來變成 U+FFFD（�）。
+// 暱稱只要中了這個，站上每一頁印到那個人的地方都會有一個問號方塊。
+// [...s] 走的是 code point，切不壞。
+export function cut(s, max) {
+  const a = [...String(s ?? '')];
+  return a.length <= max ? a.join('') : a.slice(0, max).join('');
+}
+
 export function safeCss(css, max = 20000){
   return String(css ?? '')
     .slice(0, max)

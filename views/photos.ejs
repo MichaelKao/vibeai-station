@@ -146,10 +146,24 @@
 <tr>
 <td>
   <center><font class="small-c">
-    <%= photos.length %> pictures&nbsp;&nbsp;相簿人氣: <%= album.views %>
+    <%# 張數要用**整本的總數**，不是這一頁的筆數——分頁之後 photos.length
+        只有這一頁的 20 張，印出來會變成「20 pictures」誤導人。 %>
+    <%= typeof total !== 'undefined' ? total : photos.length %> pictures&nbsp;&nbsp;相簿人氣: <%= album.views %>
     <% if (viewAll) { %>&nbsp;[<a href="<%= phPath %>">Thumbnails</a>]<% } %>
     <% if (photos.length) { %>&nbsp;[<a href="<%= phPath %>/slide">自動播放</a>]<% } %>
     <% if (me && me.admin) { %>&nbsp;[<form method="post" action="/admin/feature/album/<%= album.id %>" style="display:inline"><input type="hidden" name="back" value="<%= phPath %>"><button class="small-c w2a-linkbtn"><%= album.featured ? '取消精選' : '設為精選' %></button></form>]<% } %>
+
+    <%# 分頁列。原站的縮圖列網址就帶 &page=（urlPhotoList），
+        照片多的相簿沒有分頁會變成一張長到看不完的頁。
+        「一頁瀏覽」是原站另一種模式，那一種本來就不分頁。 %>
+    <% if (!viewAll && typeof pages !== 'undefined' && pages > 1) { %>
+    <br />
+    <span class="w2a-photopager">
+      <% if (page > 1) { %><a href="<%= phPath %>?p=<%= page-1 %>">上一頁</a>&nbsp;<% } %>
+      <% for (let i = 1; i <= pages; i++) { %><% if (i === page) { %><b><%= i %></b><% } else { %><a href="<%= phPath %>?p=<%= i %>"><%= i %></a><% } %>&nbsp;<% } %>
+      <% if (page < pages) { %><a href="<%= phPath %>?p=<%= page+1 %>">下一頁</a><% } %>
+    </span>
+    <% } %>
   </font></center>
 </td>
 </tr>

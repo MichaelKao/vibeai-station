@@ -7,7 +7,7 @@ import { sessionStore, startVisitFlusher, bumpVisit, hasRedis } from './cache.js
 import { hash, salt, check, requireLogin, requireOwner } from './auth.js';
 import { save, remove, hasR2, diskFree, readImage } from './storage.js';
 import { UPLOAD_DIR } from './paths.js';
-import { render, EMOTES, safeCss } from './format.js';
+import { render, EMOTES, safeCss, cut } from './format.js';
 import { fetchFeed, subUrlOk } from './feed.js';
 import { SITE_NAME, SITE_DESC, SITE_LOGO, CDN } from './config.js';
 import { ALBUM_TOPICS, BLOG_TOPICS, PLACES, MOODS, WEATHERS, ZODIACS, BLOODS, SEXES, CITIES, isAlbumTopic, isBlogTopic, isPlace } from './taxonomy.js';
@@ -631,7 +631,7 @@ site.get('/settings',requireLogin,requireOwner,async (req,res)=>res.render('sett
 site.post('/settings',requireLogin,requireOwner,upload.single('avatar'),async(req,res)=>{
   const {nick,intro,music,css,css_blog,pass,pass2}=req.body, u=U(res);
   let avatar=u.avatar; if(req.file){ const s=await save(req.file); avatar=s.thumb; await remove(u.avatar); }
-  await run('UPDATE users SET nick=?,intro=?,music=?,css=?,css_blog=?,avatar=?,theme=? WHERE id=?',((nick||'').trim()||u.nick).slice(0,20),(intro||'').slice(0,500),cleanMusic(music),(css||'').slice(0,20000),(css_blog||'').slice(0,20000),avatar,isSkin(req.body.theme)?(req.body.theme||''):'',u.id);
+  await run('UPDATE users SET nick=?,intro=?,music=?,css=?,css_blog=?,avatar=?,theme=? WHERE id=?',cut((nick||'').trim()||u.nick, 20),(intro||'').slice(0,500),cleanMusic(music),(css||'').slice(0,20000),(css_blog||'').slice(0,20000),avatar,isSkin(req.body.theme)?(req.body.theme||''):'',u.id);
   if(pass){ if(pass!==pass2) {flash(req,'兩次密碼不一致，其他設定已儲存');return res.redirect(`/${u.name}/settings`);} const s=salt(); await run('UPDATE users SET pass=?,salt=? WHERE id=?',hash(pass,s),s,u.id); }
   flash(req,'設定已儲存'); res.redirect(`/${u.name}/settings`);
 });
@@ -900,9 +900,19 @@ site.get('/album/:id',albumOf,async (req,res)=>{
   if(!await albumAllowed(req,res)) return res.status(403).render('msg',{title:'好友限定',msg:'這本相簿是好友限定，只有 '+U(res).nick+' 的好友才看得到。',back:'/'+U(res).name+'/album'});
   if(!albumUnlocked(req,res)) return res.render('album_lock',{nav:'album',album:a,err:null});
   if(!res.locals.isOwner) await run('UPDATE albums SET views=views+1 WHERE id=?',a.id);
+  // 單本相簿的照片要分頁。原站的縮圖列網址帶 `&page=1`
+  // （assets_src2/html/album_show_zh_kellyla.html 的 urlPhotoList），
+  // 我們原本一次把整本吐出來——照片多的相簿會變成一張長到看不完的頁。
+  // 「一頁瀏覽」（?all=1）是原站本來就有的另一種模式，那一種才不分頁。
+  const viewAll = req.query.all==='1';
+  const per = 20, page = pageNo(req.query.p);
+  const total = (await one('SELECT count(*) c FROM photos WHERE album_id=?',a.id)).c;
   res.render('photos',{nav:'album',album:a,topics:ALBUM_TOPICS,places:PLACES,
-    viewAll: req.query.all==='1',                    // 「一頁瀏覽」：整本大圖一次看完
-    photos:await all('SELECT * FROM photos WHERE album_id=? ORDER BY id',a.id)});
+    viewAll,
+    page, per, total, pages: Math.max(1, Math.ceil(total/per)),
+    photos: viewAll
+      ? await all('SELECT * FROM photos WHERE album_id=? ORDER BY id',a.id)
+      : await all('SELECT * FROM photos WHERE album_id=? ORDER BY id LIMIT ? OFFSET ?',a.id,per,(page-1)*per)});
 });
 // 幻燈片（無名相簿的「幻燈片」）
 site.get('/album/:id/slide',albumOf,async (req,res)=>{
@@ -923,7 +933,7 @@ site.get('/album/:id/wall',albumOf,async (req,res)=>{
     photos:await all('SELECT id,url,thumb,caption,width,height FROM photos WHERE album_id=? ORDER BY id',a.id)});
 });
 site.post('/album/:id/unlock',albumOf,(req,res)=>{ const a=res.locals.album; if(req.body.pass===a.pass){ req.session.unlocked=[...(req.session.unlocked||[]),a.id]; return res.redirect(`/${U(res).name}/album/${a.id}`);} res.render('album_lock',{nav:'album',album:a,err:'密碼錯誤'}); });
-site.post('/album/:id/edit',requireLogin,requireOwner,albumOf,async (req,res)=>{ await run('UPDATE albums SET title=?,descr=?,pass=?,topic=?,place=?,friends_only=? WHERE id=?',((req.body.title||'').trim()||res.locals.album.title).slice(0,40),(req.body.descr||'').slice(0,200),(req.body.pass||'').slice(0,20),isAlbumTopic(req.body.topic)?req.body.topic:'',isPlace(req.body.place)?req.body.place:'',req.body.friends_only?1:0,res.locals.album.id); res.redirect(`/${U(res).name}/album/${res.locals.album.id}`); });
+site.post('/album/:id/edit',requireLogin,requireOwner,albumOf,async (req,res)=>{ await run('UPDATE albums SET title=?,descr=?,pass=?,topic=?,place=?,friends_only=? WHERE id=?',cut((req.body.title||'').trim()||res.locals.album.title, 40),(req.body.descr||'').slice(0,200),(req.body.pass||'').slice(0,20),isAlbumTopic(req.body.topic)?req.body.topic:'',isPlace(req.body.place)?req.body.place:'',req.body.friends_only?1:0,res.locals.album.id); res.redirect(`/${U(res).name}/album/${res.locals.album.id}`); });
 site.post('/album/:id/del',requireLogin,requireOwner,albumOf,async(req,res)=>{ for(const p of await all('SELECT url,thumb FROM photos WHERE album_id=?',res.locals.album.id)){ await remove(p.url); if(p.thumb&&p.thumb!==p.url) await remove(p.thumb); } await run('DELETE FROM albums WHERE id=?',res.locals.album.id); res.redirect(`/${U(res).name}/album`); });
 site.post('/album/:id/upload',requireLogin,requireOwner,albumOf,upload.array('photos',20),async(req,res)=>{
   const a=res.locals.album; let first=null;
@@ -954,7 +964,7 @@ site.get('/photo/:pid',async (req,res,next)=>{
 // 相簿頁／幻燈片／相片牆／照片頁四個入口都同時查 albumUnlocked（密碼）
 // 與 albumAllowed（好友限定），唯獨這裡只查了密碼——
 // 於是非好友雖然看不到好友限定相簿的照片，**卻留得了言**（多代理稽核實測寫得進去）。
-site.post('/photo/:pid/comment',async (req,res)=>{ const p=await one('SELECT p.id,p.album_id,a.pass,a.friends_only FROM photos p JOIN albums a ON a.id=p.album_id WHERE p.id=? AND a.user_id=?',req.params.pid,U(res).id); if(!p) return res.redirect('/'+U(res).name+'/album'); res.locals.album={id:p.album_id,pass:p.pass,friends_only:p.friends_only}; if(!await albumAllowed(req,res)) return res.status(403).render('msg',{title:'好友限定',msg:'這本相簿是好友限定，只有 '+U(res).nick+' 的好友才留得了言。',back:'/'+U(res).name+'/album'}); if(!albumUnlocked(req,res)) return res.status(403).render('msg',{title:'沒有權限',msg:'相簿已上鎖',back:'/'+U(res).name+'/album'}); if(req.body.body?.trim()) await run('INSERT INTO photo_comments(photo_id,author,body) VALUES(?,?,?)',p.id,(res.locals.me?.nick||req.body.author||'訪客').slice(0,20),req.body.body.trim().slice(0,300)); res.redirect(`/${U(res).name}/photo/${req.params.pid}`); });
+site.post('/photo/:pid/comment',async (req,res)=>{ const p=await one('SELECT p.id,p.album_id,a.pass,a.friends_only FROM photos p JOIN albums a ON a.id=p.album_id WHERE p.id=? AND a.user_id=?',req.params.pid,U(res).id); if(!p) return res.redirect('/'+U(res).name+'/album'); res.locals.album={id:p.album_id,pass:p.pass,friends_only:p.friends_only}; if(!await albumAllowed(req,res)) return res.status(403).render('msg',{title:'好友限定',msg:'這本相簿是好友限定，只有 '+U(res).nick+' 的好友才留得了言。',back:'/'+U(res).name+'/album'}); if(!albumUnlocked(req,res)) return res.status(403).render('msg',{title:'沒有權限',msg:'相簿已上鎖',back:'/'+U(res).name+'/album'}); if(req.body.body?.trim()) await run('INSERT INTO photo_comments(photo_id,author,body) VALUES(?,?,?)',p.id,cut(res.locals.me?.nick||req.body.author||'訪客', 20),req.body.body.trim().slice(0,300)); res.redirect(`/${U(res).name}/photo/${req.params.pid}`); });
 // ── 切割照片（原站照片頁工具列那顆「切割照片(NEW)」）────────────────────
 // 零存檔：assets_src2/spec/shot.md:493 的截圖逐字轉寫看得到這顆按鈕
 // （2012 英文版工具列「搜尋更多 切割照片(NEW) Report this Picture」），
@@ -1234,8 +1244,8 @@ const myPhotos = async res => await all(`SELECT p.id,p.thumb,p.url FROM photos p
 site.get('/blog/new',requireLogin,requireOwner,async (req,res)=>res.render('post_edit',{nav:'blog',post:null,photos:await myPhotos(res),emotes:EMOTES,...await blogSide(res)}));
 site.post('/blog/new',requireLogin,requireOwner,async (req,res)=>{ const {title,body,category,mood,weather}=req.body;
   if(!title?.trim()||!body?.trim()) return res.redirect(`/${U(res).name}/blog/new`);
-  const r=await run('INSERT INTO posts(user_id,title,body,category,mood,weather,pass,topic,place) VALUES(?,?,?,?,?,?,?,?,?)',U(res).id,title.trim().slice(0,100),body.slice(0,50000),(category||'未分類').trim().slice(0,20)||'未分類',MOODS.includes(mood)?mood:'',WEATHERS.includes(weather)?weather:'',(req.body.pass||'').slice(0,20),isBlogTopic(req.body.topic)?req.body.topic:'',isPlace(req.body.place)?req.body.place:'');
-  await act(U(res).id,'blog',title.trim().slice(0,100),`/${U(res).name}/blog/${r.lastInsertRowid}`);
+  const r=await run('INSERT INTO posts(user_id,title,body,category,mood,weather,pass,topic,place) VALUES(?,?,?,?,?,?,?,?,?)',U(res).id,cut(title.trim(), 100),body.slice(0,50000),(category||'未分類').trim().slice(0,20)||'未分類',MOODS.includes(mood)?mood:'',WEATHERS.includes(weather)?weather:'',(req.body.pass||'').slice(0,20),isBlogTopic(req.body.topic)?req.body.topic:'',isPlace(req.body.place)?req.body.place:'');
+  await act(U(res).id,'blog',cut(title.trim(), 100),`/${U(res).name}/blog/${r.lastInsertRowid}`);
   res.redirect(`/${U(res).name}/blog/${r.lastInsertRowid}`); });
 const postOf=async (req,res,next)=>{ const p=await one('SELECT * FROM posts WHERE id=? AND user_id=?',req.params.id,U(res).id); if(!p) return next('route'); res.locals.post=p; next(); };
 // 文章密碼（當年網誌可以上鎖，很多人拿來寫悄悄話）
