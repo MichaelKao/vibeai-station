@@ -37,10 +37,13 @@ pnpm dev                             # http://localhost:3000
 | 送禮物 | 完成。原站在付費網域，我們不接金流但功能照做，一律免費 |
 | 四種 RSS | 網誌／相簿／留言板／迴響，悄悄話與上鎖內容都不外流 |
 | RWD | 完成。**桌機零影響**（1000px 以上一條規則都不生效），320〜1440 八個寬度、28 頁全部零問題 |
-| 回歸測試 | **174 項全綠**（`node tools/runtests.mjs`，會自己開乾淨資料庫） |
-| SQL 方言測試 | **29 項全綠** |
-| 啟動搬移測試 | **8 項全綠**（`test_migrate.mjs`，孤兒列／冪等／預設組）|
-| SSRF 防護測試 | **36 項全綠**（`test_ssrf.mjs`，私有網段／IPv4-mapped／十進位 loopback／轉址繞過） |
+| 測試總計 | **517 項全綠**，一支 `node tools/runtests.mjs` 全跑完 |
+| 　回歸測試 | 199 項（SQLite）＋ **199 項（Postgres）** |
+| 　SQL 方言 | 33 項（`test_pg.mjs`，含 LIKE→ILIKE 與搬移清單不能漏表） |
+| 　**Postgres 行為** | 9 項（`test_pgbehavior.mjs`）——**專測兩個驅動行為不一樣的地方**，見下方警告 |
+| 　SSRF 防護 | 36 項（`test_ssrf.mjs`，私有網段／IPv4-mapped／十進位 loopback／轉址繞過） |
+| 　啟動搬移 | 8 項（`test_migrate.mjs`，孤兒列／冪等／預設組） |
+| 　瀏覽器流程 | 33 項（`tools/ownerflow.mjs`，真的 Chrome 走登入後的站主流程） |
 | 按鈕全覆蓋 | **136 個表單**、三種身分、零錯誤（`node tools/buttoncheck.mjs`） |
 
 > ⚠ `test_all.mjs` **要對一個乾淨的資料庫跑**（它第一步就是註冊 alpha/bravo/charlie，
@@ -252,6 +255,14 @@ railway variables --service station --set SEED_DEMO=0        # 灌完關掉
 | **啟動時的搬移不要一列一個來回** | 本機量到 44 個分組要送 176 次查詢；正式站量級更大又跨區，健康檢查會等不到 listen。要寫成集合式 SQL |
 | **revert 之後再 merge 回來會靜悄悄少檔案** | main 上的 revert 刪了檔，分支從那之後沒再碰它們，git 判定「一邊刪、一邊沒動」＝維持刪除。只有兩邊都改過的檔才會報衝突，其餘直接不見。要用 `git checkout <分支> -- .` 把整棵樹取回來 |
 | **沒有平台日誌就只能用回退反推** | `railway login` 是互動式的，非互動 shell 登不進去（`Cannot login in non-interactive mode`）。診斷正式站專屬問題的替代路徑：**在本機刻意製造正式站才有的資料狀態**（被刪的帳號、孤兒列、舊 schema），比猜快得多 |
+| **回歸網對 Postgres 路徑可能零偵測力** | 多代理稽核在 Postgres 上挖出四個高嚴重度問題時，`test_all` 在 SQLite 與 Postgres **都是 199 passed / 0 failed**。因為那些問題出在「兩個驅動行為不一樣」的地方，而測試斷言剛好都避開了。已補 `test_pgbehavior.mjs` 並把 Postgres 接進 `runtests`。**新增任何查詢之後，先想「這在 Postgres 上會不會不一樣」** |
+| **PG 的 count(*) 與 SUM() 回字串** | int8 預設 parser 回 string，`(11531) + 41333` 是**字串相接**不是加法。相簿配額因此永遠判「空間不足」，使用者傳完第一張就再也傳不上去。根因一行修掉：`pg.types.setTypeParser(20, Number)`（見 `src/db.js`） |
+| **PG 的字串比對與 LIKE 都分大小寫** | SQLite 有 `COLLATE NOCASE`，PG 沒有。帳號查詢要自己 `toLowerCase()`，`LIKE` 在 `toPg()` 統一轉 `ILIKE`。正式站實測 `/AHUA` 404、`/search?q=AHUA` 0 筆 |
+| **PG 的 IDENTITY 主鍵拒絕明寫 id** | 搬移工具要 `OVERRIDING SYSTEM VALUE`，不然第一張表就拋 `cannot insert a non-DEFAULT value into column "id"`，而錯誤被 try/catch 吞掉之後站台就起在空資料庫上 |
+| **搬移清單漏表是「安靜的資料遺失」** | 筆數報表只比對清單裡的表，漏掉的那幾張照樣印「一致」。已加 `assertNoMissingTable()`：拿 `schemaSql` 反推真正的表名對差集，漏了當場失敗 |
+| **先查再插擋不住並行** | 註冊的「這個帳號有人用了嗎」在表單被雙擊時兩個請求都會查到「沒人用」。PG 的唯一索引會擋，但那是 23505 例外，沒攔就是 500。要 try/catch 當成「已經有人用了」 |
+| **平台事故看起來會很像自己的 bug** | Railway 曾因 Google Cloud 事故讓部署卡在 DEPLOYING 半小時、邊緣回 502，而容器其實活得好好的（日誌顯示已連上 Postgres 與 Redis）。查 <https://status.railway.com/> 再開始懷疑自己的程式 |
+| **選擇器要限定在目標表單裡** | 頁首有站內搜尋，它的送出鈕在 DOM 裡**排在最前面**。瀏覽器測試用 `button[type=submit]` 會點到搜尋、送出後跳到 `/search?q=`，然後每一個需要登入的步驟都失敗，看起來像「登入功能壞了」 |
 | **Express 4 不接住 async handler 的錯誤** | 那是 Express 5 才有的行為。沒有 `wrapAsync` 的話，任何 DB 錯誤都會變成 unhandled rejection，請求永遠掛著。已在 `src/server.js` 註冊層處理 |
 | **`one(...).c` 加 await 的陷阱** | `await one(...).c` 會先對 Promise 取屬性得到 undefined 再 await，**不拋錯**，只是所有計數變空。要寫成 `(await one(...)).c`。全檔有 24 處 |
 | **connect-redis 是具名匯出** | v7 起沒有 default。寫錯會讓正式站起不來，而且**本機測不出來**（沒有 REDIS_URL 就提早 return，那段程式碼從沒被執行）。`test_pg.mjs` 已加測試釘住 |
