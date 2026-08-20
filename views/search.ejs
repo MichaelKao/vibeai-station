@@ -14,7 +14,10 @@
      （src/server.js 的 app.get('/search') 只讀 q）。
 
      資料來自 app.get('/search')：k / users / albums / posts。 */
-  const seTotal = users.length + albums.length + posts.length;
+  /* 標題的數字要用**真的命中數**（後端傳來的 counts），不是這一頁的筆數。
+     三區各自 LIMIT 30，用 .length 的話搜到 2000 筆也只會顯示 30。 */
+  const seC = locals.counts || { users: users.length, albums: albums.length, posts: posts.length };
+  const seTotal = seC.users + seC.albums + seC.posts;
 %>
 <%- include('partials/head2012', { title: (k ? k + ' - ' : '') + '搜尋 - 無名小站' }) %>
 
@@ -43,7 +46,7 @@
       <% if (k) { %>
 
       <div class="mod w2-auth" id="users">
-        <div class="hd"><h2>站友（<%= users.length %>）</h2></div>
+        <div class="hd"><h2>站友（<%= seC.users %>）</h2></div>
         <div class="bd">
           <% if (!users.length) { %><p class="w2-note">找不到相符的站友。</p><% } %>
           <ol class="w2-ranklist">
@@ -64,7 +67,7 @@
       </div>
 
       <div class="mod w2-auth" id="albums">
-        <div class="hd"><h2>相簿（<%= albums.length %>）</h2></div>
+        <div class="hd"><h2>相簿（<%= seC.albums %>）</h2></div>
         <div class="bd">
           <% if (!albums.length) { %><p class="w2-note">找不到相符的相簿。</p><% } %>
           <ul class="w2-albumgrid">
@@ -84,7 +87,7 @@
       </div>
 
       <div class="mod w2-auth" id="posts">
-        <div class="hd"><h2>網誌（<%= posts.length %>）</h2></div>
+        <div class="hd"><h2>網誌（<%= seC.posts %>）</h2></div>
         <div class="bd">
           <% if (!posts.length) { %><p class="w2-note">找不到相符的文章。</p><% } %>
           <ol class="w2-bloglist w2-nothumb">
@@ -117,9 +120,9 @@
         <div class="hd"><h2>搜尋結果</h2></div>
         <div class="bd">
           <ul>
-            <li><a href="#users">站友（<%= users.length %>）</a></li>
-            <li><a href="#albums">相簿（<%= albums.length %>）</a></li>
-            <li><a href="#posts">網誌（<%= posts.length %>）</a></li>
+            <li><a href="#users">站友（<%= seC.users %>）</a></li>
+            <li><a href="#albums">相簿（<%= seC.albums %>）</a></li>
+            <li><a href="#posts">網誌（<%= seC.posts %>）</a></li>
           </ul>
         </div>
       </div>

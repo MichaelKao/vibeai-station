@@ -180,11 +180,28 @@ app.get('/rank',async (req,res)=>res.render('rank',{
   posts: await all(`SELECT p.*,u.name uname,u.nick FROM posts p JOIN users u ON u.id=p.user_id WHERE p.pass='' ORDER BY p.views DESC LIMIT 30`)}));
 app.get('/search',async (req,res)=>{
   const k=qs1(req.query.q).trim(), like=`%${k}%`;
-  res.render('search',{k,
-    users:k?await all('SELECT name,nick,avatar FROM users WHERE name LIKE ? OR nick LIKE ? LIMIT 30',like,like):[],
-    albums:k?await all(`SELECT a.*,u.name uname FROM albums a JOIN users u ON u.id=a.user_id WHERE a.pass='' AND a.friends_only=0 AND a.title LIKE ? LIMIT 30`,like):[],
+  // 三區的 WHERE 條件抽出來共用，count 與清單才不會分歧。
+  // ⚠ 分歧的後果不只是數字不準：posts 那條的 `pass=''` 少寫一次，
+  // 數字就會把上鎖文章算進去，變成另一種外洩。
+  const W = {
+    users:  { from:'FROM users', where:'name LIKE ? OR nick LIKE ?', args:[like,like] },
+    albums: { from:'FROM albums a JOIN users u ON u.id=a.user_id',
+              where:"a.pass='' AND a.friends_only=0 AND a.title LIKE ?", args:[like] },
     // 上鎖文章不讓內文被搜出來，只比對標題
-    posts:k?await all(`SELECT p.*,u.name uname FROM posts p JOIN users u ON u.id=p.user_id WHERE p.title LIKE ? OR (p.pass='' AND p.body LIKE ?) LIMIT 30`,like,like):[]});
+    posts:  { from:'FROM posts p JOIN users u ON u.id=p.user_id',
+              where:"p.title LIKE ? OR (p.pass='' AND p.body LIKE ?)", args:[like,like] },
+  };
+  const cnt = async s => k ? (await one(`SELECT count(*) c ${s.from} WHERE ${s.where}`,...s.args)).c : 0;
+  res.render('search',{k,
+    // ⚠ 一定要 ORDER BY。原本三條都沒有排序又只取 30 筆，
+    // 結果永遠是 rowid 最小（**最舊**）的 30 筆——新內容一律搜不到。
+    users:k?await all(`SELECT name,nick,avatar ${W.users.from} WHERE ${W.users.where} ORDER BY id DESC LIMIT 30`,...W.users.args):[],
+    albums:k?await all(`SELECT a.*,u.name uname ${W.albums.from} WHERE ${W.albums.where} ORDER BY a.id DESC LIMIT 30`,...W.albums.args):[],
+    posts:k?await all(`SELECT p.*,u.name uname ${W.posts.from} WHERE ${W.posts.where} ORDER BY p.id DESC LIMIT 30`,...W.posts.args):[],
+    // 標題的數字要是**真的命中數**，不是這一頁的筆數。
+    // 原本 view 直接印 users.length，那永遠是 min(命中數, 30)——
+    // 搜到 2000 個帳號也只會顯示「站友（30）」。
+    counts:{ users:await cnt(W.users), albums:await cnt(W.albums), posts:await cnt(W.posts) }});
 });
 app.get('/help',(req,res)=>res.render('help'));
 
@@ -1077,7 +1094,7 @@ const blogSide=async (res, forPost=null)=>({
   cats:await all('SELECT category,count(*) n FROM posts WHERE user_id=? GROUP BY category',U(res).id),
   recent:await all('SELECT id,title FROM posts WHERE user_id=? ORDER BY id DESC LIMIT 8',U(res).id),
   recentC:await all('SELECT c.author,c.post_id,p.title FROM comments c JOIN posts p ON p.id=c.post_id WHERE p.user_id=? ORDER BY c.id DESC LIMIT 5',U(res).id),
-  months:await all("SELECT substr(created,1,7) ym, count(*) n FROM posts WHERE user_id=? GROUP BY ym ORDER BY ym DESC LIMIT 24",U(res).id),
+  months:await all("SELECT substr(created,1,7) ym, count(*) n FROM posts WHERE user_id=? GROUP BY ym ORDER BY ym DESC",U(res).id),
   cal:await calendar(U(res).id, res.calYm),
   // 側欄自訂欄位（原站的 #boxFolder，可以有很多個）
   folders:await all('SELECT * FROM folders WHERE user_id=? ORDER BY seq,id',U(res).id),
@@ -1494,7 +1511,17 @@ app.use((err,req,res,next)=>{
   });
 });
 // ===== 啟動 =====
-await migrate();
+// ⚠ migrate() 是頂層 await：這裡拋出去就是**行程死在 listen 之前**，
+// 邊緣找不到健康的容器 → 502，而且日誌上只有一段堆疊、看起來像「建置失敗」。
+// 今天已經因為這個掛過兩次（一次是孤兒列違反外鍵，一次是多實例併發建表）。
+// 建表／補欄位失敗時，站台**照樣要起得來**——舊 schema 的頁面大多還能看，
+// 總比整站 502 好。真正的問題會留在日誌裡，而且下一次部署會再試一次。
+try {
+  await migrate();
+} catch (e) {
+  console.error('[migrate] 失敗，但站台照常啟動（schema 可能不完整）：', e.message);
+  console.error(e.stack);
+}
 
 // 一次性把 SQLite 的資料搬到 Postgres（見 src/migrate-pg.js 的用法說明）。
 // 只有明確設 MIGRATE_SQLITE_TO_PG=1 才會跑，而且目標表非空就自動跳過。

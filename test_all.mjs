@@ -497,6 +497,20 @@ for(const p of ['/alpha/album/abc','/alpha/photo/abc','/alpha/blog/abc','/join/a
   ok('404 非數字編號 '+p, (await get(p)).status===404);
 }
 
+console.log('\n=== 搜尋 ===');
+// 三區的標題數字要是**真的命中數**，不是這一頁的筆數（各區 LIMIT 30）。
+// 原本 view 直接印 rows.length，搜到 2000 筆也只會顯示「站友（30）」。
+ok('搜尋的數字用真的命中數', await (async()=>{
+  const t=await text('/search?q=a');
+  // counts 是後端算的；至少要能正常算出來、不是 undefined/NaN
+  return !t.includes('（undefined）') && !t.includes('（NaN）');
+})());
+// ⚠ 三條查詢原本都沒有 ORDER BY 又只取 30 筆，結果永遠是**最舊**的 30 筆，
+// 新內容一律搜不到。alpha 的文章是最後才建的，要搜得到才算對。
+ok('搜尋排序是新的在前面', (await text('/search?q=' + encodeURIComponent('第一'))).includes('第一篇'));
+// 上鎖文章的內文不能被搜出來（數字也不能把它算進去）
+ok('搜尋不外洩鎖文內文', !(await text('/search?q=SECRETTEXT')).includes('鎖起來'));
+
 console.log('\n=== 截斷與分頁 ===');
 // slice 用 UTF-16 code unit 數，emoji 佔兩個 unit，切在中間會留下孤兒代理對，
 // 存進資料庫再讀出來變成 U+FFFD（�），那個人的暱稱在全站每一頁都會壞掉。

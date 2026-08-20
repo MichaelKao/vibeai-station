@@ -414,7 +414,19 @@ export async function backfillGroups() {
 // 對目前這個資料庫建表。搬移工具要對「另一個」資料庫建表時，
 // 自己拿 schemaSql('postgres') 去打。
 export async function migrate() {
-  for (const sql of schemaSql(driver)) await exec(sql);
+  // ⚠ Postgres 的 `CREATE TABLE IF NOT EXISTS` **對併發不安全**：
+  // 兩個 replica 同時開機時，兩邊都看到「表不存在」→ 同時建 → 其中一個撞
+  // 23505（unique_violation，pg_type 的唯一鍵）或 42P07（表已存在）。
+  // 而呼叫端是頂層 await，沒接住就是行程死在 listen 之前 → 邊緣 502。
+  // 這正是今天那次事故的同一類（那次是外鍵，這次是併發）。
+  //
+  // 這些錯誤的語意都是「別人已經建好了」，吞掉是安全的——
+  // 真正的 schema 問題會以別的錯誤碼出現，那些照樣往外拋。
+  const benign = /duplicate key|already exists|23505|42P07|42710/i;
+  for (const sql of schemaSql(driver)) {
+    try { await exec(sql); }
+    catch (e) { if (!benign.test(e.message)) throw e; }
+  }
   await addColumns(driver);
   await backfillGroups();
 }

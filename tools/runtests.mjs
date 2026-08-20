@@ -102,7 +102,14 @@ if (!process.env.SKIP_PG) {
       if (spawnSync('docker', ['exec', CN, 'pg_isready', '-q'], { encoding: 'utf8' }).status === 0) break;
       await sleep(1000);
     }
-    const PGURL = 'postgresql://postgres:pw@127.0.0.1:' + PGPORT + '/w2';
+    // ⚠ 每次跑都用**新的資料庫名**。
+    // `docker rm -f` 之後馬上 `docker run` 綁同一個埠，移除是非同步的——
+    // 新容器可能綁不上，app 就連到**還沒死透的舊容器**，裡面還有上一輪的資料。
+    // 症狀是 test_all 第一步「註冊三個帳號」就失敗（alpha 已存在），
+    // 整串連鎖紅燈，看起來像「剛改壞了」。用不重複的資料庫名就完全避開。
+    const DBNAME = 'w2_' + Date.now().toString(36);
+    spawnSync('docker', ['exec', CN, 'psql', '-U', 'postgres', '-c', 'CREATE DATABASE ' + DBNAME], { encoding: 'utf8' });
+    const PGURL = 'postgresql://postgres:pw@127.0.0.1:' + PGPORT + '/' + DBNAME;
     const pgEnv = { ...process.env, DB_DRIVER: 'postgres', DATABASE_URL: PGURL, PORT: APPPORT };
     const pgSrv = spawn(process.execPath, ['src/server.js'], { env: pgEnv, stdio: 'ignore' });
     const pgBase = 'http://127.0.0.1:' + APPPORT;

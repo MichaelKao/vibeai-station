@@ -63,7 +63,21 @@ const HITS_KEY = 'hits:pending';               // hash: userId -> 增量
 const pendingLocal = new Map();                // 沒有 Redis 時的本機退回
 
 export async function bumpVisit(userId) {
-  if (redis) { await redis.hIncrBy(HITS_KEY, String(userId), 1); return false; }
+  // ⚠ 這裡**一定要包 try/catch**。這是全檔唯一一個沒有包的 Redis 呼叫，
+  // 而呼叫端（src/server.js 的個人小站首頁）是 await——
+  // Redis 一斷線，`/某人` 就對**所有人（包含訪客）**回 500。
+  // 實測：Redis 停掉之後 `/`、`/login`、`/某人/blog` 都還是 200，只有 `/某人` 掛。
+  // 人氣計數是全站最不重要的數字，不該有能力打掛頁面。
+  if (redis) {
+    try { await redis.hIncrBy(HITS_KEY, String(userId), 1); return false; }
+    catch (e) {
+      // Redis 掛了就退回「呼叫端自己寫 DB」。
+      // ⚠ 這裡**不要**同時塞進 pendingLocal——那會在 Redis 復原後被
+      // flushVisits 再算一次，變成重複計數。
+      console.error('[redis] 人氣計數失敗，改直接寫 DB：', e.message);
+      return true;
+    }
+  }
   pendingLocal.set(userId, (pendingLocal.get(userId) || 0) + 1);
   return true;                                  // true = 呼叫端自己寫 DB
 }
