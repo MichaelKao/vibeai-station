@@ -160,37 +160,11 @@
             <% }) %>
           </select>
           </form>
-          <%# 「看地圖」照 WRETCH_SPEC.md:278 放在 boxDate 裡（月份下拉之後）。
-              那個功能零存檔，只有這兩行文字轉寫，所以連過去的頁面是自製的
-              ——按地區看文章與相簿，不做假的地圖，理由見 views/blog_map.ejs。 %>
-          <a href="/<%= u.name %>/blog/map">看地圖</a>
           <br />
         </div>
       </div>
       <br />
     </div>
-
-<%# ── #boxFolder（使用者自訂欄位，可以有 N 個）─────────────────────
-    原版存檔實證見 assets_src2/spec/blog.md §1097：同一個 id 重複很多次，
-    原站就是這樣（【About Me】【線上人數】【FLAG COUNTER】…），照抄不改成 class。
-    `.side` 上那個 inline `style="width: 200px;"` 也照抄——
-    blog.md §168 已經指出它加上 12px border 會超出 200px 欄寬，那是原站的小 bug。
-
-    ⚠ 原站的自訂欄位可以塞任意 HTML（Facebook badge、廣告 iframe）。
-    我們不行：WRETCH_2012.md §4-4 規定使用者輸入一律逸出，
-    所以內容走站上通用的 render()（[img] [b] 連結那套），
-    貼得進去圖片與連結，貼不進去 <script>。 %>
-<% if (typeof folders !== 'undefined' && folders.length) { folders.forEach(fd => { %>
-      <div id="boxFolder">
-      <div class="boxFolder0"><div class="sidetitle"><%= fd.title %>          </div></div>
-      <div class="boxFolder1">
-        <div class="side" style="width: 200px; ">
-          <%- render(fd.body) %>
-        </div>
-      </div>
-      <br />
-    </div>
-<% }) } %>
 
 <%# ── #boxSearch ──────────────────────────────────────────────── %>
       <div id="boxSearch">
@@ -236,37 +210,6 @@
         </div>
         <br />
       </div>
-
-<%# ── #boxRssList（我的訂閱）─────────────────────────────────────
-    骨架逐字照 assets_src/html/blog_home.html:341（注意是 assets_src，不是 src2——
-    assets_src2 那十份頁面沒有這個模組，blog.md §1271 有記這件事）：
-
-      #boxRssList > .boxRssList0 > .sidetitle
-                  > .boxRssList1 > .side
-        span#boxRssEntryTitle 來源名 (日期) <br />
-        span#boxRssEntryBody > a[target=_blank] 條目標題 <br />
-
-    兩個特徵照抄：
-      1. **末尾沒有 <br />**——其他每個模組都有，只有這一個沒有
-      2. id 重複用在多筆上（原站就是這樣寫，不是 class）
-    標題文字原檔是英文語系的 My subscription，中文對照表是「我的訂閱」
-    （WRETCH_SPEC.md:279），與其他模組一樣走中文。
-    位置也照原檔：夾在 #boxNewComment 與 #boxNewTrackback 之間。
-    沒有訂閱（或還沒抓到東西）就整塊不印。 %>
-<% if (typeof subs !== 'undefined' && subs.length) { %>
-      <div id="boxRssList">
-        <div class="boxRssList0">
-          <div class="sidetitle">
-            我的訂閱          </div>
-        </div>
-        <div class="boxRssList1">
-          <div class="side">
-<% subs.forEach(s => { %>            <span id="boxRssEntryTitle" ><%= s.title %></span>(<%= (s.last_date || '').slice(0,16) %>)<br />
-            <span id="boxRssEntryBody" ><% if (s.last_url) { %><a target="_blank" rel="noopener nofollow" href="<%= s.last_url %>"><%= s.last_title %></a><% } else { %><%= s.last_title %><% } %> </span><br />
-<% }) %>          </div>
-        </div>
-      </div>
-<% } %>
 
 <%# ── #boxNewTrackback ────────────────────────────────────────── %>
         <div id="boxNewTrackback">

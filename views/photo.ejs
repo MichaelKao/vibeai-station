@@ -172,12 +172,6 @@
     <p align="right">
         <a style="font-size=8pt" target="_blank" href="/search?q=<%= encodeURIComponent(p.caption || p.atitle) %>">搜尋更多</a>&nbsp;
     <a style="font-size=8pt" target="_blank" href="/<%= u.name %>/guestbook">留言</a>&nbsp;
-<%# 「切割照片(NEW)」：原站 2012 英文版工具列的第二顆
-    （assets_src2/spec/shot.md:493 的截圖逐字轉寫，2013 中文版已經換掉了）。
-    只有站主自己看得到——訪客切別人的照片沒有道理，原站也是登入態才有。
-    NEW 紅章的寫法照 album_show_zh_jssophia.html:307 那條（.newVideoUpdate）。 %>
-<% if (isOwner) { %>    <a style="font-size=8pt" href="/<%= u.name %>/photo/<%= p.id %>/crop"><img class="newVideoUpdate" alt="newVideoUpdate" src="/img/wretch2012/album/new_album.gif" border="0" />切割照片</a>&nbsp;
-<% } %>
     <%# .newVideoUpdate 是一顆紅色「NEW」小圖章（new_album.gif 21×11），
         不是影音功能——原站最早拿它標影音有新東西，後來當通用 NEW 章重用，
         名稱跟用途早就脫鉤了。原版這裡掛的是 VIP 的 iZoom 放大鏡，我們沒有，

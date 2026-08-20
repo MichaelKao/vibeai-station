@@ -162,10 +162,6 @@ const BUNDLES = {
       ['common/css/sharing.css（l.yimg 版）', 'css/chrome_sharing.css', 'chrome'],
       ['blog/css/font.css（字級）', 'css/blog_font.css', 'blog'],
       ['blog/css/trackback.css', 'css/blog_trackback.css', 'blog'],
-      // 「誰來收藏」那個彈窗（#friend-picker）。原站是單獨一支 friend_picker.css，
-      // 由 friend_picker.js 那條路徑載進來；我們沒有那支 JS，樣式照載，
-      // 名單改成後端直接印（見 views/post.ejs 的說明）。
-      ['blog/css/friend_picker.css（誰來收藏彈窗）', 'css/blog_friend_picker.css', 'blog'],
       ['common/css/kukubar.css（內頁工具列）', 'css/chrome_kukubar.css', 'chrome'],
     ],
   },

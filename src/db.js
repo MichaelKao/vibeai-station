@@ -182,31 +182,8 @@ export function schemaSql(forDriver = driver) {
     T('visitors', `id ${PK}, ${fkUser}, who TEXT, ${created}`),
     T('friends', `user_id INTEGER, friend_id INTEGER, grp TEXT DEFAULT '好友',
       ${created}, PRIMARY KEY(user_id,friend_id)`),
-    // 好友分組。原站 #cateSelect 的 option value 是**稀疏的整數 group id**
-    // （存檔實證：gb_friend_a000000000aa_20131225.html:187 的 value 是 8/3/1/7/4/0/-1，
-    // 不連續也不照排序，0 固定是預設組、-1 是「全部」）——也就是說分組在原站是
-    // 一等公民，可以改名、可以排序，不是掛在每一筆好友上的一個字串。
-    //
-    // 本站原本把分組名直接存在 friends.grp（TEXT），功能都在，
-    // 但「把某一組改名」得掃過每一筆好友去改字串，而且兩個人打同一個名字
-    // 是不是同一組也講不清楚。改成真正的分組表。
-    // friends.grp 保留不動（見 ADD_COLUMNS 的 group_id 與 backfillGroups 的說明）。
-    T('friend_groups', `id ${PK}, ${fkUser}, name TEXT, ord INTEGER DEFAULT 0, ${created}`),
     T('favs', `${fkUser}, post_id INTEGER REFERENCES posts(id) ON DELETE CASCADE,
       ${created}, PRIMARY KEY(user_id,post_id)`),
-    // 網誌側欄的自訂欄位。原站叫 #boxFolder，同一個 id 可以重複很多次
-    // （blog.md §1097 有存檔實證：【About Me】【線上人數】【FLAG COUNTER】…）。
-    // 原站可以塞任意 HTML（Facebook badge、廣告 iframe），
-    // 我們照 WRETCH_2012.md §4-4「使用者輸入一律逸出」走 render()，
-    // 允許的是站上通用那套標記（[img] [b] 連結…），不是原生 HTML。
-    T('folders', `id ${PK}, ${fkUser}, title TEXT, body TEXT, seq INTEGER DEFAULT 0, ${created}`),
-    // 網誌側欄的「我的訂閱」（原站 #boxRssList，assets_src/html/blog_home.html:341）。
-    // 原站顯示的是**站方公告**那類外部 RSS 的最新一則：來源名 +（日期）+ 條目標題連結。
-    // title 是來源名（＝側欄第一行那個 span），url 是 feed 網址；
-    // last_* 三欄是最近一次抓到的條目，抓不到就沿用上一次的，側欄不會忽然空掉。
-    T('subs', `id ${PK}, ${fkUser}, title TEXT, url TEXT,
-      last_title TEXT DEFAULT '', last_url TEXT DEFAULT '', last_date TEXT DEFAULT '',
-      fetched TEXT DEFAULT '', ${created}`),
     T('acts', `id ${PK}, ${fkUser}, kind TEXT, title TEXT, url TEXT, ${created}`),
     T('sysmsg', `id ${PK}, ${fkUser}, title TEXT, body TEXT, seen INTEGER DEFAULT 0, ${created}`),
     T('reports', `id ${PK}, kind TEXT, target_id INTEGER, url TEXT, reason TEXT,
@@ -266,14 +243,6 @@ export function schemaSql(forDriver = driver) {
     CREATE INDEX IF NOT EXISTS idx_visitors_user ON visitors(user_id, id DESC);
     CREATE INDEX IF NOT EXISTS idx_friends_rev   ON friends(friend_id);
     CREATE INDEX IF NOT EXISTS idx_favs_user     ON favs(user_id, created DESC);
-    -- 反向查詢：「這篇文章有誰收藏」（單篇文章頁的「誰來收藏」彈窗）。
-    -- 主鍵是 (user_id, post_id)，開頭不是 post_id，所以這個方向用不到主鍵索引，
-    -- 沒有這一條就是每開一篇文章全表掃一次 favs。
-    CREATE INDEX IF NOT EXISTS idx_favs_post     ON favs(post_id, created DESC);
-    -- 好友頁的分組篩選（?cateSelect=）
-    CREATE INDEX IF NOT EXISTS idx_friends_grp   ON friends(user_id, grp);
-    -- 側欄自訂欄位：每一頁網誌都要撈一次
-    CREATE INDEX IF NOT EXISTS idx_folders_user  ON folders(user_id, seq);
     CREATE INDEX IF NOT EXISTS idx_acts_user     ON acts(user_id, id DESC);
     CREATE INDEX IF NOT EXISTS idx_sysmsg_user   ON sysmsg(user_id, id DESC);
     CREATE INDEX IF NOT EXISTS idx_joins_user    ON joins(user_id, id DESC);
@@ -312,19 +281,6 @@ const ADD_COLUMNS = [
   // 想把相簿弄成一個樣、網誌弄成另一個樣的人做不到——那正是當年大家在玩的事。
   // users.css 保留原意＝相簿那份，網誌另存一份。
   ['users', 'css_blog', "TEXT DEFAULT ''"],
-  // 好友屬於哪一組（friend_groups.id）。0＝預設組，對得上原站 #cateSelect 的
-  // `option value="0" → Default group`。
-  // ⚠ 舊的 friends.grp（文字組名）**故意留著不刪**：
-  //   1. 正式站上是有資料的，砍掉就回不去了
-  //   2. backfillGroups() 靠它把既有資料搬進 friend_groups
-  // 讀取一律以 group_id 為準，grp 只當歷史資料看。
-  ['friends', 'group_id', 'INTEGER DEFAULT 0'],
-  // 文章的地區。原站網誌側欄 boxDate 裡有一顆「看地圖」（WRETCH_SPEC.md:278、:382），
-  // 但那個功能連一份 DOM 存檔都沒有，只有截圖上的四個字。
-  // 相簿早就有 place（四選一的地區分類，src/taxonomy.js 的 PLACES），
-  // 文章沒有——沒有地點資料的話「看地圖」就沒有東西可看。
-  // 補上同一組白名單，讓兩邊講同一種話。
-  ['posts', 'place', "TEXT DEFAULT ''"],
 ];
 
 export async function addColumns(forDriver = driver) {
@@ -344,37 +300,9 @@ export async function addColumns(forDriver = driver) {
   }
 }
 
-// 好友分組從「每一筆好友身上的一個字串」搬到真正的分組表。
-//
-// 冪等：每次啟動都會跑，但只處理「還沒有 group_id 的好友」。
-// 已經搬過的資料 group_id 不是 0，第二次跑就整批跳過，
-// 所以正式站重啟幾次都不會多出重複的分組。
-//
-// 為什麼不寫成一次性的 migration 腳本：本機 SQLite 與正式站 Postgres
-// 是各自獨立的資料庫，而且開發機隨時可能拿到一份舊的備份。
-// 每次啟動自我修復比「記得去跑那支腳本」可靠。
-export async function backfillGroups() {
-  // 還留在舊寫法的好友：有文字組名、而且還沒指到任何分組
-  const rows = await all(
-    "SELECT DISTINCT user_id, grp FROM friends WHERE COALESCE(group_id,0)=0 AND COALESCE(grp,'')<>''");
-  for (const r of rows) {
-    // 「好友」是預設組（friends.grp 的 DEFAULT），對應原站的 group id 0，
-    // 不必替它建一筆分組——建了反而會讓每個人都多一組叫「好友」的東西。
-    if (r.grp === '好友') continue;
-    let g = await one('SELECT id FROM friend_groups WHERE user_id=? AND name=?', r.user_id, r.grp);
-    if (!g) {
-      await run('INSERT INTO friend_groups(user_id,name,ord) VALUES(?,?,?)', r.user_id, r.grp, 0);
-      g = await one('SELECT id FROM friend_groups WHERE user_id=? AND name=?', r.user_id, r.grp);
-    }
-    if (g) await run('UPDATE friends SET group_id=? WHERE user_id=? AND grp=? AND COALESCE(group_id,0)=0',
-      g.id, r.user_id, r.grp);
-  }
-}
-
 // 對目前這個資料庫建表。搬移工具要對「另一個」資料庫建表時，
 // 自己拿 schemaSql('postgres') 去打。
 export async function migrate() {
   for (const sql of schemaSql(driver)) await exec(sql);
   await addColumns(driver);
-  await backfillGroups();
 }

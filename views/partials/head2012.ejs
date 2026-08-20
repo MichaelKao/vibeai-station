@@ -52,15 +52,7 @@
         <div class="hd">
           <!--campaign starts-->
           <ul>
-            <%# 沒有統計數字就整個 <li> 不要印。
-                原本是「印出 <a>，裡面的字用 if 包住」——呼叫端沒送 stats 的頁
-                （哈啦／揪團明細／愛正妹）就留下一個 18×0 的空連結：
-                看不見、但滑鼠移過去會變手指，而且 tools/clickcheck.mjs 每次都報它。
-                `undeline` 這個錯字是**原版存檔就有的**（index_20120204090819.html），
-                不要順手改掉。 %>
-            <% if (locals.stats) { %>
-            <li><a href="/rank" style="position:absolute;top:10px;left:45%;text-decoration:undeline;color:#8080BF;">目前共 <%= stats.users %> 位站友、<%= stats.photos %> 張照片、<%= stats.posts %> 篇網誌</a></li>
-            <% } %>
+            <li><a href="/rank" style="position:absolute;top:10px;left:45%;text-decoration:undeline;color:#8080BF;"><% if (locals.stats) { %>目前共 <%= stats.users %> 位站友、<%= stats.photos %> 張照片、<%= stats.posts %> 篇網誌<% } %></a></li>
           </ul>
           <!--campaign ends-->
           <ul class="nav">

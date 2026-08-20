@@ -45,26 +45,6 @@ const ph=await text('/alpha/photo/1',A);
 ok('照片導覽列', ph.includes('第一張')&&ph.includes('上一張')&&ph.includes('下一張')&&ph.includes('最後一張'));
 // 不綁 class 名稱（版面在復刻不同年代時會換）。驗行為：照片頁要連得到同本的其他照片。
 ok('照片縮圖列', new Set(ph.match(/\/alpha\/photo\/\d+/g)||[]).size>=3);
-
-// 切割照片（原站工具列的「切割照片(NEW)」）。上傳的測試圖是 300×220。
-ok('切割頁只有站主進得去', (await get('/alpha/photo/1/crop',A)).status===200 &&
-   (await get('/alpha/photo/1/crop',Bc)).status===403);
-ok('切割鈕只有站主看得到', (await text('/alpha/photo/1',A)).includes('切割照片') &&
-   !(await text('/alpha/photo/1',Bc)).includes('切割照片'));
-// 驗真的裁了：裁完會存成新檔（網址換掉），而且尺寸就是要求的 100×80。
-// 上傳的測試圖是 300×220，所以裁出來一定比原圖小。
-ok('切割真的裁了照片', await (async()=>{
-  // ⚠ 樣板那一行用的是**單引號**（id='DisplayImage' src='…'，照原版存檔的寫法），
-  // 正則只比對雙引號會永遠抓不到，看起來像功能壞了。
-  const grab = h => h.match(/id=['"]DisplayImage['"][^>]*src=['"]([^'"]+)['"]/)?.[1];
-  const before=grab(await text('/alpha/photo/1',A));
-  const r=await post('/alpha/photo/1/crop',{x:10,y:10,w:100,h:80},A);
-  const after=await text('/alpha/photo/1',A);
-  const url=grab(after);
-  return r.status===302 && !!url && url!==before && /100\s*[×x]\s*80/.test(after);
-})());
-ok('切割範圍太小被擋', (await post('/alpha/photo/1/crop',{x:0,y:0,w:2,h:2},A)).status===302);
-ok('非本人不能切割', (await post('/alpha/photo/1/crop',{x:0,y:0,w:50,h:50},Bc)).status===403);
 ok('非圖片被拒', (await (async()=>{const g=new FormData();g.append('photos',new Blob([Buffer.from('hi')],{type:'text/plain'}),'a.txt');
   const r=await fetch(`${B}/alpha/album/${aid}/upload`,{method:'POST',headers:{cookie:A},body:g,redirect:'manual'}); return r.status===302;})()));
 
@@ -119,29 +99,6 @@ ok('RSS 不含鎖文', !(await text('/alpha/blog/rss')).includes('SECRETTEXT'));
 ok('網誌搜尋(標題)', (await text('/alpha/blog/search?q=' + encodeURIComponent('第一'))).includes('找到 <b>1</b>'));
 ok('網誌搜尋(內容)', (await text('/alpha/blog/search?q=' + encodeURIComponent('內容內容') + '&body=1')).includes('找到 <b>1</b>'));
 
-console.log('\n=== 看地圖 ===');
-// 原站側欄 boxDate 那顆「看地圖」。功能零存檔，我們做成「按地區看文章與相簿」。
-ok('看地圖打得開', (await get('/alpha/blog/map')).status===200);
-ok('側欄有看地圖連結', (await text('/alpha/blog')).includes('/alpha/blog/map'));
-ok('文章可以標地區', await (async()=>{
-  await post('/alpha/blog/1/edit',{title:'第一篇',body:'內容內容內容',category:'心情',place:'台灣'},A);
-  const t=await text('/alpha/blog/map');
-  return t.includes('台灣') && t.includes('第一篇'); })());
-ok('地區擋亂值', await (async()=>{
-  await post('/alpha/blog/1/edit',{title:'第一篇',body:'內容內容內容',category:'心情',place:'火星'},A);
-  return !(await text('/alpha/blog/map')).includes('火星'); })());
-// 上鎖的文章不能因為換一個入口就外洩。
-// ⚠ 不能直接比對整頁有沒有「鎖起來」這三個字：**側欄的最新文章、頁首的
-// 今日主題、首頁好文本來就會印鎖文的標題**（原站也是這樣，列表印標題加一個
-// 鎖頭圖，內容才要密碼）。要驗的是「地圖那一區」有沒有把它列進去。
-ok('看地圖不外洩鎖文', await (async()=>{
-  await post('/alpha/blog/2/edit',{title:'鎖起來',body:'SECRETTEXT',category:'心情',pass:'8888',place:'台灣'},A);
-  const page=await text('/alpha/blog/map');
-  const zone=(page.match(/<div class="articletext"[\s\S]*?<\/div>\s*<\/div>\s*<\/div>/)||[''])[0];
-  return !zone.includes('鎖起來') && !page.includes('SECRETTEXT'); })());
-// 標回台灣，後面的測試（歷史上的今天等）才有一篇有地區的文章可看
-await post('/alpha/blog/1/edit',{title:'第一篇',body:'內容內容內容',category:'心情',place:'台灣'},A);
-
 console.log('\n=== 迴響 / 收藏 / 引用 ===');
 await post('/alpha/blog/1/comment',{author:'路人',email:'a@b.com',homepage:'https://ex.com',body:'搶頭香'},null);
 const p1=await text('/alpha/blog/1');
@@ -150,26 +107,6 @@ ok('暱稱連個人網頁', p1.includes('https://ex.com'));
 ok('板主回覆', (await post('/alpha/blog/1/comment/1/reply',{reply:'謝謝'},A)).status===302 &&
    (await text('/alpha/blog/1')).includes('板主回覆'));
 ok('收藏', (await post('/alpha/blog/1/fav',{},Bc)).status===302 && (await text('/bravo/favs')).includes('第一篇'));
-ok('誰來收藏用原版 #friend-picker 結構', (await text('/alpha/blog/1')).includes('friend-picker-bd'));
-ok('誰來收藏列出收藏者', (await text('/alpha/blog/1')).includes('friend-picker-cell'));
-
-console.log('\n=== 我的訂閱（boxRssList）===');
-// 訂閱站內的 RSS：不必連外網，而且抓回來的東西是我們自己產的，內容可預期
-ok('訂閱站內 RSS', (await post('/alpha/subs',{title:'布拉的網誌',url:B+'/bravo/blog/rss'},A)).status===302);
-// SSRF：伺服器主動連使用者給的網址，是全站唯一一處，要擋內網與非 http 協定
-ok('擋掉內網位址（SSRF）', (await post('/alpha/subs',{title:'內網',url:'http://127.0.0.1:9/x'},A)).status===302 &&
-   !(await text('/alpha/settings',A)).includes('127.0.0.1:9'));
-ok('擋掉 file 協定', (await post('/alpha/subs',{title:'檔案',url:'file:///etc/passwd'},A)).status===302 &&
-   !(await text('/alpha/settings',A)).includes('file:///'));
-ok('非本人不能訂閱', (await post('/alpha/subs',{title:'壞人',url:'https://example.com/rss'},Bc)).status===403);
-
-console.log('\n=== 側欄自訂欄位（boxFolder）===');
-ok('新增自訂欄位', (await post('/alpha/folders',{title:'【About Me】',body:'我是阿發'},A)).status===302 && (await text('/alpha/blog')).includes('【About Me】'));
-ok('自訂欄位內容有印出來', (await text('/alpha/blog')).includes('我是阿發'));
-ok('自訂欄位用 boxFolder 結構', (await text('/alpha/blog')).includes('boxFolder'));
-ok('自訂欄位逸出 HTML', (await post('/alpha/folders',{title:'XSS',body:'<script>alert(1)</script>'},A)).status===302 && !(await text('/alpha/blog')).includes('<script>alert(1)'));
-ok('非本人不能新增自訂欄位', (await post('/alpha/folders',{title:'壞人',body:'x'},Bc)).status===403);
-
 ok('推薦', (await post('/alpha/blog/1/like',{},Bc)).status===302);
 ok('引用', (await post('/alpha/blog/1/trackback',{},Bc)).status===302 && (await text('/alpha/blog/1')).includes('引用'));
 
@@ -273,33 +210,8 @@ ok('名片欄位', card.includes('王小明')&&card.includes('雙子座')&&card.
 ok('名片擋亂值', (await post('/alpha/card',{zodiac:'亂',city:'火星',homepage:'javascript:alert(1)'},A)).status===302 &&
    !(await text('/alpha/card')).includes('javascript:alert'));
 ok('/user/ 導向名片', (await get('/user/alpha')).headers.get('location')==='/alpha/card');
-// 分組是真的東西（friend_groups），POST 的欄位是 group_id 不是組名字串
-await post('/alpha/friendgroups',{name:'同學'},A);
-await post('/alpha/friendgroups',{name:'同事'},A);
-const grpPage = await text('/alpha/friends',A);
-const gidClass = +(grpPage.match(/friendgroups\/(\d+)\/edit/)||[])[1];
-await post('/alpha/friends/3/group',{group_id:String(gidClass)},A);
+await post('/alpha/friends/3/group',{grp:'同學'},A);
 ok('好友分組', (await text('/alpha/friends')).includes('同學'));
-ok('分組改名，整組跟著改', await (async()=>{
-  await post(`/alpha/friendgroups/${gidClass}/edit`,{name:'高中同學'},A);
-  const t=await text('/alpha/friends',A);
-  return t.includes('高中同學') && !t.includes('>同學（'); })());
-await post(`/alpha/friendgroups/${gidClass}/edit`,{name:'同學'},A);
-ok('不能把好友掛到別人的分組', await (async()=>{
-  const bg=await post('/bravo/friendgroups',{name:'布拉的組'},Bc);
-  const bt=await text('/bravo/friends',Bc);
-  const bid=+(bt.match(/friendgroups\/(\d+)\/edit/)||[])[1];
-  if(!bid) return true;                       // 布拉還沒有好友就沒有這個畫面，跳過
-  await post('/alpha/friends/3/group',{group_id:String(bid)},A);
-  return !(await text('/alpha/friends',A)).includes('布拉的組'); })());
-ok('刪分類不刪人', await (async()=>{
-  await post('/alpha/friendgroups',{name:'待刪'},A);
-  const t=await text('/alpha/friends',A);
-  const ids=[...t.matchAll(/friendgroups\/(\d+)\/edit/g)].map(m=>+m[1]);
-  const del=ids[ids.length-1];
-  await post(`/alpha/friendgroups/${del}/del`,{},A);
-  const after=await text('/alpha/friends',A);
-  return !after.includes('待刪') && after.includes('charlie'); })());
 ok('好友動態', (await text('/alpha/feed',A)).includes('好友動態'));
 ok('好友動態私密', (await get('/alpha/feed',Bc)).status===403);
 
@@ -319,14 +231,8 @@ await post('/bravo/friend',{},C);                     // charlie 也加 bravo，
 }
 ok('好友搜尋只比對帳號', (await text('/alpha/friends?search_id=charl')).includes('charlie') &&
    !(await text('/alpha/friends?search_id=nobodyhere')).includes('charlie'));
-// cateSelect 帶的是分組 id（原站也是），0＝預設組、-1＝全部
-ok('好友分類篩選', await (async()=>{
-  const t=await text('/alpha/friends',A);
-  const ids=[...t.matchAll(/friendgroups\/(\d+)\/edit/g)].map(m=>+m[1]);
-  const inGroup=await text(`/alpha/friends?cateSelect=${ids[0]}`);
-  const other=await text(`/alpha/friends?cateSelect=${ids[1] ?? 0}`);
-  return inGroup.includes('charlie') && !other.includes('charlie'); })());
-ok('cateSelect=-1 是全部', (await text('/alpha/friends?cateSelect=-1')).includes('charlie'));
+ok('好友分類篩選', (await text('/alpha/friends?cateSelect='+encodeURIComponent('同學'))).includes('charlie') &&
+   !(await text('/alpha/friends?cateSelect='+encodeURIComponent('同事'))).includes('charlie'));
 // 原站那張搜尋表單是 POST，導回 GET 才有得加書籤、才分得了頁
 ok('好友搜尋 POST 導回 GET', (await post('/alpha/friends',{search_id:'charl'},A)).headers.get('location')==='/alpha/friends?search_id=charl');
 

@@ -249,16 +249,3 @@ td#ad_word   .w2-ad-in { display: block; }
     display: block !important; width: auto !important; text-align: center;
   }
 }
-
-/* --- 切割照片 -------------------------------------------------------------
- * 零存檔（只有 shot.md:493 的截圖轉寫證明原站有這顆按鈕），整頁自製。
- * 配色沿用 skin 1/189 既有色盤，不新增視覺語言。
- */
-.w2a-crop        { padding: 12px; text-align: left; }
-.w2a-crop-stage  { position: relative; display: inline-block; line-height: 0;
-                   border: 1px solid #ccc; cursor: crosshair; user-select: none; }
-.w2a-crop-stage img { max-width: 640px; height: auto; }
-.w2a-crop-sel    { position: absolute; display: none; box-sizing: border-box;
-                   border: 2px dashed #A13636; background: rgba(255,232,232,.35); }
-.w2a-crop form   { margin-top: 10px; }
-.w2a-crop input[type=number] { width: 5em; }

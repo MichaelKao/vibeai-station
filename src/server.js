@@ -5,10 +5,9 @@ import path from 'node:path';
 import { one, all, run, migrate, driver } from './db.js';
 import { sessionStore, startVisitFlusher, bumpVisit, hasRedis } from './cache.js';
 import { hash, salt, check, requireLogin, requireOwner } from './auth.js';
-import { save, remove, hasR2, diskFree, readImage } from './storage.js';
+import { save, remove, hasR2, diskFree } from './storage.js';
 import { UPLOAD_DIR } from './paths.js';
 import { render, EMOTES, safeCss } from './format.js';
-import { fetchFeed, subUrlOk } from './feed.js';
 import { SITE_NAME, SITE_DESC, SITE_LOGO, CDN } from './config.js';
 import { ALBUM_TOPICS, BLOG_TOPICS, PLACES, MOODS, WEATHERS, ZODIACS, BLOODS, SEXES, CITIES, isAlbumTopic, isBlogTopic, isPlace } from './taxonomy.js';
 import { SKINS, isSkin, skinCss } from './skins.js';
@@ -49,12 +48,7 @@ app.use(session({
   store: await sessionStore(),          // 沒有 REDIS_URL 時回傳 undefined＝用預設 MemoryStore
   secret: process.env.SESSION_SECRET || 'vibeai-dev-secret',
   resave: false, saveUninitialized: false,
-  // secure:'auto' ＝ 連線是 https 就標 Secure、是 http 就不標。
-  // 寫死 true 的話本機 http 會拿不到 cookie（登入完馬上又變登出，很難查）；
-  // 完全不寫的話正式站的 session cookie 會允許在 http 下送出。
-  // 'auto' 要靠上面那行 `app.set('trust proxy', 1)` 才判斷得出來——
-  // Railway 是反向代理，協定寫在 X-Forwarded-Proto 裡。
-  cookie: { maxAge: 30*864e5, httpOnly: true, sameSite: 'lax', secure: 'auto' },
+  cookie: { maxAge: 30*864e5, httpOnly: true, sameSite: 'lax' },
 }));
 const upload = multer({storage:multer.memoryStorage(),limits:{fileSize:8*1024*1024,files:20},fileFilter:(r,f,cb)=>cb(null,/^image\/(jpeg|png|gif|webp)$/.test(f.mimetype))});
 
@@ -573,76 +567,13 @@ site.get('/visitors',async (req,res)=>{
     friends:await all('SELECT u.name,u.nick FROM friends f JOIN users u ON u.id=f.friend_id WHERE f.user_id=? LIMIT 12',U(res).id)});
 });
 // 個人設定
-site.get('/settings',requireLogin,requireOwner,async (req,res)=>res.render('settings',{nav:'user',themes:SKINS,
-  folders:await all('SELECT * FROM folders WHERE user_id=? ORDER BY seq,id',U(res).id),
-  subs:await all('SELECT * FROM subs WHERE user_id=? ORDER BY id',U(res).id)}));
+site.get('/settings',requireLogin,requireOwner,(req,res)=>res.render('settings',{nav:'user',themes:SKINS}));
 site.post('/settings',requireLogin,requireOwner,upload.single('avatar'),async(req,res)=>{
   const {nick,intro,music,css,css_blog,pass,pass2}=req.body, u=U(res);
   let avatar=u.avatar; if(req.file){ const s=await save(req.file); avatar=s.thumb; await remove(u.avatar); }
   await run('UPDATE users SET nick=?,intro=?,music=?,css=?,css_blog=?,avatar=?,theme=? WHERE id=?',(nick||u.nick).trim().slice(0,20),(intro||'').slice(0,500),cleanMusic(music),(css||'').slice(0,20000),(css_blog||'').slice(0,20000),avatar,isSkin(req.body.theme)?(req.body.theme||''):'',u.id);
   if(pass){ if(pass!==pass2) {flash(req,'兩次密碼不一致，其他設定已儲存');return res.redirect(`/${u.name}/settings`);} const s=salt(); await run('UPDATE users SET pass=?,salt=? WHERE id=?',hash(pass,s),s,u.id); }
   flash(req,'設定已儲存'); res.redirect(`/${u.name}/settings`);
-});
-
-// ── 我的訂閱（原站側欄的 #boxRssList）────────────────────────────────────
-// 原站訂的是站方公告那類外部 RSS，側欄印「來源名（日期）＋ 最新一則標題」。
-//
-// ⚠ 這是全站唯一一處「伺服器主動去連使用者給的網址」，所以規矩要嚴：
-//   1. 只收 http/https，擋掉 file: 與其他協定
-//   2. 擋掉指向內網的位址（127.*、10.*、192.168.*、169.254.* 與 localhost）——
-//      不擋的話任何人都能拿我們的伺服器去掃內網，這叫 SSRF
-//   3. 逾時 6 秒、只讀前 256KB，避免對方餵一條無止盡的串流把行程卡死
-//   4. 每個來源最多 30 分鐘抓一次，抓失敗就沿用上一次的結果，側欄不會忽然空掉
-const SUB_MAX = 5;
-// SSRF 防護與抓取全部在 src/feed.js（那支的檔頭寫了為什麼「檢查網址字串」不夠）。
-// 側欄要用的時候才更新，而且 30 分鐘內不重抓。
-// 放在 render 之前 await 會讓每一頁網誌都等外部網站——所以**不等**：
-// 這一輪先把上次的結果印出去，順便在背景更新，下一次進來就是新的。
-async function refreshSubs(uid){
-  const rows = await all('SELECT * FROM subs WHERE user_id=?', uid);
-  for(const s of rows){
-    if(s.fetched && Date.now() - Date.parse(s.fetched) < 30*60*1000) continue;
-    const got = await fetchFeed(s.url);
-    if(got) await run('UPDATE subs SET last_title=?,last_url=?,last_date=?,fetched=? WHERE id=?',
-      got.title, got.url, got.date, new Date().toISOString(), s.id);
-    else await run('UPDATE subs SET fetched=? WHERE id=?', new Date().toISOString(), s.id);
-  }
-}
-site.post('/subs',requireLogin,requireOwner,async (req,res)=>{
-  const u=U(res), title=(req.body.title||'').trim().slice(0,30), url=subUrlOk((req.body.url||'').trim());
-  if(title && url && (await one('SELECT count(*) c FROM subs WHERE user_id=?',u.id)).c < SUB_MAX){
-    await run('INSERT INTO subs(user_id,title,url) VALUES(?,?,?)',u.id,title,url);
-    refreshSubs(u.id).catch(()=>{});     // 不擋這一次的回應
-  }
-  res.redirect(`/${u.name}/settings#subs`);
-});
-site.post('/subs/:id/del',requireLogin,requireOwner,async (req,res)=>{
-  await run('DELETE FROM subs WHERE id=? AND user_id=?',req.params.id,U(res).id);
-  res.redirect(`/${U(res).name}/settings#subs`);
-});
-
-// 網誌側欄的自訂欄位（原站的 #boxFolder，可以有很多個）。
-// 原站能塞任意 HTML；我們照契約 §4-4 一律逸出，內容走站上通用的 render()
-// （[img] [b] 連結那套），所以貼得進去圖片與連結，貼不進去 <script>。
-// 上限 8 個：原站沒有上限，但側欄只有 200px 寬，再多就變成一條沒有盡頭的長廊。
-const FOLDER_MAX = 8;
-site.post('/folders',requireLogin,requireOwner,async (req,res)=>{
-  const u=U(res), title=(req.body.title||'').trim().slice(0,30), body=(req.body.body||'').slice(0,5000);
-  if(title && (await one('SELECT count(*) c FROM folders WHERE user_id=?',u.id)).c < FOLDER_MAX){
-    const seq=((await one('SELECT max(seq) m FROM folders WHERE user_id=?',u.id))?.m ?? 0)+1;
-    await run('INSERT INTO folders(user_id,title,body,seq) VALUES(?,?,?,?)',u.id,title,body,seq);
-  }
-  res.redirect(`/${u.name}/settings#folders`);
-});
-site.post('/folders/:id/edit',requireLogin,requireOwner,async (req,res)=>{
-  const u=U(res);
-  await run('UPDATE folders SET title=?,body=? WHERE id=? AND user_id=?',
-    (req.body.title||'').trim().slice(0,30)||'自訂欄位',(req.body.body||'').slice(0,5000),req.params.id,u.id);
-  res.redirect(`/${u.name}/settings#folders`);
-});
-site.post('/folders/:id/del',requireLogin,requireOwner,async (req,res)=>{
-  await run('DELETE FROM folders WHERE id=? AND user_id=?',req.params.id,U(res).id);
-  res.redirect(`/${U(res).name}/settings#folders`);
 });
 // 刪除自己的帳號（需再次輸入密碼），連同照片一起清掉
 site.post('/settings/delete',requireLogin,requireOwner,async(req,res)=>{
@@ -659,33 +590,8 @@ site.post('/friend',requireLogin,async (req,res)=>{ const me=res.locals.me.id,u=
               else await run("INSERT OR IGNORE INTO friends(user_id,friend_id,grp) VALUES(?,?,?)",me,u,(req.body.grp||'好友').trim().slice(0,10)||'好友'); }
   res.redirect('/'+U(res).name); });
 // 好友分類（當年好友名單可以分組）
-// 把某位好友換到某一組。req.body.group_id 是分組 id，0＝預設組。
-// ⚠ 一定要驗那一組**是這個人自己的**——不驗的話，隨便填一個別人的分組 id
-// 就能把自己的好友掛到別人的分組上，畫面上還看得到別人的分組名。
 site.post('/friends/:fid/group',requireLogin,requireOwner,async (req,res)=>{
-  const uid=U(res).id, gid=+req.body.group_id||0;
-  const ok = gid===0 || !!await one('SELECT 1 FROM friend_groups WHERE id=? AND user_id=?',gid,uid);
-  if(ok) await run('UPDATE friends SET group_id=? WHERE user_id=? AND friend_id=?',gid,uid,req.params.fid);
-  res.redirect(`/${U(res).name}/friends`); });
-
-// 分組本身的增／改名／刪。原站的分組是一等公民（#cateSelect 的 value 是 group id），
-// 改名一次全組跟著改——這正是「把組名存在每一筆好友身上」做不到的事。
-const FGROUP_MAX = 20;
-site.post('/friendgroups',requireLogin,requireOwner,async (req,res)=>{
-  const uid=U(res).id, name=(req.body.name||'').trim().slice(0,20);
-  if(name && (await one('SELECT count(*) c FROM friend_groups WHERE user_id=?',uid)).c < FGROUP_MAX
-      && !await one('SELECT 1 FROM friend_groups WHERE user_id=? AND name=?',uid,name))
-    await run('INSERT INTO friend_groups(user_id,name,ord) VALUES(?,?,?)',uid,name,0);
-  res.redirect(`/${U(res).name}/friends`); });
-site.post('/friendgroups/:id/edit',requireLogin,requireOwner,async (req,res)=>{
-  const name=(req.body.name||'').trim().slice(0,20);
-  if(name) await run('UPDATE friend_groups SET name=? WHERE id=? AND user_id=?',name,req.params.id,U(res).id);
-  res.redirect(`/${U(res).name}/friends`); });
-site.post('/friendgroups/:id/del',requireLogin,requireOwner,async (req,res)=>{
-  const uid=U(res).id;
-  // 刪組不刪人：組裡的好友退回預設組（原站的 Default group）
-  await run('UPDATE friends SET group_id=0 WHERE user_id=? AND group_id=?',uid,req.params.id);
-  await run('DELETE FROM friend_groups WHERE id=? AND user_id=?',req.params.id,uid);
+  await run('UPDATE friends SET grp=? WHERE user_id=? AND friend_id=?',(req.body.grp||'好友').trim().slice(0,10)||'好友',U(res).id,req.params.fid);
   res.redirect(`/${U(res).name}/friends`); });
 site.get('/card',async (req,res)=>res.render('card',{nav:'card',
   // 收到的禮物顯示在名片頁（原站的送禮物就是掛在個人資料上）
@@ -741,10 +647,6 @@ site.post('/card',requireLogin,requireOwner,async (req,res)=>{
 // 一頁 25 人：原始檔 gb_friend_a000001_20131226.html 的頁首 JS 寫死 paginator='25'。
 const FRIEND_PER = 25;
 const FRIEND_RELS = ['我的好友','誰加我為好友','互相是好友','好友的好友'];
-// 分組名一律從 friend_groups 撈（group_id=0 就是原站的 Default group）。
-// ⚠ 這個子查詢要放在 SELECT 裡，不能 JOIN friend_groups——
-// rel=1/3 那兩種關係的 f 不是站主自己的那條邊，JOIN 會把筆數乘開。
-const GRP_NAME = "COALESCE((SELECT name FROM friend_groups WHERE id=f.group_id),'好友')";
 function friendQuery(uid, rel, cate, q){
   const args=[]; let from, where, grp;
   if(rel===1){                       // 誰加我為好友：反向邊
@@ -753,19 +655,17 @@ function friendQuery(uid, rel, cate, q){
   } else if(rel===2){                // 互相：正向邊存在，且反向邊也存在
     from='FROM friends f JOIN users u ON u.id=f.friend_id '
        + 'JOIN friends b ON b.user_id=f.friend_id AND b.friend_id=f.user_id';
-    where='f.user_id=?'; args.push(uid); grp=GRP_NAME;
+    where='f.user_id=?'; args.push(uid); grp="COALESCE(NULLIF(f.grp,''),'好友')";
   } else if(rel===3){                // 好友的好友：兩跳，扣掉自己與已經是好友的人
     from='FROM friends f JOIN friends g ON g.user_id=f.friend_id JOIN users u ON u.id=g.friend_id';
     where='f.user_id=? AND g.friend_id<>? AND g.friend_id NOT IN (SELECT friend_id FROM friends WHERE user_id=?)';
     args.push(uid,uid,uid); grp="'好友的好友'";
   } else {                           // 我的好友
     from='FROM friends f JOIN users u ON u.id=f.friend_id';
-    where='f.user_id=?'; args.push(uid); grp=GRP_NAME;
+    where='f.user_id=?'; args.push(uid); grp="COALESCE(NULLIF(f.grp,''),'好友')";
   }
-  // 分類只有「我加的」那兩種關係才有意義。
-  // cate 是**分組 id**（原站 #cateSelect 的 option value 就是 group id，
-  // 0＝Default group、-1＝全部），不是分組名。
-  if(cate!=='' && (rel===0||rel===2)){ where+=' AND COALESCE(f.group_id,0)=?'; args.push(+cate||0); }
+  // 分類只有「我加的」那兩種關係才有意義（grp 是站主自己打的分類名）
+  if(cate && (rel===0||rel===2)){ where+=" AND COALESCE(NULLIF(f.grp,''),'好友')=?"; args.push(cate); }
   // #searchInput 原站只搜帳號（js_lang_searchTip = 'Search ID'），照做
   if(q){ where+=' AND u.name LIKE ?'; args.push('%'+q+'%'); }
   return {from,where,grp,args};
@@ -773,9 +673,7 @@ function friendQuery(uid, rel, cate, q){
 site.get('/friends',async (req,res)=>{
   const uid=U(res).id;
   const rel=[0,1,2,3].includes(+req.query.c)?+req.query.c:0;
-  // cateSelect 是分組 id：'' 或 '-1' 都代表全部，'0' 是預設組（原站的 Default group）
-  const cateRaw=(req.query.cateSelect||'').trim().slice(0,10);
-  const cate=/^-?\d+$/.test(cateRaw)?cateRaw:'';
+  const cate=(req.query.cateSelect||'').trim().slice(0,10);   // '' 或 '-1' 都代表全部
   const q=(req.query.search_id||'').trim().slice(0,20);
   const page=Math.max(1,+req.query.p||1);
   const {from,where,grp,args}=friendQuery(uid,rel,cate==='-1'?'':cate,q);
@@ -793,16 +691,7 @@ site.get('/friends',async (req,res)=>{
     rows,
     friends:rows,     // 舊名，view 換過來之前先留著
     // #cateSelect 的選項：本站沒有 group 表，option value 直接放分類名，-1＝全部
-    // #cateSelect 的選項。原站 option value 是分組 id，0＝Default group、-1＝全部
-    // （gb_friend_a000000000aa_20131225.html:187）。這裡照做。
-    // 預設組要單獨算：它沒有 friend_groups 那一列，group_id 就是 0。
-    groups:[
-      ...await all(`SELECT g.id, g.name,
-          (SELECT count(*) FROM friends f WHERE f.user_id=g.user_id AND f.group_id=g.id) n
-        FROM friend_groups g WHERE g.user_id=? ORDER BY g.ord, g.id`,uid),
-      { id:0, name:'預設分類',
-        n:(await one('SELECT count(*) c FROM friends WHERE user_id=? AND COALESCE(group_id,0)=0',uid)).c },
-    ],
+    groups:await all("SELECT COALESCE(NULLIF(grp,''),'好友') g, count(*) n FROM friends WHERE user_id=? GROUP BY COALESCE(NULLIF(grp,''),'好友') ORDER BY g",uid),
     counts:{ mine:await count(0), fans:await count(1), mutual:await count(2), fof:await count(3) },
     // fans 是舊 view 那一整塊「誰加我為好友」。切了頁籤或下了篩選之後再印一份
     // 沒篩過的名單會自相矛盾（畫面上明明篩掉了，下面又整批列出來），所以只在
@@ -900,49 +789,6 @@ site.get('/photo/:pid',async (req,res,next)=>{
     comments:await all('SELECT * FROM photo_comments WHERE photo_id=? ORDER BY id',p.id)});
 });
 site.post('/photo/:pid/comment',async (req,res)=>{ const p=await one('SELECT p.id,p.album_id,a.pass FROM photos p JOIN albums a ON a.id=p.album_id WHERE p.id=? AND a.user_id=?',req.params.pid,U(res).id); if(!p) return res.redirect('/'+U(res).name+'/album'); res.locals.album={id:p.album_id,pass:p.pass}; if(!albumUnlocked(req,res)) return res.status(403).render('msg',{title:'沒有權限',msg:'相簿已上鎖',back:'/'+U(res).name+'/album'}); if(req.body.body?.trim()) await run('INSERT INTO photo_comments(photo_id,author,body) VALUES(?,?,?)',p.id,(res.locals.me?.nick||req.body.author||'訪客').slice(0,20),req.body.body.trim().slice(0,300)); res.redirect(`/${U(res).name}/photo/${req.params.pid}`); });
-// ── 切割照片（原站照片頁工具列那顆「切割照片(NEW)」）────────────────────
-// 零存檔：assets_src2/spec/shot.md:493 的截圖逐字轉寫看得到這顆按鈕
-// （2012 英文版工具列「搜尋更多 切割照片(NEW) Report this Picture」），
-// 但整個切割介面連一份 HTML 都沒有存下來，所以下面的頁面是自製的，
-// 只有工具列那顆按鈕與 .newVideoUpdate 紅 NEW 章照 2013 中文版存檔的寫法。
-//
-// 行為：裁切**覆蓋原圖**，跟原站一樣（原站沒有「另存新檔」的說法）。
-// 舊檔案裁完就刪掉，不然每裁一次就多留一份沒人指向的檔案。
-site.get('/photo/:pid/crop',requireLogin,requireOwner,async (req,res,next)=>{
-  const p=await one(`SELECT p.*,a.title atitle,a.id aid FROM photos p JOIN albums a ON a.id=p.album_id
-    WHERE p.id=? AND a.user_id=?`,req.params.pid,U(res).id);
-  if(!p) return next();
-  res.render('photo_crop',{nav:'album',p});
-});
-site.post('/photo/:pid/crop',requireLogin,requireOwner,async (req,res)=>{
-  const u=U(res);
-  const p=await one(`SELECT p.* FROM photos p JOIN albums a ON a.id=p.album_id
-    WHERE p.id=? AND a.user_id=?`,req.params.pid,u.id);
-  if(!p) return res.redirect(`/${u.name}/album`);
-  const back=`/${u.name}/photo/${p.id}`;
-  const n=v=>Math.max(0,Math.round(+v||0));
-  const x=n(req.body.x), y=n(req.body.y), w=n(req.body.w), h=n(req.body.h);
-  // 太小的框直接退回。裁到 1×1 沒有意義，而且很容易是誤觸。
-  if(w<16||h<16){ flash(req,'切割範圍太小了'); return res.redirect(back); }
-  try{
-    const sharp=(await import('sharp')).default;
-    const src=await readImage(p.url);
-    const meta=await sharp(src).metadata();
-    // 夾在原圖範圍內：前端傳來的數字不可信，超出邊界 sharp 會直接拋錯
-    const cw=Math.min(w, (meta.width||0)-x), chh=Math.min(h, (meta.height||0)-y);
-    if(cw<16||chh<16){ flash(req,'切割範圍超出照片了'); return res.redirect(back); }
-    const buf=await sharp(src).extract({left:x,top:y,width:cw,height:chh}).jpeg({quality:88}).toBuffer();
-    const saved=await save({buffer:buf,mimetype:'image/jpeg'});
-    const oldUrl=p.url, oldThumb=p.thumb;
-    await run('UPDATE photos SET url=?,thumb=?,width=?,height=?,bytes=? WHERE id=?',
-      saved.url,saved.thumb,saved.width,saved.height,saved.bytes,p.id);
-    // 這張如果剛好是相簿封面，封面也要跟著換，不然封面會指到已刪的檔
-    await run('UPDATE albums SET cover=? WHERE id=? AND cover=?',saved.url,p.album_id,oldUrl);
-    await remove(oldUrl); if(oldThumb&&oldThumb!==oldUrl) await remove(oldThumb);
-    flash(req,'照片已切割');
-  }catch(e){ console.error(e); flash(req,'切割失敗，照片沒有變動'); }
-  res.redirect(back);
-});
 site.post('/photo/:pid/caption',requireLogin,requireOwner,async (req,res)=>{ await run('UPDATE photos SET caption=? WHERE id=? AND album_id IN (SELECT id FROM albums WHERE user_id=?)',(req.body.caption||'').slice(0,100),req.params.pid,U(res).id); res.redirect(`/${U(res).name}/photo/${req.params.pid}`); });
 site.post('/photo/:pid/cover',requireLogin,requireOwner,async (req,res)=>{ const p=await one('SELECT * FROM photos WHERE id=?',req.params.pid); if(p) await run('UPDATE albums SET cover=? WHERE id=? AND user_id=?',p.url,p.album_id,U(res).id); res.redirect(`/${U(res).name}/photo/${req.params.pid}`); });
 site.post('/photo/:pid/del',requireLogin,requireOwner,async(req,res)=>{ const p=await one('SELECT p.* FROM photos p JOIN albums a ON a.id=p.album_id WHERE p.id=? AND a.user_id=?',req.params.pid,U(res).id); if(p){ await remove(p.url); if(p.thumb&&p.thumb!==p.url) await remove(p.thumb); await run('DELETE FROM photos WHERE id=?',p.id); await run("UPDATE albums SET cover=COALESCE((SELECT url FROM photos WHERE album_id=? LIMIT 1),'') WHERE id=? AND cover=?",p.album_id,p.album_id,p.url); return res.redirect(`/${U(res).name}/album/${p.album_id}`);} res.redirect(`/${U(res).name}/album`); });
@@ -972,26 +818,6 @@ const blogSide=async res=>({
   recentC:await all('SELECT c.author,c.post_id,p.title FROM comments c JOIN posts p ON p.id=c.post_id WHERE p.user_id=? ORDER BY c.id DESC LIMIT 5',U(res).id),
   months:await all("SELECT substr(created,1,7) ym, count(*) n FROM posts WHERE user_id=? GROUP BY ym ORDER BY ym DESC LIMIT 24",U(res).id),
   cal:await calendar(U(res).id, res.calYm),
-  // 側欄自訂欄位（原站的 #boxFolder，可以有很多個）
-  folders:await all('SELECT * FROM folders WHERE user_id=? ORDER BY seq,id',U(res).id),
-  // 我的訂閱（原站的 #boxRssList）。這裡只讀資料庫裡上一次抓到的結果，
-  // **不等外部網站**——順手在背景更新，下一次進來就是新的。
-  // 直接 await 的話每一頁網誌都會被別人家的 RSS 拖慢。
-  subs:await (async () => {
-    const rows = await all("SELECT * FROM subs WHERE user_id=? AND last_title!='' ORDER BY id",U(res).id);
-    refreshSubs(U(res).id).catch(()=>{});
-    return rows;
-  })(),
-  // 「歷史上的今天」：往年同月同日發過的文（blog.md 記為後期加上的側欄模組）。
-  // created 是 'YYYY-MM-DD HH:MM:SS' 字串，substr(created,6,5) 就是 'MM-DD'——
-  // 兩個驅動都有 substr，不用寫方言分支（其他側欄查詢也是這樣切月份的）。
-  // 只排除「今年的今天」：那些就是今天剛發的，放進「歷史上」很怪。
-  onThisDay:await all(
-    "SELECT id,title,created FROM posts WHERE user_id=? AND substr(created,6,5)=? "
-    + "AND substr(created,1,4)!=? ORDER BY created DESC LIMIT 5",
-    U(res).id,
-    new Date().toLocaleDateString('sv-SE').slice(5),
-    new Date().toLocaleDateString('sv-SE').slice(0,4)),
   // 側欄「最新引用」：blogside.ejs 讀 locals.trackbacks，但一直沒人給它，
   // 所以站上明明有引用，那一格永遠印「尚無引用」。
   // 側欄「最新引用」＝**別人引用了我哪一篇**，所以要 join t.from_post
@@ -1013,7 +839,7 @@ const blogSide=async res=>({
   // 沒有任何文章設過 topic 就回空字串，整塊不印，跟原版一樣
   // （blog_2013_index_treehouse16.html 那位沒設分類，該存檔就沒有這個節點）。
   blogTopic:(await one("SELECT topic FROM posts WHERE user_id=? AND topic!='' GROUP BY topic ORDER BY count(*) DESC LIMIT 1",U(res).id))?.topic||'',
-  moods:MOODS, weathers:WEATHERS, blogTopics:BLOG_TOPICS, places:PLACES});
+  moods:MOODS, weathers:WEATHERS, blogTopics:BLOG_TOPICS});
 site.get('/blog',async (req,res)=>{ const cat=req.query.cat, ym=/^\d{4}-\d{2}$/.test(req.query.ym||'')?req.query.ym:null, page=Math.max(1,+req.query.p||1), per=10;
   const day=/^\d{4}-\d{2}-\d{2}$/.test(req.query.d||'')?req.query.d:null;
   // 日曆顯示的月份：?cal= 優先，其次跟著目前篩選的月份／日期
@@ -1035,36 +861,6 @@ site.get('/blog/search',async (req,res)=>{
   res.render('blog_search',{nav:'blog',k,inBody,rows,...await blogSide(res)});
 });
 // RSS
-// ── 看地圖 ───────────────────────────────────────────────────────────────
-// 原站網誌側欄的 boxDate 裡有一顆「看地圖」（WRETCH_SPEC.md:278、:382），
-// 但**整個功能零存檔**：assets_src2 與 assets_src 的 HTML/CSS 搜不到
-// 「看地圖」「map」「maps.google」任何一個，兩份完整的 #boxDate 逐字看過，
-// 裡面只有月份下拉。所以這一頁是自製的，不是照抄。
-//
-// ⚠ 而且不做「假地圖」：albums.place 與新加的 posts.place 是四選一的**地區分類**
-// （台灣／香港與澳門／中國／世界各地，src/taxonomy.js），**不是經緯度**。
-// 手上沒有座標，畫一張圖釘標記只會是編造。
-// 所以「看地圖」＝按地區把這個人的文章與相簿攤開來看。
-//
-// 路由順序：這一支在 /blog/:id 之前，但就算不小心排到後面也不會出事——
-// router 層的數字參數守門員會把 'map' 擋下來交給下一條（見檔案上方那段）。
-site.get('/blog/map',async (req,res)=>{
-  const uid=U(res).id, isOwner=res.locals.isOwner;
-  const groups=[];
-  for(const place of PLACES){
-    const posts=await all(
-      `SELECT id,title,created,place FROM posts WHERE user_id=? AND place=?`
-      + (isOwner?'':" AND pass=''") + ' ORDER BY id DESC LIMIT 20', uid, place);
-    // 相簿也一起攤出來：地區這個欄位相簿本來就有，只看文章會少一半
-    const albums=await all(
-      `SELECT id,title,cover,place,(SELECT count(*) FROM photos WHERE album_id=albums.id) n
-       FROM albums WHERE user_id=? AND place=?`
-      + (isOwner?'':" AND pass='' AND friends_only=0") + ' ORDER BY id DESC LIMIT 12', uid, place);
-    if(posts.length||albums.length) groups.push({place,posts,albums});
-  }
-  const none=(await one('SELECT count(*) c FROM posts WHERE user_id=? AND place=?',uid,'')).c;
-  res.render('blog_map',{nav:'blog',groups,none,...await blogSide(res)});
-});
 site.get('/blog/rss',async (req,res)=>{
   const u=U(res), origin=`${req.protocol}://${req.get('host')}`;
   const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&apos;'}[c]));
@@ -1143,7 +939,7 @@ const myPhotos = async res => await all(`SELECT p.id,p.thumb,p.url FROM photos p
 site.get('/blog/new',requireLogin,requireOwner,async (req,res)=>res.render('post_edit',{nav:'blog',post:null,photos:await myPhotos(res),emotes:EMOTES,...await blogSide(res)}));
 site.post('/blog/new',requireLogin,requireOwner,async (req,res)=>{ const {title,body,category,mood,weather}=req.body;
   if(!title?.trim()||!body?.trim()) return res.redirect(`/${U(res).name}/blog/new`);
-  const r=await run('INSERT INTO posts(user_id,title,body,category,mood,weather,pass,topic,place) VALUES(?,?,?,?,?,?,?,?,?)',U(res).id,title.trim().slice(0,100),body.slice(0,50000),(category||'未分類').trim().slice(0,20)||'未分類',MOODS.includes(mood)?mood:'',WEATHERS.includes(weather)?weather:'',(req.body.pass||'').slice(0,20),isBlogTopic(req.body.topic)?req.body.topic:'',isPlace(req.body.place)?req.body.place:'');
+  const r=await run('INSERT INTO posts(user_id,title,body,category,mood,weather,pass,topic) VALUES(?,?,?,?,?,?,?,?)',U(res).id,title.trim().slice(0,100),body.slice(0,50000),(category||'未分類').trim().slice(0,20)||'未分類',MOODS.includes(mood)?mood:'',WEATHERS.includes(weather)?weather:'',(req.body.pass||'').slice(0,20),isBlogTopic(req.body.topic)?req.body.topic:'');
   await act(U(res).id,'blog',title.trim().slice(0,100),`/${U(res).name}/blog/${r.lastInsertRowid}`);
   res.redirect(`/${U(res).name}/blog/${r.lastInsertRowid}`); });
 const postOf=async (req,res,next)=>{ const p=await one('SELECT * FROM posts WHERE id=? AND user_id=?',req.params.id,U(res).id); if(!p) return next('route'); res.locals.post=p; next(); };
@@ -1160,16 +956,12 @@ site.get('/blog/:id',postOf,async (req,res)=>{ const p=res.locals.post;
   res.render('post',{nav:'blog',post:p,...await blogSide(res),
     faved: res.locals.me?!!await one('SELECT 1 FROM favs WHERE user_id=? AND post_id=?',res.locals.me.id,p.id):false,
     favN: (await one('SELECT count(*) c FROM favs WHERE post_id=?',p.id)).c,
-    // 「誰來收藏」：原站按下收藏數會展開收藏過這篇的人（blog.md 列為後期功能）。
-    // 資料本來就在 favs 裡，只是之前沒有印出來。
-    collectors:await all(`SELECT u.name,u.nick,u.avatar FROM favs f JOIN users u ON u.id=f.user_id
-      WHERE f.post_id=? ORDER BY f.created DESC LIMIT 30`,p.id),
     comments:await all('SELECT * FROM comments WHERE post_id=? ORDER BY id',p.id),
     trackbacks:await all('SELECT t.*,p.title,p.id pid,u.name uname FROM trackbacks t JOIN posts p ON p.id=t.from_post JOIN users u ON u.id=p.user_id WHERE t.post_id=?',p.id),
     prev:await one('SELECT id,title FROM posts WHERE user_id=? AND id<? ORDER BY id DESC',U(res).id,p.id),next:await one('SELECT id,title FROM posts WHERE user_id=? AND id>? ORDER BY id',U(res).id,p.id)}); });
 site.get('/blog/:id/edit',requireLogin,requireOwner,postOf,async (req,res)=>res.render('post_edit',{nav:'blog',post:res.locals.post,photos:await myPhotos(res),emotes:EMOTES,...await blogSide(res)}));
 site.post('/blog/:id/edit',requireLogin,requireOwner,postOf,async (req,res)=>{ const {title,body,category,mood,weather}=req.body;
-  await run('UPDATE posts SET title=?,body=?,category=?,mood=?,weather=?,pass=?,topic=?,place=? WHERE id=?',(title||res.locals.post.title).trim().slice(0,100),(body||'').slice(0,50000),(category||'未分類').trim().slice(0,20)||'未分類',MOODS.includes(mood)?mood:'',WEATHERS.includes(weather)?weather:'',(req.body.pass||'').slice(0,20),isBlogTopic(req.body.topic)?req.body.topic:'',isPlace(req.body.place)?req.body.place:'',res.locals.post.id);
+  await run('UPDATE posts SET title=?,body=?,category=?,mood=?,weather=?,pass=?,topic=? WHERE id=?',(title||res.locals.post.title).trim().slice(0,100),(body||'').slice(0,50000),(category||'未分類').trim().slice(0,20)||'未分類',MOODS.includes(mood)?mood:'',WEATHERS.includes(weather)?weather:'',(req.body.pass||'').slice(0,20),isBlogTopic(req.body.topic)?req.body.topic:'',res.locals.post.id);
   res.redirect(`/${U(res).name}/blog/${res.locals.post.id}`); });
 site.post('/blog/:id/del',requireLogin,requireOwner,postOf,async (req,res)=>{ await run('DELETE FROM posts WHERE id=?',res.locals.post.id); res.redirect(`/${U(res).name}/blog`); });
 // 上鎖文章：沒解鎖就不能回應、推薦、引用（引用會複製內文，等於繞過密碼）
