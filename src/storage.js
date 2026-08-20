@@ -97,3 +97,16 @@ export async function remove(url){
   try{ if (R2 && url.startsWith(process.env.R2_PUBLIC_URL)) await R2.c.send(new R2.DeleteObjectCommand({Bucket:process.env.R2_BUCKET,Key:url.slice(process.env.R2_PUBLIC_URL.replace(/\/$/,'').length+1)}));
   else if (url.startsWith('/uploads/')) fs.unlinkSync(path.join(DATA_DIR,url.replace('/uploads/','uploads/'))); }catch{}
 }
+
+// 把已經存起來的圖片讀回記憶體。切割照片要先拿到原圖才能裁。
+//   /uploads/…      本機磁碟（沒有設 R2 時走這條）
+//   https://…r2.dev 正式站的 R2，公開網址，直接 HTTP 抓
+// 只給站內功能用，網址一律來自資料庫（不是使用者當場給的字串），
+// 所以這裡不需要 SSRF 那一套檢查——但也因此**不要**把這支開放給外部輸入。
+export async function readImage(url){
+  if (url.startsWith('/uploads/'))
+    return fs.readFileSync(path.join(DATA_DIR, url.replace('/uploads/', 'uploads/')));
+  const r = await fetch(url);
+  if (!r.ok) throw new Error('讀不到原圖：' + r.status);
+  return Buffer.from(await r.arrayBuffer());
+}

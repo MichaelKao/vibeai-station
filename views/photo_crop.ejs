@@ -1,0 +1,96 @@
+<%
+  /* 切割照片 /:name/photo/:pid/crop（只有站主自己進得來）
+     ═══════════════════════════════════════════════════════════════════════
+     【零存檔，整頁自製】
+     原站照片頁的工具列有一顆「切割照片(NEW)」——證據只有一張截圖的逐字轉寫
+     （assets_src2/spec/shot.md:493，2012 英文版：搜尋更多 切割照片(NEW)
+     Report this Picture）。切割介面本身**一份 HTML 都沒有存下來**，
+     所以這一頁的版面是我們自己排的，不是照抄。
+
+     照 WRETCH_2012.md §3-A 的規矩：自製的東西要用 2012 的元件語言，
+     不自創第二種頁框——外框走一般相簿內頁的 head2012_site/foot2012_site，
+     按鈕沿用 .yui3_button_content，配色不新增。
+
+     互動：在圖上拖曳畫出範圍，四個數字欄位跟著更新；沒有 JS 也能用
+     （直接填數字送出）。座標一律以**原圖像素**為準，畫面上的圖是縮放過的，
+     所以送出前要乘回去——這一步錯了就會裁到不對的地方。 */
+%>
+<%- include('partials/head2012_site', {
+      w2Title:   '切割照片 - ' + u.name + "'s Album - " + SITE_NAME,
+      w2Service: 'Album',
+      w2Head:    'none',
+    }) %>
+
+<table width="700" border="0" cellpadding="0" cellspacing="0" align="center">
+<tr>
+<td>
+  <div class="w2a-crop">
+    <p><b>切割照片</b>　在照片上拖曳出要保留的範圍，然後按「切割」。</p>
+
+    <div class="w2a-crop-stage" id="stage">
+      <img id="cropimg" src="<%= p.url %>" alt="<%= p.caption || '照片' %>">
+      <div id="sel" class="w2a-crop-sel"></div>
+    </div>
+
+    <form method="post" action="/<%= u.name %>/photo/<%= p.id %>/crop" id="cropform">
+      <p class="small-e">
+        原圖 <span id="natsize"><%= p.width || '?' %>×<%= p.height || '?' %></span> 像素。
+        座標以原圖為準，沒有滑鼠也可以直接填數字。
+      </p>
+      X <input type="number" name="x" id="fx" value="0" min="0" size="5">
+      Y <input type="number" name="y" id="fy" value="0" min="0" size="5">
+      寬 <input type="number" name="w" id="fw" value="<%= p.width || 0 %>" min="16" size="5">
+      高 <input type="number" name="h" id="fh" value="<%= p.height || 0 %>" min="16" size="5">
+      <input type="submit" class="yui3_button_content" value="切割">
+      <a href="/<%= u.name %>/photo/<%= p.id %>">取消</a>
+    </form>
+
+    <p class="small-e">
+      ⚠ 切割會**覆蓋原本的照片**，原圖不會留著（原站也是這樣，沒有另存新檔）。
+    </p>
+  </div>
+</td>
+</tr>
+</table>
+
+<script>
+/* 拖曳選取。座標換算是這一頁唯一容易寫錯的地方：
+   畫面上的 <img> 被 CSS 縮到最多 640px 寬，但要送給後端的是**原圖像素**，
+   所以每個值都要除以 (顯示寬 / 原圖寬)。 */
+(function () {
+  var img = document.getElementById('cropimg');
+  var sel = document.getElementById('sel');
+  var stage = document.getElementById('stage');
+  var f = { x: document.getElementById('fx'), y: document.getElementById('fy'),
+            w: document.getElementById('fw'), h: document.getElementById('fh') };
+  var start = null;
+
+  function scale() { return img.naturalWidth ? img.width / img.naturalWidth : 1; }
+
+  img.addEventListener('load', function () {
+    document.getElementById('natsize').textContent = img.naturalWidth + '×' + img.naturalHeight;
+    f.w.value = img.naturalWidth; f.h.value = img.naturalHeight;
+  });
+
+  function pos(e) {
+    var r = img.getBoundingClientRect();
+    return { x: Math.min(Math.max(e.clientX - r.left, 0), r.width),
+             y: Math.min(Math.max(e.clientY - r.top, 0), r.height) };
+  }
+  function paint(a, b) {
+    var x = Math.min(a.x, b.x), y = Math.min(a.y, b.y);
+    var w = Math.abs(a.x - b.x), h = Math.abs(a.y - b.y);
+    sel.style.display = 'block';
+    sel.style.left = x + 'px'; sel.style.top = y + 'px';
+    sel.style.width = w + 'px'; sel.style.height = h + 'px';
+    var s = scale() || 1;
+    f.x.value = Math.round(x / s); f.y.value = Math.round(y / s);
+    f.w.value = Math.round(w / s); f.h.value = Math.round(h / s);
+  }
+  stage.addEventListener('mousedown', function (e) { e.preventDefault(); start = pos(e); paint(start, start); });
+  stage.addEventListener('mousemove', function (e) { if (start) paint(start, pos(e)); });
+  window.addEventListener('mouseup', function () { start = null; });
+})();
+</script>
+
+<%- include('partials/foot2012_site') %>
