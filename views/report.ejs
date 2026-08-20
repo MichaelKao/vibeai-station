@@ -1,0 +1,40 @@
+<%
+  /* 檢舉頁 /report?kind=&target=&url=
+     ═══════════════════════════════════════════════════════════════════════
+     原站的檢舉是跳到 cc.wretch.cc/help/prosecute.php 另一頁
+     （album_show_zh_jssophia.html:317 那條連結），**不靠 JS**。
+
+     本站原本只做了「同頁展開的表單」，四個入口都是 `<a href="#">`＋
+     display:none 的表單，kind 與 target 靠 JS 填——關掉 JS 就完全不能檢舉，
+     點下去只是網址多一個 #。這一頁補上不靠 JS 的那條路。
+
+     有 JS 時仍走原本的同頁展開（比較不打斷閱讀），這一頁是後援。
+     版面走站台層級的 2012 外框，不自創第二種頁框。 */
+  const rpKind = { post: '文章', comment: '回應', guestbook: '留言', photo: '照片' }[kind] || '內容';
+%>
+<%- include('partials/head2012', { title: '檢舉 - ' + SITE_NAME }) %>
+
+<div class="belt">
+  <div id="wfp-report" class="mod">
+    <div class="hd"><h2>檢舉這則<%= rpKind %></h2></div>
+    <div class="bd">
+      <p class="w2-sub">
+        請說明你認為這則<%= rpKind %>有什麼問題，站長會盡快處理。
+        <% if (url) { %><br>被檢舉的位置：<a href="<%= url %>"><%= url %></a><% } %>
+      </p>
+      <form method="post" action="/report">
+        <input type="hidden" name="kind" value="<%= kind %>">
+        <input type="hidden" name="target" value="<%= target %>">
+        <input type="hidden" name="url" value="<%= url %>">
+        <p><textarea name="reason" rows="5" cols="50" maxlength="500" required
+                     placeholder="例如：內容涉及侵權、廣告灌水、不當言論…"></textarea></p>
+        <p>
+          <button type="submit">送出檢舉</button>
+          <% if (url) { %>　<a href="<%= url %>">取消，回上一層</a><% } %>
+        </p>
+      </form>
+    </div>
+  </div>
+</div>
+
+<%- include('partials/foot2012') %>

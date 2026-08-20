@@ -213,6 +213,17 @@ app.get('/bgm',(req,res)=>{
 });
 
 // 檢舉（無名各處都有「檢舉」連結，送到站長後台處理）
+// 檢舉的獨立頁面。
+// ⚠ 站上四個檢舉入口（文章／回應／留言／照片）都是 `<a href="#">` 加一個
+// display:none 的表單，kind 與 target 靠 JS 填——**沒有 JS 就完全不能檢舉**，
+// 點下去只是網址多一個 #。原站的檢舉是跳到 cc.wretch.cc/help/prosecute.php
+// 另一頁（album_show_zh_jssophia.html:317 那條連結就是），本來就不靠 JS。
+// 所以補一個 GET 頁：連結直接帶參數過來，有沒有 JS 都能用。
+app.get('/report',(req,res)=>res.render('report',{
+  kind: qs1(req.query.kind).slice(0,20),
+  target: +qs1(req.query.target) || 0,
+  url: safePath(qs1(req.query.url)),
+}));
 app.post('/report',async (req,res)=>{
   const {kind,target,url,reason}=req.body;
   // 只收站內相對路徑；擋掉 javascript: 與 //host（否則會變成後台的 XSS／開放轉址）
@@ -661,7 +672,20 @@ site.post('/settings',requireLogin,requireOwner,upload.single('avatar'),async(re
   // 大頭貼走同一條 save()。它會出現在訪客記錄、好友清單、留言板、排行榜——
   // 也就是**別人的頁面**上，所以壞圖的擴散面比相簿照片更廣，一定要擋住。
   if(req.file){
-    try { const s=await save(req.file); avatar=s.thumb; await remove(u.avatar); }
+    // ⚠ 大頭貼原本**完全不走配額**（usedBytes 只 SUM photos.bytes），
+    // 任何登入者都能無上限地換頭貼把磁碟灌爆，而畫面上還顯示「0.0 MB / 500.0 MB」。
+    // 換一張的大小很小，這裡只要擋住「已經爆了還繼續傳」就夠。
+    const qerr = await quotaError(u.id, req.file.size || 0);
+    if (qerr) {
+      avatarErr = qerr;
+    } else try {
+      const s=await save(req.file);
+      avatar=s.thumb;
+      // ⚠ save() 會產出**大圖與縮圖兩個檔**，但大頭貼只採用縮圖。
+      // 不刪掉那張 1024px 的大圖，每換一次頭貼就在磁碟上留一個沒人指向的孤兒檔。
+      if (s.url && s.url !== s.thumb) await remove(s.url);
+      await remove(u.avatar);
+    }
     catch (e) { if(e && e.code==='BAD_IMAGE') avatarErr=e.message; else throw e; }
   }
   await run('UPDATE users SET nick=?,intro=?,music=?,css=?,css_blog=?,avatar=?,theme=? WHERE id=?',cut((nick||'').trim()||u.nick, 20),(intro||'').slice(0,500),cleanMusic(music),(css||'').slice(0,20000),(css_blog||'').slice(0,20000),avatar,isSkin(req.body.theme)?(req.body.theme||''):'',u.id);
@@ -771,9 +795,15 @@ site.post('/friendgroups/:id/edit',requireLogin,requireOwner,async (req,res)=>{
   res.redirect(`/${U(res).name}/friends`); });
 site.post('/friendgroups/:id/del',requireLogin,requireOwner,async (req,res)=>{
   const uid=U(res).id;
-  // 刪組不刪人：組裡的好友退回預設組（原站的 Default group）
-  await run('UPDATE friends SET group_id=0 WHERE user_id=? AND group_id=?',uid,req.params.id);
+  // 刪組不刪人：組裡的好友退回預設組（原站的 Default group）。
+  // ⚠ 順序要**先刪組再掃孤兒**。反過來的話，在 UPDATE 與 DELETE 之間有人
+  // 把好友換進這一組，那筆 group_id 就會指向一個已經不存在的分組——
+  // 篩選條件比對的是 group_id，孤兒值既不等於 0 也不等於任何現存分組，
+  // **那位好友會從所有分組頁消失**（稽核實測 5 次全中）。
   await run('DELETE FROM friend_groups WHERE id=? AND user_id=?',req.params.id,uid);
+  // 掃掉指向已刪分組的孤兒值（不只這一組，順手把歷史殘留一起修好）
+  await run('UPDATE friends SET group_id=0 WHERE user_id=? AND COALESCE(group_id,0)<>0'
+    + ' AND NOT EXISTS (SELECT 1 FROM friend_groups g WHERE g.id=friends.group_id)',uid);
   res.redirect(`/${U(res).name}/friends`); });
 site.get('/card',async (req,res)=>res.render('card',{nav:'card',
   // 收到的禮物顯示在名片頁（原站的送禮物就是掛在個人資料上）
@@ -849,7 +879,15 @@ function friendQuery(uid, rel, cate, q){
   // 分類只有「我加的」那兩種關係才有意義。
   // cate 是**分組 id**（原站 #cateSelect 的 option value 就是 group id，
   // 0＝Default group、-1＝全部），不是分組名。
-  if(cate!=='' && (rel===0||rel===2)){ where+=' AND COALESCE(f.group_id,0)=?'; args.push(+cate||0); }
+  // ⚠ 「預設組」要把**孤兒值**也算進去：分組被刪掉之後，指向它的 group_id
+  // 既不等於 0 也不等於任何現存分組，那位好友會從所有分組頁消失。
+  // 寫入端已經會掃孤兒，這裡是讀取端的保險（也順便讓歷史殘留看得見）。
+  if(cate!=='' && (rel===0||rel===2)){
+    if((+cate||0)===0)
+      where+=' AND (COALESCE(f.group_id,0)=0'
+           + ' OR NOT EXISTS (SELECT 1 FROM friend_groups g2 WHERE g2.id=f.group_id))';
+    else { where+=' AND COALESCE(f.group_id,0)=?'; args.push(+cate); }
+  }
   // #searchInput 原站只搜帳號（js_lang_searchTip = 'Search ID'），照做
   if(q){ where+=' AND u.name LIKE ?'; args.push('%'+q+'%'); }
   return {from,where,grp,args};
@@ -1069,7 +1107,13 @@ site.post('/photo/:pid/del',requireLogin,requireOwner,async(req,res)=>{ const p=
   // 封面可能是大圖也可能是縮圖（上傳存縮圖、「設為封面」存大圖），兩種都要比對，
   // 不然刪掉當封面的那張之後，相簿封面會指到已經刪掉的檔＝破圖。
   // 換上去的也用縮圖，跟上傳時的慣例一致。
-  await run("UPDATE albums SET cover=COALESCE((SELECT thumb FROM photos WHERE album_id=? LIMIT 1),'') WHERE id=? AND (cover=? OR cover=?)",p.album_id,p.album_id,p.url,p.thumb); return res.redirect(`/${U(res).name}/album/${p.album_id}`);} res.redirect(`/${U(res).name}/album`); });
+  // ⚠ 條件不要寫成「封面等於剛刪掉的那張」——兩個人同時刪不同照片時，
+  // A 把封面換成 photo2，B 同時把 photo2 刪了，封面就指向一個不存在的檔（稽核 6 次全中）。
+  // 改成**自我修復**：只要封面指向的照片已經不在了，就換成現存的第一張。
+  // 這個寫法可以重複跑、也會順手把歷史上留下來的破圖封面一起修好。
+  await run("UPDATE albums SET cover=COALESCE((SELECT thumb FROM photos WHERE album_id=? ORDER BY id LIMIT 1),'')"
+    + " WHERE id=? AND cover<>'' AND NOT EXISTS (SELECT 1 FROM photos WHERE album_id=? AND (thumb=albums.cover OR url=albums.cover))",
+    p.album_id,p.album_id,p.album_id); return res.redirect(`/${U(res).name}/album/${p.album_id}`);} res.redirect(`/${U(res).name}/album`); });
 
 // 網誌
 // 文章日曆：回傳該月的格子，有發文的日期給連結（無名側欄的「文章日曆」）
@@ -1483,9 +1527,12 @@ site.post('/guestbook',async (req,res)=>{ const {author,subject,body,secret}=req
     // author_id 只有登入才有值：原版每一則留言的暱稱與大頭貼都連回留言者的小站，
     // 認證章也掛在那裡。訪客留言留 NULL，view 就退回純文字。
     await run('INSERT INTO guestbook(user_id,author,author_id,subject,body,secret) VALUES(?,?,?,?,?,?)',U(res).id,who.trim().slice(0,20),res.locals.me?.id||null,(subject||'').trim().slice(0,40),body.trim().slice(0,500),secret?1:0);
-    // 通知板主有新留言：只有登入者會觸發，且 10 分鐘內只發一則，避免被灌爆
+    // 通知板主有新留言：只有登入者會觸發，且 10 分鐘內只發一則，避免被灌爆。
+    // ⚠ 節流條件要限定在**這一種**通知上（title）。
+    // 原本只看「10 分鐘內有沒有任何 sysmsg」，於是站長一發群發公告，
+    // 全站每個人的信箱裡都有一則新訊息 → **所有人接下來 10 分鐘都收不到留言通知**。
     if(res.locals.me && res.locals.me.id!==U(res).id &&
-       !await one("SELECT 1 FROM sysmsg WHERE user_id=? AND created>datetime('now','localtime','-10 minutes')",U(res).id))
+       !await one("SELECT 1 FROM sysmsg WHERE user_id=? AND title='你有新的留言' AND created>datetime('now','localtime','-10 minutes')",U(res).id))
       await run('INSERT INTO sysmsg(user_id,title,body) VALUES(?,?,?)',U(res).id,'你有新的留言',`${res.locals.me.nick} 在你的留言板留言了。`);
   }
   res.redirect(`/${U(res).name}/guestbook`); });

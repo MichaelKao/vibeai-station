@@ -497,6 +497,21 @@ for(const p of ['/alpha/album/abc','/alpha/photo/abc','/alpha/blog/abc','/join/a
   ok('404 非數字編號 '+p, (await get(p)).status===404);
 }
 
+console.log('\n=== 檢舉與通知 ===');
+// 檢舉四個入口原本都是 <a href="#"> ＋ display:none 的表單，kind/target 靠 JS 填，
+// **關掉 JS 就完全不能檢舉**。原站的檢舉本來就是跳到另一頁，不靠 JS。
+ok('檢舉有獨立頁面（不靠 JS）', (await get('/report?kind=post&target=1&url=%2Falpha%2Fblog%2F1')).status===200);
+ok('檢舉頁帶得回原本的位置', (await text('/report?kind=post&target=1&url=%2Falpha%2Fblog%2F1')).includes('/alpha/blog/1'));
+ok('文章頁的檢舉連結指向那一頁', (await text('/alpha/blog/1')).includes('/report?kind=post'));
+// ⚠ 留言通知的節流原本只看「10 分鐘內有沒有**任何** sysmsg」，
+// 於是站長一發群發公告，全站每個人接下來 10 分鐘都收不到留言通知。
+ok('群發公告不會壓掉留言通知', await (async()=>{
+  await post('/admin/broadcast',{body:'測試群發'},A);          // alpha 是站長
+  await post('/bravo/guestbook',{subject:'嗨',body:'留言測試'},C);
+  const t=await text('/bravo/guestbook?tab=sys',Bc);
+  return t.includes('你有新的留言');
+})());
+
 console.log('\n=== 搜尋 ===');
 // 三區的標題數字要是**真的命中數**，不是這一頁的筆數（各區 LIMIT 30）。
 // 原本 view 直接印 rows.length，搜到 2000 筆也只會顯示「站友（30）」。

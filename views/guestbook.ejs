@@ -190,7 +190,7 @@ document.addEventListener('click', function(e){
         <li class="msg_man"><span>暱稱：</span><% if (hide) { %>悄悄話<% } else { %><%- include('partials/vipicon2012', { viUser: { vip: m.a_vip }, viStyle: 'auth' }) %><% if (m.a_name) { %><a href="/<%= m.a_name %>/guestbook" target="_blank"><%= m.author %></a><% } else { %><%= m.author %><% } %><% } %></li>
         <li class="msg_title"><span>主題：</span><strong><%= hide ? '悄悄話' : (m.subject || '無標題') %></strong><cite><% if (m.secret) { %><img src="/img/wretch2012/gb/lock.gif" width="21" height="16" alt="悄悄話"><% } %></cite></li>
         <li class="msg_date"><span>時間：</span><%= m.created %>
-          &nbsp;<a href="#" class="reportlink" data-kind="guestbook" data-id="<%= m.id %>">檢舉</a></li>
+          &nbsp;<a href="/report?kind=guestbook&amp;target=<%= m.id %>&amp;url=<%= encodeURIComponent("/" + u.name + "/guestbook") %>" class="reportlink" data-kind="guestbook" data-id="<%= m.id %>">檢舉</a></li>
         <li class="msg_word"><span>內容：</span><strong><% if (hide) { %>悄悄話<% } else { %><%- gbBody(m.body) %><% } %></strong></li>
       </ul>
     </li>

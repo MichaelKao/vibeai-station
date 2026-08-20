@@ -130,7 +130,7 @@
                 #collectbtn。我原本把兩件事併成一顆送出鈕，結果彈窗只能用 hover 開、
                 移開又關不掉，觸控與鍵盤更是完全打不開。照原版拆回兩顆。 %>
             | <a href="javascript:void(0)" id="showCollector" role="button" tabindex="0">收藏(<%= favN %>)</a>
-            | <a href="#" class="reportlink" data-kind="post" data-id="<%= post.id %>">檢舉</a>
+            | <a href="/report?kind=post&amp;target=<%= post.id %>&amp;url=<%= encodeURIComponent(here) %>" class="reportlink" data-kind="post" data-id="<%= post.id %>">檢舉</a>
                       </div>
 
 <%# ── 誰來收藏（#friend-picker 彈窗）─────────────────────────────
@@ -267,7 +267,7 @@
         </li>
         <li class="comments-post">
           <% if (c.homepage) { %><a class='postuser' target='_blank' href='<%= c.homepage %>'><%= c.author %></a><% } else { %><a class='postuser'><%= c.author %></a><% } %><% if (c.email) { %><a class='postemail' href='mailto:<%= c.email %>'><img src='<%= IMG %>/email.gif' width="25" height="25" border="0" align='absmiddle' alt="email"></a><% } %> at <%= wStamp(c.created) %> comment
-          | <a href="#" class="reportlink" data-kind="comment" data-id="<%= c.id %>">檢舉</a>
+          | <a href="/report?kind=comment&amp;target=<%= c.id %>&amp;url=<%= encodeURIComponent(here) %>" class="reportlink" data-kind="comment" data-id="<%= c.id %>">檢舉</a>
           <% if (isOwner) { %>| <form method="post" action="<%= here %>/comment/<%= c.id %>/del"><button>刪除</button></form><% } %>
         </li>
       </ul>

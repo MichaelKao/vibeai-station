@@ -184,7 +184,7 @@
         改掛本站真的有的「一頁瀏覽」（?all=1）。 %>
     <a style="font-size=8pt" href="/<%= u.name %>/album/<%= p.album_id %>?all=1" target="_blank"><img  class="newVideoUpdate" alt="newVideoUpdate" src="/img/wretch2012/album/new_album.gif" border="0" />一頁瀏覽</a>&nbsp;&nbsp;
 &nbsp;
-<a style="font-size=8pt" href="#" class="w2a-reportlink" data-kind="photo" data-id="<%= p.id %>">檢舉這張相片</a>
+<a style="font-size=8pt" href="/report?kind=photo&amp;target=<%= p.id %>&amp;url=<%= encodeURIComponent("/" + u.name + "/photo/" + p.id) %>" class="w2a-reportlink" data-kind="photo" data-id="<%= p.id %>">檢舉這張相片</a>
 <br/>
 </p>
 <% if (phStrip.length) { %>
