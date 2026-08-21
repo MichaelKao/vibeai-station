@@ -27,9 +27,12 @@
         <div class="hd"><h2><%= title %></h2></div>
         <div class="bd">
           <p class="w2-msg"><%= msg %></p>
-          <p class="w2-msg-back"><a href="<%= backUrl %>">回上一頁</a>
-            <% if (locals.u) { %>　<a href="/<%= u.name %>"><%= u.nick %> 的小站</a><% } %>
-            　<a href="/">回首頁</a></p>
+          <%# ⚠ backUrl 退到底就是 '/'，跟旁邊的「回首頁」是同一個地方。
+              兩顆長得不一樣的連結導去同一頁，使用者會以為自己點錯了、
+              再點一次另一顆——白繞一圈。落點相同時就只印一顆。 %>
+          <p class="w2-msg-back"><% if (backUrl !== '/') { %><a href="<%= backUrl %>">回上一頁</a>　<% } %>
+            <% if (locals.u) { %><a href="/<%= u.name %>"><%= u.nick %> 的小站</a>　<% } %>
+            <a href="/">回首頁</a></p>
         </div>
       </div>
 

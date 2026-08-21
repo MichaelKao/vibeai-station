@@ -18,6 +18,8 @@ const KEY  = process.env.RESEND_API_KEY || '';
 const FROM = process.env.MAIL_FROM || 'vibeai 小站 <no-reply@send.vibeaico.com>';
 
 export const hasMail = !!KEY;
+// 正式站的判斷跟 server.js 同一套：Railway 一定有 DATABASE_URL，本機沒有。
+const IS_PROD = !!process.env.DATABASE_URL;
 
 /** 現在的寄信狀態，給 /healthz 用。不洩漏任何金鑰內容。 */
 export const mailState = () => (hasMail ? 'resend' : 'off');
@@ -31,6 +33,15 @@ export async function sendMail({ to, subject, html, text }) {
   if (!to || !subject) return { ok: false, error: '缺少收件人或主旨' };
 
   if (!hasMail) {
+    // ⚠ 這一段會把整封信印進 log，包含忘記密碼的重設連結。
+    // 本機開發沒問題（就是為了讓人複製連結來測），但正式站漏設
+    // RESEND_API_KEY 的話，任何看得到 Railway log 的人都能撿走別人的
+    // 重設憑證＝直接接管帳號。所以正式環境只留一行警告，不印內容。
+    if (IS_PROD) {
+      console.error('[mail] 正式環境沒有設 RESEND_API_KEY，這封信沒有寄出，' +
+        '內容也不會印進 log（裡面可能有重設密碼的連結）。收件人：' + String(to).replace(/(.).*(@.*)/, '$1***$2'));
+      return { ok: false, error: '寄信服務還沒設定好，請聯絡站長' };
+    }
     // 本機開發：印出來讓人可以直接複製連結測試。
     console.log('─'.repeat(60));
     console.log('[mail] 沒有 RESEND_API_KEY，這封信只印在這裡：');

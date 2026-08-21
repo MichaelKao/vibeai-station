@@ -70,7 +70,9 @@
 <% if (!posts.length) { %>
       <div class="date">
         <div class="datediv">
-          還沒有文章        </div>
+          <%# ⚠ 原本只有「還沒有文章」四個字。「發表文章」的連結只在側欄清單裡，
+              新站主進來看到這一句，會在內容區找按鈕，找不到。空狀態要直接給路。 %>
+          <% if (isOwner) { %>還沒有文章。<a href="/<%= u.name %>/blog/new">發表第一篇文章</a><% } else { %><%= u.nick %> 還沒有發表文章。<% } %>        </div>
       </div>
 <% } %>
 

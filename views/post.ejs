@@ -312,7 +312,12 @@
           <p><%= c.body %></p>
         </li>
         <li class="comments-post">
-          <% if (c.homepage) { %><a class='postuser' target='_blank' href='<%= c.homepage %>'><%= c.author %></a><% } else { %><a class='postuser'><%= c.author %></a><% } %><% if (c.email) { %><a class='postemail' href='mailto:<%= c.email %>'><img src='<%= IMG %>/email.gif' width="25" height="25" border="0" align='absmiddle' alt="email"></a><% } %> at <%= wStamp(c.created) %> comment
+          <% if (c.homepage) { %><a class='postuser' target='_blank' href='<%= c.homepage %>'><%= c.author %></a><% } else { %><a class='postuser'><%= c.author %></a><% } %><%# ⚠ 信封那顆連結原本直接就是 mailto: 加上留言者填的信箱——明文印在
+        公開頁面的原始碼裡，爬蟲拉一次文章頁就能把全站留言者的信箱收割乾淨，
+        而受害的是替你留言的朋友，不是你。
+        原站的信封圖示照留（版型一個像素都不動），只是位址不進 HTML：
+        連結指到 /contact/comment/:id，要登入才走得通，機器人拿不到。 %>
+<% if (c.email) { %><a class='postemail' href='/contact/comment/<%= c.id %>'><img src='<%= IMG %>/email.gif' width="25" height="25" border="0" align='absmiddle' alt="email"></a><% } %> at <%= wStamp(c.created) %> comment
           | <a href="/report?kind=comment&amp;target=<%= c.id %>&amp;url=<%= encodeURIComponent(here) %>" class="reportlink" data-kind="comment" data-id="<%= c.id %>">檢舉</a>
           <% if (isOwner) { %>| <form method="post" action="<%= here %>/comment/<%= c.id %>/del" onsubmit="return confirm('刪除這則回應？刪掉之後救不回來。')"><button>刪除</button></form><% } %>
         </li>

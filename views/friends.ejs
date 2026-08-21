@@ -167,7 +167,10 @@
     <div id="friendListDiv">
 
       <% if (!rows.length) { %>
-      <div class="w2-empty"><%= q || cate ? '沒有符合條件的好友' : '這裡還是空的' %></div>
+      <%# ⚠ 原本沒好友時只寫「這裡還是空的」，沒說怎麼加。
+          加好友的入口在別人的小站上（名片那顆「加為好友」），
+          不講的話使用者會在這一頁上找按鈕，找不到就走了。 %>
+      <div class="w2-empty"><% if (q || cate) { %>沒有符合條件的好友。<a href="/<%= u.name %>/friends">看全部好友</a><% } else if (isOwner) { %>還沒有好友。到別人的小站按名片上的「加為好友」，或先去<a href="/rank">人氣排行</a>逛逛。<% } else { %><%= u.nick %> 還沒有加好友。<% } %></div>
       <% } %>
 
       <ol>

@@ -367,5 +367,21 @@ if (!process.env.SKIP_BROWSER) {
   if (fails.length) bad += fails.length;
 }
 
+// ── 上線防護（自己開站，不需要 Chrome）──────────────────────────
+// 一次上線稽核抓到的幾道鎖。它們的共同點是「站跑得好好的，什麼都不會壞」——
+// 所以沒有測試守著就會在某次重構中安靜地掉回去，而代價是使用者的帳號或隱私。
+{
+  const r = spawnSync(process.execPath, ['tools/hardening.mjs'], {
+    env: { ...process.env, PORT: '3494', MSYS_NO_PATHCONV: '1' }, encoding: 'utf8',
+  });
+  const out = (r.stdout || '') + (r.stderr || '');
+  const line = out.split('\n').filter(l => l.includes('passed')).pop();
+  const fails = out.split('\n').filter(l => l.startsWith('! FAIL'));
+  console.log(`\n上線防護：${line ? line.trim() : '(沒有結果——測試根本沒跑完)'}`);
+  for (const f of fails.slice(0, 20)) console.log('  ' + f.trim());
+  if (!line) { bad += 1; }
+  if (fails.length) bad += fails.length;
+}
+
 console.log(bad ? `\n共 ${bad} 項失敗` : '\n全部通過');
 process.exit(bad ? 1 : 0);

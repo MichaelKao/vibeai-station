@@ -66,9 +66,27 @@ app.locals.SITE_LOGO=SITE_LOGO; app.locals.CDN=CDN;
 app.use(express.urlencoded({extended:false, limit:'1mb'}));
 // session：有 Redis 就存 Redis。預設的 MemoryStore 會漏記憶體，
 // 而且每次部署所有人都被登出——這是換 Redis 最直接的理由。
+// 「這是正式站嗎」的判斷：Railway 一定會給 DATABASE_URL（Postgres），
+// 本機開發是 node:sqlite，沒有這個變數。比 NODE_ENV 可靠——NODE_ENV
+// 常常忘記設，而漏設的方向剛好是「正式站被當成開發環境」，最危險。
+const IS_PROD = !!process.env.DATABASE_URL;
+function sessionSecret(){
+  const s = process.env.SESSION_SECRET;
+  if (s) return s;
+  if (IS_PROD) throw new Error(
+    '正式環境沒有設 SESSION_SECRET。這個值是 session cookie 的簽章金鑰，' +
+    '用預設字串等於讓任何人都可以冒充任何帳號（含站長）。' +
+    '請到 Railway 的環境變數加一個夠長的隨機字串再重新部署。');
+  return 'vibeai-dev-secret';
+}
 app.use(session({
   store: await sessionStore(),          // 沒有 REDIS_URL 時回傳 undefined＝用預設 MemoryStore
-  secret: process.env.SESSION_SECRET || 'vibeai-dev-secret',
+  // ⚠ 這裡原本是 `process.env.SESSION_SECRET || 'vibeai-dev-secret'`。
+  // 那個 fallback 是寫在公開原始碼裡的字串——正式站漏設環境變數的話，
+  // 任何看過這一行的人都可以自己簽一張 session cookie，指定 uid 是誰
+  // 就冒充誰，包含站長。而且**完全沒有徵兆**：站跑得好好的。
+  // 所以正式環境缺這個變數就不准開機，寧可 deploy 紅一次。
+  secret: sessionSecret(),
   resave: false, saveUninitialized: false,
   // secure:'auto' ＝ 連線是 https 就標 Secure、是 http 就不標。
   // 寫死 true 的話本機 http 會拿不到 cookie（登入完馬上又變登出，很難查）；
@@ -447,6 +465,21 @@ app.get('/blogs',async (req,res)=>{
 // ADMIN_USERS=vibeai,someone 名單內的帳號註冊或登入時自動取得站長權限，
 // 避免「第一個註冊的人就是站長」被誤佔（例如測試帳號）。
 const ADMIN_USERS = new Set((process.env.ADMIN_USERS||'').split(',').map(s=>s.trim().toLowerCase()).filter(Boolean));
+// 留言者信箱的轉址。
+//
+// ⚠ 為什麼要繞這一手：原站的迴響列有一顆信封圖示，href 直接就是
+// mailto:<留言者的信箱>。照抄的話，任何爬蟲拉一次文章頁就把全站留言者的
+// Email 收割乾淨——而受害的是替你留言的朋友，不是你。
+//
+// 版型完全不動（信封圖示照舊），只是位址不寫進 HTML：點下去先來這裡，
+// 要登入才拿得到，機器人沒有 session 就走不通。
+app.get('/contact/comment/:id',async (req,res)=>{
+  if(!res.locals.me)
+    return res.redirect('/login?next='+encodeURIComponent(req.originalUrl));
+  const c=await one('SELECT email FROM comments WHERE id=?',req.params.id);
+  if(!c?.email) return res.status(404).render('msg',{title:'找不到',msg:'這則迴響沒有留下信箱。',back:'/'});
+  res.redirect('mailto:'+c.email);
+});
 app.get('/register',(req,res)=>res.render('register',{err:null,form:{}}));
 // 猜密碼的速率限制。
 //
@@ -480,6 +513,25 @@ function rateHit(req, what, max = RATE.max){
 // 只鎖 IP 不行——公司、學校、電信業者的 NAT 後面成千上萬人共用一個位址，
 // 一個人猜錯十次就把整棟樓鎖在外面。只鎖帳號也不行——那就變成可以慢慢
 // 掃過全站的帳號。兩道一起才擋得住，又不會誤傷。
+// 寫入的洪水閘門。
+//
+// ⚠ 稽核指出：登入之後的寫入路由（發文、迴響、留言、嘀咕、哈啦回覆）
+// 只檢查 requireLogin，一次上限都沒有。一支迴圈就可以整晚灌爆資料庫，
+// 或把某個人的留言板洗到沒人看得下去。
+//
+// 這一道是**洪水閘門，不是精細限速**：門檻放在「正常人再熱情也碰不到、
+// 腳本跑不動」的高度（十分鐘 100 筆）。想再收緊要先想清楚誤傷——
+// 相簿一次上傳 20 張、活動當天大家在同一個留言板刷屏，都是真實的正常流量。
+//
+// 鍵用 IP（跟其他限速同一套）。多副本擴容時整包要搬到 Redis。
+const FLOOD_MAX = 100;
+const flood = what => (req, res, next) => {
+  if (!rateHit(req, 'write:' + what, FLOOD_MAX)) return next();
+  return res.status(429).render('msg', {
+    title: '慢一點',
+    msg: '短時間內送出太多次了，請等十分鐘再繼續。（如果你覺得這是誤判，請告訴站長。）',
+    back: '/' });
+};
 function loginBlocked(req, name){
   const perName = rateHit(req, 'login:' + String(name || '').toLowerCase());
   const perIp   = rateHit(req, 'login-ip', 60);
@@ -519,6 +571,18 @@ function isReserved(name){ return RESERVED.has(String(name || '').toLowerCase())
 
 
 app.post('/register',async (req,res)=>{
+  // ⚠ 登入（loginBlocked）與忘記密碼（rateHit）都有限速，唯獨註冊沒有。
+  // 一支迴圈就能無限狂建帳號：users 表被灌爆、好聽的暱稱被整批佔走，
+  // 之後那些帳號還可以拿來洗留言。上線前一定要擋。
+  //
+  // 跟其他寫入一樣是**洪水閘門，不是精細限速**（見 flood()）：
+  // 十分鐘 100 個帳號。一間電腦教室整班同時註冊也碰不到，
+  // 但腳本想灌十萬個帳號就跑不動了。
+  //
+  // ⚠ 別把這個數字調小到「感覺比較安全」的程度：一個 IP 後面可能是整棟
+  // 大樓的 NAT，調緊的代價是把真人擋在門外，而那沒有任何錯誤訊息救得回來。
+  if (rateHit(req, 'register', 100))
+    return res.status(429).render('register',{err:'同一個網路註冊太多帳號了，請等十分鐘再試。',form:req.body});
   const {name='',nick='',pass='',pass2=''}=req.body;
   // ⚠ RESERVED 原本**只用在路由上**（/:name 這一層遇到保留字就 next()），
   // 註冊完全沒有比對。於是任何人都可以註冊 admin／login／rank／albums…，
@@ -915,7 +979,7 @@ app.get('/hala/:id',async (req,res,next)=>{
   const d=await halaTopic(req,res,req.params.id); if(!d) return next();
   res.render('hala_topic',d);
 });
-app.post('/hala',requireLogin,async (req,res)=>{
+app.post('/hala',requireLogin,flood('hala'),async (req,res)=>{
   const title=(req.body.title||'').trim().slice(0,60);
   const body=(req.body.body||'').trim().slice(0,3000);
   // ⚠ 原本是 302 回 /hala——標題與內文一起不見，畫面上沒有任何訊息，
@@ -929,7 +993,7 @@ app.post('/hala',requireLogin,async (req,res)=>{
     res.locals.me.id,title,body,(req.body.cat||'').slice(0,10));
   res.redirect('/hala/'+Number(r.lastInsertRowid));
 });
-app.post('/hala/:id/reply',requireLogin,async (req,res)=>{
+app.post('/hala/:id/reply',requireLogin,flood('hala'),async (req,res)=>{
   const t=await one('SELECT id FROM hala_topics WHERE id=?',req.params.id);
   if(!t) return res.redirect('/hala');
   const body=(req.body.body||'').trim().slice(0,3000);
@@ -2041,7 +2105,7 @@ site.get('/blog/comments.rss',async (req,res)=>{
 const myPhotos = async res => await all(`SELECT p.id,p.thumb,p.url FROM photos p JOIN albums a ON a.id=p.album_id
   WHERE a.user_id=? ORDER BY p.id DESC LIMIT 40`, U(res).id);
 site.get('/blog/new',requireLogin,requireOwner,async (req,res)=>res.render('post_edit',{nav:'blog',post:null,photos:await myPhotos(res),emotes:EMOTES,...await blogSide(res)}));
-site.post('/blog/new',requireLogin,requireOwner,async (req,res)=>{ const {title,body,category,mood,weather}=req.body;
+site.post('/blog/new',requireLogin,requireOwner,flood('post'),async (req,res)=>{ const {title,body,category,mood,weather}=req.body;
   // ⚠ 原本是「標題或內容是空的就 302 回 /blog/new」——那一跳把使用者
   // **剛打完的整篇文章丟掉**，而且一個字都不解釋。有人打了半小時的文章，
   // 標題不小心只按到空白鍵，按下發表，回到一張全空的表單。
@@ -2139,7 +2203,7 @@ site.post('/blog/:id/del',requireLogin,requireOwner,postOf,async (req,res)=>{
 // 上鎖文章：沒解鎖就不能回應、推薦、引用（引用會複製內文，等於繞過密碼）
 const needUnlocked=(req,res,next)=>postUnlocked(req,res)?next():res.redirect(`/${U(res).name}/blog/${res.locals.post.id}`);
 // 迴響（無名的表單欄位：暱稱／E-mail／個人網頁／記住我的資料／內容最多1000字）
-site.post('/blog/:id/comment',postOf,needUnlocked,async (req,res)=>{
+site.post('/blog/:id/comment',flood('comment'),postOf,needUnlocked,async (req,res)=>{
   const b=req.body;
   // ⚠ 原本是「有內容才寫，否則直接 302 到 #comments」——迴響沒送出，
   // 但畫面跳到迴響區，看起來就像成功了，使用者要滑一遍才發現自己那則不在。
@@ -2303,7 +2367,7 @@ site.get('/digu',async (req,res)=>{
     visitors:await all('SELECT * FROM visitors WHERE user_id=? ORDER BY id DESC LIMIT 8',U(res).id),
     friends:await all('SELECT u.name,u.nick FROM friends f JOIN users u ON u.id=f.friend_id WHERE f.user_id=? LIMIT 12',U(res).id)});
 });
-site.post('/digu',requireLogin,requireOwner,async (req,res)=>{
+site.post('/digu',requireLogin,requireOwner,flood('digu'),async (req,res)=>{
   const body=(req.body.body||'').trim().slice(0,140);   // 一句話，長度比照當年的微網誌
   if(body){
     await run('INSERT INTO digu(user_id,body) VALUES(?,?)',U(res).id,body);
@@ -2371,7 +2435,7 @@ site.get('/guestbook',async (req,res)=>{
     msgs:await all(`SELECT g.*,au.name a_name,au.nick a_nick,au.avatar a_avatar,au.vip a_vip
       FROM guestbook g LEFT JOIN users au ON au.id=g.author_id
       WHERE g.user_id=? ORDER BY g.id DESC LIMIT ? OFFSET ?`,U(res).id,per,(page-1)*per)}); });
-site.post('/guestbook',async (req,res)=>{ const {author,subject,body,secret}=req.body; const who=res.locals.me?.nick||author;
+site.post('/guestbook',flood('gb'),async (req,res)=>{ const {author,subject,body,secret}=req.body; const who=res.locals.me?.nick||author;
   // E-mail 與個人網頁：跟網誌迴響同一套驗證（見 site.post('/blog/:id/comment')）。
   // ⚠ 原站的留言表單有 Name / Email / URL / Remember Me 四欄，我們只做了 Name。
   const gbSite=(()=>{ try{ const x=String(req.body.homepage||'').trim(); if(!x) return '';
