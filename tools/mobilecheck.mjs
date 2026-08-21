@@ -41,6 +41,7 @@ const setup = await browser.newContext();
 const sp = await setup.newPage();
 const NAME = 'mtest' + Math.floor(Date.now() / 1000 % 100000);
 let COOKIES = [];
+let POST_ID = '1', ALBUM_ID = '1';
 try {
   await sp.goto(BASE + '/register', { waitUntil: 'domcontentloaded' });
   // ⚠ 一定要鎖定「包著 pass2 這一欄的那張表單」再送出。
@@ -56,6 +57,25 @@ try {
     sp.waitForNavigation({ waitUntil: 'domcontentloaded' }),
     form.locator('button[type=submit], input[type=submit], button:not([type])').first().click(),
   ]);
+  // 建一篇文章與一本相簿，才有 :id 可以測單篇頁。
+  // ⚠ 沒有資料的話這些頁只會 404，測起來全綠但什麼都沒驗到。
+  await sp.goto(BASE + `/${NAME}/blog/new`, { waitUntil: 'domcontentloaded' });
+  const pf = sp.locator('form:has(textarea)').first();
+  await pf.locator('input[name=title]').fill('手機版面測試用的文章標題');
+  await pf.locator('textarea[name=body]').first().fill('內容第一段\n內容第二段');
+  await Promise.all([sp.waitForNavigation({ waitUntil: 'domcontentloaded' }),
+    pf.locator('input[type=submit], button[type=submit]').first().click()]);
+  POST_ID = (sp.url().match(/\/blog\/(\d+)/) || [])[1] || '1';
+  await sp.goto(BASE + `/${NAME}/album`, { waitUntil: 'domcontentloaded' });
+  const af = sp.locator('form[action$="/album"]').first();
+  await af.locator('input[name=title]').fill('手機版面測試相簿');
+  await Promise.all([sp.waitForNavigation({ waitUntil: 'domcontentloaded' }),
+    af.locator('input[type=submit], button[type=submit]').first().click()]);
+  ALBUM_ID = (await sp.evaluate(() => {
+    const a = [...document.querySelectorAll('a[href*="/album/"]')]
+      .map(x => (x.getAttribute('href').match(/\/album\/(\d+)/) || [])[1]).filter(Boolean);
+    return a[0] || '1';
+  }));
   COOKIES = await setup.cookies();
   console.log(`[setup] 測試帳號 ${NAME}，登入後網址 ${sp.url()}，cookie ${COOKIES.length} 個`);
 } catch (e) {
@@ -89,6 +109,20 @@ const PAGES = [
   [`/${NAME}/files`, '網頁空間', true],
   ['/points', '點數明細', true],
   ['/vip', '認證申請', true],
+  // ⚠ 以下這批是清點「全站 51 個 GET 路由 vs 手機測了 24 個」時補上的。
+  // 漏掉的裡面包含**最多人看的兩種頁**——單篇文章與單張照片。
+  // 一個網誌／相簿站，訪客絕大多數時間就待在這兩頁上，而它們原本
+  // 一次都沒有在手機尺寸下被畫出來過。
+  [`/${NAME}/blog/${POST_ID}`, '單篇文章', true],
+  [`/${NAME}/album/${ALBUM_ID}`, '單本相簿', true],
+  [`/${NAME}/card`, '名片', true],
+  [`/${NAME}/blog/map`, '文章地圖', true],
+  [`/${NAME}/blog/search?q=a`, '網誌搜尋', true],
+  [`/${NAME}/blog/${POST_ID}/edit`, '編輯文章', true],
+  [`/${NAME}/album/${ALBUM_ID}/wall`, '相片牆', true],
+  [`/${NAME}/favs`, '我的收藏', true],   // ⚠ 收藏掛在小站底下，不是 /favs
+  ['/join', '揪團', false],
+  ['/forgot', '忘記密碼', false],
 ];
 
 // 找出「是誰撐出去的」。

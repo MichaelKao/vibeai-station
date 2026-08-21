@@ -186,7 +186,14 @@
   <h4>Album Setting</h4>
   <div class="bd">
     <form method="post" action="<%= phPath %>/edit">
-      <table border="0" cellpadding="0" cellspacing="0">
+      <%# ⚠ class="w2b-form" 是為了讓 RWD 的表單規則吃得到這張表——跟
+          views/album.ejs 的「New Album」是同一張表格、同一個毛病：
+          裡面的 <input size="24"> 有固有寬度、不會跟著螢幕縮，
+          iPhone SE（320px）量出來整頁多 3px、可以左右拖。
+          第一次修的時候只改了 album.ejs 那一張，漏了這一張，
+          是把單本相簿頁補進手機測試清單之後才抓到的。
+          視覺不變——w2b-form 在桌機上只是 width:100% 的表格。 %>
+      <table class="w2b-form" border="0" cellpadding="0" cellspacing="0">
         <tr>
           <th>相簿名稱</th>
           <td><input type="text" name="title" size="24" maxlength="40" value="<%= album.title %>"></td>
