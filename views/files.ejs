@@ -1,0 +1,76 @@
+<%
+  /* 個人網頁空間 /<帳號>/files
+     ─────────────────────────────────────────────────────────────
+     原站的付費會員有一塊自己的檔案空間放 HTML 與圖片
+     （f10.wretch.yimg.com/<帳號>/files/…，自訂 CSS 就放在那裡）。
+     原站的管理頁沒有存檔（付費站抓不到），照 §3-A 用站台既有元件組。
+
+     ⚠ 上傳的 HTML 一律以純文字回應，不會被瀏覽器當網頁執行。
+     這不是偷懶——讓使用者上傳的 HTML 在本站網域上跑 JavaScript，
+     等於把所有人的 session cookie 交給上傳者。頁面上要把這件事講明白，
+     不然使用者會以為是壞掉的。
+
+     資料來自 src/server.js 的 site.get('/files')。 */
+  const flKB = n => (n / 1024).toFixed(1) + 'KB';
+%>
+<%- include('partials/head2012in', {
+      title: u.nick + '的網頁空間 - 無名小站',
+      page: 'w2-gb',
+      skin: ['/wretch2012-skin-guestbook.css'] }) %>
+
+<%- include('partials/gbtop', { here: 'files', head: u.nick + ' 的網頁空間' }) %>
+
+<div id="search">已用 <b><%= flKB(used) %></b> / <%= flKB(quota) %></div>
+
+<div class="msg_body">
+
+  <% if (!paid) { %>
+  <p class="w2-note">現在是免費期，每個人都有 <%= flKB(quota) %> 的空間，單檔上限 <%= flKB(fileMax) %>。</p>
+  <% } %>
+
+  <p class="w2-note">放上來的檔案任何人都看得到，網址是
+    <code>/<%= u.name %>/files/&lt;檔名&gt;</code>。
+    <%# 這一段一定要講，不然使用者上傳 HTML 之後看到滿畫面原始碼會以為壞了 %>
+    ⚠ HTML 檔會以<b>純文字</b>顯示，不會被當成網頁執行——讓站上任何人上傳的
+    JavaScript 跑在這個網域上，等於把所有人的登入狀態交出去。
+    目前收的副檔名：<%= types.join('、') %>。</p>
+
+  <% if (!files.length) { %>
+  <div class="w2-empty">空間裡還沒有檔案。用下面的表單放第一個上來，
+    存好之後就能用 <code>/<%= u.name %>/files/&lt;檔名&gt;</code> 開啟。</div>
+  <% } else { %>
+  <table class="w2-rows">
+    <tr><th>檔名</th><th>大小</th><th>時間</th><th></th></tr>
+    <% files.forEach(f => { %>
+    <tr>
+      <td><a href="/<%= u.name %>/files/<%= f.name %>"><%= f.name %></a></td>
+      <td><%= flKB(f.bytes) %></td>
+      <td class="w2-when"><%= String(f.created).slice(0, 16) %></td>
+      <td>
+        <form method="post" action="/<%= u.name %>/files/<%= f.id %>/del"
+              onsubmit="return confirm('刪掉 <%= f.name %>？刪掉之後救不回來。')">
+          <button class="w2-linkbtn">刪除</button>
+        </form>
+      </td>
+    </tr>
+    <% }) %>
+  </table>
+  <% } %>
+
+  <div class="w2-h3">放一個檔上來</div>
+  <p class="w2-note">檔名重複會直接覆蓋舊的那一份。</p>
+  <form method="post" action="/<%= u.name %>/files">
+    <ul class="w2-form">
+      <li><label for="fl-name">檔名</label>
+        <input type="text" name="name" id="fl-name" size="30" maxlength="40"
+               placeholder="index.html"></li>
+      <li><label for="fl-body">內容</label>
+        <textarea name="body" id="fl-body" cols="60" rows="14"></textarea></li>
+      <li><button class="w2-btn" type="submit">存檔</button></li>
+    </ul>
+  </form>
+
+</div>
+
+<%- include('partials/gbfoot') %>
+<%- include('partials/foot2012in') %>

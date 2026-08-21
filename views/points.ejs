@@ -1,0 +1,72 @@
+<%
+  /* 點數明細 /points
+     ─────────────────────────────────────────────────────────────
+     ⚠ 這一頁不是裝飾。點數是「使用者覺得自己被偷了」最容易吵起來的東西——
+     沒有明細，發生爭議時雙方都只能猜。所以帳本是流水帳（每一筆進出都在），
+     餘額是它的總和，而不是一個可以被改壞又查不出來的欄位。
+
+     原站沒有這一頁的存檔（付費站抓不到），照 §3-A 用站台既有元件組。
+     資料來自 src/server.js 的 app.get('/points')。 */
+  const ptWhy = {
+    welcome: '註冊見面禮',
+    daily:   '每日登入',
+    buy:     '購買商品',
+    gift:    '送禮',
+    admin:   '站長調整',
+  };
+%>
+<%- include('partials/head2012', { title: '點數明細 - 無名小站' }) %>
+
+  <div class="bd big-bd clearfix">
+    <div class="main">
+
+      <div class="mod w2-auth">
+        <div class="hd"><h2>我的點數</h2></div>
+        <div class="bd">
+          <p class="w2-note">目前餘額 <b><%= balance %></b> 點，共 <b><%= total %></b> 筆紀錄。
+            <a href="/shop">去小舖看看</a></p>
+
+          <% if (!rows.length) { %>
+          <p class="w2-note">還沒有任何紀錄。每天登入會自動送點，登入一次就會出現在這裡。</p>
+          <% } else { %>
+          <table class="w2-rows">
+            <tr><th>時間</th><th>項目</th><th>增減</th></tr>
+            <% rows.forEach(r => { %>
+            <tr>
+              <td class="w2-when"><%= String(r.created).slice(0, 16) %></td>
+              <td><%= ptWhy[r.reason] || r.reason %><% if (r.ref) { %>
+                <span class="w2-sub">#<%= r.ref %></span><% } %></td>
+              <%# 進帳補一個 + 號：光看數字分不出 10 是加還是減，
+                  而這正是使用者最想一眼看懂的一欄。 %>
+              <td><%= r.delta > 0 ? '+' + r.delta : r.delta %></td>
+            </tr>
+            <% }) %>
+          </table>
+          <%- include('partials/pager2012', { pgPage: page, pgPages: pages,
+                pgHref: n => '/points?p=' + n }) %>
+          <% } %>
+        </div>
+      </div>
+
+    </div>
+    <div class="side">
+
+      <div class="mod w2-auth-side">
+        <div class="hd"><h2>相關</h2></div>
+        <div class="bd">
+          <ul>
+            <li><a href="/shop">無名小舖</a></li>
+            <li><a href="/<%= me.name %>">我的小站</a></li>
+            <li><a href="/help">服務說明</a></li>
+          </ul>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+</div><!-- /#wrapper -->
+
+<div id="lower-wrapper" class="clearfix">
+  <div class="bd clearfix"></div>
+<%- include('partials/foot2012') %>

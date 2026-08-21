@@ -167,6 +167,77 @@
         </div>
       </div>
 
+
+      <div class="mod w2-auth" id="vipapps">
+        <div class="hd"><h2>認證申請</h2></div>
+        <div class="bd">
+          <%# ⚠ 在有這一塊之前，認證徽章只有下面「站友管理」的下拉能掛，
+              而使用者端根本沒有申請入口——等於這個功能對使用者不存在。 %>
+          <p>待審 <b><%= vipApps.filter(a => !a.state).length %></b> 件<% if (!vipApps.length) { %>　<span class="w2-note">目前沒有申請</span><% } %></p>
+          <% vipApps.forEach(a => { %>
+          <div class="w2-admin-item<%= a.state ? ' done' : '' %>">
+            <div><a href="/<%= a.uname %>"><%= a.nick %></a>（<%= a.uname %>）申請
+              <b><%= ['無','銀','金','白金'][a.want] %></b>認證　<%= String(a.created).slice(5,16) %>
+              <%= a.state === 1 ? '　→ 已通過' : (a.state === 2 ? '　→ 已婉拒' : '') %></div>
+            <div><%= a.reason %></div>
+            <% if (!a.state) { %>
+            <div>
+              <form method="post" action="/admin/vip/<%= a.id %>/ok">
+                <input type="text" name="note" size="24" maxlength="200" placeholder="給他的話（選填）">
+                <button class="w2-admin-lnk">通過並掛上徽章</button>
+              </form>
+              <form method="post" action="/admin/vip/<%= a.id %>/no">
+                <button class="w2-admin-lnk w2-admin-red">婉拒</button>
+              </form>
+            </div>
+            <% } else if (a.note) { %>
+            <div class="w2-note">站長的話：<%= a.note %></div>
+            <% } %>
+          </div>
+          <% }) %>
+        </div>
+      </div>
+
+      <div class="mod w2-auth" id="shop">
+        <div class="hd"><h2>小舖商品</h2></div>
+        <div class="bd">
+          <%# 免費期與收費期的差別只在「點數從哪裡來」，商品本身一樣要上架。
+              沒有商品的話小舖是一個空頁，所以空狀態要把站長帶到這裡。 %>
+          <p>架上 <b><%= shopItems.filter(i => i.onsale).length %></b> 件<% if (!shopItems.length) { %>　<span class="w2-note">還沒有上架任何商品——小舖現在是空的</span><% } %></p>
+          <% shopItems.forEach(it => { %>
+          <div class="w2-admin-item<%= it.onsale ? '' : ' done' %>">
+            <div><b><%= it.name %></b>　<%= { gift:'禮物', badge:'徽章', space:'網頁空間' }[it.kind] || it.kind %>　
+              <%= it.price %> 點<%= it.onsale ? '' : '　（已下架）' %></div>
+            <% if (it.descr) { %><div class="w2-note"><%= it.descr %></div><% } %>
+            <div>
+              <form method="post" action="/admin/shop/<%= it.id %>/sale"><button class="w2-admin-lnk"><%= it.onsale ? '下架' : '重新上架' %></button></form>　
+              <form method="post" action="/admin/shop/<%= it.id %>/del" onsubmit="return confirm('刪掉「<%= it.name %>」？已經有人買走的紀錄會一起不見。')"><button class="w2-admin-lnk w2-admin-red">刪除</button></form>
+            </div>
+          </div>
+          <% }) %>
+
+          <form method="post" action="/admin/shop/new">
+            <ul class="w2-form">
+              <li><label for="sh-name">名稱</label>
+                <input type="text" name="name" id="sh-name" size="24" maxlength="40"></li>
+              <li><label for="sh-kind">類型</label>
+                <select name="kind" id="sh-kind">
+                  <option value="gift">禮物</option>
+                  <option value="badge">徽章</option>
+                  <option value="space">網頁空間</option>
+                </select></li>
+              <li><label for="sh-price">售價（點）</label>
+                <input type="number" name="price" id="sh-price" min="0" value="10"></li>
+              <li><label for="sh-descr">說明</label>
+                <input type="text" name="descr" id="sh-descr" size="40" maxlength="100"></li>
+              <li><label for="sh-icon">圖示網址</label>
+                <input type="text" name="icon" id="sh-icon" size="40" maxlength="200" placeholder="選填"></li>
+              <li><button class="w2-btn" type="submit">上架</button></li>
+            </ul>
+          </form>
+        </div>
+      </div>
+
     </div>
 
     <div class="side">
@@ -196,6 +267,8 @@
             <li><a href="#reports">檢舉處理</a></li>
             <li><a href="#broadcast">群發系統訊息</a></li>
             <li><a href="#notices">站內公告</a></li>
+            <li><a href="#vipapps">認證申請</a></li>
+            <li><a href="#shop">小舖商品</a></li>
             <li><a href="#feature">精選</a></li>
             <li><a href="/rank">人氣排行榜</a></li>
           </ul>

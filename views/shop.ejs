@@ -1,0 +1,140 @@
+<%
+  /* 無名小舖 /shop
+     ─────────────────────────────────────────────────────────────
+     原站的小舖是 bill.wretch.cc 底下的**付費站**：刷卡儲值、買虛擬商品、
+     送禮扣點。archive.org 抓不到付費頁（要登入又要金流），所以照
+     WRETCH_2012.md §3-A 的規矩：用站台既有的 .mod / .w2-auth 元件組出來，
+     不自創新的視覺，也不假裝有存檔佐證。
+
+     站主的決定是「現在全部免費，等我想開能隨時開」，所以這一頁在
+     PAID_MODE 關著的時候印的是「每天登入送點」，打開之後那一塊會換成
+     儲值入口（金流本身還沒接，到時候要另外做）。
+
+     資料來自 src/server.js 的 app.get('/shop')。 */
+  const shKinds = { gift: '禮物', badge: '徽章', space: '網頁空間' };
+  const shGroups = [...new Set(items.map(i => i.kind))];
+%>
+<%- include('partials/head2012', { title: '無名小舖 - 無名小站' }) %>
+
+  <div class="bd big-bd clearfix">
+    <div class="main">
+
+      <div class="mod w2-auth">
+        <div class="hd"><h2>無名小舖</h2></div>
+        <div class="bd">
+          <% if (!me) { %>
+          <p class="w2-note">小舖要<a href="/login?next=%2Fshop">登入</a>才買得了東西。
+            還沒有帳號的話，<a href="/register">申請一個</a>，註冊就送見面禮點數。</p>
+          <% } else { %>
+          <p class="w2-note">你目前有 <b><%= balance %></b> 點。
+            <a href="/points">看點數明細</a></p>
+          <% } %>
+
+          <%# 點數從哪裡來。免費期與收費期印的是兩件不同的事，
+              所以這裡不是文案差異，是兩種狀態。 %>
+          <% if (!paid) { %>
+          <p class="w2-note">現在是免費期：註冊送見面禮，之後<b>每天登入自動送 <%= daily %> 點</b>，
+            不用做任何事。點數只能在站上用，不能買賣。</p>
+          <% } else { %>
+          <p class="w2-note">點數需要儲值。</p>
+          <% } %>
+        </div>
+      </div>
+
+      <% if (!items.length) { %>
+      <div class="mod w2-auth">
+        <div class="hd"><h2>架上商品</h2></div>
+        <div class="bd">
+          <%# 空狀態要講清楚是「還沒上架」而不是「壞了」，
+              並且告訴站長東西要去哪裡上架。 %>
+          <p class="w2-note">小舖還沒有上架任何商品。<% if (me && me.admin) { %>
+            到<a href="/admin">後台</a>的「小舖商品」把第一件東西放上來。<% } %></p>
+        </div>
+      </div>
+      <% } %>
+
+      <% shGroups.forEach(k => { %>
+      <div class="mod w2-auth" id="kind-<%= k %>">
+        <div class="hd"><h2><%= shKinds[k] || k %></h2></div>
+        <div class="bd">
+          <ul class="w2-albumgrid">
+            <% items.filter(i => i.kind === k).forEach(it => { %>
+            <li>
+              <img src="<%= it.icon || '/img/wretch2012/blog/user_cover.gif' %>" alt="<%= it.name %>">
+              <span class="tt"><%= it.name %></span>
+              <span class="w2-sub"><%= it.descr %></span>
+              <span class="num"><%= it.price %> 點</span>
+              <% if (me) { %>
+              <form method="post" action="/shop/<%= it.id %>/buy">
+                <button class="w2-btn"<%= balance < it.price ? ' disabled' : '' %>>
+                  <%= balance < it.price ? '點數不夠' : '購買' %></button>
+              </form>
+              <% } else { %>
+              <a href="/login?next=%2Fshop">登入後購買</a>
+              <% } %>
+            </li>
+            <% }) %>
+          </ul>
+        </div>
+      </div>
+      <% }) %>
+
+      <% if (me) { %>
+      <div class="mod w2-auth" id="bag">
+        <div class="hd"><h2>我的背包</h2></div>
+        <div class="bd">
+          <% if (!owned.length) { %>
+          <p class="w2-note">背包是空的。買到的東西會放在這裡。</p>
+          <% } else { %>
+          <ul class="w2-albumgrid">
+            <% owned.forEach(o => { %>
+            <li>
+              <img src="<%= o.icon || '/img/wretch2012/blog/user_cover.gif' %>" alt="<%= o.name %>">
+              <span class="tt"><%= o.name %></span>
+              <span class="w2-sub"><%= o.used ? '已使用' : shKinds[o.kind] || o.kind %></span>
+            </li>
+            <% }) %>
+          </ul>
+          <% } %>
+        </div>
+      </div>
+      <% } %>
+
+    </div>
+    <div class="side">
+
+      <div class="mod w2-auth-side">
+        <div class="hd"><h2>小舖</h2></div>
+        <div class="bd">
+          <ul>
+            <% shGroups.forEach(k => { %>
+            <li><a href="#kind-<%= k %>"><%= shKinds[k] || k %></a></li>
+            <% }) %>
+            <% if (me) { %>
+            <li><a href="#bag">我的背包</a></li>
+            <li><a href="/points">點數明細</a></li>
+            <% } %>
+          </ul>
+        </div>
+      </div>
+
+      <div class="mod w2-auth-side">
+        <div class="hd"><h2>逛逛別的</h2></div>
+        <div class="bd">
+          <ul>
+            <li><a href="/albums">相簿總站</a></li>
+            <li><a href="/blogs">網誌總站</a></li>
+            <li><a href="/rank">人氣排行</a></li>
+            <li><a href="/help">服務說明</a></li>
+          </ul>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+</div><!-- /#wrapper -->
+
+<div id="lower-wrapper" class="clearfix">
+  <div class="bd clearfix"></div>
+<%- include('partials/foot2012') %>

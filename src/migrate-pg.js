@@ -34,6 +34,8 @@ export const MIGRATE_TABLES = [
   // assertNoMissingTable() 與 test_pg 的「搬移清單涵蓋所有資料表」就是
   // 為了擋這件事（加 pwresets 的時候它立刻紅燈，證明那道防線有效）。
   'pwresets',
+  // 小舖／點數／認證申請／個人網頁空間
+  'points', 'shop_items', 'shop_owned', 'vip_apps', 'webfiles',
 ];
 // 用 IDENTITY 主鍵的表，搬完要把序列推到 max(id)，否則之後 INSERT 會撞主鍵
 // 沒有 id 欄位的關聯表不用推序列（推了會找不到那個序列而報錯）。

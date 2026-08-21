@@ -612,7 +612,7 @@ app.post('/register',async (req,res)=>{
     throw e;
   }
   await run('INSERT INTO albums(user_id,title) VALUES(?,?)',r.lastInsertRowid,'我的相簿');
-  await signIn(req, Number(r.lastInsertRowid)); flash(req,'歡迎加入 vibeai 小站！'); res.redirect('/'+name.toLowerCase());
+  await signIn(req, Number(r.lastInsertRowid)); await welcomePoints(Number(r.lastInsertRowid)); flash(req,`歡迎加入 vibeai 小站！送你 ${WELCOME_POINTS} 點見面禮，可以到小舖逛逛。`); res.redirect('/'+name.toLowerCase());
 });
 app.get('/login',(req,res)=>res.render('login',{err:null,next:req.query.next||''}));
 app.post('/login',async (req,res)=>{
@@ -625,7 +625,7 @@ app.post('/login',async (req,res)=>{
       name:String(req.body.name||'').slice(0,20)});
   if(ADMIN_USERS.has(u.name) && !u.admin) await run('UPDATE users SET admin=1 WHERE id=?',u.id); // ADMIN_USERS 名單登入即補站長權限
   rateClear(req, 'login:' + String(req.body.name||'').toLowerCase()); rateClear(req, 'login-ip');
-  await signIn(req, u.id); res.redirect(safePath(req.body.next) || '/'+u.name);
+  await signIn(req, u.id); await dailyBonus(u.id); res.redirect(safePath(req.body.next) || '/'+u.name);
 });
 app.post('/logout',(req,res)=>req.session.destroy(()=>res.redirect('/')));
 
@@ -739,6 +739,10 @@ app.get('/admin',requireAdmin,async (req,res)=>res.render('admin',{
     FROM users u ORDER BY u.id DESC`),
   notices:await all('SELECT * FROM notices ORDER BY id DESC'),
   reports:await all('SELECT * FROM reports ORDER BY done, id DESC LIMIT 50'),
+  // 認證申請與小舖商品。待審的排最前面——站長打開後台第一眼要看到待辦。
+  vipApps:await all(`SELECT v.*,u.name uname,u.nick FROM vip_apps v
+    JOIN users u ON u.id=v.user_id ORDER BY v.state, v.id DESC LIMIT 50`),
+  shopItems:await all('SELECT * FROM shop_items ORDER BY onsale DESC, kind, price, id'),
   storage:{ total:(await one('SELECT COALESCE(SUM(bytes),0) b FROM photos')).b, free:diskFree(), r2:hasR2, quota:USER_QUOTA, mb:MB }}));
 app.post('/admin/report/:id/done',requireAdmin,async (req,res)=>{ await run('UPDATE reports SET done=1 WHERE id=?',req.params.id); res.redirect('/admin'); });
 app.post('/admin/report/:id/del',requireAdmin,async (req,res)=>{ await run('DELETE FROM reports WHERE id=?',req.params.id); res.redirect('/admin'); });
@@ -1057,6 +1061,8 @@ const RESERVED=new Set(['login','register','logout','rank','search','help','admi
   'join','hala','svcs',
   // 站台層級的總站與工具頁
   'albums','blogs','video','digu','report','healthz','bgm','robots.txt','sitemap.xml',
+  // 小舖／點數／認證申請／個人網頁空間
+  'shop','points','vip','contact',
   ...Object.keys(SECTION)]);
 
 // 數字型路由參數的守門員。
@@ -1482,6 +1488,296 @@ site.post('/gift',requireLogin,async (req,res)=>{
   flash(req,`送出了一個${label}`);
   res.redirect('/'+u.name+'/card');
 });
+
+// ===== 無名小舖與點數 =====
+//
+// 原站的點數綁在 bill.wretch.cc 的付費機制：刷卡儲值、買虛擬商品、送禮扣點。
+// 站主的決定是「現在全部免費，等我想開能隨時開」，所以：
+//   帳本、商品、背包、扣點  → 全部照做（開關打開的那天使用者是無感的）
+//   點數從哪裡來            → 現在是註冊送＋每天登入送，以後換成金流
+//
+// ⚠ 為什麼不先不做點數、以後再加：那會讓「誰買過什麼」沒有帳本，
+// 之後要開收費得從零重建，既有使用者手上也什麼都沒有。
+//
+// PAID_MODE 就是那個開關。預設關（免費）。
+// 打開之後：每日登入不再送點、小舖頁改印儲值入口（金流本身還沒接）。
+const PAID_MODE = process.env.PAID_MODE === '1';
+
+// 免費模式下每天登入送的點數，以及註冊時的見面禮。
+const DAILY_POINTS = 10, WELCOME_POINTS = 100;
+
+// 餘額 = 流水帳的總和。
+//
+// ⚠ 為什麼不存一個 balance 欄位：那樣一旦有一筆扣錯，事後完全查不出是
+// 哪一筆出的問題。點數是「使用者覺得自己被偷了」最容易吵起來的東西，
+// 帳本要查得出來。SUM 有 idx_points_user 撐著，不會慢。
+const balanceOf = async uid => (await one('SELECT COALESCE(SUM(delta),0) b FROM points WHERE user_id=?', uid)).b;
+
+// 記一筆帳。ref 用來對回是哪一件事（商品 id、禮物 id、日期）。
+const addPoints = (uid, delta, reason, ref = '') =>
+  run('INSERT INTO points(user_id,delta,reason,ref) VALUES(?,?,?,?)', uid, delta, reason, String(ref).slice(0, 40));
+
+// 每天第一次登入送點。
+//
+// ⚠ 一定要用 ref 去重，不能只看「今天有沒有送過」的時間比較——
+// 同一個人在兩個裝置同時登入會跑兩次，時間比較擋不住，ref 的唯一性擋得住。
+// 這裡沒有唯一索引，所以還是先查再寫；併發最糟的情況是多送一次點，
+// 而不是少送或報錯——免費模式下多送一次沒有任何人受損。
+// 註冊的見面禮。
+// ⚠ 用 ref 去重：註冊只會跑一次，但這一行以後很可能被別的地方（管理員
+// 補發、匯入舊帳號）呼叫到，去重放在這裡最省事。
+async function welcomePoints(uid){
+  if (await one('SELECT 1 FROM points WHERE user_id=? AND reason=?', uid, 'welcome')) return;
+  await addPoints(uid, WELCOME_POINTS, 'welcome');
+}
+async function dailyBonus(uid){
+  if (PAID_MODE) return;
+  const today = new Date().toLocaleDateString('sv-SE', { timeZone: 'Asia/Taipei' });
+  if (await one('SELECT 1 FROM points WHERE user_id=? AND reason=? AND ref=?', uid, 'daily', today)) return;
+  await addPoints(uid, DAILY_POINTS, 'daily', today);
+}
+
+// 小舖首頁：架上商品 ＋ 自己的餘額與背包
+app.get('/shop', async (req, res) => {
+  const me = res.locals.me;
+  res.render('shop', {
+    paid: PAID_MODE, daily: DAILY_POINTS,
+    items: await all('SELECT * FROM shop_items WHERE onsale=1 ORDER BY kind, price, id'),
+    balance: me ? await balanceOf(me.id) : 0,
+    owned: me ? await all(
+      `SELECT o.id, o.used, i.name, i.icon, i.kind FROM shop_owned o
+       JOIN shop_items i ON i.id=o.item_id WHERE o.user_id=? ORDER BY o.used, o.id DESC LIMIT 60`, me.id) : [],
+  });
+});
+
+// 點數明細（流水帳）。
+// ⚠ 這一頁不是裝飾：使用者覺得點數不對的時候，沒有明細就只能吵架。
+app.get('/points', requireLogin, async (req, res) => {
+  const uid = res.locals.me.id, per = 30;
+  const total = (await one('SELECT count(*) c FROM points WHERE user_id=?', uid)).c;
+  const page = clampPage(pageNo(req.query.p), Math.ceil(total / per));
+  res.render('points', {
+    balance: await balanceOf(uid), total, page, per,
+    pages: Math.max(1, Math.ceil(total / per)),
+    rows: await all('SELECT * FROM points WHERE user_id=? ORDER BY id DESC LIMIT ? OFFSET ?', uid, per, (page - 1) * per),
+  });
+});
+
+// 買一件東西。
+//
+// ⚠ 整段包在 withLock 裡：不鎖的話，同一個人開兩個分頁同時按「購買」，
+// 兩邊都會先讀到同一個餘額、都判斷「夠」、然後各扣一次——
+// 餘額變成負的，而且是使用者自己就能觸發的，不需要任何攻擊技巧。
+app.post('/shop/:id/buy', requireLogin, flood('shop'), async (req, res) => {
+  const uid = res.locals.me.id;
+  await withLock('points:' + uid, async () => {
+    const it = await one('SELECT * FROM shop_items WHERE id=? AND onsale=1', req.params.id);
+    if (!it) { flash(req, '這件商品已經下架了'); return; }
+    const bal = await balanceOf(uid);
+    if (bal < it.price) {
+      // 講清楚差多少，不要只說「點數不足」——使用者得自己去減。
+      flash(req, `點數不夠：${it.name} 要 ${it.price} 點，你有 ${bal} 點，還差 ${it.price - bal} 點。`);
+      return;
+    }
+    await addPoints(uid, -it.price, 'buy', it.id);
+    await run('INSERT INTO shop_owned(user_id,item_id) VALUES(?,?)', uid, it.id);
+    flash(req, `買到了「${it.name}」，放進你的背包了。`);
+  });
+  res.redirect('/shop');
+});
+
+// ===== VIP 認證申請 =====
+//
+// ⚠ 在這之前，認證徽章**只有站長後台能手動掛**——使用者端看不到任何入口，
+// 等於這個功能對使用者不存在（功能盤點抓到的）。原站是付費申請，
+// 站主的決定是「現在免費，等我想開能隨時開」，所以流程照做，
+// 只有「要不要收錢」那一段掛在 PAID_MODE 上。
+//
+// state：0 待審、1 通過、2 婉拒。
+const VIP_NAMES = ['無', '銀', '金', '白金'];
+app.get('/vip', requireLogin, async (req, res) => {
+  const uid = res.locals.me.id;
+  res.render('vip', {
+    paid: PAID_MODE, names: VIP_NAMES,
+    // 手上這張的等級要印出來，不然使用者不知道自己現在是什麼
+    now: res.locals.me.vip || 0,
+    // 待審中的那一筆（有的話就不讓他重送，見下面）
+    pending: await one('SELECT * FROM vip_apps WHERE user_id=? AND state=0 ORDER BY id DESC', uid),
+    apps: await all('SELECT * FROM vip_apps WHERE user_id=? ORDER BY id DESC LIMIT 10', uid),
+  });
+});
+app.post('/vip', requireLogin, flood('vip'), async (req, res) => {
+  const uid = res.locals.me.id;
+  const want = Math.min(3, Math.max(1, +req.body.want || 1));
+  const reason = (req.body.reason || '').trim().slice(0, 500);
+  // ⚠ 空白理由直接退回並保留填過的內容——這是站上其他表單一致的做法，
+  // 302 走人會讓使用者以為送出成功了。
+  if (!reason)
+    return res.status(400).render('vip', {
+      paid: PAID_MODE, names: VIP_NAMES, now: res.locals.me.vip || 0,
+      pending: await one('SELECT * FROM vip_apps WHERE user_id=? AND state=0 ORDER BY id DESC', uid),
+      apps: await all('SELECT * FROM vip_apps WHERE user_id=? ORDER BY id DESC LIMIT 10', uid),
+      formErr: '請寫一下申請的理由，站長要靠這段話判斷。', form: req.body });
+  // 已經有一筆在排隊就不再收——不然使用者會連按好幾次，站長看到一排重複的。
+  if (await one('SELECT 1 FROM vip_apps WHERE user_id=? AND state=0', uid)) {
+    flash(req, '你已經有一筆申請在審核中了，等站長看完再說。');
+    return res.redirect('/vip');
+  }
+  await run('INSERT INTO vip_apps(user_id,want,reason) VALUES(?,?,?)', uid, want, reason);
+  await run('INSERT INTO sysmsg(user_id,title,body) VALUES(?,?,?)',
+    uid, '認證申請已送出', `你申請的是「${VIP_NAMES[want]}」認證，站長看完會再通知你。`);
+  flash(req, '申請送出了，站長審核完會用系統訊息通知你。');
+  res.redirect('/vip');
+});
+// 站長審核。通過就順手把徽章掛上去——分兩步做的話一定會有人只按了前一半。
+app.post('/admin/vip/:id/:act', requireAdmin, async (req, res) => {
+  const a = await one('SELECT * FROM vip_apps WHERE id=?', req.params.id);
+  if (!a) return res.redirect('/admin');
+  const okAct = req.params.act === 'ok';
+  const note = (req.body.note || '').trim().slice(0, 200);
+  await run('UPDATE vip_apps SET state=?, note=? WHERE id=?', okAct ? 1 : 2, note, a.id);
+  if (okAct) await run('UPDATE users SET vip=? WHERE id=?', Math.min(3, Math.max(0, a.want)), a.user_id);
+  // 使用者要知道結果，不然他會一直回來看那一頁
+  await run('INSERT INTO sysmsg(user_id,title,body) VALUES(?,?,?)', a.user_id,
+    okAct ? '認證通過了' : '認證申請沒有通過',
+    okAct ? `你的「${VIP_NAMES[a.want]}」認證已經掛上去了。${note ? '站長說：' + note : ''}`
+          : `這次沒有通過。${note ? '站長說：' + note : '之後還可以再申請。'}`);
+  res.redirect('/admin');
+});
+
+// ===== 小舖商品的後台 =====
+app.post('/admin/shop/new', requireAdmin, async (req, res) => {
+  const name = (req.body.name || '').trim().slice(0, 40);
+  if (!name) { flash(req, '商品名稱不能是空白'); return res.redirect('/admin'); }
+  await run('INSERT INTO shop_items(kind,name,descr,icon,price,amount) VALUES(?,?,?,?,?,?)',
+    ['gift', 'badge', 'space'].includes(req.body.kind) ? req.body.kind : 'gift',
+    name, (req.body.descr || '').trim().slice(0, 100),
+    (req.body.icon || '').trim().slice(0, 200),
+    Math.max(0, +req.body.price || 0), Math.max(0, +req.body.amount || 0));
+  res.redirect('/admin');
+});
+app.post('/admin/shop/:id/sale', requireAdmin, async (req, res) => {
+  await run('UPDATE shop_items SET onsale=1-onsale WHERE id=?', req.params.id);
+  res.redirect('/admin');
+});
+app.post('/admin/shop/:id/del', requireAdmin, async (req, res) => {
+  await run('DELETE FROM shop_items WHERE id=?', req.params.id);
+  res.redirect('/admin');
+});
+// 站長手動加減某個人的點數。走同一本帳，所以查得到是誰調的。
+app.post('/admin/user/:id/points', requireAdmin, async (req, res) => {
+  const d = Math.trunc(+req.body.delta || 0);
+  if (d) await addPoints(Number(req.params.id), d, 'admin', res.locals.me.name);
+  res.redirect('/admin');
+});
+
+// ===== 個人網頁空間 =====
+//
+// 原站的付費會員可以拿到一塊自己的檔案空間放 HTML 與圖片
+// （f10.wretch.yimg.com/<帳號>/files/…，自訂 CSS 就是放在那裡）。
+// 站主的決定是「現在免費，等我想開能隨時開」——所以容量的上限掛在
+// PAID_MODE 上，其餘照做。
+//
+// ⚠ 檔案存資料庫而不是磁碟：正式站的容器檔案系統每次部署都重來，
+// 照片走 R2 是因為量大，這裡是少量小檔，放資料庫最不會弄丟，
+// 也不用再開一套權限。
+const WEB_QUOTA = 1024 * 1024;      // 免費期每人 1MB
+const WEBFILE_MAX = 200 * 1024;     // 單檔 200KB
+// 能放的型別。
+//
+// ⚠ 這裡**故意不收 .html 以外的可執行內容**，而且 HTML 是用純文字回應、
+// 不是 text/html——放任站上任何人上傳一頁 HTML 再用同一個網域打開，
+// 等於把整站的 cookie 交給他（存 XSS：他的 JS 跑在 station.vibeaico.com 上，
+// 讀得到別人的 session cookie）。
+//
+// 所以規則是：檔案放得上去、列得出來、下載得到，但**一律以純文字或
+// 圖片回應**，瀏覽器不會把它當網頁執行。想真的當網頁跑，得先有一個
+// 獨立的網域來裝，那是之後的事，不是現在偷偷放行的事。
+const WEB_TYPES = {
+  '.html': 'text/plain; charset=utf-8',
+  '.htm':  'text/plain; charset=utf-8',
+  '.css':  'text/css; charset=utf-8',
+  '.txt':  'text/plain; charset=utf-8',
+  '.js':   'text/plain; charset=utf-8',
+};
+const webExt = n => { const m = /\.[a-z0-9]{1,5}$/i.exec(String(n || '')); return m ? m[0].toLowerCase() : ''; };
+// 檔名只收最保守的一組字元。
+// ⚠ 不是為了好看：檔名會被拼進網址，放行斜線或 .. 就等於開了路徑穿越。
+const webName = n => {
+  const x = String(n || '').trim().toLowerCase();
+  return /^[a-z0-9][a-z0-9._-]{0,39}$/.test(x) && !x.includes('..') ? x : '';
+};
+const webUsed = async uid => (await one('SELECT COALESCE(SUM(bytes),0) b FROM webfiles WHERE user_id=?', uid)).b;
+
+site.get('/files', requireLogin, requireOwner, async (req, res) => {
+  const uid = U(res).id;
+  res.render('files', { nav: 'user', paid: PAID_MODE,
+    quota: WEB_QUOTA, fileMax: WEBFILE_MAX, types: Object.keys(WEB_TYPES),
+    used: await webUsed(uid),
+    files: await all('SELECT id,name,mime,bytes,created FROM webfiles WHERE user_id=? ORDER BY name', uid) });
+});
+
+// 存一個檔（新增或覆蓋同名）。
+site.post('/files', requireLogin, requireOwner, flood('files'), async (req, res) => {
+  const uid = U(res).id;
+  const name = webName(req.body.name);
+  const body = String(req.body.body || '');
+  const back = `/${U(res).name}/files`;
+  // 每一種失敗都要講清楚是哪一種，而且不能吃掉使用者打的字。
+  if (!name) { flash(req, '檔名只能用英數字、底線、減號與小數點，開頭要是英數字，最多 40 字。'); return res.redirect(back); }
+  if (!WEB_TYPES[webExt(name)]) {
+    flash(req, `副檔名不支援：目前只收 ${Object.keys(WEB_TYPES).join('、')}。`);
+    return res.redirect(back);
+  }
+  const bytes = Buffer.byteLength(body, 'utf8');
+  if (bytes > WEBFILE_MAX) {
+    flash(req, `單一檔案最多 ${Math.round(WEBFILE_MAX / 1024)}KB，這一份是 ${Math.round(bytes / 1024)}KB。`);
+    return res.redirect(back);
+  }
+  // ⚠ 配額檢查與寫入要在同一把鎖裡：不鎖的話同時開兩個分頁各存一份大檔，
+  // 兩邊都會先讀到「還有空間」然後各寫一次，配額直接被超過去。
+  // 站上的照片配額（quota:<uid>）就是同一個問題、同一個解法。
+  await withLock('webfiles:' + uid, async () => {
+    const old = await one('SELECT bytes FROM webfiles WHERE user_id=? AND name=?', uid, name);
+    const after = (await webUsed(uid)) - (old?.bytes || 0) + bytes;
+    if (after > WEB_QUOTA) {
+      flash(req, `空間不夠：上限 ${Math.round(WEB_QUOTA / 1024)}KB，存這一份會變成 ` +
+        `${Math.round(after / 1024)}KB。先刪掉一些檔案再試。`);
+      return;
+    }
+    if (old) await run('UPDATE webfiles SET body=?, bytes=?, mime=? WHERE user_id=? AND name=?',
+      body, bytes, WEB_TYPES[webExt(name)], uid, name);
+    else await run('INSERT INTO webfiles(user_id,name,mime,body,bytes) VALUES(?,?,?,?,?)',
+      uid, name, WEB_TYPES[webExt(name)], body, bytes);
+    flash(req, `存好了：${name}（${bytes} 位元組）`);
+  });
+  res.redirect(back);
+});
+site.post('/files/:id/del', requireLogin, requireOwner, async (req, res) => {
+  await run('DELETE FROM webfiles WHERE id=? AND user_id=?', req.params.id, U(res).id);
+  flash(req, '刪掉了');
+  res.redirect(`/${U(res).name}/files`);
+});
+
+// 讀一個檔。任何人都看得到——這就是「個人網頁空間」的意思。
+//
+// ⚠ Content-Type 一律照 WEB_TYPES 給，而且 HTML 是 text/plain：
+// 讓使用者上傳的 HTML 在本站網域上被當網頁執行，等於把所有人的
+// session cookie 交給上傳者。加上 nosniff，不然舊瀏覽器會自己去猜型別，
+// 猜出 text/html 就前功盡棄。
+site.get('/files/:name', async (req, res, next) => {
+  const name = webName(req.params.name);
+  if (!name) return next();
+  const f = await one('SELECT * FROM webfiles WHERE user_id=? AND name=?', U(res).id, name);
+  if (!f) return next();
+  res.set('X-Content-Type-Options', 'nosniff');
+  res.set('Content-Security-Policy', "default-src 'none'");
+  res.type(f.mime || 'text/plain; charset=utf-8');
+  res.send(f.body);
+});
+
+
+
 
 site.post('/card',requireLogin,requireOwner,async (req,res)=>{
   const b=req.body, cut=(v,n)=>String(v||'').trim().slice(0,n);

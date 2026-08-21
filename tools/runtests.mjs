@@ -383,5 +383,22 @@ if (!process.env.SKIP_BROWSER) {
   if (fails.length) bad += fails.length;
 }
 
+// ── 小舖／點數／認證申請／個人網頁空間 ────────────────────────────
+// 功能盤點抓到「無名有、本站沒有」的四項。站主的決定是「現在全部免費，
+// 等我想開能隨時開」——所以帳本、商品、背包、扣點全部照做，
+// 只有「點數從哪裡來」掛在 PAID_MODE 上。
+{
+  const r = spawnSync(process.execPath, ['tools/shopcheck.mjs'], {
+    env: { ...process.env, PORT: '3495', MSYS_NO_PATHCONV: '1' }, encoding: 'utf8',
+  });
+  const out = (r.stdout || '') + (r.stderr || '');
+  const line = out.split('\n').filter(l => l.includes('passed')).pop();
+  const fails = out.split('\n').filter(l => l.startsWith('! FAIL'));
+  console.log(`\n小舖與新功能：${line ? line.trim() : '(沒有結果——測試根本沒跑完)'}`);
+  for (const f of fails.slice(0, 20)) console.log('  ' + f.trim());
+  if (!line) { bad += 1; }
+  if (fails.length) bad += fails.length;
+}
+
 console.log(bad ? `\n共 ${bad} 項失敗` : '\n全部通過');
 process.exit(bad ? 1 : 0);

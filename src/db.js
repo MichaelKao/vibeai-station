@@ -280,6 +280,53 @@ export function schemaSql(forDriver = driver) {
     T('pwresets', `id ${PK}, ${fkUser}, token_hash TEXT, expires TEXT,
       used INTEGER DEFAULT 0, ${created}`),
     T('digu', `id ${PK}, ${fkUser}, body TEXT, ${created}`),
+
+    // ── 無名小舖／點數 ───────────────────────────────────────────────
+    //
+    // 原站的點數是綁在 bill.wretch.cc 的**付費**機制：刷卡儲值、買虛擬
+    // 商品、送禮扣點。站主的決定是「現在全部免費，等我想開能隨時開」——
+    // 所以整套點數的帳本照做，只有「點數從哪裡來」那一段是開關：
+    // 現在是註冊就送＋每天登入送，以後把 PAID 打開就換成金流。
+    //
+    // ⚠ 為什麼不乾脆先不做點數、以後再加：那會讓「誰買過什麼」沒有帳本，
+    // 之後要開收費就得從零重建，而且既有使用者手上什麼都沒有。
+    // 先有帳本、先發免費點數，開關打開的那天使用者是無感的。
+    //
+    // ledger 是流水帳，不是餘額——餘額用 SUM(delta) 算。理由是對帳：
+    // 只存餘額的話，一旦有一筆扣錯，事後完全查不出是哪一筆。
+    T('points', `id ${PK}, ${fkUser}, delta INTEGER DEFAULT 0,
+      reason TEXT DEFAULT '', ref TEXT DEFAULT '', ${created}`),
+    // 小舖賣的東西。站長在後台上架，kind 決定買到之後發生什麼事：
+    //   gift   → 可以送人的禮物圖示（買了進背包）
+    //   badge  → 掛在自己名字旁邊的小圖
+    //   space  → 個人網頁空間的加購容量
+    T('shop_items', `id ${PK}, kind TEXT DEFAULT 'gift', name TEXT, descr TEXT DEFAULT '',
+      icon TEXT DEFAULT '', price INTEGER DEFAULT 0, amount INTEGER DEFAULT 0,
+      onsale INTEGER DEFAULT 1, ${created}`),
+    // 買下來的東西（背包）。used=1 代表已經送出去或已經用掉。
+    T('shop_owned', `id ${PK}, ${fkUser}, item_id INTEGER REFERENCES shop_items(id) ON DELETE CASCADE,
+      used INTEGER DEFAULT 0, ${created}`),
+
+    // ── VIP 認證申請 ─────────────────────────────────────────────────
+    //
+    // ⚠ 原站的認證是付費制，本站沒有金流，所以在這之前只有站長後台能手動
+    // 掛徽章——使用者端**看不到任何入口**，等於這個功能對使用者不存在。
+    // 補一條申請流程：使用者送出理由，進站長的審核佇列。
+    // state：0 待審、1 通過、2 婉拒。
+    T('vip_apps', `id ${PK}, ${fkUser}, want INTEGER DEFAULT 1, reason TEXT DEFAULT '',
+      state INTEGER DEFAULT 0, note TEXT DEFAULT '', ${created}`),
+
+    // ── 個人網頁空間 ─────────────────────────────────────────────────
+    //
+    // 原站付費會員可以拿到一塊自己的檔案空間放 HTML 與圖片
+    // （f10.wretch.yimg.com/<帳號>/files/…，自訂 CSS 就是放在那裡）。
+    // 我們做「最小可用」：站主上傳檔案，站上用 /<帳號>/files/<檔名> 提供。
+    //
+    // ⚠ body 存在資料庫而不是磁碟：正式站的檔案系統是暫時的（Railway 的
+    // 容器每次部署都重來），照片走 R2 是因為量大，這裡是少量小檔，
+    // 放資料庫最不會弄丟，也不用再開一套權限。
+    T('webfiles', `id ${PK}, ${fkUser}, name TEXT, mime TEXT DEFAULT 'text/html',
+      body TEXT DEFAULT '', bytes INTEGER DEFAULT 0, ${created}`),
   ].join('\n'));
 
   // 帳號大小寫不敏感：SQLite 靠 COLLATE NOCASE，PG 靠 lower() 唯一索引
@@ -322,6 +369,12 @@ export function schemaSql(forDriver = driver) {
     -- 過期清理則是掃 expires。
     CREATE INDEX IF NOT EXISTS idx_pwreset_hash ON pwresets(token_hash);
     CREATE INDEX IF NOT EXISTS idx_pwreset_exp  ON pwresets(expires);
+    -- 餘額是 SUM(delta)，每一頁的頁首都要印，所以這個索引是必要的而不是優化
+    CREATE INDEX IF NOT EXISTS idx_points_user  ON points(user_id);
+    CREATE INDEX IF NOT EXISTS idx_owned_user   ON shop_owned(user_id, used);
+    CREATE INDEX IF NOT EXISTS idx_vipapp_state ON vip_apps(state, id DESC);
+    -- /<帳號>/files/<檔名> 每一次請求都要靠這一組查
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_webfile_name ON webfiles(user_id, name);
     -- ⚠ 人氣排行榜（/rank 與首頁側欄）是 ORDER BY visits DESC LIMIT N，
     -- 沒有索引就要把整張 users 撈出來排序一次。站友一多，每一個訪客
     -- 開首頁都付這個代價。

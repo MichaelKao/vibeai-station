@@ -1,0 +1,98 @@
+<%
+  /* 認證申請 /vip
+     ─────────────────────────────────────────────────────────────
+     ⚠ 在這一頁之前，認證徽章只有站長後台掛得上去——使用者端沒有任何入口，
+     等於這個功能對使用者不存在。原站是付費申請（bill.wretch.cc），
+     站主的決定是「現在免費，等我想開能隨時開」。
+
+     原站的申請頁沒有存檔（付費站抓不到），照 §3-A 用站台既有元件組。
+     資料來自 src/server.js 的 app.get('/vip')。 */
+  const vpState = ['審核中', '通過', '沒有通過'];
+  const vpForm = locals.form || {};
+%>
+<%- include('partials/head2012', { title: '認證申請 - 無名小站' }) %>
+
+  <div class="bd big-bd clearfix">
+    <div class="main">
+
+      <div class="mod w2-auth">
+        <div class="hd"><h2>認證申請</h2></div>
+        <div class="bd">
+          <p class="w2-note">你目前的認證是 <b><%= names[now] %></b>。
+            認證徽章會出現在你的名字旁邊，站上每一則留言、迴響都看得到。</p>
+          <% if (!paid) { %>
+          <p class="w2-note">現在是免費期，申請不用花點數，站長看過理由就會處理。</p>
+          <% } %>
+
+          <% if (locals.formErr) { %>
+          <%# 錯誤講在表單上方，並且下面的欄位會保留填過的內容 %>
+          <p class="w2-err"><%= formErr %></p>
+          <% } %>
+
+          <% if (pending) { %>
+          <p class="w2-note">你有一筆<b>審核中</b>的申請（<%= names[pending.want] %>認證，
+            <%= String(pending.created).slice(0, 16) %> 送出）。
+            站長處理完會用系統訊息通知你，這段時間不用重複送。</p>
+          <% } else { %>
+          <form method="post" action="/vip">
+            <ul class="w2-form">
+              <li><label for="vip-want">想申請的等級</label>
+                <select name="want" id="vip-want">
+                  <% [1, 2, 3].forEach(n => { %>
+                  <option value="<%= n %>"<%= String(vpForm.want) === String(n) ? ' selected' : '' %>><%= names[n] %></option>
+                  <% }) %>
+                </select></li>
+              <li><label for="vip-reason">申請的理由</label>
+                <textarea name="reason" id="vip-reason" cols="50" rows="5" maxlength="500"
+                  placeholder="說說你在站上做了什麼、為什麼想要這個徽章"><%= vpForm.reason || '' %></textarea></li>
+              <li><button class="w2-btn" type="submit">送出申請</button></li>
+            </ul>
+          </form>
+          <% } %>
+        </div>
+      </div>
+
+      <div class="mod w2-auth">
+        <div class="hd"><h2>我送過的申請</h2></div>
+        <div class="bd">
+          <% if (!apps.length) { %>
+          <p class="w2-note">還沒有送過申請。</p>
+          <% } else { %>
+          <table class="w2-rows">
+            <tr><th>時間</th><th>等級</th><th>結果</th><th>站長的話</th></tr>
+            <% apps.forEach(a => { %>
+            <tr>
+              <td class="w2-when"><%= String(a.created).slice(0, 16) %></td>
+              <td><%= names[a.want] %></td>
+              <td><%= vpState[a.state] %></td>
+              <td><%= a.note || '—' %></td>
+            </tr>
+            <% }) %>
+          </table>
+          <% } %>
+        </div>
+      </div>
+
+    </div>
+    <div class="side">
+
+      <div class="mod w2-auth-side">
+        <div class="hd"><h2>相關</h2></div>
+        <div class="bd">
+          <ul>
+            <li><a href="/<%= me.name %>/settings">小站設定</a></li>
+            <li><a href="/shop">無名小舖</a></li>
+            <li><a href="/points">點數明細</a></li>
+            <li><a href="/help">服務說明</a></li>
+          </ul>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+</div><!-- /#wrapper -->
+
+<div id="lower-wrapper" class="clearfix">
+  <div class="bd clearfix"></div>
+<%- include('partials/foot2012') %>

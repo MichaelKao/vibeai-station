@@ -30,6 +30,9 @@
     { href: '/' + u.name + '/favs',     label: '我的收藏', on: locals.here === 'favs' },
     ...(isOwner ? [
       { href: '/' + u.name + '/feed',     label: '好友動態', on: locals.here === 'feed' },
+      /* 個人網頁空間。原站是付費會員才有的一塊檔案空間，現在免費期人人都有。
+         放在這一排是因為它跟收藏、好友動態一樣是「站主自己的東西」。 */
+      { href: '/' + u.name + '/files',    label: '網頁空間', on: locals.here === 'files' },
       { href: '/' + u.name + '/settings', label: '個人設定', on: locals.here === 'settings' },
     ] : []),
   ];
