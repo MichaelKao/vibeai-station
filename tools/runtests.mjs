@@ -239,8 +239,15 @@ if (!process.env.SKIP_BROWSER) {
   const r11 = spawnSync(process.execPath, ['tools/mobileupload.mjs'], {
     env: { ...process.env, BASE: b2, MSYS_NO_PATHCONV: '1' }, encoding: 'utf8',
   });
+  // Safari（WebKit）。
+  // ⚠ 上面全部都是 Chromium。在台灣 iPhone 佔比很高，而 iPhone 上**所有**
+  // 瀏覽器都是 WebKit（iOS 規定），所以 Chromium 全綠不代表 iPhone 沒事。
+  const r12 = spawnSync(process.execPath, ['tools/safaricheck.mjs'], {
+    env: { ...process.env, BASE: b2, MSYS_NO_PATHCONV: '1' }, encoding: 'utf8',
+  });
   srv2.kill();
-  for (const [nm, rr] of [['手機版面', r9], ['手機流程', r10], ['手機上傳', r11]]) {
+  for (const [nm, rr] of [['手機版面', r9], ['手機流程', r10], ['手機上傳', r11],
+                          ['Safari 引擎', r12]]) {
     const o = (rr.stdout || '') + (rr.stderr || '');
     const ln = o.split('\n').filter(l => l.includes('passed')).pop();
     const fs2 = o.split('\n').filter(l => l.startsWith('! FAIL'));
@@ -432,6 +439,53 @@ if (!process.env.SKIP_BROWSER) {
   for (const f of fails.slice(0, 20)) console.log('  ' + f.trim());
   if (!line) { bad += 1; }
   if (fails.length) bad += fails.length;
+}
+
+// ── 收費模式與併發（自己開站，不需要 Chrome）──────────────────────
+// 收費模式：站主的「等我想開能隨時開」是一個**從沒被執行過的分支**，
+//           而它第一次跑的那天，站上已經有真實使用者與真實點數。
+// 併發：    其餘所有測試都是一次一個請求。真正上線那天來的是一群人，
+//           而我們對那件事一個數字都沒有。
+for (const [name, file, port] of [
+  ['收費模式', 'tools/paidcheck.mjs', '3498'],
+  ['併發負載', 'tools/loadcheck.mjs', '3500'],
+]) {
+  const r = spawnSync(process.execPath, [file], {
+    env: { ...process.env, MSYS_NO_PATHCONV: '1' }, encoding: 'utf8',
+  });
+  void port;
+  const out = (r.stdout || '') + (r.stderr || '');
+  const line = out.split('\n').filter(l => l.includes('passed')).pop();
+  const fails = out.split('\n').filter(l => l.startsWith('! FAIL'));
+  console.log(`\n${name}：${line ? line.trim() : '(沒有結果——測試根本沒跑完)'}`);
+  // 併發那一支會印出延遲數字，那是要看的，不是雜訊
+  for (const l of out.split('\n').filter(l => l.includes('[基準]') || l.includes('併發]')))
+    console.log('  ' + l.trim());
+  for (const f of fails.slice(0, 20)) console.log('  ' + f.trim());
+  if (!line) { bad += 1; console.log('  ' + out.trim().split('\n').slice(-6).join('\n  ')); }
+  if (fails.length) bad += fails.length;
+}
+
+// ── 備份還原演練（要 Docker）───────────────────────────────────────
+// ⚠ 沒有還原過的備份等於沒有備份。最常見的失敗不是「備份沒跑」，是需要
+// 用的那一天才發現檔案是空的、版本對不上、或還原指令跑不起來——而那一天
+// 通常就是你剛剛誤刪東西的那一天。站上刪帳號／相簿／文章都是硬刪除。
+{
+  const hasDocker = spawnSync('docker', ['ps'], { stdio: 'ignore' }).status === 0;
+  if (!hasDocker) {
+    console.log('\n備份還原演練：(略過——Docker 沒在跑。⚠ 這一項略過等於' +
+                '「備份能不能還原」這件事沒有人驗過)');
+  } else {
+    const r = spawnSync(process.execPath, ['tools/restoredrill.mjs'],
+      { env: { ...process.env, MSYS_NO_PATHCONV: '1' }, encoding: 'utf8' });
+    const out = (r.stdout || '') + (r.stderr || '');
+    const line = out.split('\n').filter(l => l.includes('passed')).pop();
+    const fails = out.split('\n').filter(l => l.startsWith('! FAIL'));
+    console.log(`\n備份還原演練：${line ? line.trim() : '(沒有結果——測試根本沒跑完)'}`);
+    for (const f of fails.slice(0, 20)) console.log('  ' + f.trim());
+    if (!line) { bad += 1; console.log('  ' + out.trim().split('\n').slice(-6).join('\n  ')); }
+    if (fails.length) bad += fails.length;
+  }
 }
 
 console.log(bad ? `\n共 ${bad} 項失敗` : '\n全部通過');

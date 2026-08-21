@@ -14,6 +14,9 @@
 //   node tools/mobilecheck.mjs                        測本機（先自己開站）
 //   BASE=https://station.vibeaico.com node tools/mobilecheck.mjs   測正式站
 import { chromium } from 'playwright-core';
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
 
 const CHROME = process.env.CHROME_PATH || 'C:/Program Files/Google/Chrome/Application/chrome.exe';
 const BASE = (process.env.BASE || 'http://localhost:3000').replace(/\/$/, '');
@@ -41,7 +44,7 @@ const setup = await browser.newContext();
 const sp = await setup.newPage();
 const NAME = 'mtest' + Math.floor(Date.now() / 1000 % 100000);
 let COOKIES = [];
-let POST_ID = '1', ALBUM_ID = '1';
+let POST_ID = '1', ALBUM_ID = '1', PHOTO_ID = '', HALA_ID = '';
 try {
   await sp.goto(BASE + '/register', { waitUntil: 'domcontentloaded' });
   // ⚠ 一定要鎖定「包著 pass2 這一欄的那張表單」再送出。
@@ -76,6 +79,38 @@ try {
       .map(x => (x.getAttribute('href').match(/\/album\/(\d+)/) || [])[1]).filter(Boolean);
     return a[0] || '1';
   }));
+  // 傳一張照片進去。
+  // ⚠ 沒有照片的話，單張照片頁與投影片頁只會導回相簿列表——那兩頁就等於
+  // 沒測到，而「單張照片」是相簿站最多人停留的一頁。
+  // 圖用 sharp 真的產一張，不要手貼 base64（貼過一次，那串其實檔頭正常、
+  // 影像資料損壞，害整支測試報假的失敗）。
+  try {
+    const sharp = (await import('sharp')).default;
+    const tmpImg = path.join(os.tmpdir(), 'mchk-' + process.pid + '.png');
+    await sharp({ create: { width: 600, height: 400, channels: 3, background: { r: 90, g: 140, b: 200 } } })
+      .png().toFile(tmpImg);
+    await sp.goto(BASE + `/${NAME}/album/${ALBUM_ID}`, { waitUntil: 'domcontentloaded' });
+    await sp.locator('input[type=file]').first().setInputFiles(tmpImg);
+    await Promise.all([sp.waitForNavigation({ waitUntil: 'domcontentloaded', timeout: 60000 }),
+      sp.locator('form:has(input[type=file])').first()
+        .locator('input[type=submit], button[type=submit]').first().click()]);
+    PHOTO_ID = await sp.evaluate(() => {
+      const a = [...document.querySelectorAll('a[href*="/photo/"]')]
+        .map(x => (x.getAttribute('href').match(/\/photo\/(\d+)/) || [])[1]).filter(Boolean);
+      return a[0] || '';
+    });
+    try { fs.rmSync(tmpImg, { force: true }); } catch {}
+  } catch (e) { console.log('[setup] 上傳照片失敗，單張照片頁會跳過：' + e.message.slice(0, 60)); }
+  // 發一則哈啦主題，才有 /hala/:id 可以測
+  try {
+    await sp.goto(BASE + '/hala', { waitUntil: 'domcontentloaded' });
+    const hf = sp.locator('form:has(textarea)').first();
+    await hf.locator('input[name=title]').fill('手機版面測試主題');
+    await hf.locator('textarea[name=body]').first().fill('內容');
+    await Promise.all([sp.waitForNavigation({ waitUntil: 'domcontentloaded' }),
+      hf.locator('button[type=submit], input[type=submit]').first().click()]);
+    HALA_ID = (sp.url().match(/\/hala\/(\d+)/) || [])[1] || '';
+  } catch { /* 沒有就跳過那一頁 */ }
   COOKIES = await setup.cookies();
   console.log(`[setup] 測試帳號 ${NAME}，登入後網址 ${sp.url()}，cookie ${COOKIES.length} 個`);
 } catch (e) {
@@ -121,8 +156,17 @@ const PAGES = [
   [`/${NAME}/blog/${POST_ID}/edit`, '編輯文章', true],
   [`/${NAME}/album/${ALBUM_ID}/wall`, '相片牆', true],
   [`/${NAME}/favs`, '我的收藏', true],   // ⚠ 收藏掛在小站底下，不是 /favs
-  ['/join', '揪團', false],
   ['/forgot', '忘記密碼', false],
+  // 第二批缺口：這些原本也沒在手機尺寸下畫出來過。
+  // /photo/:pid 是相簿站訪客停留最久的一頁，卻要有照片才進得去——
+  // 所以上面的 setup 才要真的傳一張，不然這一頁永遠測不到。
+  ...(PHOTO_ID ? [[`/${NAME}/photo/${PHOTO_ID}`, '單張照片', true]] : []),
+  ...(PHOTO_ID ? [[`/${NAME}/album/${ALBUM_ID}/slide`, '投影片', true]] : []),
+  ...(HALA_ID ? [[`/hala/${HALA_ID}`, '哈啦主題', false]] : []),
+  [`/${NAME}/visitors`, '誰來我家', true],
+  [`/${NAME}/feed`, '好友動態', true],
+  ['/svcs/wretch_girl', '愛正妹', false],
+  ['/report', '檢舉', false],
 ];
 
 // 找出「是誰撐出去的」。
