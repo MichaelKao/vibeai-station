@@ -203,6 +203,10 @@ if (!process.env.SKIP_BROWSER) {
     env: { ...process.env, BASE: b2, MSYS_NO_PATHCONV: '1',
            USER_NAME: 'alpha', USER_PASS: 'test1234' }, encoding: 'utf8',
   });
+  // 手機可用性：觸控目標大小、圖片 alt、主要內容有沒有被推到看不見的地方
+  const r7 = spawnSync(process.execPath, ['tools/touchcheck.mjs'], {
+    env: { ...process.env, BASE: b2, MSYS_NO_PATHCONV: '1' }, encoding: 'utf8',
+  });
   srv2.kill();
   const out = (r.stdout || '') + (r.stderr || '');
   const line = out.split('\n').filter(l => l.includes('passed')).pop();
@@ -243,6 +247,14 @@ if (!process.env.SKIP_BROWSER) {
   for (const f of fails6.slice(0, 20)) console.log('  ' + f.trim());
   if (!line6) { bad += 1; console.log('  ' + out6.trim().split('\n').slice(-8).join('\n  ')); }
   if (fails6.length) bad += fails6.length;
+
+  const out7 = (r7.stdout || '') + (r7.stderr || '');
+  const line7 = out7.split('\n').filter(l => l.includes('passed')).pop();
+  const fails7 = out7.split('\n').filter(l => l.startsWith('! FAIL'));
+  console.log(`\n手機可用性：${line7 ? line7.trim() : '(沒有結果——測試根本沒跑完)'}`);
+  for (const f of fails7.slice(0, 20)) console.log('  ' + f.trim());
+  if (!line7) { bad += 1; console.log('  ' + out7.trim().split('\n').slice(-8).join('\n  ')); }
+  if (fails7.length) bad += fails7.length;
 }
 
 console.log(bad ? `\n共 ${bad} 項失敗` : '\n全部通過');

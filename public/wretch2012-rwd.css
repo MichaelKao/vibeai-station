@@ -414,6 +414,146 @@
     left: 0 !important; box-sizing: border-box;
   }
   #wfp-cover .stack .gallery { width: auto !important; max-width: 100%; }
+
+  /* ── 10. 手指按得到：清單與導覽類的連結加高 ─────────────────────────
+   * 手指的接觸面積大約 44×44 CSS px（Apple 的人機介面指南與 WCAG 2.5.5
+   * 都是這個數字）。原站是 2012 年的桌機站，滿滿都是 12～14px 高的小字
+   * 連結，直接搬到手機上會一直按錯、按到旁邊那一顆。
+   *
+   * **只加高「清單項目與導覽」類的連結**，不碰內文。
+   * 段落裡的連結長高會把行距撐開、整段文字變得七零八落，那比小一點更糟；
+   * 而且內文連結本來就是靠上下文閱讀的，不是拿來戳的。
+   *
+   * 用 padding 而不是 min-height：min-height 對 inline 元素無效，
+   * 而這些連結大多是 inline。padding 上下各 10px 讓 14px 的字變成 34px、左右各 6px 讓「影音」這種
+   * 兩個字的連結也有 38px 寬，加上 li 本身的間距就接近 44px 的可觸區。 */
+  #kukubar-upper .bar-link, #kukubar-lower .bar-link,
+  #kukubar-upper .dropdown a, #kukubar-lower .dropdown a,
+  ul.nav li a, .w2-ranklist li a, .w2-bloglist h3 a, .w2-albumgrid li a.t,
+  .w2-more a, .w2-search-scope a, .side .bd ul li a, .mod .bd > ul > li > a,
+  .pagination a, .page a, #pager a,
+  /* 頁尾那三排（服務連結、RSS、語言）與所有分頁列 */
+  #lower-wrapper li a, #footer li a, .page_control a,
+  /* 送出鈕：搜尋那顆只有 24px 高 */
+  /* 相簿總站自己那排頁首連結（ul#access_link）與首頁的日曆／小工具 */
+  #access_link li a, #service_link a,
+  /* 首頁的日期軸（#wfp-archive-calendar 那一排日子與前後翻頁） */
+  #wfp-archive-calendar li a, #wfp-archive-forward, #wfp-archive-back, #wfp-archive-today,
+  /* 首頁其餘自己的工具列（wfp-* 是原站首頁的前綴） */
+  [id^="wfp-"] a, #service_list a,
+  /* 相簿總站的熱門關鍵字與左欄分類 */
+  #Hot_Keyword a, #browse_album li a, .sideII li a,
+  /* 相簿總站每一格底下的「帳號／相簿名」兩行字 */
+  .grid > a, .grid strong a,
+  /* 相簿總站自己那套分頁（#pagination_album 之類） */
+  [id^="pagination"] a, .pagination_album a,
+  /* 站台頁自己那套分頁列 */
+  .w2-pager a,
+  input[type=submit], input[type=button], button {
+    /* 這幾條要 !important：版型那邊有 #header .nav li a 這種 ID 選擇器把
+       padding 歸零，特異性比這裡高。本檔是版面的最後一層，用 !important
+       是這支檔案既有的作法（見檔頭說明）。 */
+    display: inline-block !important;
+    padding: 10px 6px !important;
+    line-height: 1.4;
+  }
+  /* 按鈕另外補 min-height：版型把送出鈕的 height 寫死成 24px，
+     只加 padding 撐不開。 */
+  input[type=submit], input[type=button], button { min-height: 34px !important; }
+  /* 分頁的個位數數字天生就窄（22px）。WCAG 2.5.8 的最小值是 24×24，
+     補一個 min-width 並置中，不動它的高度。 */
+  .page_control a, [id^="pagination"] a, .w2-pager a, .pagination a {
+    min-width: 24px; text-align: center;
+  }
+  /* ⚠ 相簿搜尋那顆送出鈕是背景圖精靈（原站 122×24 的圖）。
+     套上上面那條 inline-block + padding 之後寬度塌成 12px——
+     加大可觸區反而把按鈕弄不見了。它單獨處理：不加 padding，只長高。 */
+  #search_submit { padding: 0 !important; min-width: 110px !important; }
+  /* 版型把送出鈕釘在 left:360px 的絕對位置（桌機那塊橫幅的右端）。
+     375px 螢幕上它會壓在頁籤與關鍵字上面。拉回文件流排在輸入框旁邊。 */
+  .search_control #search_submit { position: static !important; left: auto !important; margin-left: 6px; }
+  .search_control { height: auto !important; padding-left: 0 !important; }
+
+  /* 相簿格子：版型寫死 .grid{height:108px;overflow:hidden} 與
+     .grid span,.grid strong{height:14px}。手機上一格變窄、標題折成兩行，
+     14px 的框就把第二行切掉（畫面上是「市場採買」只剩上半截）。 */
+  .grid { height: auto !important; overflow: visible !important; width: auto !important; }
+  .grid span, .grid strong { height: auto !important; width: auto !important; overflow: visible !important; }
+  /* 外面那一格也寫死 height:160px;overflow:hidden。標題折行之後
+     一樣會被切掉，要一起放開。 */
+  .album_list li { height: auto !important; overflow: visible !important; }
+
+  /* 服務列表那塊是繁／簡／英三份並排（原站的 dl#navigation），
+     375px 排不下，第三份會被切掉一半。改成折行。 */
+  /* dl#navigation 那四顆服務鈕是**一張精靈圖**（sprite_fplink.png）
+     用 background-position 切出來的，每一顆的座標都寫死。
+     所以它不能套上面那條觸控放大（padding 會把座標整個錯開，畫面上
+     就是三塊橘色互相疊在一起）。這裡只做兩件事：拉回文件流，
+     以及排不下時讓它自己橫向捲動，不要被裁掉。 */
+  #navigation {
+    height: auto !important; overflow-x: auto; overflow-y: hidden;
+    white-space: nowrap; -webkit-overflow-scrolling: touch;
+  }
+  #navigation dd { float: none !important; display: inline-block; vertical-align: top; }
+  /* 相簿與照片的縮圖連結：把整張圖當可觸區，本來就夠大，只要確保
+     連結不是塌成 0 高度的 inline 盒子（圖片浮動時會發生）。 */
+  .w2-albumgrid li > a, .w2-grid li > a, a.thumbnail { display: inline-block; }
+
+
+  /* ── 11. 相簿總站的頁首搜尋區（/albums）───────────────────────────────
+   * ⚠ 這一頁在手機上原本是**壞的**，而且壞得很難發現：
+   * rwdprobe 只量橫向溢出，量不到「內容被推到看不見的地方」。
+   *
+   * 版型把搜尋表單寫成
+   *     #searchForm { width:500px; position:absolute; left:205px; top:6px }
+   * 375px 的螢幕上這一塊被推到畫面外，寬度算出來是 0，於是
+   * #Hot_Keyword（那排「國內旅遊、國外旅遊…」）每個字都自己換一行——
+   * 實測 0px 寬 × 721px 高，把底下的相簿清單整個推到 y=2200 以下。
+   * 使用者看到的就是「開頁面 → 一片空白 → 一張相簿都沒有」。
+   *
+   * 手機上把它拉回正常文件流，讓關鍵字自己橫向折行。 */
+  #searchForm {
+    position: static !important;
+    width: auto !important; height: auto !important;
+    left: auto !important; top: auto !important;
+    margin: 6px 8px;
+  }
+  /* fieldset 在 Chrome 有 min-inline-size:min-content 的預設行為，
+     width:auto 在這個版型下算出來是 0——整塊搜尋區塌成一條 543px 高的
+     直線。要寫死 100% 才撐得開。 */
+  #searchForm fieldset { width: 100% !important; float: none !important; position: static !important; min-inline-size: 0; }
+  #search_tab { width: auto !important; height: auto !important; overflow: visible !important; }
+  #search_tab label { display: inline-block; margin-right: 4px; }
+  #Hot_Keyword {
+    width: 100% !important; height: auto !important;
+    /* 原本的字色 #fce070 是配那張橘色橫幅背景圖的。窄螢幕下背景圖
+       蓋不到這裡，淺黃字印在白底上等於看不見。 */
+    color: #b35900;
+    line-height: 1.8; word-break: keep-all;
+  }
+  #Hot_Keyword a { white-space: nowrap; color: #c30 !important; }
+  .search_control { width: auto !important; }
+  .search_control input[type=text] { width: 60% !important; }
+  /* 手機上先看相簿，篩選條件放後面。
+     左欄 #browse_album 是 Conditions／Categories／Locations 三組共 30 幾項，
+     在 375px 下堆成 1317px 高——使用者要滑過三個半螢幕才看得到第一張相簿，
+     體感就是「這頁是空的」。用 flex 的 order 換順序，DOM 不動
+     （桌機版完全不受影響，那邊是三欄浮動排版）。 */
+  #main2 { display: flex; flex-direction: column; }
+  /* #navigation（服務列表那塊橘色方塊）是絕對定位，窄螢幕會壓在
+     「Hot > All」標題上面。拉回文件流。 */
+  #navigation { position: static !important; width: auto !important; }
+  #main2 > #navigation   { order: 1; }
+  #main2 > #main_content { order: 2; }
+  #main2 > #browse_album { order: 3; }
+  /* 篩選那三組在手機上橫向折行，不要一項一行 */
+  #browse_album > li { width: auto !important; float: none !important; }
+  #browse_album .sideII ul { display: flex; flex-wrap: wrap; }
+  #browse_album .sideII li { width: auto !important; float: none !important; }
+
+  /* 頁首那塊背景圖是 970px 寬的橫幅，窄螢幕下不要撐出捲軸 */
+  #header #searchForm { background-size: contain; }
+
 }
 
 /* 真正的窄螢幕（手機直立）再收一次 */
