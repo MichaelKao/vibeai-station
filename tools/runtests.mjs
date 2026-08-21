@@ -193,6 +193,11 @@ if (!process.env.SKIP_BROWSER) {
     env: { ...process.env, BASE: b2, MSYS_NO_PATHCONV: '1',
            USER_NAME: 'alpha', USER_PASS: 'test1234' }, encoding: 'utf8',
   });
+  // 鍵盤操作：kukubar 那幾顆「展開」用 Enter 按得動嗎
+  const r5 = spawnSync(process.execPath, ['tools/keyboardcheck.mjs'], {
+    env: { ...process.env, BASE: b2, MSYS_NO_PATHCONV: '1',
+           USER_NAME: 'alpha', USER_PASS: 'test1234' }, encoding: 'utf8',
+  });
   srv2.kill();
   const out = (r.stdout || '') + (r.stderr || '');
   const line = out.split('\n').filter(l => l.includes('passed')).pop();
@@ -217,6 +222,14 @@ if (!process.env.SKIP_BROWSER) {
   for (const f of fails4.slice(0, 20)) console.log('  ' + f.trim());
   if (!line4) { bad += 1; console.log('  ' + out4.trim().split('\n').slice(-8).join('\n  ')); }
   if (fails4.length) bad += fails4.length;
+
+  const out5 = (r5.stdout || '') + (r5.stderr || '');
+  const line5 = out5.split('\n').filter(l => l.includes('passed')).pop();
+  const fails5 = out5.split('\n').filter(l => l.startsWith('! FAIL'));
+  console.log(`\n鍵盤操作：${line5 ? line5.trim() : '(沒有結果——測試根本沒跑完)'}`);
+  for (const f of fails5.slice(0, 20)) console.log('  ' + f.trim());
+  if (!line5) { bad += 1; console.log('  ' + out5.trim().split('\n').slice(-8).join('\n  ')); }
+  if (fails5.length) bad += fails5.length;
 }
 
 console.log(bad ? `\n共 ${bad} 項失敗` : '\n全部通過');

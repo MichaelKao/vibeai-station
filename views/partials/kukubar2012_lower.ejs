@@ -37,7 +37,7 @@
             <a class="" href="/help" target="_blank">我有建議</a>
         </div>
         <div id="footer-subscription" class="bar-block bar-block-click">
-            <a class="footer-subscription-btn" href="#">分類好文<span class="bar-block-btn">展開</span></a>
+            <a class="footer-subscription-btn" href="#">分類好文<span class="bar-block-btn" tabindex="0" role="button" aria-expanded="false">展開</span></a>
                 <div id="scrb-panel" class="dropdown ">
                 <div class="hd panel-block">
                     <div class="heading"><h5>請選擇你有興趣的分類</h5></div>
@@ -117,5 +117,32 @@
     var off = bar.classList.toggle('hidden-footer');
     sw.classList.toggle('off', off);
   });
+
+  /* 鍵盤：Enter／Space 等同點擊。
+     那幾顆「展開」是 <span role="button">，瀏覽器不會幫 span 把 Enter 轉成
+     click（只有 <button> 與 <a href> 有這個待遇），所以自己轉。
+     不轉的話，用鍵盤的人 Tab 到那一顆按下去完全沒反應，底下整個選單
+     （我的小站／我的相簿／個人設定／登出）永遠打不開。 */
+  document.addEventListener('keydown', function(e){
+    var t = e.target;
+    if (!t || t.getAttribute('role') !== 'button') return;
+    if (e.key !== 'Enter' && e.key !== ' ' && e.key !== 'Spacebar') return;
+    e.preventDefault();
+    t.click();
+  });
+
+  /* 選單開合時同步 aria-expanded，讀螢幕軟體才唸得出「已展開／已收合」。
+     用 MutationObserver 盯 class 的變化，就不必去改上面那段開合邏輯。 */
+  (function(){
+    var blocks = document.querySelectorAll('.bar-block-click');
+    if (!blocks.length || typeof MutationObserver === 'undefined') return;
+    var mo = new MutationObserver(function(rs){
+      rs.forEach(function(r){
+        var b = r.target, btn = b.querySelector('[role="button"]');
+        if (btn) btn.setAttribute('aria-expanded', b.classList.contains('expanded-btn') ? 'true' : 'false');
+      });
+    });
+    blocks.forEach(function(b){ mo.observe(b, { attributes: true, attributeFilter: ['class'] }); });
+  })();
 })();
 </script>

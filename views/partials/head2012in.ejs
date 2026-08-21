@@ -88,7 +88,7 @@
     <%# 目前服務固定是 Blog：存檔的留言板頁就是這樣（li.blog-index 會被 CSS 藏起來） %>
     <div id="wretch-service" class="bar-block bar-block-click">
       <a class="current-service bar-link theme" tabindex="2" href="/blogs">Blog</a>
-      <span class="bar-block-btn" tabindex="3">展開</span>
+      <span class="bar-block-btn" tabindex="3" role="button" aria-expanded="false">展開</span>
       <ul class="dropdown blog-service">
         <li class="album-index"><a class="bar-link" href="/albums">Album</a></li>
         <li class="blog-index"><a class="bar-link" href="/blogs">Blog</a></li>
@@ -145,7 +145,7 @@
         （chrome.md 第 5.3 節標【推】）：暱稱 + 展開箭頭 + 白底下拉。 %>
     <div id="wretch-login" class="bar-block bar-block-click bar-link">
       <a class="bar-link theme" href="/<%= me.name %>"><%= me.nick %></a>
-      <span class="bar-block-btn-login">展開</span>
+      <span class="bar-block-btn-login" tabindex="0" role="button" aria-expanded="false">展開</span>
       <ul class="dropdown">
         <li><a class="bar-link" href="/<%= me.name %>">我的小站</a></li>
         <li><a class="bar-link" href="/<%= me.name %>/feed">好友動態</a></li>

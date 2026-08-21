@@ -46,7 +46,7 @@
         </div>
         <div id="wretch-service" class="bar-block bar-block-click">
             <a class="current-service bar-link theme" tabindex="2" href="/blogs">Blog</a>
-            <span class="bar-block-btn" tabindex="3">展開</span>
+            <span class="bar-block-btn" tabindex="3" role="button" aria-expanded="false">展開</span>
             <ul class="dropdown <%= kkService %>-service">
                 <li class="album-index"><a class="bar-link" href="/albums">Album</a></li>
                 <li class="blog-index"><a class="bar-link" href="/blogs">Blog</a></li>
@@ -98,7 +98,7 @@
         <%# 登入後：chrome.md 5.3【推】——暱稱 + 展開鈕 + 下拉選單 %>
         <div id="wretch-login" class="bar-block bar-block-click bar-link">
             <span class="theme"><%= kkMe.nick %></span>
-            <span class="bar-block-btn-login" tabindex="4">展開</span>
+            <span class="bar-block-btn-login" tabindex="4" role="button" aria-expanded="false">展開</span>
             <ul class="dropdown">
                 <li><a class="bar-link" href="/<%= kkMe.name %>">我的小站</a></li>
                 <li><a class="bar-link" href="/<%= kkMe.name %>/blog/new">發表文章</a></li>
