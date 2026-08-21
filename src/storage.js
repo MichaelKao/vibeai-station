@@ -85,7 +85,7 @@ const MAX_PIXELS = 50e6;
 
 export async function save(file){
   const base = (process.env.R2_PREFIX||'station/') + crypto.randomUUID();
-  let big = file.buffer, thumbBuf = null, meta = {};
+  let big = file.buffer, thumbBuf = null, meta = {}, thumbErr = null;
 
   // ⚠⚠ 這裡本來是一個「轉檔失敗就退回原圖，不擋使用者上傳」的 catch。
   // 那一行讓兩種攻擊直接成立：
@@ -120,10 +120,24 @@ export async function save(file){
       big = await sharp(file.buffer).rotate().resize(1024, 1024, { fit:'inside', withoutEnlargement:true }).jpeg({ quality:86 }).toBuffer();
     }
     thumbBuf = await sharp(file.buffer).rotate().resize(90, 90, { fit:'cover', position:'centre' }).jpeg({ quality:82 }).toBuffer();
-  } catch { /* 已經確認是合法圖片了，壓縮這一步失敗才退回原圖 */ }
+  } catch (e) {
+    /* 已經確認是合法圖片了，壓縮這一步失敗才退回原圖 */
+    // ⚠ 這裡原本是 `catch { }`——把原因整個吞掉。
+    // 後果不是「少一行 log」而已：metadata() 只讀檔頭，所以**檔頭好好的、
+    // 影像資料損壞**的圖（下載中斷、隨身碟壞軌、傳輸出錯）會通過上面那道
+    // 檢查，然後在這裡失敗，使用者只看到一句「產生不出縮圖」——那句話
+    // 對他毫無意義，他不知道是自己的檔壞了還是網站壞了，只會一直重傳。
+    // 而站長翻 log 也什麼都看不到，沒辦法回答他。
+    // 實測一張檔頭正常、IDAT 損壞的 PNG，真正的原因是
+    // 「vipspng: libpng read error」，那句話一路被吞到底。
+    thumbErr = e;
+    console.error('[upload] 解碼失敗', file.originalname, '→', e.message);
+  }
   // 縮圖是**一定要有**的：它出現在相簿列表、好友清單、留言板這些公開頁，
   // fallback 成原圖等於把大圖送去當 90px 的格子用。
-  if (!thumbBuf) throw new BadImage('產生不出縮圖');
+  if (!thumbBuf) throw new BadImage(
+    thumbErr ? '這張圖的檔案內容有損壞，讀到一半就壞掉了（可以試試重新存一次再上傳）'
+             : '產生不出縮圖');
   meta.height = realHeight;
   const isJpeg = big !== file.buffer;
   const url   = await put(base + (isJpeg ? '.jpg' : ext(file.mimetype)), big, isJpeg ? 'image/jpeg' : file.mimetype);

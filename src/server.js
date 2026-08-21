@@ -76,7 +76,9 @@ function sessionSecret(){
   if (IS_PROD) throw new Error(
     '正式環境沒有設 SESSION_SECRET。這個值是 session cookie 的簽章金鑰，' +
     '用預設字串等於讓任何人都可以冒充任何帳號（含站長）。' +
-    '請到 Railway 的環境變數加一個夠長的隨機字串再重新部署。');
+    '請到 Railway 的環境變數加一個夠長的隨機字串再重新部署。' +
+    '（本機接 Postgres 做測試時也會走到這裡——那不是誤判，' +
+    '任何有真實資料庫的環境都該有自己的金鑰，設一個給它就好。）');
   return 'vibeai-dev-secret';
 }
 app.use(session({

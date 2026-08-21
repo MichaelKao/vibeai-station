@@ -114,7 +114,14 @@ if (!process.env.SKIP_PG) {
     const DBNAME = 'w2_' + Date.now().toString(36);
     spawnSync('docker', ['exec', CN, 'psql', '-U', 'postgres', '-c', 'CREATE DATABASE ' + DBNAME], { encoding: 'utf8' });
     const PGURL = 'postgresql://postgres:pw@127.0.0.1:' + PGPORT + '/' + DBNAME;
-    const pgEnv = { ...process.env, DB_DRIVER: 'postgres', DATABASE_URL: PGURL, PORT: APPPORT };
+    // ⚠ SESSION_SECRET 一定要給。
+    // src/server.js 判斷「是不是正式站」的方式是「有沒有 DATABASE_URL」，
+    // 而這裡的測試用 Postgres 也有——於是伺服器認定自己是正式站，
+    // 缺 SESSION_SECRET 就拒絕開機（那個檢查是刻意的，見 sessionSecret()）。
+    // 少了這一行的後果不是報錯，是**整套 Postgres 測試被靜默跳過**：
+    // 報表只印一句「server 沒起來，跳過」，而正式站跑的正是 Postgres。
+    const pgEnv = { ...process.env, DB_DRIVER: 'postgres', DATABASE_URL: PGURL, PORT: APPPORT,
+                    SESSION_SECRET: 'runtests-only-not-a-real-secret' };
     // stderr 收起來：server 起不來的時候要看得到原因，
     // 不然只會看到 test_all 整串連鎖紅燈，完全不知道是它根本沒起來。
     const pgSrv = spawn(process.execPath, ['src/server.js'], { env: pgEnv, stdio: ['ignore', 'ignore', 'pipe'] });
@@ -227,8 +234,13 @@ if (!process.env.SKIP_BROWSER) {
   const r10 = spawnSync(process.execPath, ['tools/mobileflow.mjs'], {
     env: { ...process.env, BASE: b2, MSYS_NO_PATHCONV: '1' }, encoding: 'utf8',
   });
+  // 上傳照片：相簿站的核心功能，而前面兩支一次都沒碰過檔案上傳
+  // （mobilecheck 只量版面，mobileflow 走的是純文字表單）。
+  const r11 = spawnSync(process.execPath, ['tools/mobileupload.mjs'], {
+    env: { ...process.env, BASE: b2, MSYS_NO_PATHCONV: '1' }, encoding: 'utf8',
+  });
   srv2.kill();
-  for (const [nm, rr] of [['手機版面', r9], ['手機流程', r10]]) {
+  for (const [nm, rr] of [['手機版面', r9], ['手機流程', r10], ['手機上傳', r11]]) {
     const o = (rr.stdout || '') + (rr.stderr || '');
     const ln = o.split('\n').filter(l => l.includes('passed')).pop();
     const fs2 = o.split('\n').filter(l => l.startsWith('! FAIL'));
