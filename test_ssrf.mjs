@@ -7,7 +7,7 @@
 //   2. fetchFeed()    真的開一個本機伺服器，讓它 302 轉到內網位址，
 //                     驗證我們不會跟過去（第一版就是跟過去了）
 import http from 'node:http';
-import { isPrivateIp, subUrlOk, fetchFeed, nextHop } from './src/feed.js';
+import { isPrivateIp, subUrlOk, fetchFeed, nextHop, parseFirstItem } from './src/feed.js';
 
 let pass = 0, fail = 0;
 const ok = (name, cond) => { cond ? pass++ : fail++; console.log((cond ? '  PASS ' : '! FAIL ') + name); };
@@ -68,5 +68,50 @@ ok('連 127.0.0.1 被擋', await fetchFeed(`http://127.0.0.1:${port}/feed`) === 
 ok('十進位 loopback 也被擋', await fetchFeed(`http://2130706433:${port}/feed`) === null);
 
 srv.close();
+
+console.log('\n=== RSS 解析（訂閱功能的核心）===');
+// ⚠ 這一組是第八輪稽核抓到的：parseFirstItem 裡的三個參數漏了引號，
+// 寫成 pick(pubDate)、toLocaleDateString(sv-SE, { timeZone: Asia/Taipei })。
+// 那是**裸識別字**不是字串——語法合法（sv-SE 被當成減法），所以模組載得起來、
+// node --check 過、13 組測試全綠，但只要真的抓到一份 RSS 就丟
+// ReferenceError: pubDate is not defined。
+//
+// 兩個呼叫端都是 .catch(()=>{}) 吞掉，所以壞得完全沒有聲音：訂閱側欄永遠空的
+// （查詢是 WHERE last_title!=''），而且 fetched 永遠寫不進去，「30 分鐘不重抓」
+// 的節流失效——每個訪客打開網誌頁都對第三方網站重抓一次。
+//
+// 整合測試碰不到這裡（要有一個真的 RSS 來源），所以一定要有單元測試。
+{
+  const RFC822 = '<?xml version="1.0"?><rss><channel>'
+    + '<item><title>第一則</title><link>http://example.com/a</link>'
+    + '<pubDate>Wed, 20 Aug 2025 05:00:00 +0800</pubDate></item>'
+    + '<item><title>第二則</title><link>http://example.com/b</link></item>'
+    + '</channel></rss>';
+  const r = parseFirstItem(RFC822);
+  ok('RSS：取到第一則的標題', r.title === '第一則', JSON.stringify(r));
+  ok('RSS：取到連結', r.url === 'http://example.com/a', JSON.stringify(r));
+  ok('RSS：pubDate 正規化成 YYYY-MM-DD', r.date === '2025-08-20', JSON.stringify(r));
+
+  // Atom 用 <updated>、日期是 ISO-8601，長度跟 RFC-822 不一樣
+  const ATOM = '<feed><entry><title>Atom 那則</title>'
+    + '<link href="http://example.com/atom"/>'
+    + '<updated>2024-01-02T10:00:00Z</updated></entry></feed>';
+  const a = parseFirstItem(ATOM);
+  ok('Atom：取到標題與 href 連結', a.title === 'Atom 那則' && a.url === 'http://example.com/atom', JSON.stringify(a));
+  ok('Atom：updated 也正規化得出來', /^\d{4}-\d{2}-\d{2}$/.test(a.date), JSON.stringify(a));
+
+  // 沒有日期欄位不能爆
+  const NODATE = '<rss><item><title>沒有日期</title><link>http://example.com/c</link></item></rss>';
+  let threw = null;
+  try { parseFirstItem(NODATE); } catch (e) { threw = e; }
+  ok('沒有日期欄位也不會丟例外', !threw, threw && (threw.name + ' ' + threw.message));
+
+  // 日期爛掉不能爆
+  const BAD = '<rss><item><title>爛日期</title><link>http://example.com/d</link><pubDate>不是日期</pubDate></item></rss>';
+  let threw2 = null;
+  try { parseFirstItem(BAD); } catch (e) { threw2 = e; }
+  ok('日期格式爛掉也不會丟例外', !threw2, threw2 && (threw2.name + ' ' + threw2.message));
+}
+
 console.log(`\n===== ${pass} passed, ${fail} failed =====`);
 process.exit(fail ? 1 : 0);

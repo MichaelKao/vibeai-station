@@ -121,7 +121,10 @@ function once(url) {
 // 抓回來的東西一律當成不可信的字串：只取文字，輸出時逸出（樣板用 <%= %>）。
 // 不引 XML 解析器——RSS 與 Atom 的第一則用字串比對就夠，
 // 而且解析器本身還要再擔心 XXE（外部實體）那一類問題。
-function parseFirstItem(xml) {
+// export 是為了讓 test_ssrf.mjs 能直接餵一段 RSS 進來驗解析結果。
+// ⚠ 這一支只要有一個字打錯就會在執行期丟例外，而兩個呼叫端都是 catch 吞掉，
+// 所以它**必須**有單元測試——整合測試碰不到（要有一個真的 RSS 來源）。
+export function parseFirstItem(xml) {
   const item = xml.match(/<(item|entry)[\s>][\s\S]*?<\/(item|entry)>/i)?.[0] || '';
   const pick = tag => {
     const m = item.match(new RegExp('<' + tag + '[^>]*>([\\s\\S]*?)</' + tag + '>', 'i'));
@@ -131,15 +134,27 @@ function parseFirstItem(xml) {
   return {
     title: pick('title').slice(0, 120),
     url: subUrlOk(link) || '',
+    // ⚠ 這幾個參數原本漏了引號，寫成 pick(pubDate)、toLocaleDateString(sv-SE,
+    // { timeZone: Asia/Taipei })。那是**裸識別字**不是字串：語法合法
+    //（sv-SE 被當成減法、Asia/Taipei 被當成除法），所以模組載得起來、
+    // 靜態檢查與現有測試都不會叫，但只要真的抓到一份 RSS 就丟
+    // ReferenceError: pubDate is not defined。
+    //
+    // 兩個呼叫端都是 .catch(()=>{}) 吞掉，於是壞得完全沒有聲音：
+    //   1. last_title 永遠是空字串，而側欄的查詢是 WHERE last_title!=''，
+    //      「我的訂閱」那一塊**永遠不會出現**。使用者以為是對方網站的問題。
+    //   2. 例外是在 UPDATE subs SET fetched=? 之前丟出來的，fetched 一輩子
+    //      是空的，「30 分鐘內不重抓」的節流完全失效——每一次有人打開這個人
+    //      的網誌頁（不必登入），伺服器就對他訂的每一個網址各發一次請求。
     // 日期正規化成 YYYY-MM-DD。RSS 的 pubDate 是 RFC-822、Atom 是 ISO-8601，
     // 兩種長度不一樣——側欄如果盲切前 16 個字，非 RFC-822 的來源會印出
     // 「(2026-08-20  05:0)」這種切壞的字串。在抓回來的時候就統一格式。
     date: (() => {
-      const raw = (pick(pubDate) || pick(updated) || pick(published)).slice(0, 60);
+      const raw = (pick('pubDate') || pick('updated') || pick('published')).slice(0, 60);
       const t = Date.parse(raw);
       return Number.isNaN(t)
         ? raw.slice(0, 10)
-        : new Date(t).toLocaleDateString(sv-SE, { timeZone: Asia/Taipei });
+        : new Date(t).toLocaleDateString('sv-SE', { timeZone: 'Asia/Taipei' });
     })(),
   };
 }

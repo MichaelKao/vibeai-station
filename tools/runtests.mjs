@@ -257,5 +257,21 @@ if (!process.env.SKIP_BROWSER) {
   if (fails7.length) bad += fails7.length;
 }
 
+
+// ── 收工排空（自己開站，不需要 Chrome）──────────────────────────────
+// 為什麼要單獨一支：它要對一個真的 server 送訊號，不能跟別人共用 BASE。
+{
+  const r = spawnSync(process.execPath, ['tools/shutdowncheck.mjs'], {
+    env: { ...process.env, PORT: '3491', MSYS_NO_PATHCONV: '1' }, encoding: 'utf8',
+  });
+  const out = (r.stdout || '') + (r.stderr || '');
+  const line = out.split('\n').filter(l => l.includes('passed')).pop();
+  const fails = out.split('\n').filter(l => l.startsWith('! FAIL'));
+  console.log(`\n收工排空：${line ? line.trim() : '(沒有結果——測試根本沒跑完)'}`);
+  for (const f of fails.slice(0, 20)) console.log('  ' + f.trim());
+  if (!line) { bad += 1; console.log('  ' + out.trim().split('\n').slice(-8).join('\n  ')); }
+  if (fails.length) bad += fails.length;
+}
+
 console.log(bad ? `\n共 ${bad} 項失敗` : '\n全部通過');
 process.exit(bad ? 1 : 0);

@@ -102,10 +102,19 @@ export async function flushVisits(applyFn) {
 export function startVisitFlusher(applyFn, ms = 30_000) {
   const t = setInterval(() => flushVisits(applyFn).catch(e => console.error('[hits]', e.message)), ms);
   t.unref?.();
-  // 收工前把手上的增量寫回去，不要讓最後 30 秒的人氣消失
-  for (const sig of ['SIGTERM', 'SIGINT'])
-    process.once(sig, () => flushVisits(applyFn).finally(() => process.exit(0)));
-  return t;
+  // ⚠ 這裡原本自己註冊 SIGTERM/SIGINT，把人氣刷回去之後就 process.exit(0)。
+  // 那等於「一個計數用的小工具擁有整個行程的生殺大權」——收到訊號的當下
+  // 立刻結束，**不等 HTTP 連線收尾、不等正在跑的 handler**。
+  //
+  // Railway 每次重新部署、重啟、擴縮容都是先送 SIGTERM，所以這不是罕見時機，
+  // 是每部署一次就截斷一次：正在上傳照片的請求會停在「檔案已經寫進 R2、
+  // photos 那幾筆 INSERT 還沒下去」的中間——瀏覽器只看到連線中斷，
+  // 相簿裡什麼都沒有，而 R2 上多了永遠沒人參照卻要一直付錢的物件。
+  // 刪帳號、切割照片、註冊（INSERT users 之後、INSERT albums 之前）同理。
+  //
+  // 關機流程改由 src/server.js 統一負責（那裡才拿得到 http server 可以排空），
+  // 這一支只回傳「把手上的增量寫回去」這件事給它呼叫。
+  return { timer: t, flush: () => flushVisits(applyFn) };
 }
 
 // ===== 3. 熱查詢快取 =====
@@ -125,4 +134,12 @@ export async function cached(key, seconds, fn) {
 export async function bust(...keys) {
   if (!redis) return;
   try { await redis.del(keys.map(k => 'q:' + k)); } catch { }
+}
+
+// 關機時把 Redis 連線收乾淨。沒有 Redis（本機開發）就什麼都不做。
+// quit() 會等待手上的指令跑完再斷；不呼叫的話 node 會被這條連線拖住不結束。
+export async function closeRedis(){
+  if (!redis) return;
+  try { await redis.quit(); } catch { try { redis.disconnect(); } catch {} }
+  redis = null;
 }

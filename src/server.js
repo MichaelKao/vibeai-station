@@ -2,8 +2,8 @@ import express from 'express';
 import session from 'express-session';
 import multer from 'multer';
 import path from 'node:path';
-import { one, all, run, migrate, driver } from './db.js';
-import { sessionStore, startVisitFlusher, bumpVisit, hasRedis } from './cache.js';
+import { one, all, run, migrate, driver, close as closeDb } from './db.js';
+import { sessionStore, startVisitFlusher, bumpVisit, hasRedis, closeRedis } from './cache.js';
 import { hash, salt, check, requireLogin, requireOwner } from './auth.js';
 import { save, remove, hasR2, diskFree, readImage } from './storage.js';
 import { UPLOAD_DIR } from './paths.js';
@@ -921,10 +921,22 @@ async function refreshSubs(uid){
   const rows = await all('SELECT * FROM subs WHERE user_id=?', uid);
   for(const s of rows){
     if(s.fetched && Date.now() - Date.parse(s.fetched) < 30*60*1000) continue;
-    const got = await fetchFeed(s.url);
+    // ⚠ 節流的那一筆 fetched **一定要寫**，不管抓得到抓不到。
+    // 原本只有「抓到」與「fetchFeed 回 null」兩條路有寫；只要 fetchFeed
+    // 或解析中途拋例外（feed.js 那三個裸識別字就是這樣），整個迴圈就跳出去，
+    // fetched 永遠是空的，於是每一次有人打開這個人的網誌頁都重抓一遍——
+    // 一個熱門網誌的側欄等於對第三方網站做持續的請求放大，而且每次都白做。
+    const now = new Date().toISOString();
+    let got = null;
+    try { got = await fetchFeed(s.url); }
+    catch (e) {
+      // 單一來源壞掉不能拖垮其他來源，也不能靜靜吞掉——這個 bug 就是
+      // 因為兩個呼叫端都寫 .catch(()=>{}) 才在站上活了這麼久沒人發現。
+      console.error('[subs] 抓不到', s.url, e.message);
+    }
     if(got) await run('UPDATE subs SET last_title=?,last_url=?,last_date=?,fetched=? WHERE id=?',
-      got.title, got.url, got.date, new Date().toISOString(), s.id);
-    else await run('UPDATE subs SET fetched=? WHERE id=?', new Date().toISOString(), s.id);
+      got.title, got.url, got.date, now, s.id);
+    else await run('UPDATE subs SET fetched=? WHERE id=?', now, s.id);
   }
 }
 site.post('/subs',requireLogin,requireOwner,async (req,res)=>{
@@ -946,7 +958,7 @@ site.post('/subs',requireLogin,requireOwner,async (req,res)=>{
       u.id, title, url, u.id, SUB_MAX));
     if (!r.changes) flash(req,`訂閱最多 ${SUB_MAX} 個，請先取消一個`);
     else {
-      refreshSubs(u.id).catch(()=>{});     // 不擋這一次的回應
+      refreshSubs(u.id).catch(e=>console.error('[subs]',e.message));     // 不擋這一次的回應
       flash(req,'訂閱好了，下次進網誌頁就會去抓最新一則');
     }
   }
@@ -1469,7 +1481,7 @@ const blogSide=async (res, forPost=null)=>({
   // 直接 await 的話每一頁網誌都會被別人家的 RSS 拖慢。
   subs:await (async () => {
     const rows = await all("SELECT * FROM subs WHERE user_id=? AND last_title!='' ORDER BY id",U(res).id);
-    refreshSubs(U(res).id).catch(()=>{});
+    refreshSubs(U(res).id).catch(e=>console.error('[subs]',e.message));
     return rows;
   })(),
   // 「歷史上的今天」：**跟這一篇同月同日**、但不同年發過的文。
@@ -1931,12 +1943,12 @@ if (process.env.MIGRATE_SQLITE_TO_PG === '1' && process.env.DATABASE_URL) {
 // 人氣計數 write-behind：bumpHits() 只在 Redis 累加，這裡每 30 秒把增量寫回資料庫。
 // 原本每次瀏覽都 UPDATE 一次，是全站最頻繁的寫入；批次之後 N 次寫入壓成 1 次。
 // 沒有 Redis 時 bumpHits() 會回傳 true，由它自己直接寫，這個排程等於空轉。
-startVisitFlusher(async (userId, n) => {
+const visitFlusher = startVisitFlusher(async (userId, n) => {
   await run('UPDATE users SET visits=visits+?, today_hits=today_hits+? WHERE id=?', n, n, userId);
 });
 
 const PORT=process.env.PORT||3000;
-app.listen(PORT,()=>{
+const server = app.listen(PORT,()=>{
   console.log(`vibeai 小站 → http://localhost:${PORT}　資料庫 ${driver}　session ${hasRedis?'redis':'memory'}`);
   // 灌示範資料（見 src/seed-demo.js 的用法與安全說明）。
   // 一定要在 listen 之後才做：抓 ~300 張照片要十幾分鐘，
@@ -1951,3 +1963,41 @@ app.listen(PORT,()=>{
       .catch(e => console.error('[seed] 出錯，站台照常運作：', e.message));
   }
 });
+
+// ===== 收工：把還在跑的請求做完再走 =====
+//
+// Railway 重新部署／重啟／擴縮容都是先送 SIGTERM，寬限期之後才 SIGKILL。
+// 原本唯一的 SIGTERM 處理在 cache.js，把人氣刷回去就 process.exit(0)——
+// 正在跑的請求被攔腰砍斷（實測：一個要跑 1.2 秒的 handler，SIGTERM 之後
+// 「寫入完成」永遠不會印出來，行程直接 exit 0）。
+//
+// 正確順序：
+//   1. server.close()  停止收新連線，但讓已經在跑的請求跑完
+//   2. 等它們跑完（設硬上限，不能無限等——平台的寬限期通常只有 30 秒，
+//      逾時被 SIGKILL 反而更慘）
+//   3. 把人氣增量刷回資料庫
+//   4. 關掉資料庫與 Redis 連線
+//   5. exit
+let shuttingDown = false;
+async function shutdown(sig){
+  if (shuttingDown) return;          // 訊號可能連來兩次
+  shuttingDown = true;
+  console.log(`[shutdown] 收到 ${sig}，停止收新連線`);
+
+  const closed = new Promise(res => server.close(() => res('drained')));
+  // 15 秒硬上限。Railway 的寬限期是 30 秒，留一半給後面的收尾動作。
+  const timeout = new Promise(res => setTimeout(() => res('timeout'), 15_000).unref?.());
+  const how = await Promise.race([closed, timeout]);
+  console.log(how === 'drained' ? '[shutdown] 現有請求都跑完了' : '[shutdown] 等太久，不等了');
+
+  try { const n = await visitFlusher.flush(); if (n) console.log(`[shutdown] 人氣增量寫回 ${n} 筆`); }
+  catch (e) { console.error('[shutdown] 人氣寫回失敗', e.message); }
+
+  try { await closeDb(); } catch (e) { console.error('[shutdown] 關資料庫失敗', e.message); }
+  try { await closeRedis(); } catch (e) { console.error('[shutdown] 關 Redis 失敗', e.message); }
+
+  console.log('[shutdown] 收工');
+  process.exit(0);
+}
+for (const sig of ['SIGTERM', 'SIGINT']) process.once(sig, () => shutdown(sig));
+
