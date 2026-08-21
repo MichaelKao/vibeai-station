@@ -1854,7 +1854,12 @@ site.get('/blog/:id',postOf,async (req,res)=>{ const p=res.locals.post;
       JOIN posts p ON p.id=t.from_post JOIN users u ON u.id=p.user_id
       WHERE t.post_id=? ORDER BY t.id LIMIT ? OFFSET ?`, p.id, tPer, (tPage-1)*tPer),
     trackbackN: tN, trackbackPage: tPage, trackbackPages: Math.ceil(tN/tPer),
-    prev:await one('SELECT id,title FROM posts WHERE user_id=? AND id<? ORDER BY id DESC',U(res).id,p.id),next:await one('SELECT id,title FROM posts WHERE user_id=? AND id>? ORDER BY id',U(res).id,p.id)}); });
+    // ⚠ 上一篇／下一篇原本跨分類亂跳：從「美食」的文章按下一篇，可能跳到
+    // 「心情」去，讀者完全沒有連續性。原站是**同分類**的上下篇——存檔逐字
+    // 寫著 "Previous in This Category" 與 "Next in This Category"
+    //（assets_src2/html/blog_2012_article_boogier_16702046.html）。
+    prev:await one('SELECT id,title FROM posts WHERE user_id=? AND category=? AND id<? ORDER BY id DESC',U(res).id,p.category,p.id),
+    next:await one('SELECT id,title FROM posts WHERE user_id=? AND category=? AND id>? ORDER BY id',U(res).id,p.category,p.id)}); });
 site.get('/blog/:id/edit',requireLogin,requireOwner,postOf,async (req,res)=>res.render('post_edit',{nav:'blog',post:res.locals.post,photos:await myPhotos(res),emotes:EMOTES,...await blogSide(res)}));
 site.post('/blog/:id/edit',requireLogin,requireOwner,postOf,async (req,res)=>{ const {title,body,category,mood,weather}=req.body;
   await run('UPDATE posts SET title=?,body=?,category=?,mood=?,weather=?,pass=?,topic=?,place=? WHERE id=?',(title||res.locals.post.title).trim().slice(0,100),(body||'').slice(0,50000),(category||'未分類').trim().slice(0,20)||'未分類',MOODS.includes(mood)?mood:'',WEATHERS.includes(weather)?weather:'',(req.body.pass||'').slice(0,20),isBlogTopic(req.body.topic)?req.body.topic:'',isPlace(req.body.place)?req.body.place:'',res.locals.post.id);
@@ -1881,7 +1886,7 @@ site.post('/blog/:id/comment',postOf,needUnlocked,async (req,res)=>{
   res.redirect(`/${U(res).name}/blog/${res.locals.post.id}#comments`); });
 // 板主回覆迴響
 site.post('/blog/:id/comment/:cid/reply',requireLogin,requireOwner,postOf,async (req,res)=>{
-  await run('UPDATE comments SET reply=? WHERE id=? AND post_id=?',(req.body.reply||'').trim().slice(0,500),req.params.cid,res.locals.post.id);
+  await run("UPDATE comments SET reply=?,reply_at=datetime('now','localtime') WHERE id=? AND post_id=?",(req.body.reply||'').trim().slice(0,500),req.params.cid,res.locals.post.id);
   res.redirect(`/${U(res).name}/blog/${res.locals.post.id}#comments`); });
 site.post('/blog/:id/comment/:cid/del',requireLogin,requireOwner,postOf,async (req,res)=>{ await run('DELETE FROM comments WHERE id=? AND post_id=?',req.params.cid,res.locals.post.id); res.redirect(`/${U(res).name}/blog/${res.locals.post.id}#comments`); });
 // 推薦。
@@ -2056,7 +2061,7 @@ site.post('/guestbook',async (req,res)=>{ const {author,subject,body,secret}=req
       await run('INSERT INTO sysmsg(user_id,title,body) VALUES(?,?,?)',U(res).id,'你有新的留言',`${res.locals.me.nick} 在你的留言板留言了。`);
   }
   res.redirect(`/${U(res).name}/guestbook`); });
-site.post('/guestbook/:id/reply',requireLogin,requireOwner,async (req,res)=>{ await run('UPDATE guestbook SET reply=? WHERE id=? AND user_id=?',(req.body.reply||'').trim().slice(0,500),req.params.id,U(res).id); res.redirect(`/${U(res).name}/guestbook`); });
+site.post('/guestbook/:id/reply',requireLogin,requireOwner,async (req,res)=>{ await run("UPDATE guestbook SET reply=?,reply_at=datetime('now','localtime') WHERE id=? AND user_id=?",(req.body.reply||'').trim().slice(0,500),req.params.id,U(res).id); res.redirect(`/${U(res).name}/guestbook`); });
 site.post('/guestbook/:id/del',requireLogin,requireOwner,async (req,res)=>{ await run('DELETE FROM guestbook WHERE id=? AND user_id=?',req.params.id,U(res).id); res.redirect(`/${U(res).name}/guestbook`); });
 
 app.use((req,res)=>res.status(404).render('msg',{title:'找不到頁面',msg:'找不到這個小站或頁面 (>_<)',back:'/'}));

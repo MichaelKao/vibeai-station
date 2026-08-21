@@ -101,8 +101,11 @@
               <% if (post.topic) { %><span>站內分類：<a href="/blogs?topic=<%= encodeURIComponent(post.topic) %>" target="_blank"><%= post.topic %></a></span><% } %>
               <% if (post.mood) { %><span>心情：<%= post.mood %></span><% } %><% if (post.weather) { %><span>天氣：<%= post.weather %></span><% } %>
               <br />
-              <% if (prev) { %>上一篇：<a href="/<%= u.name %>/blog/<%= prev.id %>"><%= prev.title %></a> &nbsp;<% } %>
-              <% if (next) { %>下一篇：<a href="/<%= u.name %>/blog/<%= next.id %>"><%= next.title %></a><% } %>
+              <%# 原站逐字是 "Previous in This Category" / "Next in This Category"——
+                  同一個分類裡的上下篇，不是整個網誌的。跨分類亂跳的話，
+                  讀者從「美食」按下一篇會跳到「心情」，完全沒有連續性。 %>
+              <% if (prev) { %>同分類上一篇：<a href="/<%= u.name %>/blog/<%= prev.id %>"><%= prev.title %></a> &nbsp;<% } %>
+              <% if (next) { %>同分類下一篇：<a href="/<%= u.name %>/blog/<%= next.id %>"><%= next.title %></a><% } %>
             </div>
 
             <%# 站長／站方的操作鈕。原站的存檔都是訪客視角（spec 第 11 節「查無」），
@@ -320,7 +323,10 @@
         <ul class="comments-author">
           <li><p><%= c.reply %></p></li>
           <li class="comments-post">
-            板主回覆 at <%= wStamp(c.created) %> Reply                                            </li>
+            <%# ⚠ 這裡原本印 c.created——那是**留言的時間**，不是回覆的時間。
+                畫面上看起來像「留言者一發文站長就回了」，三個月後才回的那一則
+                也顯示成同一分鐘。舊資料沒有 reply_at，退回顯示留言時間。 %>
+            板主回覆 at <%= wStamp(c.reply_at || c.created) %> Reply                                            </li>
         </ul>
       </div>
       <% } %>

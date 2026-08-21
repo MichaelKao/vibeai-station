@@ -331,6 +331,11 @@ export function schemaSql(forDriver = driver) {
 //   SQLite 沒有，要先問 pragma_table_info 有沒有這一欄。
 // 表名與欄名都是下面這張常數表裡的字面值，不是使用者輸入，可以直接拼進 SQL。
 const ADD_COLUMNS = [
+  // 板主回覆的時間。⚠ 沒有這一欄的時候，畫面上印的是**留言當時的時間**
+  //（c.created），看起來像「留言者一發文站長就回了」——三個月後才回的
+  // 那一則也顯示成同一分鐘。舊資料這一欄是空的，view 會退回顯示留言時間。
+  ['comments',  'reply_at', "TEXT DEFAULT ''"],
+  ['guestbook', 'reply_at', "TEXT DEFAULT ''"],
   ['users',  'vip',    'INTEGER DEFAULT 0'],   // 認證／VIP 徽章 .vip_icon、相片牆 .vip_only
   ['photos', 'width',  'INTEGER DEFAULT 0'],   // 以下四欄給照片頁的 #exif 面板
   ['photos', 'height', 'INTEGER DEFAULT 0'],

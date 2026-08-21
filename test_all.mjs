@@ -1,4 +1,5 @@
 // 全站回歸測試（本機跑，不進 git）
+import fs from 'node:fs';
 import zlib from 'node:zlib';
 function crc(b){let c,t=[];for(let n=0;n<256;n++){c=n;for(let k=0;k<8;k++)c=c&1?0xedb88320^(c>>>1):c>>>1;t[n]=c>>>0}let r=0xffffffff;for(const x of b)r=t[(r^x)&255]^(r>>>8);return (r^0xffffffff)>>>0}
 function ch(t,d){const l=Buffer.alloc(4);l.writeUInt32BE(d.length);const td=Buffer.concat([Buffer.from(t),d]);const c=Buffer.alloc(4);c.writeUInt32BE(crc(td));return Buffer.concat([l,td,c])}
@@ -915,6 +916,74 @@ for (const n of ['albums','blogs','video','digu','report','healthz','bgm']) {
   ok('標題空白不會把內容吃掉', html.includes(long.slice(0, 30)),
      'HTTP ' + r.status + '（有沒有把內容送回來）');
   ok('標題空白會講原因', html.includes('標題不能是空白'), 'HTTP ' + r.status);
+}
+
+
+console.log('\n=== 板主回覆的時間是回覆的時間 ===');
+// ⚠ 畫面上原本印的是 c.created——**留言當時的時間**，不是回覆的時間。
+// 看起來像「留言者一發文站長就回了」，三個月後才回的那一則也顯示成同一分鐘。
+{
+  await post('/register',{name:'replyq',nick:'回覆',pass:'test1234',pass2:'test1234'});
+  const R = await login('replyq');
+  await post('/replyq/blog/new',{title:'等回覆的文章',body:'內容',category:'心情'},R);
+  const list = await text('/replyq/blog',R);
+  const pid = Math.max(...[...list.matchAll(/\/replyq\/blog\/(\d+)/g)].map(m=>+m[1]));
+  await post(`/replyq/blog/${pid}/comment`,{author:'路人',body:'第一則留言'},R);
+
+  const before = await text(`/replyq/blog/${pid}`,R);
+  const cid = Math.max(...[...before.matchAll(/\/comment\/(\d+)\//g)].map(m=>+m[1]));
+  ok('抓得到留言 id', cid > 0);
+
+  // 留言與回覆之間隔一秒，兩個時間才看得出差別
+  await new Promise(r => setTimeout(r, 1100));
+  await post(`/replyq/blog/${pid}/comment/${cid}/reply`,{reply:'謝謝你的留言'},R);
+
+  const after = await text(`/replyq/blog/${pid}`,R);
+  ok('回覆有印出來', after.includes('謝謝你的留言'));
+  // 畫面上的時間格式只到分鐘（原站就是 "2011 年 12 月 9 日 07:13 PM"），
+  // 一秒的間隔看不出來，所以這裡直接驗資料層：reply_at 有沒有真的寫進去，
+  // 而且跟 created 不是同一個值。
+  // Postgres 那一輪沒有本機的 station.db，就跳過這一條（欄位與寫入邏輯
+  // 兩邊共用，SQLite 這一輪驗過就夠）。
+  const dbFile = (process.env.DATA_DIR || '') + '/station.db';
+  if (fs.existsSync(dbFile)) {
+    const { DatabaseSync } = await import('node:sqlite');
+    const db = new DatabaseSync(dbFile, { readOnly: true });
+    const row = db.prepare('SELECT created, reply_at FROM comments WHERE id=?').get(cid);
+    db.close();
+    ok('reply_at 有寫進去', !!row?.reply_at, JSON.stringify(row));
+    ok('reply_at 跟留言時間不是同一個值', row?.reply_at !== row?.created, JSON.stringify(row));
+  } else {
+    ok('（這一輪沒有本機 station.db，跳過 reply_at 的資料層檢查）', true);
+  }
+}
+
+
+console.log('\n=== 上一篇／下一篇要在同一個分類裡 ===');
+// ⚠ 原本跨分類亂跳：從「美食」的文章按下一篇可能跳到「心情」去，
+// 讀者完全沒有連續性。原站存檔逐字寫著 "Previous in This Category"
+// 與 "Next in This Category"（blog_2012_article_boogier_16702046.html）。
+{
+  await post('/register',{name:'catq',nick:'分類',pass:'test1234',pass2:'test1234'});
+  const K = await login('catq');
+  // 交錯建立：美食1 心情1 美食2 心情2 美食3
+  for (const [t, c] of [['美食一','美食'],['心情一','心情'],['美食二','美食'],['心情二','心情'],['美食三','美食']])
+    await post('/catq/blog/new',{title:t,body:'內容',category:c},K);
+
+  const list = await text('/catq/blog',K);
+  // ⚠ 清單頁上同一篇文章的連結會出現好幾次（標題、縮圖、留言數…），
+  // 不去重的話 ids.length-3 會挑到重複的那一筆，測到的根本不是中間那篇。
+  const ids = [...new Set([...list.matchAll(/\/catq\/blog\/(\d+)/g)].map(m => +m[1]))].sort((a, b) => a - b);
+  // 「美食二」是第 3 篇（交錯排列的中間那一篇美食）
+  const midId = ids[2];   // 交錯建立的第 3 篇＝美食二
+  const page = await text(`/catq/blog/${midId}`);
+  ok('打開的是美食二', page.includes('美食二'), page.match(/<h3 class="title">[^<]*/)?.[0] || '');
+  ok('上一篇是同分類的「美食一」', page.includes('同分類上一篇') && page.includes('美食一'),
+     (page.match(/同分類上一篇[\s\S]{0,80}/) || ['(找不到)'])[0].replace(/\s+/g,' '));
+  ok('下一篇是同分類的「美食三」', page.includes('同分類下一篇') && page.includes('美食三'),
+     (page.match(/同分類下一篇[\s\S]{0,80}/) || ['(找不到)'])[0].replace(/\s+/g,' '));
+  ok('不會跳到別的分類（心情一／心情二都不該出現在上下篇）',
+     !/同分類上一篇[\s\S]{0,80}心情/.test(page) && !/同分類下一篇[\s\S]{0,80}心情/.test(page));
 }
 
 console.log(`\n===== ${pass} passed, ${fail} failed =====`);
