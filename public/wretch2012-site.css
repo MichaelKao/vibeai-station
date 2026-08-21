@@ -256,3 +256,13 @@ html body #bg-wrapper #wfp-footer #wfp-lang { top: 24px; }   /* 跟著上移，�
 .w2-search-scope a:hover { background: #fff; color: #d55; }
 .w2-search-scope a.on    { background: #fff; border-bottom-color: #fff;
                            color: #d55; font-weight: bold; }
+
+/* 頁首 ul.nav 裡的「登出」是一顆 <form> 按鈕（登出必須是 POST，
+   不能做成連結——被 <img src> 之類的東西預抓就會把人登出）。
+   這兩條讓它跟旁邊的 <a> 長得一模一樣。全站其他地方的同名 class
+   定義在 wretch2012-blog-site.css 與 wretch2012-in.css，那兩支
+   這一頁沒載，所以要在這裡各留一份。 */
+.w2-inline-form { display: inline; margin: 0; padding: 0; }
+.w2-linkbtn     { background: none; border: 0; padding: 0; margin: 0;
+                  font: inherit; color: inherit; cursor: pointer; }
+.w2-linkbtn:hover { text-decoration: underline; }

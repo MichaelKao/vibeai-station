@@ -182,6 +182,12 @@ if (!process.env.SKIP_BROWSER) {
   const r = spawnSync(process.execPath, ['tools/tabclick.mjs'], {
     env: { ...process.env, BASE: b2, MSYS_NO_PATHCONV: '1' }, encoding: 'utf8',
   });
+  // 登入／登出入口：三套頁首 × 兩種螢幕寬度。
+  // test_all 在同一個資料庫裡建過 alpha/test1234，直接借用。
+  const r3 = spawnSync(process.execPath, ['tools/authnav.mjs'], {
+    env: { ...process.env, BASE: b2, MSYS_NO_PATHCONV: '1',
+           USER_NAME: 'alpha', USER_PASS: 'test1234' }, encoding: 'utf8',
+  });
   srv2.kill();
   const out = (r.stdout || '') + (r.stderr || '');
   const line = out.split('\n').filter(l => l.includes('passed')).pop();
@@ -190,6 +196,14 @@ if (!process.env.SKIP_BROWSER) {
   for (const f of fails.slice(0, 20)) console.log('  ' + f.trim());
   if (!line) { bad += 1; console.log('  ' + out.trim().split('\n').slice(-8).join('\n  ')); }
   if (fails.length) bad += fails.length;
+
+  const out3 = (r3.stdout || '') + (r3.stderr || '');
+  const line3 = out3.split('\n').filter(l => l.includes('passed')).pop();
+  const fails3 = out3.split('\n').filter(l => l.startsWith('! FAIL'));
+  console.log(`\n登入登出入口：${line3 ? line3.trim() : '(沒有結果——測試根本沒跑完)'}`);
+  for (const f of fails3.slice(0, 20)) console.log('  ' + f.trim());
+  if (!line3) { bad += 1; console.log('  ' + out3.trim().split('\n').slice(-8).join('\n  ')); }
+  if (fails3.length) bad += fails3.length;
 }
 
 console.log(bad ? `\n共 ${bad} 項失敗` : '\n全部通過');

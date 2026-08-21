@@ -197,7 +197,23 @@
 
   /* ── 4. kukubar 上下兩條固定列 ──────────────────────────────────── */
   #kukubar-upper, #kukubar-lower { width: auto !important; max-width: 100%; }
-  #kukubar-upper .right-side, #kukubar-lower .right-side { display: none; }
+  /* ⚠ 這一條原本是 `#kukubar-upper .right-side { display:none }`——整個右半邊
+     一起藏掉。但**登入／登出／我的小站那個選單就在裡面**（#wretch-login），
+     所以在 999px 以下的螢幕上，站上根本沒有任何一個地方可以登入或登出。
+     手機使用者連進來就卡在訪客狀態，這是純粹的功能消失，不是版面問題，
+     所以 rwdprobe（量橫向溢出）與 uicheck（量跑版）都不會叫。
+
+     要藏的只有頁首那個搜尋框（它 300px 寬，窄螢幕塞不下，而且每一頁
+     都另外有搜尋入口）。帳號選單與 Yahoo! 那顆留著。
+     底列的 .right-side 是廣告輪播與三個服務下拉，照舊整塊藏。 */
+  #kukubar-upper #wretch-search { display: none; }
+  #kukubar-lower .right-side    { display: none; }
+  /* 留下來的那兩塊要能在窄螢幕排得下 */
+  #kukubar-upper .right-side {
+    float: none; position: absolute; right: 4px; top: 0;
+    display: flex; align-items: center; gap: 6px;
+  }
+  #kukubar-upper #wretch-login .dropdown { right: 0; left: auto; }
 
   /* ── 5. 表單：輸入框不要頂出容器 ─────────────────────────────────── */
   input[type=text], input[type=password], input[type=email],
@@ -417,3 +433,9 @@
   /* 名片那種「欄位:值」兩欄表，窄螢幕改成上下 */
   .w2-card td.sidetitle, .w2-card td.side { display: block; width: auto !important; text-align: left; }
 }
+
+  /* 把帳號選單救回來之後，頁首那條 30px 高的列變成三塊搶位子：
+     logo ＋ 服務下拉 ＋ #infozone（公告／今日主題）＋ 帳號選單。
+     375px 下 #infozone 會被絕對定位的帳號選單壓在底下，兩段字疊成一團。
+     公告在每一頁的「站內導覽」區塊已經有一份完整的，這裡不重複印。 */
+  #kukubar-upper #infozone { display: none; }

@@ -69,6 +69,20 @@
           <ul class="nav">
             <li class="yahoo-home"><a href="/">Yahoo!奇摩</a></li>
             <li class="service-guide"><a href="/help">服務說明</a></li>
+            <%# 會員登入／免費註冊。
+                ⚠ 這兩個 <li> 原本漏掉了，但原站的 ul.nav 就有
+                （blog_2012_service_index.html：Yahoo!奇摩 · 服務說明 · 會員登入 · 免費註冊）。
+                漏掉的後果不是還原度差一點而已——**這支頁首是 /blogs /search /video
+                /digu /join /hala /help 十幾頁共用的，那些頁面等於完全沒有登入或
+                登出的入口**。訪客在網誌總站逛半天找不到哪裡可以登入，
+                登入的人在那些頁也登不出去。
+                登入後照原站的位置換成暱稱與登出（原站是導到 Yahoo 的整合登入頁，
+                本站自己有帳號系統，所以直接放我的小站／登出）。 %>
+<% if (locals.me) { %>            <li class="member-mypage"><a href="/<%= me.name %>"><%= me.nick %></a></li>
+            <li class="member-logout last"><form method="post" action="/logout" class="w2-inline-form"><button type="submit" class="w2-linkbtn">登出</button></form></li>
+<% } else { %>            <li class="member-login"><a href="/login">會員登入</a></li>
+            <li class="member-signup last"><a href="/register">免費註冊</a></li>
+<% } %>
           </ul>
         </div>
         <div class="bd">
