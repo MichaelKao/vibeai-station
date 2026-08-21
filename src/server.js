@@ -3,7 +3,7 @@ import session from 'express-session';
 import multer from 'multer';
 import path from 'node:path';
 import { one, all, run, migrate, driver, close as closeDb } from './db.js';
-import { sessionStore, startVisitFlusher, bumpVisit, hasRedis, closeRedis } from './cache.js';
+import { sessionStore, startVisitFlusher, bumpVisit, hasRedis, closeRedis, redisState } from './cache.js';
 import { hash, salt, check, requireLogin, requireOwner } from './auth.js';
 import { save, remove, hasR2, diskFree, readImage } from './storage.js';
 import { UPLOAD_DIR } from './paths.js';
@@ -296,7 +296,10 @@ app.get('/search',async (req,res)=>{
 //
 // 不印任何密鑰或連線字串，只印「有沒有」與 ping 得通不通，可以公開。
 app.get('/healthz', async (req, res) => {
-  const out = { ok: true, db: driver, redis: hasRedis ? 'redis' : 'memory', storage: hasR2 ? 'r2' : 'disk' };
+  // ⚠ redis 這一欄要回報**實際狀態**，不是「有沒有設定 REDIS_URL」。
+  // 原本寫 hasRedis（＝!!URL），於是 Redis 連不上而降級成 MemoryStore 時，
+  // /healthz 照樣回報 redis——那是假訊號，比不回報更糟。
+  const out = { ok: true, db: driver, redis: redisState(), storage: hasR2 ? 'r2' : 'disk' };
   try {
     const t = Date.now();
     await one('SELECT 1 c');
