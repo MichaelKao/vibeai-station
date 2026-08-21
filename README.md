@@ -77,6 +77,71 @@ Start command `pnpm start`，**Volume 掛 `/app/data` 並設 `DATA_DIR=/app/data
 4. 服務區域跟著 Volume 走，用 `serviceInstanceUpdate(input:{multiRegionConfig:{...}})`。
 5. GitHub 故障時 Nixpacks 抓不到 nixpkgs 會 build 失敗；用 `deploymentRedeploy` 拿舊映像即可救回站台。
 
+## 健康檢查
+
+`GET /healthz` 回傳目前接到的是哪三個服務：
+
+```json
+{ "ok": true, "db": "postgres", "redis": "redis", "storage": "r2", "dbMs": 3 }
+```
+
+正式站三個值應該分別是 `postgres` / `redis` / `r2`。
+
+**⚠ 每一個都有安靜的退路**：`REDIS_URL` 沒設就回到 MemoryStore、
+`R2_BUCKET` 沒設就寫本機磁碟、`DB_DRIVER` 不對就開 SQLite。站看起來完全正常，
+直到某天重新部署之後大家一起被登出（session 在記憶體裡），或是照片全部不見
+（寫在容器的暫存磁碟上）。看到 `memory` 或 `disk` 就是環境變數掉了。
+
+不印任何密鑰或連線字串，可以公開。
+
+## 備份與還原
+
+**⚠ 不要直接複製 `station.db`。** 資料庫開著 WAL（`journal_mode=WAL`），
+剛寫進去的資料在旁邊的 `station.db-wal` 裡，主檔還沒收到。站台跑著的時候
+直接 `cp`，拿到的是上一次 checkpoint 的狀態。
+
+實測（新開的站、註冊 5 個帳號、不停站直接複製）：
+
+| 做法 | 結果 |
+|---|---|
+| `cp station.db` | 打開之後 **一張表都沒有**（`no such table: users`） |
+| `node tools/backup.mjs` | 5 筆，跟站台一致 |
+| `station.db-wal` | 819912 bytes——資料全都還在裡面 |
+
+那份 `cp` 出來的檔案不會報錯、不會壞，它就是空的。真的要拿它還原的那天
+才會發現。
+
+### 本機／單機（SQLite）
+
+```
+node tools/backup.mjs                 存到 DATA_DIR/backups/，只留最近 7 份
+node tools/backup.mjs --out D:/bak    指定目錄
+node tools/backup.mjs --keep 14       改保留份數
+```
+
+用 `VACUUM INTO`，SQLite 會自己把 WAL 併進去，**不必停站**。做完會逐表
+核對筆數，對不上就把那份備份刪掉並回傳非零——備份最怕的是「檔案有、
+內容空」，所以不能只看檔案大小。
+
+還原：停站 → 把備份檔複製成 `DATA_DIR/station.db` → 把 `station.db-wal`
+與 `station.db-shm` 刪掉（不刪的話舊的 WAL 會蓋回去） → 啟動。
+
+### 正式站（Postgres）
+
+```
+railway run pg_dump '$DATABASE_URL' -Fc > station-$(date +%Y%m%d).dump
+railway run pg_restore -d '$DATABASE_URL' --clean --if-exists station.dump
+```
+
+照片在 R2，R2 自己有版本控制，不需要另外備份。
+
+### 什麼時候一定要備份
+
+- 改 schema 之前（`src/db.js` 的 `schemaSql` / `ADD_COLUMNS`）
+- 跑 `src/migrate-pg.js` 之前
+- 任何一次「先刪再建」的維護動作之前
+
+
 ## 安全性
 
 所有使用者輸入一律先 escape 再套白名單標記；網址欄位只收 `http(s)` 或站內相對路徑；

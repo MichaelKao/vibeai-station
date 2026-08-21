@@ -285,6 +285,28 @@ app.get('/search',async (req,res)=>{
     counts:{ users:await cnt('users',W.users), albums:await cnt('albums',W.albums),
              posts:await cnt('posts',W.posts), videos:await cnt('videos',W.videos) }});
 });
+// 健康檢查。給 Railway 的 healthcheck 用，也給人一眼確認三個外部服務都接上了。
+//
+// ⚠ 為什麼需要：正式站是 Postgres ＋ Redis ＋ R2 三個外掛服務，
+// 而**每一個都有安靜的退路**——REDIS_URL 沒設就回到 MemoryStore、
+// R2_BUCKET 沒設就寫本機磁碟、DB_DRIVER 不對就開 SQLite。
+// 站看起來完全正常，直到某天重啟之後大家一起被登出（session 在記憶體裡）、
+// 或是照片全部不見（寫在容器的暫存磁碟上，重新部署就沒了）。
+// 這一支把「現在到底接到什麼」講清楚。
+//
+// 不印任何密鑰或連線字串，只印「有沒有」與 ping 得通不通，可以公開。
+app.get('/healthz', async (req, res) => {
+  const out = { ok: true, db: driver, redis: hasRedis ? 'redis' : 'memory', storage: hasR2 ? 'r2' : 'disk' };
+  try {
+    const t = Date.now();
+    await one('SELECT 1 c');
+    out.dbMs = Date.now() - t;
+  } catch (e) { out.ok = false; out.dbError = e.message.slice(0, 120); }
+  // Redis 沒接也不算失敗——本機開發就是這樣跑的。但正式站看到 memory
+  // 就是設定掉了，值印出來讓人自己判斷。
+  res.status(out.ok ? 200 : 503).type('application/json').send(JSON.stringify(out, null, 2));
+});
+
 app.get('/help',(req,res)=>res.render('help'));
 
 // 背景音樂開關（首頁 #wfp-bgm）。原站是純前端＋cookie mf，
