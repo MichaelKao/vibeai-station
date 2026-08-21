@@ -172,6 +172,9 @@ app.use(async (req,res,next)=>{
     }
   }
   res.locals.u = null; res.locals.nav=''; res.locals.flash = req.session.flash; delete req.session.flash;
+  // 目前的查詢字串。分頁列要用它保留其他參數（例如同一頁上迴響用 ?page=、
+  // 引用用 ?tpage=，換其中一個的時候另一個不能被洗掉）。
+  res.locals.query = req.query;
   // 站台自己的絕對網址。分享列與「引用網址」原本只印站內相對路徑，
   // 靠頁尾那段 JS 補 location.origin——**沒有 JS 就複製到一段沒用的路徑**
   // （貼到 Plurk 上是 /jaychou/blog/20，誰都打不開）。RSS 那邊早就用
@@ -1728,6 +1731,21 @@ site.post('/blog/:id/unlock',postOf,async (req,res)=>{
 site.get('/blog/:id',postOf,async (req,res)=>{ const p=res.locals.post;
   if(!postUnlocked(req,res)) return res.render('post_lock',{nav:'blog',post:p,...await blogSide(res),err:null});
   if(!res.locals.isOwner) await run('UPDATE posts SET views=views+1 WHERE id=?',p.id);
+  // 迴響與引用要分頁。
+  //
+  // ⚠ 原本兩支查詢都沒有 LIMIT：一篇文章有一萬則迴響，就一次撈一萬列、
+  // 一次算一萬次 render()（每一則都要跑 BBCode）、一次送出去。
+  // 那不只是慢——那是一個不用登入、任何人都可以重複觸發的資源消耗點。
+  //
+  // 原站本來就有分頁，存檔看得到參數與頁數：
+  //   blog_2013_article_comments_page2.html   Reply(124) 分 7 頁 → 20 則／頁
+  //   blog_2013_article_trackback_page2.html  Trackback(128) 分 5 頁 → 30 筆／頁
+  //   網址是 …/blog/<帳號>/<文章>&page=2#postComments 與 &tpage=2#trackbacks
+  const cPer = 20, tPer = 30;
+  const cN = (await one('SELECT count(*) c FROM comments WHERE post_id=?',p.id)).c;
+  const tN = (await one('SELECT count(*) c FROM trackbacks WHERE post_id=?',p.id)).c;
+  const cPage = Math.min(pageNo(req.query.page), Math.max(1, Math.ceil(cN/cPer)));
+  const tPage = Math.min(pageNo(req.query.tpage), Math.max(1, Math.ceil(tN/tPer)));
   res.render('post',{nav:'blog',post:p,...await blogSide(res, p),
     faved: res.locals.me?!!await one('SELECT 1 FROM favs WHERE user_id=? AND post_id=?',res.locals.me.id,p.id):false,
     favN: (await one('SELECT count(*) c FROM favs WHERE post_id=?',p.id)).c,
@@ -1736,8 +1754,13 @@ site.get('/blog/:id',postOf,async (req,res)=>{ const p=res.locals.post;
     collectors:await all(`SELECT u.name,u.nick,u.avatar FROM favs f JOIN users u ON u.id=f.user_id
       WHERE f.post_id=? ORDER BY f.created DESC LIMIT 30`,p.id),
     comments:await all(`SELECT c.*,cu.name cname,cu.avatar cavatar FROM comments c
-      LEFT JOIN users cu ON cu.id=c.author_id WHERE c.post_id=? ORDER BY c.id`,p.id),
-    trackbacks:await all('SELECT t.*,p.title,p.id pid,u.name uname FROM trackbacks t JOIN posts p ON p.id=t.from_post JOIN users u ON u.id=p.user_id WHERE t.post_id=?',p.id),
+      LEFT JOIN users cu ON cu.id=c.author_id WHERE c.post_id=? ORDER BY c.id LIMIT ? OFFSET ?`,
+      p.id, cPer, (cPage-1)*cPer),
+    commentN: cN, commentPage: cPage, commentPages: Math.ceil(cN/cPer),
+    trackbacks:await all(`SELECT t.*,p.title,p.id pid,u.name uname FROM trackbacks t
+      JOIN posts p ON p.id=t.from_post JOIN users u ON u.id=p.user_id
+      WHERE t.post_id=? ORDER BY t.id LIMIT ? OFFSET ?`, p.id, tPer, (tPage-1)*tPer),
+    trackbackN: tN, trackbackPage: tPage, trackbackPages: Math.ceil(tN/tPer),
     prev:await one('SELECT id,title FROM posts WHERE user_id=? AND id<? ORDER BY id DESC',U(res).id,p.id),next:await one('SELECT id,title FROM posts WHERE user_id=? AND id>? ORDER BY id',U(res).id,p.id)}); });
 site.get('/blog/:id/edit',requireLogin,requireOwner,postOf,async (req,res)=>res.render('post_edit',{nav:'blog',post:res.locals.post,photos:await myPhotos(res),emotes:EMOTES,...await blogSide(res)}));
 site.post('/blog/:id/edit',requireLogin,requireOwner,postOf,async (req,res)=>{ const {title,body,category,mood,weather}=req.body;

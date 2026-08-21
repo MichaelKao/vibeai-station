@@ -827,5 +827,47 @@ console.log('\n=== 相機原生格式與被擋掉的檔案 ===');
      (st.match(/設定已儲存[^<]{0,50}/) || ['(找不到訊息)'])[0]);
 }
 
+
+console.log('\n=== 迴響與引用要分頁 ===');
+// ⚠ 兩支查詢原本都沒有 LIMIT：一篇文章有一萬則迴響，就一次撈一萬列、
+// 一次跑一萬次 render()（每一則都要跑 BBCode）、一次送出去。
+// 那不只是慢——那是一個不用登入、任何人都可以重複觸發的資源消耗點。
+//
+// 原站本來就有分頁，存檔看得到參數與頁數：
+//   blog_2013_article_comments_page2.html   Reply(124) 分 7 頁 → 20 則／頁
+//   blog_2013_article_trackback_page2.html  Trackback(128) 分 5 頁 → 30 筆／頁
+//   網址是 …&page=2#postComments 與 …&tpage=2#trackbacks
+{
+  await post('/register',{name:'cpageq',nick:'分頁',pass:'test1234',pass2:'test1234'});
+  const C = await login('cpageq');
+  await post('/cpageq/blog/new',{title:'很多迴響的文章',body:'內容',category:'心情'},C);
+  const list = await text('/cpageq/blog',C);
+  const pid = Math.max(...[...list.matchAll(/\/cpageq\/blog\/(\d+)/g)].map(m=>+m[1]));
+  for (let i = 1; i <= 55; i++)
+    await post(`/cpageq/blog/${pid}/comment`,{author:'訪客'+i,body:'第 '+i+' 則'},C);
+
+  const p1 = await text(`/cpageq/blog/${pid}`);
+  const n1 = (p1.match(/第 \d+ 則/g) || []).length;
+  ok(`第一頁只印 20 則（實際 ${n1}）`, n1 === 20);
+  ok('「回應(N)」印的是總數不是這一頁的筆數', /回應\(55\)/.test(p1),
+     (p1.match(/回應\(\d+\)/) || ['(找不到)'])[0]);
+  ok('有分頁列', p1.includes('id="comment_pager"'));
+
+  const p3 = await text(`/cpageq/blog/${pid}?page=3`);
+  const n3 = (p3.match(/第 \d+ 則/g) || []).length;
+  ok(`第三頁印剩下的 15 則（實際 ${n3}）`, n3 === 15);
+  ok('第三頁是從第 41 則開始', (p3.match(/第 \d+ 則/) || [''])[0] === '第 41 則',
+     (p3.match(/第 \d+ 則/) || ['(找不到)'])[0]);
+
+  // 頁碼亂給不能 500，也不能撈到奇怪的東西
+  for (const q of ['?page=0','?page=-1','?page=abc','?page=1e999','?page[]=1','?tpage=1e999'])
+    ok('頁碼亂給不會壞 '+q, (await get(`/cpageq/blog/${pid}${q}`)).status === 200);
+
+  // 分頁連結要保留另一組參數（同一頁上有兩組分頁）
+  const both = await text(`/cpageq/blog/${pid}?tpage=1&page=2`);
+  ok('切迴響的頁不會把 tpage 洗掉', /page=3[^"]*#postComments/.test(both) && both.includes('tpage=1'),
+     (both.match(/href="[^"]*page=3[^"]*"/) || ['(找不到)'])[0]);
+}
+
 console.log(`\n===== ${pass} passed, ${fail} failed =====`);
 process.exit(fail?1:0);

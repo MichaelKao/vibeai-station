@@ -38,6 +38,19 @@
   /* 樓層別名：只有前三樓有，第 4 樓以後就是 N樓（spec 第 6-B 節逐字） */
   const floorAlias = ['1樓搶頭香','2樓頸推','3樓坐沙發'];
   const todayHits2 = u.hits_date === new Date().toLocaleDateString('sv-SE') ? (u.today_hits || 0) : 0;
+  /* 迴響與引用的分頁列。
+     ⚠ 原本兩份清單都沒有分頁，一篇文章有一萬則迴響就一次全部印出來——
+     不只是慢，那是一個不用登入、任何人都可以重複觸發的資源消耗點。
+     原站本來就有分頁，存檔看得到參數：
+       …/blog/<帳號>/<文章>&page=2#postComments    迴響 20 則／頁
+       …/blog/<帳號>/<文章>&tpage=2#trackbacks     引用 30 筆／頁
+     （Reply(124) 分 7 頁、Trackback(128) 分 5 頁反推出來的每頁筆數） */
+  const pgUrl = (key, n, anchor) => {
+    const q = new URLSearchParams(locals.query || {});
+    if (n <= 1) q.delete(key); else q.set(key, n);
+    const s = q.toString();
+    return here + (s ? '?' + s : '') + '#' + anchor;
+  };
 %>
 <%- include('partials/blog2012_head', { title: post.title + ' - ' + u.nick + ' - 無名小站',
                                         artTitle: post.title, medium: 'blog' }) %>
@@ -56,7 +69,7 @@
             <div class="articletext">
             <a name="<%= post.id %>"></a>
             <h3 class="title"><% if (post.pass) { %><img src="<%= IMG %>/lock.gif" width="21" height="16" border="0" align="absmiddle" alt="[鎖]"><% } %><%= post.title %><% if (post.featured) { %><a href="/blogs" target="_blank"><img src="<%= IMG %>/hot.png" border="0" alt=""></a><% } %></h3>
-            <%- include('partials/blogshare', { shPost: post, shOwner: u.name, shTb: trackbacks.length, shCan: !!(me && !isOwner) }) %>
+            <%- include('partials/blogshare', { shPost: post, shOwner: u.name, shTb: locals.trackbackN ?? trackbacks.length, shCan: !!(me && !isOwner) }) %>
 
             <div class="innertext">
               <%- render(post.body) %>
@@ -71,7 +84,7 @@
                   <a href="/login?next=<%= encodeURIComponent(here) %>" id="collectbtn" class="pull" title="收藏這篇文章">收</a>
                   <% } %>
                 </div>
-                <%- include('partials/blogshare', { shPost: post, shOwner: u.name, shTb: trackbacks.length, shCan: !!(me && !isOwner) }) %>
+                <%- include('partials/blogshare', { shPost: post, shOwner: u.name, shTb: locals.trackbackN ?? trackbacks.length, shCan: !!(me && !isOwner) }) %>
               </div>
             </div>
 
@@ -122,8 +135,8 @@
             </div> <!-- end of articletext -->
 
             <div class="posted">
-            <a href="/<%= u.name %>/blog"><%= u.name %></a> at <a href="/blogs">無名小站</a> at <%= wTime(post.created) %> post            | <a href="<%= here %>#postComments">回應(<%= comments.length %>)</a>
-            | <a href="<%= here %>#trackbacks">引用(<%= trackbacks.length %>)</a>
+            <a href="/<%= u.name %>/blog"><%= u.name %></a> at <a href="/blogs">無名小站</a> at <%= wTime(post.created) %> post            | <a href="<%= here %>#postComments">回應(<%= locals.commentN ?? comments.length %>)</a>
+            | <a href="<%= here %>#trackbacks">引用(<%= locals.trackbackN ?? trackbacks.length %>)</a>
             <%# 原版這裡是 `<a href="javascript:void(0)" id="showCollector">Collection(0)</a>`
                 （blog_2013_article_a0000000_32846743.html:369）——它的工作是**開啟
                 「誰來收藏」彈窗**，不是收藏本身；收藏是上面 .innertext 裡那顆
@@ -233,7 +246,7 @@
     <%# ── (b) 引用列表（預設收合，#HiddenTrackback.hide-list{display:none}） ── %>
     <div class="trackbacks-head">
       <div class="comments-head">
-        <a name="trackbacks"><span>引用(<%= trackbacks.length %>)</span><span id="trackback-switch"></span></a>
+        <a name="trackbacks"><span>引用(<%= locals.trackbackN ?? trackbacks.length %>)</span><span id="trackback-switch"></span></a>
       </div>
     </div>
     <div id="HiddenTrackback" class="hide-list">
@@ -254,6 +267,9 @@
         </div>
       </div>
       <% }) %>
+      <%- include('partials/pager2012', {
+        pgPage: locals.trackbackPage || 1, pgPages: locals.trackbackPages || 1,
+        pgHref: n => pgUrl('tpage', n, 'trackbacks'), pgId: 'trackback_pager' }) %>
       <% if (!trackbacks.length) { %>
       <div class="trackbacks-body">
         <div class="comments-body">
@@ -319,6 +335,9 @@
     </div>
     <% }) %>
 
+    <%- include('partials/pager2012', {
+      pgPage: locals.commentPage || 1, pgPages: locals.commentPages || 1,
+      pgHref: n => pgUrl('page', n, 'postComments'), pgId: 'comment_pager' }) %>
     <% if (!comments.length) { %>
     <%# 零迴響時原站的空狀態 HTML 查無（spec 第 11 節），這句是本站自己補的 %>
     <div class="comments-body">

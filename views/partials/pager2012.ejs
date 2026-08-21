@@ -1,0 +1,31 @@
+<%
+  /* 通用分頁列（原站 ul.page_control 的結構）
+     ─────────────────────────────────────────────────────────────
+     DOM 照抄 partials/gbpager.ejs 那一份（留言板用的），差別只在
+     那一支把網址組法寫死成 ?page=N，這一支收一個函式，所以同一頁上
+     可以有兩組互不干擾的分頁（文章頁的迴響 ?page= 與引用 ?tpage=）。
+
+     include 參數：
+       pgPage   目前第幾頁（1 起算）
+       pgPages  總頁數。<=1 就整塊不印
+       pgHref   n => 網址字串
+       pgId     <ul> 的 id（同一頁兩組要不一樣）
+
+     原站的規則（blog_2013_article_comments_page2.html）：
+       目前這一頁**不是連結**，直接印數字
+       第一頁的 id 是 first、其餘是 page_link_N、上下頁是 prev / next
+     EJS 用 with(locals)：內部變數一律加 pg 前綴。 */
+  const pgP  = Math.max(1, +locals.pgPage || 1);
+  const pgN  = Math.max(1, +locals.pgPages || 1);
+  const pgH  = locals.pgHref;
+  const pgId = locals.pgId || 'page_control';
+  /* 頁數多的時候不要把幾百個數字全印出來——那本身就變成一個大頁面。
+     原站是全部印，但原站的文章最多七頁；本站沒有上限，所以夾一個視窗：
+     永遠印第一頁與最後一頁，中間只印目前這一頁前後各兩頁。 */
+  const pgWin = new Set([1, pgN, pgP - 2, pgP - 1, pgP, pgP + 1, pgP + 2].filter(n => n >= 1 && n <= pgN));
+  const pgList = [...pgWin].sort((a, b) => a - b);
+%><% if (pgN > 1) { %><ul id="<%= pgId %>" class="page_control">
+<% if (pgP > 1) { %><a id="prev" href="<%= pgH(pgP - 1) %>">上一頁</a><% } %>
+<% pgList.forEach((n, i) => { %><% if (i && n !== pgList[i - 1] + 1) { %><span class="gap">…</span><% } %><% if (n === pgP) { %><b><%= n %></b><% } else { %><a id="<%= n === 1 ? 'first' : 'page_link_' + n %>" href="<%= pgH(n) %>"><%= n %></a><% } %><% }) %>
+<% if (pgP < pgN) { %><a id="next" href="<%= pgH(pgP + 1) %>">下一頁</a><% } %>
+</ul><% } %>
