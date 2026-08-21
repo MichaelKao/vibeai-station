@@ -780,5 +780,52 @@ console.log('\n=== 猜密碼要被擋，壞請求要回 400 ===');
   ok('壞掉的 multipart 回 4xx 不是 500', r.status < 500, 'HTTP ' + r.status);
 }
 
+
+console.log('\n=== 相機原生格式與被擋掉的檔案 ===');
+// ⚠ multer 的 fileFilter 原本只放行 jpeg|png|gif|webp。**iPhone 拍的照片
+// 預設是 HEIC**，相機原始檔常常是 TIFF，新一點的 Android 會出 AVIF——
+// 這些檔案被 cb(null,false) 靜靜丟掉：使用者選了照片、按下上傳，
+// 頁面回來說「上傳了 0 張照片」，一個字都沒解釋。
+// 換大頭貼更糟：req.file 是 undefined，跟「這次沒有要換頭貼」長得一樣，
+// 畫面顯示「設定已儲存」，使用者以為換好了。
+{
+  await post('/register',{name:'heicq',nick:'相機',pass:'test1234',pass2:'test1234'});
+  const H = await login('heicq');
+  await post('/heicq/album',{title:'相機測試'},H);
+  const ap = await text('/heicq/album',H);
+  const hid = Math.max(...[...ap.matchAll(/\/heicq\/album\/(\d+)/g)].map(m=>+m[1]));
+
+  // TIFF：sharp 讀得懂，應該收下並轉成 JPEG。用真的 TIFF 標頭產一張小圖。
+  // （HEIC 沒辦法在測試裡憑空產生一個合法檔，所以用同樣被擋在門外的 TIFF 代表這一類。）
+  const tiff = await (async () => {
+    const sharp = (await import('sharp')).default;
+    return sharp({ create: { width: 120, height: 90, channels: 3, background: { r: 200, g: 60, b: 60 } } })
+      .tiff().toBuffer();
+  })();
+  const g = new FormData();
+  g.append('photos', new Blob([tiff], { type: 'image/tiff' }), 'camera.tiff');
+  const r = await fetch(`${B}/heicq/album/${hid}/upload`, {method:'POST',headers:{cookie:H},body:g,redirect:'manual'});
+  ok('TIFF 上傳有被收下（302）', r.status === 302, 'HTTP ' + r.status);
+  const after = await text(`/heicq/album/${hid}`, H);
+  ok('TIFF 真的變成一張照片', (after.match(/\/heicq\/photo\/\d+/g) || []).length >= 1);
+
+  // 真的不支援的格式：要講原因，不能只說「上傳了 0 張」
+  const g2 = new FormData();
+  g2.append('photos', new Blob([Buffer.from('%PDF-1.4 not an image')],{type:'application/pdf'}), '報告.pdf');
+  await fetch(`${B}/heicq/album/${hid}/upload`, {method:'POST',headers:{cookie:H},body:g2,redirect:'manual'});
+  const msg = await text(`/heicq/album/${hid}`, H);
+  ok('不支援的格式會講出檔名與原因', msg.includes('報告.pdf') && msg.includes('不支援這個格式'),
+     (msg.match(/上傳了[^<]{0,60}/) || ['(找不到訊息)'])[0]);
+
+  // 大頭貼被擋掉時不能說「設定已儲存」
+  const fd = new FormData();
+  fd.append('nick','相機');
+  fd.append('avatar', new Blob([Buffer.from('not an image')],{type:'application/pdf'}), '頭貼.pdf');
+  await fetch(`${B}/heicq/settings`, {method:'POST',headers:{cookie:H},body:fd,redirect:'manual'});
+  const st = await text('/heicq/settings', H);
+  ok('大頭貼被擋掉時不會謊稱已儲存', st.includes('頭貼.pdf') || st.includes('大頭貼沒有換'),
+     (st.match(/設定已儲存[^<]{0,50}/) || ['(找不到訊息)'])[0]);
+}
+
 console.log(`\n===== ${pass} passed, ${fail} failed =====`);
 process.exit(fail?1:0);

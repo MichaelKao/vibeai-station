@@ -105,7 +105,41 @@ app.use((req, res, next) => {
 });
 
 
-const upload = multer({storage:multer.memoryStorage(),limits:{fileSize:8*1024*1024,files:20},fileFilter:(r,f,cb)=>cb(null,/^image\/(jpeg|png|gif|webp)$/.test(f.mimetype))});
+// 可以收的圖片格式。
+//
+// ⚠ 原本只放行 jpeg|png|gif|webp——**iPhone 拍的照片預設是 HEIC**，
+// 相機的原始檔常常是 TIFF，新一點的 Android 會出 AVIF。這些檔案被 multer
+// 的 fileFilter 用 cb(null,false) 靜靜丟掉：使用者選了 20 張照片、按下上傳、
+// 頁面回來說「上傳了 0 張照片」，一個字都沒解釋為什麼。換大頭貼更糟——
+// req.file 是 undefined，程式判斷成「這次沒有要換頭貼」，畫面顯示
+// 「設定已儲存」，使用者以為換好了。
+//
+// sharp 讀得懂 heif／tiff／avif（實測 sharp.format 有 heif、tiff），
+// save() 又一律轉成 JPEG 才存，所以收下來完全沒問題。
+// 上傳檔名的編碼。
+//
+// ⚠ multer（busboy）依照 RFC 7578 把 multipart 的檔名當成 latin1 解碼，
+// 但瀏覽器實際送的是 UTF-8。所以中文檔名拿到的是亂碼：
+// 「報告.pdf」會變成「å ±å.pdf」。我們只把檔名用在錯誤訊息上，
+// 但那正是使用者要靠它認出「是哪一張沒傳成功」的時候——印成亂碼等於沒印。
+const fname = f => {
+  try { return Buffer.from(f.originalname || '', 'latin1').toString('utf8'); }
+  catch { return f.originalname || '(沒有檔名)'; }
+};
+
+
+const OK_IMAGE = /^image\/(jpeg|png|gif|webp|heic|heif|avif|tiff?)$/i;
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 8 * 1024 * 1024, files: 20 },
+  fileFilter: (req, f, cb) => {
+    if (OK_IMAGE.test(f.mimetype)) return cb(null, true);
+    // ⚠ 一定要記下來。cb(null,false) 只是把檔案丟掉，handler 完全不知道
+    // 有這件事，於是使用者收到的訊息是「上傳了 0 張照片」而沒有原因。
+    (req.droppedFiles ||= []).push(`${fname(f)}：不支援這個格式（${f.mimetype || '未知'}）`);
+    cb(null, false);
+  },
+});
 
 // 站方公告：kukubar 的 <p class="announcement"> 與各頁的公告區都接這裡。
 // 每個請求都查一次太浪費（全站每一頁都要），用 30 秒的行程內快取——
@@ -844,6 +878,10 @@ site.get('/settings',requireLogin,requireOwner,async (req,res)=>res.render('sett
 site.post('/settings',requireLogin,requireOwner,upload.single('avatar'),async(req,res)=>{
   const {nick,intro,music,css,css_blog,pass,pass2}=req.body, u=U(res);
   let avatar=u.avatar, avatarErr='';
+  // ⚠ fileFilter 擋掉的檔案 req.file 會是 undefined，跟「這次沒有要換頭貼」
+  // 長得一模一樣，於是畫面顯示「設定已儲存」——使用者以為換好了，其實沒有。
+  // droppedFiles 是 fileFilter 記下來的，有東西就代表**有選檔案但被擋掉**。
+  if (req.droppedFiles?.length) avatarErr = req.droppedFiles[0];
   // 大頭貼走同一條 save()。它會出現在訪客記錄、好友清單、留言板、排行榜——
   // 也就是**別人的頁面**上，所以壞圖的擴散面比相簿照片更廣，一定要擋住。
   if(req.file){
@@ -1338,12 +1376,12 @@ site.post('/album/:id/upload',requireLogin,requireOwner,albumOf,upload.array('ph
   // ⚠ 讀不懂的檔案（偽造 MIME 的文字檔、執行檔、像素炸彈）會拋 BadImage，
   // **一個位元組都不要落地、也不要寫進資料庫**。一批裡有壞的就只跳過那一張，
   // 其餘照收——不要因為一張壞圖讓整批上傳白費。
-  let okN = 0; const rejected = [];
+  let okN = 0; const rejected = [...(req.droppedFiles || [])];   // fileFilter 擋掉的也要講
   for(const f of files){
     let s;
     try { s = await save(f); }
     catch (e) {
-      if (e && e.code === 'BAD_IMAGE') { rejected.push(`${f.originalname}：${e.message}`); continue; }
+      if (e && e.code === 'BAD_IMAGE') { rejected.push(`${fname(f)}：${e.message}`); continue; }
       throw e;
     }
     // ⚠ 檔案已經落地了，這時 INSERT 還是有可能失敗——最典型的是**相簿在
@@ -1357,7 +1395,7 @@ site.post('/album/:id/upload',requireLogin,requireOwner,albumOf,upload.array('ph
     } catch (e) {
       await remove(s.url).catch(()=>{});
       if (s.thumb && s.thumb !== s.url) await remove(s.thumb).catch(()=>{});
-      rejected.push(`${f.originalname}：這本相簿已經不在了`);
+      rejected.push(`${fname(f)}：這本相簿已經不在了`);
       continue;
     }
     if(!first) first=s.thumb; okN++; }

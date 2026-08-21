@@ -39,6 +39,14 @@ for (const path of PAGES) {
   const r = await page.goto(BASE + path, { waitUntil: 'networkidle' });
   if (!r || r.status() >= 400) { ok(`${path} 開得起來`, false, 'HTTP ' + (r && r.status())); continue; }
 
+  // ── viewport meta 一定要有 ────────────────────────────────────────
+  // ⚠ 沒有這一行，手機瀏覽器會用 980px 的虛擬視窗排版再整頁縮到約四成，
+  // 而 @media (max-width:999px) 因為算出來的寬度是 980 而**一條都不會觸發**——
+  // 整支 RWD 白做。稽核在 /albums 與 /slide 抓到（那兩頁自己起 <head>，
+  // 不吃共用的 partials）。
+  const vp = await page.$$eval('meta[name="viewport"]', els => els.map(e => e.content));
+  ok(`${path} 有 viewport meta`, vp.some(v => /width\s*=\s*device-width/i.test(v)), JSON.stringify(vp));
+
   const small = await page.$$eval('a[href], button, input[type=submit], [role=button]', (els, min) => {
     const out = [];
     for (const e of els) {

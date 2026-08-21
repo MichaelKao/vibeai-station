@@ -41,6 +41,18 @@
 %><!DOCTYPE html>
 <html lang="zh-Hant">
 <head>
+<%# ⚠ 這一行原站沒有（2012 年還沒人在管手機），但**少了它整支 RWD 都是白做的**。
+    沒有 viewport meta，手機瀏覽器會用 980px 的虛擬視窗寬度來排版，再把整頁縮到
+    大約四成——字看不清、連結點不到，而 wretch2012-rwd.css 的 @media (max-width:999px)
+    因為算出來的寬度是 980，**一條都不會觸發**。
+
+    這一頁與 slide.ejs 自己起 <head>（不吃 partials/head2012_site.ejs），
+    所以漏掉了。桌機完全不受影響。
+
+    也因為這樣，用 playwright 設 viewport:{width:375} 測是測不出來的——
+    那等同「375px 寬的桌機視窗」，媒體查詢照樣會觸發。要開 isMobile:true
+    才會走真手機那條路（tools/touchcheck.mjs 有開）。 %>
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
 <meta http-equiv="imagetoolbar" content="no">
 <title><%= album.title %> - <%= u.name %>'s Album - <%= SITE_NAME %></title>
