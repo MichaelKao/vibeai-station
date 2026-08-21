@@ -77,9 +77,14 @@
               <div class="clearfix">
                 <div id="push">
                   <span id="recommendcount"><%= post.likes %></span>推薦此文章
-                  <form method="post" action="<%= here %>/like"><button id="pushbtn" class="push" title="推薦此文章">推</button></form>
+                  <%# 推過的人看到的是「已推」的樣子。原本推前推後長得一模一樣，
+                      重複按沒有任何回饋，使用者只會覺得按鈕壞了。 %>
+                  <% const liked = (locals.likedByMe === true); %>
+                  <form method="post" action="<%= here %>/like"><button id="pushbtn" class="push<%= liked ? ' on' : '' %>" title="<%= liked ? '你已經推過了' : '推薦此文章' %>">推</button></form>
                   <% if (me) { %>
-                  <form method="post" action="<%= here %>/fav"><button id="collectbtn" class="pull" title="<%= faved ? '取消收藏' : '收藏這篇文章' %>">收</button></form>
+                  <%# 收藏是切換狀態的按鈕，樣子要跟著狀態走，不然第二次點會
+                      在使用者不知情的狀況下把收藏取消掉。 %>
+                  <form method="post" action="<%= here %>/fav"><button id="collectbtn" class="pull<%= faved ? ' on' : '' %>" title="<%= faved ? '取消收藏' : '收藏這篇文章' %>">收</button></form>
                   <% } else { %>
                   <a href="/login?next=<%= encodeURIComponent(here) %>" id="collectbtn" class="pull" title="收藏這篇文章">收</a>
                   <% } %>
@@ -306,7 +311,7 @@
         <li class="comments-post">
           <% if (c.homepage) { %><a class='postuser' target='_blank' href='<%= c.homepage %>'><%= c.author %></a><% } else { %><a class='postuser'><%= c.author %></a><% } %><% if (c.email) { %><a class='postemail' href='mailto:<%= c.email %>'><img src='<%= IMG %>/email.gif' width="25" height="25" border="0" align='absmiddle' alt="email"></a><% } %> at <%= wStamp(c.created) %> comment
           | <a href="/report?kind=comment&amp;target=<%= c.id %>&amp;url=<%= encodeURIComponent(here) %>" class="reportlink" data-kind="comment" data-id="<%= c.id %>">檢舉</a>
-          <% if (isOwner) { %>| <form method="post" action="<%= here %>/comment/<%= c.id %>/del"><button>刪除</button></form><% } %>
+          <% if (isOwner) { %>| <form method="post" action="<%= here %>/comment/<%= c.id %>/del" onsubmit="return confirm('刪除這則回應？刪掉之後救不回來。')"><button>刪除</button></form><% } %>
         </li>
       </ul>
 

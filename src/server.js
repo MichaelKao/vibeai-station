@@ -1839,6 +1839,8 @@ site.get('/blog/:id',postOf,async (req,res)=>{ const p=res.locals.post;
   const tPage = Math.min(pageNo(req.query.tpage), Math.max(1, Math.ceil(tN/tPer)));
   res.render('post',{nav:'blog',post:p,...await blogSide(res, p),
     faved: res.locals.me?!!await one('SELECT 1 FROM favs WHERE user_id=? AND post_id=?',res.locals.me.id,p.id):false,
+    // 這個 session 推過這篇沒有——按鈕要照狀態長不一樣的樣子
+    likedByMe: (req.session.liked||[]).includes(p.id),
     favN: (await one('SELECT count(*) c FROM favs WHERE post_id=?',p.id)).c,
     // 「誰來收藏」：原站按下收藏數會展開收藏過這篇的人（blog.md 列為後期功能）。
     // 資料本來就在 favs 裡，只是之前沒有印出來。
@@ -1882,12 +1884,36 @@ site.post('/blog/:id/comment/:cid/reply',requireLogin,requireOwner,postOf,async 
   await run('UPDATE comments SET reply=? WHERE id=? AND post_id=?',(req.body.reply||'').trim().slice(0,500),req.params.cid,res.locals.post.id);
   res.redirect(`/${U(res).name}/blog/${res.locals.post.id}#comments`); });
 site.post('/blog/:id/comment/:cid/del',requireLogin,requireOwner,postOf,async (req,res)=>{ await run('DELETE FROM comments WHERE id=? AND post_id=?',req.params.cid,res.locals.post.id); res.redirect(`/${U(res).name}/blog/${res.locals.post.id}#comments`); });
-site.post('/blog/:id/like',postOf,needUnlocked,async (req,res)=>{ req.session.liked??=[]; if(!req.session.liked.includes(res.locals.post.id)){ req.session.liked.push(res.locals.post.id); await run('UPDATE posts SET likes=likes+1 WHERE id=?',res.locals.post.id);} res.redirect(`/${U(res).name}/blog/${res.locals.post.id}`); });
+// 推薦。
+//
+// ⚠ 原本重複按完全沒有回饋：數字不動、按鈕長得一樣、也不說「你已經推過了」。
+// 使用者只會覺得「這顆按鈕壞了」，然後一直按。
+// 現在推成功與已經推過都給一句 flash，而且畫面上那顆按鈕會變成已推的樣子。
+site.post('/blog/:id/like',postOf,needUnlocked,async (req,res)=>{
+  const pid = res.locals.post.id;
+  req.session.liked ??= [];
+  if (req.session.liked.includes(pid)) {
+    flash(req, '你已經推過這篇文章了');
+  } else {
+    req.session.liked.push(pid);
+    await run('UPDATE posts SET likes=likes+1 WHERE id=?', pid);
+    flash(req, '推薦成功，謝謝你');
+  }
+  res.redirect(`/${U(res).name}/blog/${pid}#${pid}`);
+});
 // 收藏（無名文章下方的「收藏」）
 site.post('/blog/:id/fav',requireLogin,postOf,needUnlocked,async (req,res)=>{
   const me=res.locals.me.id, pid=res.locals.post.id;
-  if(await one('SELECT 1 FROM favs WHERE user_id=? AND post_id=?',me,pid)) await run('DELETE FROM favs WHERE user_id=? AND post_id=?',me,pid);
-  else await run('INSERT OR IGNORE INTO favs(user_id,post_id) VALUES(?,?)',me,pid);
+  // ⚠ 收藏是一顆會切換狀態的按鈕，但原本收藏前後長得一模一樣，
+  // 第二次點會**靜靜地把收藏取消掉**——使用者以為自己收了兩次。
+  // 講清楚做了什麼；按鈕本身的樣子由 views/post.ejs 依 faved 切換。
+  if (await one('SELECT 1 FROM favs WHERE user_id=? AND post_id=?', me, pid)) {
+    await run('DELETE FROM favs WHERE user_id=? AND post_id=?', me, pid);
+    flash(req, '已取消收藏');
+  } else {
+    await run('INSERT OR IGNORE INTO favs(user_id,post_id) VALUES(?,?)', me, pid);
+    flash(req, '已加入我的收藏');
+  }
   res.redirect(`/${U(res).name}/blog/${pid}`); });
 // 我的收藏
 site.get('/favs',async (req,res)=>res.render('favs',{nav:'user',

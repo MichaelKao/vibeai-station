@@ -213,3 +213,13 @@ html > body #content #push button.push { margin: 0 0 0 2px; }
    保住，所以需要一個就地顯示的位置。 */
 .w2-formerr { margin: 6px 0; padding: 6px 10px; border: 1px solid #e0a0a0;
               background: #fff4f4; color: #c33; font-size: 13px; }
+
+/* 推／收按鈕的「已經做過了」狀態。
+   ⚠ 原本這兩顆在動作前後長得一模一樣：推過了再按沒有任何回饋（使用者
+   只會覺得按鈕壞了、一直按），收藏過了再按會**靜靜地取消收藏**（使用者
+   以為自己收了兩次）。狀態要看得見。
+   只加深顏色與內凹，不改尺寸與版位，桌機版面不受影響。 */
+#pushbtn.on, #collectbtn.on {
+  filter: brightness(0.82) saturate(1.3);
+  box-shadow: inset 0 1px 3px rgba(0,0,0,.35);
+}

@@ -108,7 +108,7 @@
               <%# 只把站內相對路徑變成連結，舊資料若含 javascript: 一律當純文字印出來 %>
               <% if(r.url && r.url.startsWith('/') && !r.url.startsWith('//')){ %><a href="<%= r.url %>">前往查看</a>　<% } else if(r.url){ %><span class="w2-note"><%= r.url %></span>　<% } %>
               <% if(!r.done){ %><form method="post" action="/admin/report/<%= r.id %>/done"><button class="w2-admin-lnk">標記已處理</button></form>　<% } %>
-              <form method="post" action="/admin/report/<%= r.id %>/del"><button class="w2-admin-lnk w2-admin-red">刪除</button></form>
+              <form method="post" action="/admin/report/<%= r.id %>/del" onsubmit="return confirm('刪除這筆檢舉記錄？')"><button class="w2-admin-lnk w2-admin-red">刪除</button></form>
             </div>
           </div>
           <% }) %>
@@ -141,7 +141,7 @@
           <% notices.forEach(n=>{ %>
           <div class="w2-admin-item">
             <%= n.created.slice(0,10) %>　<%= n.body %>
-            <form method="post" action="/admin/notice/<%= n.id %>/del"><button class="w2-admin-lnk w2-admin-red">刪除</button></form>
+            <form method="post" action="/admin/notice/<%= n.id %>/del" onsubmit="return confirm('刪除這則公告？')"><button class="w2-admin-lnk w2-admin-red">刪除</button></form>
           </div>
           <% }) %>
         </div>
