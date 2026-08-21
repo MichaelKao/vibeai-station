@@ -1,0 +1,68 @@
+/* 聚焦看得見（WCAG 2.4.7 Focus Visible）
+ * ═══════════════════════════════════════════════════════════════════════
+ * ⚠ 這一支是 tools/visualclick.mjs 抓出來的：點每一頁的「搜尋：」標籤，
+ * 游標確實進到輸入框了，但**畫面一個像素都沒有變**——因為版型（2012 年的
+ * 原站 CSS）從來沒有寫過聚焦樣式，而現代瀏覽器的預設外框又被版型的
+ * `outline:none` 之類的規則洗掉。
+ *
+ * 後果不是「不好看」，是**用鍵盤的人不知道自己在哪一格**：
+ * 一路 Tab 過去，畫面完全沒有回饋，只能靠猜。原站當年沒人在管這件事，
+ * 但那不是保留它的理由——這是純粹的功能缺失，不是風格差異。
+ *
+ * 用 :focus-visible 而不是 :focus：滑鼠點擊不會亮（不打擾一般使用者），
+ * 只有鍵盤操作與輔助技術才會看到外框，這正是它存在的目的。
+ * 不支援 :focus-visible 的舊瀏覽器會落到下面的 :focus 退路。
+ *
+ * 顏色用原站頁面上本來就有的那個紅（#c30，連結的 hover 色），
+ * 不引進新的色票。 */
+
+:focus-visible {
+  outline: 2px solid #c30;
+  outline-offset: 1px;
+}
+
+/* 輸入框與文字區：外框之外再加一層淡淡的光暈，深色底上也看得見 */
+/* ⚠ 這幾條要 !important。版型對某些輸入框寫了 outline:none
+   （例如網誌頁首的搜尋框 #wretch-search-text.blur，實測算出來是
+   outline-style: none），不加 !important 蓋不過去——那一格就會變成
+   「Tab 走到這裡畫面完全沒變」，正是這支 CSS 要解決的問題本身。 */
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible {
+  outline: 2px solid #c30 !important;
+  outline-offset: 0;
+  box-shadow: 0 0 0 3px rgba(204, 51, 0, .18);
+}
+
+/* 版型把某些控制項的 outline 關掉了，這裡要蓋回來 */
+a:focus-visible,
+button:focus-visible,
+[role="button"]:focus-visible,
+summary:focus-visible {
+  outline: 2px solid #c30 !important;
+  outline-offset: 1px;
+}
+
+/* 舊瀏覽器退路：沒有 :focus-visible 的話，至少 :focus 要看得見。
+   有支援的瀏覽器會被上面那幾條蓋過去，所以不會兩種同時出現。 */
+@supports not selector(:focus-visible) {
+  a:focus, button:focus, input:focus, textarea:focus, select:focus,
+  [role="button"]:focus, summary:focus {
+    outline: 2px solid #c30;
+    outline-offset: 1px;
+  }
+}
+
+/* ── 看不見的東西不該被 Tab 走到 ─────────────────────────────────────
+ * ⚠ kukubar 底列的 #text-carousel（原站會輪播的「首頁好文」）在版型裡是
+ *   #text-carousel { height:25px; overflow:hidden }
+ *   #text-carousel li { height:25px }
+ * 也就是「一次只露出第一則，其餘被裁掉」。原站靠一段 JS 輪播，我們沒有做
+ * 那段——所以第二則之後永遠看不到，卻**還留在 Tab 順序裡**：用鍵盤的人會
+ * 一路 Tab 到三個看不見的連結上，畫面完全沒有反應。
+ *
+ * tools/visualclick.mjs 就是這樣抓到的（三個焦點停在同一個座標 @918,880）。
+ *
+ * 沒有輪播就只留看得到的那一則。display:none 會一併從 Tab 順序與
+ * 讀螢幕軟體裡移除，這正是我們要的：畫面上沒有的東西，鍵盤與語音也不該有。 */
+#text-carousel li:not(:first-child) { display: none; }

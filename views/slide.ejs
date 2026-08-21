@@ -58,6 +58,9 @@
 <title><%= album.title %> - <%= u.name %>'s Album - <%= SITE_NAME %></title>
 <link rel="shortcut icon" type="image/x-icon" href="/favicon.ico">
 <link href="/wretch2012-slider.css" rel="stylesheet" type="text/css">
+<%# 聚焦看得見（見 public/wretch2012-focus.css 的說明）。原站沒有寫過聚焦樣式，
+    用鍵盤的人一路 Tab 過去畫面完全沒有回饋。這是功能缺失，不是風格差異。 %>
+<link rel="stylesheet" href="/wretch2012-focus.css">
 <style>
 /* 【刻意偏離，一行】底部控制列的「－ 秒數 ＋」按不下去。
    原因不是我們寫錯，原檔就是這樣：slider.css 裡 #slideinfo 是 position:fixed

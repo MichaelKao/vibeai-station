@@ -64,6 +64,9 @@
     **一定要放在所有版型與偏離層之後**才蓋得過那些寫死的 px 寬度，
     但要放在使用者自訂 CSS 之前——自訂 CSS 依契約 §4-5 永遠是最後一個。 %>
 <link rel="stylesheet" href="/wretch2012-rwd.css">
+<%# 聚焦看得見（見 public/wretch2012-focus.css 的說明）。原站沒有寫過聚焦樣式，
+    用鍵盤的人一路 Tab 過去畫面完全沒有回饋。這是功能缺失，不是風格差異。 %>
+<link rel="stylesheet" href="/wretch2012-focus.css">
 <%# 網誌吃 css_blog、相簿與其餘頁面吃 css——原站就是兩份
     （f10.wretch.yimg.com/<帳號>/files/album.css 與 blog.css，WRETCH_SPEC.md §6）。
     還沒填過 css_blog 的人退回 css，不然舊使用者的自訂樣式會突然消失。 %>

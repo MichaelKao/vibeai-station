@@ -39,6 +39,9 @@
     **一定要放在所有版型與偏離層之後**才蓋得過那些寫死的 px 寬度，
     但要放在使用者自訂 CSS 之前——自訂 CSS 依契約 §4-5 永遠是最後一個。 %>
 <link rel="stylesheet" href="/wretch2012-rwd.css">
+<%# 聚焦看得見（見 public/wretch2012-focus.css 的說明）。原站沒有寫過聚焦樣式，
+    用鍵盤的人一路 Tab 過去畫面完全沒有回饋。這是功能缺失，不是風格差異。 %>
+<link rel="stylesheet" href="/wretch2012-focus.css">
 <%# ⚠ 用 locals.u 不要用裸的 u。錯誤頁（msg.ejs）是在 body-parser 拋錯之後才 render 的，
     那時候 res.locals 還沒被設好——裸的 u 會拋 "u is not defined"，
     於是**錯誤頁自己再爆一次**，最後掉到純文字兜底，使用者看到一行沒有版型的裸字。 %>

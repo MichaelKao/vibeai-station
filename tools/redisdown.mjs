@@ -36,7 +36,10 @@ await new Promise(res => {
   s.listen(deadPort, '127.0.0.1', () => s.close(res));
 });
 
-async function boot(label, env, port, waitMs = 20_000) {
+// ⚠ 這裡的等待要放寬。這一條量的是「站起不起得來」，不是「多快起來」——
+// 單獨跑 5.8 秒就好了，但在完整測試裡前面剛跑完一輪 Chrome 截圖，機器還在
+// 喘，20 秒就會誤判成「起不來」。實測差距是 5.8s vs 20s+，所以放到 45 秒。
+async function boot(label, env, port, waitMs = 45_000) {
   const DIR = path.join(os.tmpdir(), 'vibeai-redisdown-' + port);
   fs.rmSync(DIR, { recursive: true, force: true });
   fs.mkdirSync(DIR, { recursive: true });
@@ -65,7 +68,7 @@ async function boot(label, env, port, waitMs = 20_000) {
   const t0 = Date.now();
   const b = await boot('連不上', { REDIS_URL: `redis://127.0.0.1:${deadPort}` }, 3481);
   const secs = ((Date.now() - t0) / 1000).toFixed(1);
-  ok(`Redis 連不上時站照樣起得來（${secs}s）`, !!b.health, '20 秒內 /healthz 都沒有回應');
+  ok(`Redis 連不上時站照樣起得來（${secs}s）`, !!b.health, '45 秒內 /healthz 都沒有回應');
   ok('降級之後 /healthz 誠實回報 redis=memory', b.health?.redis === 'memory', JSON.stringify(b.health));
   ok('log 有講清楚是降級不是壞掉', /降級/.test(b.log()),
      b.log().split('\n').filter(l => l.includes('[redis]')).slice(0, 3).join(' | '));
@@ -76,8 +79,8 @@ async function boot(label, env, port, waitMs = 20_000) {
 
 // ── 2. 沒設 REDIS_URL（本機開發的常態）──────────────────────────────
 {
-  const b = await boot('沒設定', { REDIS_URL: '', REDIS_PRIVATE_URL: '' }, 3482, 15_000);
-  ok('沒設 REDIS_URL 也起得來', !!b.health, '15 秒內 /healthz 都沒有回應');
+  const b = await boot('沒設定', { REDIS_URL: '', REDIS_PRIVATE_URL: '' }, 3482, 45_000);
+  ok('沒設 REDIS_URL 也起得來', !!b.health, '45 秒內 /healthz 都沒有回應');
   ok('/healthz 回報 redis=memory', b.health?.redis === 'memory', JSON.stringify(b.health));
   b.srv.kill('SIGKILL');
   await sleep(500);

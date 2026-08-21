@@ -203,6 +203,13 @@ if (!process.env.SKIP_BROWSER) {
     env: { ...process.env, BASE: b2, MSYS_NO_PATHCONV: '1',
            USER_NAME: 'alpha', USER_PASS: 'test1234' }, encoding: 'utf8',
   });
+  // 眼睛看得到的回饋：點下去畫面有沒有變、Tab 走過去看不看得出焦點在哪。
+  // ⚠ 這一支補的是「測試全綠但畫面是壞的」那個盲點——使用者連續兩次回報
+  // 相簿頁籤不能點，而當時的測試都在量「機器看得到的狀態改變」。
+  const r8 = spawnSync(process.execPath, ['tools/visualclick.mjs'], {
+    env: { ...process.env, BASE: b2, MSYS_NO_PATHCONV: '1',
+           USER_NAME: 'alpha', USER_PASS: 'test1234' }, encoding: 'utf8',
+  });
   // 手機可用性：觸控目標大小、圖片 alt、主要內容有沒有被推到看不見的地方
   const r7 = spawnSync(process.execPath, ['tools/touchcheck.mjs'], {
     env: { ...process.env, BASE: b2, MSYS_NO_PATHCONV: '1' }, encoding: 'utf8',
@@ -247,6 +254,14 @@ if (!process.env.SKIP_BROWSER) {
   for (const f of fails6.slice(0, 20)) console.log('  ' + f.trim());
   if (!line6) { bad += 1; console.log('  ' + out6.trim().split('\n').slice(-8).join('\n  ')); }
   if (fails6.length) bad += fails6.length;
+
+  const out8 = (r8.stdout || '') + (r8.stderr || '');
+  const line8 = out8.split('\n').filter(l => l.includes('passed')).pop();
+  const fails8 = out8.split('\n').filter(l => l.startsWith('! FAIL'));
+  console.log(`\n看得到的回饋：${line8 ? line8.trim() : '(沒有結果——測試根本沒跑完)'}`);
+  for (const f of fails8.slice(0, 20)) console.log('  ' + f.trim());
+  if (!line8) { bad += 1; }
+  if (fails8.length) bad += fails8.length;
 
   const out7 = (r7.stdout || '') + (r7.stderr || '');
   const line7 = out7.split('\n').filter(l => l.includes('passed')).pop();

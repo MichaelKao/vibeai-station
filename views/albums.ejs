@@ -84,6 +84,9 @@
     實測 768px 視窗橫向溢出 192px、375px 溢出 585px，是站台層唯一會跑版的頁。
     一定要排在最後：它靠載入順序蓋過上面兩支的固定寬度。 %>
 <link rel="stylesheet" href="/wretch2012-rwd.css" type="text/css" />
+<%# 聚焦看得見（見 public/wretch2012-focus.css 的說明）。原站沒有寫過聚焦樣式，
+    用鍵盤的人一路 Tab 過去畫面完全沒有回饋。這是功能缺失，不是風格差異。 %>
+<link rel="stylesheet" href="/wretch2012-focus.css">
 </head>
 <%# body 上不要掛語系 class。sprite_fplink.png（429×115）左右並排三塊：
     0 = 繁體「服務列表／無名相簿・無名網誌・無名影音・無名揪團」（無 class 時的預設）
