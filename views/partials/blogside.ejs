@@ -40,7 +40,9 @@
 %>
 <%# ── 月曆 .calendar（200×200，底圖 calendar.gif） ───────────────── %>
 <div align="center" class="calendar">
-  <a href="/<%= u.name %>/blog?cal=<%= cal.key %>" rel="nofollow">文章日曆</a>
+  <%# ⚠ 這裡原本連到 ?cal=<目前正在顯示的月份>——點下去只是維持現狀，
+      畫面一個像素都不會變。原站連到的是整頁月曆檢視（?schedule=1）。 %>
+  <a href="/<%= u.name %>/blog?schedule=1&amp;ym=<%= cal.key %>" rel="nofollow">文章日曆</a>
   <table border="0" cellspacing="4" cellpadding="0" summary="Monthly calendar with links to each day's posts">
     <caption class="calendarhead">
       <a href="/<%= u.name %>/blog?cal=<%= cal.prevYm %>" rel="nofollow">&lt&lt</a>

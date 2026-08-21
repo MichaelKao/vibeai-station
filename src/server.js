@@ -1666,6 +1666,19 @@ site.get('/blog',async (req,res)=>{
   const per = archive ? 500 : 10;
   // 日曆顯示的月份：?cal= 優先，其次跟著目前篩選的月份／日期
   res.calYm=/^\d{4}-\d{2}$/.test(qs1(req.query.cal))?qs1(req.query.cal):(ym||(day?day.slice(0,7):null));
+  // 整頁月曆檢視。⚠ 側欄那顆「文章日曆」原本連到 ?cal=<目前月份>——
+  // 點下去只是維持現狀，畫面一個像素都不會變，使用者的感受是「連結壞了」。
+  // 原站點下去是整頁月曆（存檔：…/blog/boogier&schedule=1&year=2011&month=9）。
+  if (req.query.schedule === '1') {
+    const sYm = /^\d{4}-\d{2}$/.test(qs1(req.query.ym)) ? qs1(req.query.ym) : null;
+    res.calYm = sYm || res.calYm;
+    const cal = await calendar(U(res).id, res.calYm);
+    return res.render('schedule', { nav:'blog', cal, ...await blogSide(res),
+      // 那個月每一天的文章（只要標題與日期，不撈內文）
+      dayPosts: await all(
+        "SELECT id,title,created FROM posts WHERE user_id=? AND substr(created,1,7)=? ORDER BY id",
+        U(res).id, cal.key) });
+  }
   let where='user_id=?'; const args=[U(res).id];
   if(cat){ where+=' AND category=?'; args.push(cat); }
   if(ym){ where+=' AND substr(created,1,7)=?'; args.push(ym); }

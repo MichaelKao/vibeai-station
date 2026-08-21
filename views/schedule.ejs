@@ -1,0 +1,64 @@
+<%
+  /* 整頁月曆檢視 /:name/blog?schedule=1&ym=YYYY-MM
+     ─────────────────────────────────────────────────────────────
+     ⚠ 側欄那顆「文章日曆」原本連到 ?cal=<目前正在顯示的月份>——點下去只是
+     維持現狀，畫面一個像素都不會變。使用者的感受就是「這顆連結壞了」。
+
+     原站點下去是**整頁的月曆檢視**（存檔逐字：
+     blog_2011_category_paginated_boogier.html 的
+     `<a href="…/blog/boogier&schedule=1&year=2011&month=9">Calendar</a>`）。
+     這一頁就是那個：一個月一格一格排開，有文章的日子印出標題可以直接點進去。
+
+     外框沿用 views/blog.ejs 那一套（blog2012_head ＋ #content ＋ #links），
+     不自創新的版面。資料來自 site.get('/blog') 的 schedule 分支：
+     cal（同側欄那支 calendar()）與 dayPosts（那個月每一天的文章）。 */
+  const scWk = ['日', '一', '二', '三', '四', '五', '六'];
+  const scByDay = {};
+  for (const sp of (locals.dayPosts || [])) {
+    const d = +String(sp.created).slice(8, 10);
+    (scByDay[d] ||= []).push(sp);
+  }
+%>
+<%- include('partials/blog2012_head', { title: cal.y + ' 年 ' + cal.m + ' 月的文章 - ' + u.nick, artTitle: cal.y + ' 年 ' + cal.m + ' 月', medium: '' }) %>
+
+<div id="content">
+<div class="blog">
+  <div class="blogbody">
+    <div class="blogbody2">
+      <div class="articletext">
+
+        <h3 class="title">
+          <a href="/<%= u.name %>/blog?schedule=1&amp;ym=<%= cal.prevYm %>">&lt;&lt;</a>
+          <%= cal.y %> 年 <%= cal.m %> 月
+          <% if (!cal.isFuture) { %><a href="/<%= u.name %>/blog?schedule=1&amp;ym=<%= cal.nextYm %>">&gt;&gt;</a><% } %>
+        </h3>
+
+        <table class="w2-schedule" cellspacing="0">
+          <tr><% scWk.forEach(d => { %><th><%= d %></th><% }) %></tr>
+          <tr>
+<% cal.cells.forEach((c, i) => { %><% if (i && i % 7 === 0) { %>          </tr><tr>
+<% } %>            <td<% if (c && c.has) { %> class="has"<% } %>><% if (c) { %><span class="d"><%= c.d %></span>
+<% (scByDay[c.d] || []).forEach(sp => { %>              <a href="/<%= u.name %>/blog/<%= sp.id %>" title="<%= sp.title %>"><%= sp.title %></a>
+<% }) %><% } %></td>
+<% }) %>          </tr>
+        </table>
+
+        <p class="w2-more">
+          <a href="/<%= u.name %>/blog?ym=<%= cal.key %>">用清單看這個月的全部文章</a>
+          &nbsp;|&nbsp;
+          <a href="/<%= u.name %>/blog">回網誌首頁</a>
+        </p>
+
+      </div>
+    </div>
+  </div>
+</div> <!-- end of class=blog -->
+</div> <!-- end of content -->
+
+<div id="links">
+  <div id="links2">
+  <%- include('partials/blogside') %>
+  </div> <!-- end of links2 -->
+</div> <!-- end of links -->
+
+<%- include('partials/blog2012_foot') %>

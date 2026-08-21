@@ -1023,5 +1023,40 @@ console.log('\n=== 分類頁／月份頁是精簡清單，不是全文 ===');
   ok('月份頁也是彙整清單', mon.includes('w2-archive'));
 }
 
+
+console.log('\n=== 側欄的「文章日曆」點下去有整頁月曆 ===');
+// ⚠ 那顆連結原本連到 ?cal=<目前正在顯示的月份>——點下去只是維持現狀，
+// 畫面一個像素都不會變，使用者的感受是「這顆連結壞了」。
+// 原站點下去是整頁月曆檢視（存檔逐字：
+// blog_2011_category_paginated_boogier.html 的
+// …/blog/boogier&schedule=1&year=2011&month=9）。
+{
+  await post('/register',{name:'schedq',nick:'月曆',pass:'test1234',pass2:'test1234'});
+  const S = await login('schedq');
+  await post('/schedq/blog/new',{title:'月曆測試文',body:'內容',category:'心情'},S);
+
+  const side = await text('/schedq/blog',S);
+  ok('側欄的「文章日曆」連到 ?schedule=1', /文章日曆/.test(side) && /schedule=1/.test(side),
+     (side.match(/<a href="[^"]*"[^>]*>文章日曆/) || ['(找不到)'])[0]);
+
+  const cal = await text('/schedq/blog?schedule=1',S);
+  ok('月曆頁開得起來', cal.includes('w2-schedule'));
+  ok('月曆頁有星期列', /<th>日<\/th>/.test(cal));
+  ok('今天那一格標成有文章', cal.includes('td class="has"'),
+     '（剛發的文章應該讓今天那一格亮起來）');
+  ok('格子裡直接印得出文章標題', cal.includes('月曆測試文'));
+  ok('有「用清單看這個月」的出口', cal.includes('用清單看這個月的全部文章'));
+
+  // 上下個月要能翻，翻到未來的月份不該出現「下個月」
+  ok('可以翻到上個月', /schedule=1&amp;ym=\d{4}-\d{2}/.test(cal),
+     (cal.match(/schedule=1&amp;ym=\d{4}-\d{2}/) || ['(找不到)'])[0]);
+  const future = await text('/schedq/blog?schedule=1&ym=2099-01',S);
+  ok('未來的月份不會壞', future.includes('w2-schedule'));
+
+  // 月份亂給不能 500
+  for (const q of ['&ym=abc','&ym=9999-99','&ym[]=1'])
+    ok('月份亂給不會壞 '+q, (await get('/schedq/blog?schedule=1'+q)).status === 200);
+}
+
 console.log(`\n===== ${pass} passed, ${fail} failed =====`);
 process.exit(fail?1:0);
