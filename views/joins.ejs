@@ -69,11 +69,11 @@
         <div class="hd"><h2>我要揪團</h2></div>
         <div class="bd">
           <form method="post" action="/join" class="w2-joinform">
-            <p><input type="text" name="title" placeholder="要做什麼？" maxlength="40" required></p>
-            <p><input type="text" name="place" placeholder="在哪裡" maxlength="20"></p>
-            <p><input type="text" name="when_text" placeholder="什麼時候" maxlength="20"></p>
-            <p><input type="number" name="quota" placeholder="人數上限（可留空）" min="0" max="999"></p>
-            <p><textarea name="descr" rows="3" maxlength="200" placeholder="說明"></textarea></p>
+            <p><input type="text" name="title" placeholder="要做什麼？" maxlength="40" required aria-label="揪團標題"></p>
+            <p><input type="text" name="place" placeholder="在哪裡" maxlength="20" aria-label="地點"></p>
+            <p><input type="text" name="when_text" placeholder="什麼時候" maxlength="20" aria-label="時間"></p>
+            <p><input type="number" name="quota" placeholder="人數上限（可留空）" min="0" max="999" aria-label="人數上限"></p>
+            <p><textarea name="descr" rows="3" maxlength="200" placeholder="說明" aria-label="揪團說明"></textarea></p>
             <%# 外觀沿用站台既有的 .w2-btn，不要留瀏覽器預設按鈕（跟登入頁那顆不一樣） %>
             <p><input type="submit" class="w2-btn" value="發起"></p>
           </form>

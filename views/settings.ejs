@@ -25,13 +25,18 @@
 
           <li><div class="w2-h3">網誌設定</div></li>
           <li><span>帳號</span><b><%= u.name %></b> <span class="w2-sub">（不可更改）</span></li>
-          <li><span>暱稱</span><input class="small-c" type="text" name="nick" value="<%= u.nick %>" size="20" maxlength="20" required></li>
-          <li><span>自我介紹</span><textarea class="small-c" name="intro" cols="50" rows="4" maxlength="500"><%= u.intro %></textarea></li>
+          <li><label for="set-nick">暱稱</label><input class="small-c" type="text" name="nick" id="set-nick" value="<%= u.nick %>" size="20" maxlength="20" required></li>
+          <li><label for="set-intro">自我介紹</label><textarea class="small-c" name="intro" id="set-intro" cols="50" rows="4" maxlength="500"><%= u.intro %></textarea></li>
           <li><span>&nbsp;</span><span class="w2-sub">會出現在小站標題下方與名片上。</span></li>
           <li><span>大頭貼</span><img src="<%= u.avatar %>" width="90" height="90" alt="<%= u.nick %>"></li>
-          <li><span>&nbsp;</span><input type="file" name="avatar" accept="image/*"> <span class="w2-sub">建議 90×90</span></li>
-          <li><span>新密碼</span><input class="small-c" type="password" name="pass" size="12">
-            　再輸入一次 <input class="small-c" type="password" name="pass2" size="12">
+          <li><span>&nbsp;</span><input type="file" name="avatar" accept="image/*" id="set-avatar" aria-label="大頭貼檔案"> <span class="w2-sub">建議 90×90</span></li>
+          <li><label for="set-oldpass">舊密碼</label>
+            <input class="small-c" type="password" name="oldpass" id="set-oldpass" size="12" autocomplete="current-password">
+            <span class="w2-sub">要換密碼才需要填</span></li>
+          <li><label for="set-pass">新密碼</label>
+            <input class="small-c" type="password" name="pass" id="set-pass" size="12" autocomplete="new-password">
+            　<label for="set-pass2">再輸入一次</label>
+            <input class="small-c" type="password" name="pass2" id="set-pass2" size="12" autocomplete="new-password">
             <span class="w2-sub">不改請留空</span></li>
 
           <%# ⚠ 這裡本來寫「網誌樣式／版面樣式」，但那兩個色票（粉紅／灰白）
@@ -47,18 +52,18 @@
             <input type="hidden" name="theme" value="<%= u.theme || '' %>">
           </li>
           <li><span>&nbsp;</span><span class="w2-sub">只換<a href="/<%= u.name %>/album">相簿</a>的版型。網誌、留言板、名片、好友各有自己的原廠版型，要改請用下面的自訂樣式。</span></li>
-          <li><span>相簿自訂樣式</span>
-            <textarea class="small-c" name="css" cols="60" rows="8" maxlength="20000" placeholder="/* 相簿與其餘頁面的專屬 CSS，例如 */&#10;body{background:#000}&#10;#content{background:#333}"><%= u.css %></textarea></li>
+          <li><label for="set-css">相簿自訂樣式</label>
+            <textarea class="small-c" name="css" id="set-css" cols="60" rows="8" maxlength="20000" placeholder="/* 相簿與其餘頁面的專屬 CSS，例如 */&#10;body{background:#000}&#10;#content{background:#333}"><%= u.css %></textarea></li>
           <li><span>&nbsp;</span><span class="w2-sub">套在相簿與其餘頁面上，蓋得過預設版型。玩壞了清空即可復原。</span></li>
 
           <li><div class="w2-h3">網誌樣式</div></li>
-          <li><span>網誌自訂樣式</span>
-            <textarea class="small-c" name="css_blog" cols="60" rows="8" maxlength="20000" placeholder="/* 只套在網誌上的 CSS */&#10;.title a{color:#c8508c}"><%= locals.u.css_blog || '' %></textarea></li>
+          <li><label for="set-cssblog">網誌自訂樣式</label>
+            <textarea class="small-c" name="css_blog" id="set-cssblog" cols="60" rows="8" maxlength="20000" placeholder="/* 只套在網誌上的 CSS */&#10;.title a{color:#c8508c}"><%= locals.u.css_blog || '' %></textarea></li>
           <li><span>&nbsp;</span><span class="w2-sub">原站的自訂樣式本來就是兩份（album.css 與 blog.css），網誌可以跟相簿長得完全不一樣。留空的話沿用上面那份。</span></li>
 
           <li><div class="w2-h3">相簿設定</div></li>
-          <li><span>音樂盒</span>
-            <textarea class="small-c" name="music" cols="50" rows="4" maxlength="2000" placeholder="一行一個 mp3 網址，可放多首組成播放清單"><%= u.music %></textarea></li>
+          <li><label for="set-music">音樂盒</label>
+            <textarea class="small-c" name="music" id="set-music" cols="50" rows="4" maxlength="2000" placeholder="一行一個 mp3 網址，可放多首組成播放清單"><%= u.music %></textarea></li>
           <li><span>&nbsp;</span><span class="w2-sub">一行一首。放在小站側欄，訪客可切換曲目。</span></li>
           <li><span>相簿權限</span>每本相簿的密碼、好友限定、封面、站內分類與地區，
             請到 <a href="/<%= u.name %>/album">相簿</a> 頁各本相簿自己設定。</li>
@@ -91,8 +96,8 @@
 <% if ((locals.subs || []).length < 5) { %>
         <li>
           <form method="post" action="/<%= u.name %>/subs">
-            <input type="text" name="title" placeholder="來源名稱，例如 站方公告" maxlength="30" size="18">
-            <input type="text" name="url" placeholder="https://…/rss" size="30">
+            <input type="text" name="title" placeholder="來源名稱，例如 站方公告" aria-label="訂閱來源名稱" maxlength="30" size="18">
+            <input type="text" name="url" placeholder="https://…/rss" aria-label="訂閱的 RSS 網址" size="30">
             <input class="small-c" type="submit" value="訂閱">
           </form>
         </li>
@@ -110,8 +115,8 @@
 <% (locals.folders || []).forEach(fd => { %>
         <li>
           <form method="post" action="/<%= u.name %>/folders/<%= fd.id %>/edit">
-            <input type="text" name="title" value="<%= fd.title %>" maxlength="30" size="20">
-            <textarea class="small-c" name="body" cols="50" rows="3" maxlength="5000"><%= fd.body %></textarea>
+            <input type="text" name="title" value="<%= fd.title %>" maxlength="30" size="20" aria-label="自訂欄位標題">
+            <textarea class="small-c" name="body" cols="50" rows="3" maxlength="5000" aria-label="自訂欄位內容"><%= fd.body %></textarea>
             <input class="small-c" type="submit" value="儲存">
           </form>
           <form method="post" action="/<%= u.name %>/folders/<%= fd.id %>/del"
@@ -121,8 +126,8 @@
 <% if ((locals.folders || []).length < 8) { %>
         <li>
           <form method="post" action="/<%= u.name %>/folders">
-            <input type="text" name="title" placeholder="欄位標題，例如【About Me】" maxlength="30" size="20">
-            <textarea class="small-c" name="body" cols="50" rows="3" maxlength="5000" placeholder="內容。可用 [img]網址[/img] 放圖，網址會自動變連結"></textarea>
+            <input type="text" name="title" placeholder="欄位標題，例如【About Me】" maxlength="30" size="20" aria-label="自訂欄位標題">
+            <textarea class="small-c" name="body" cols="50" rows="3" maxlength="5000" placeholder="內容。可用 [img]網址[/img] 放圖，網址會自動變連結" aria-label="自訂欄位內容"></textarea>
             <input class="small-c" type="submit" value="新增欄位">
           </form>
         </li>
@@ -136,7 +141,7 @@
   <div class="w2-h3">刪除帳號</div>
   <div class="w2-sub">刪除後你的相簿、照片、網誌、留言板都會一起消失，無法復原。</div>
   <form method="post" action="/<%= u.name %>/settings/delete" onsubmit="return confirm('真的要刪除帳號嗎？所有內容都會消失，無法復原。')">
-    輸入密碼確認：<input class="small-c" type="password" name="pass" size="14" required>
+    輸入密碼確認：<input class="small-c" type="password" name="pass" size="14" required aria-label="輸入密碼以確認刪除帳號">
     <input class="small-c" type="submit" value="永久刪除我的帳號">
   </form>
 </div>

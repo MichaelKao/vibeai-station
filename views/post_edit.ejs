@@ -66,7 +66,7 @@
               <tr>
                 <th><label for="ed_mood">心情／天氣</label></th>
                 <td><select id="ed_mood" name="mood"><option value="">（不設定）</option><% moods.forEach(m=>{ %><option <%= post && post.mood===m ? 'selected' : '' %>><%= m %></option><% }) %></select>
-                  　<select name="weather"><option value="">（不設定）</option><% weathers.forEach(w=>{ %><option <%= post && post.weather===w ? 'selected' : '' %>><%= w %></option><% }) %></select></td>
+                  　<select name="weather" aria-label="天氣"><option value="">（不設定）</option><% weathers.forEach(w=>{ %><option <%= post && post.weather===w ? 'selected' : '' %>><%= w %></option><% }) %></select></td>
               </tr>
 
               <tr>

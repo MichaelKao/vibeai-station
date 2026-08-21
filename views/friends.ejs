@@ -117,7 +117,7 @@
               <%# option value 是**分組 id**，跟原站一樣
                   （gb_friend_a000000000aa_20131225.html:187 的 value 是 8/3/1/7/4，
                   稀疏、不照排序；0 固定是 Default group、-1 是「全部」）。 %>
-              <select class="selectBox" id="cateSelect" name="cateSelect">
+              <select class="selectBox" id="cateSelect" name="cateSelect" aria-label="好友分類">
                 <% groups.forEach(g => { %>
                 <option value="<%= g.id %>"<%= cate === String(g.id) ? ' selected' : '' %>><%= g.name %>（<%= g.n %>）</option>
                 <% }) %>
@@ -125,7 +125,7 @@
               </select>
             </li>
             <li class="il">
-              <input id="searchInput" name="search_id" type="text" value="<%= q %>">
+              <input id="searchInput" name="search_id" type="text" value="<%= q %>" aria-label="搜尋好友帳號">
             </li>
             <li class="il">
               <input type="submit" value="搜尋好友">
@@ -221,7 +221,7 @@
         <tr>
           <td width="200">
             <form method="post" action="/<%= u.name %>/friendgroups/<%= g.id %>/edit">
-              <input type="text" name="name" value="<%= g.name %>" size="10" maxlength="20">
+              <input type="text" name="name" value="<%= g.name %>" size="10" maxlength="20" aria-label="好友帳號">
               <input type="submit" value="改名">
             </form>
           </td>
@@ -235,7 +235,7 @@
         <tr>
           <td colspan="2">
             <form method="post" action="/<%= u.name %>/friendgroups">
-              <input type="text" name="name" placeholder="新分類名稱" size="10" maxlength="20">
+              <input type="text" name="name" placeholder="新分類名稱" size="10" maxlength="20" aria-label="好友帳號">
               <input type="submit" value="新增分類">
             </form>
           </td>
@@ -258,7 +258,7 @@
             <%# 改成下拉：分組現在是真的東西（friend_groups），不是每個人身上的字串。
                 打錯一個字就多一組的問題也一併消失了。 %>
             <form method="post" action="/<%= u.name %>/friends/<%= f.id %>/group">
-              <select name="group_id">
+              <select name="group_id" aria-label="把這位好友歸到哪一組">
                 <% groups.forEach(g => { %>
                 <option value="<%= g.id %>"<%= f.grp === g.name ? ' selected' : '' %>><%= g.name %></option>
                 <% }) %>

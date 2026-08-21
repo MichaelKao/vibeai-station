@@ -68,9 +68,9 @@
         <div class="hd"><h2>開一個主題</h2></div>
         <div class="bd">
           <form method="post" action="/hala">
-            <p><input type="text" name="title" placeholder="標題" maxlength="60" required></p>
-            <p><input type="text" name="cat" placeholder="分類（可留空）" maxlength="10"></p>
-            <p><textarea name="body" rows="5" maxlength="3000" placeholder="想問什麼？" required></textarea></p>
+            <p><input type="text" name="title" placeholder="標題" maxlength="60" required aria-label="主題標題"></p>
+            <p><input type="text" name="cat" placeholder="分類（可留空）" maxlength="10" aria-label="看板分類"></p>
+            <p><textarea name="body" rows="5" maxlength="3000" placeholder="想問什麼？" required aria-label="主題內容"></textarea></p>
             <p><input type="submit" class="w2-btn" value="發表"></p>
           </form>
         </div>

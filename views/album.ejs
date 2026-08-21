@@ -140,21 +140,21 @@
       <table border="0" cellpadding="0" cellspacing="0">
         <tr>
           <th>相簿名稱</th>
-          <td><input type="text" name="title" size="24" maxlength="40" required></td>
+          <td><input type="text" name="title" size="24" maxlength="40" required aria-label="相簿名稱"></td>
         </tr>
         <tr>
           <th>說明</th>
-          <td><input type="text" name="descr" size="40" maxlength="200"></td>
+          <td><input type="text" name="descr" size="40" maxlength="200" aria-label="相簿說明"></td>
         </tr>
         <tr>
           <th>站內分類</th>
           <td>
-            <select name="topic">
+            <select name="topic" aria-label="站內分類">
               <option value="">- 相簿分類 -</option>
 <% topics.forEach(t => { %>              <option><%= t %></option>
 <% }) %>            </select>
             &nbsp;地區
-            <select name="place">
+            <select name="place" aria-label="拍攝地區">
               <option value="">- 全部 -</option>
 <% places.forEach(pl => { %>              <option><%= pl %></option>
 <% }) %>            </select>
@@ -162,7 +162,7 @@
         </tr>
         <tr>
           <th>密碼</th>
-          <td><input type="text" name="pass" size="12" maxlength="20">
+          <td><input type="text" name="pass" size="12" maxlength="20" aria-label="相簿密碼（留空就是公開）">
             <span class="w2a-note">留空＝公開相簿</span></td>
         </tr>
         <tr>

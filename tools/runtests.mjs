@@ -188,6 +188,11 @@ if (!process.env.SKIP_BROWSER) {
     env: { ...process.env, BASE: b2, MSYS_NO_PATHCONV: '1',
            USER_NAME: 'alpha', USER_PASS: 'test1234' }, encoding: 'utf8',
   });
+  // 無障礙：每個輸入框都要唸得出名字（label / aria-label / title）
+  const r4 = spawnSync(process.execPath, ['tools/labelcheck.mjs'], {
+    env: { ...process.env, BASE: b2, MSYS_NO_PATHCONV: '1',
+           USER_NAME: 'alpha', USER_PASS: 'test1234' }, encoding: 'utf8',
+  });
   srv2.kill();
   const out = (r.stdout || '') + (r.stderr || '');
   const line = out.split('\n').filter(l => l.includes('passed')).pop();
@@ -204,6 +209,14 @@ if (!process.env.SKIP_BROWSER) {
   for (const f of fails3.slice(0, 20)) console.log('  ' + f.trim());
   if (!line3) { bad += 1; console.log('  ' + out3.trim().split('\n').slice(-8).join('\n  ')); }
   if (fails3.length) bad += fails3.length;
+
+  const out4 = (r4.stdout || '') + (r4.stderr || '');
+  const line4 = out4.split('\n').filter(l => l.includes('passed')).pop();
+  const fails4 = out4.split('\n').filter(l => l.startsWith('! FAIL'));
+  console.log(`\n欄位標籤：${line4 ? line4.trim() : '(沒有結果——測試根本沒跑完)'}`);
+  for (const f of fails4.slice(0, 20)) console.log('  ' + f.trim());
+  if (!line4) { bad += 1; console.log('  ' + out4.trim().split('\n').slice(-8).join('\n  ')); }
+  if (fails4.length) bad += fails4.length;
 }
 
 console.log(bad ? `\n共 ${bad} 項失敗` : '\n全部通過');

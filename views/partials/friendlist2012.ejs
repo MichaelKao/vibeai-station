@@ -3,7 +3,7 @@
      ═══════════════════════════════════════════════════════════════════════
      逐字來源 gb_user_a000000010_20120531.html:129-191（名片頁那份最完整）：
 
-       <select id="friendlist" name="friendlist" onChange="MeetFriend('/user/', this);">
+       <select id="friendlist" name="friendlist" onChange="MeetFriend('/user/', this);" aria-label="跳到好友的頁面">
          <option>- My Friends -</option>
          <optgroup label="相遇在...中興商工">
            <option value="a0953253940">a0953253940(飛飛)</option>
@@ -53,7 +53,7 @@
     if (!flG.has(g)) flG.set(g, []);
     flG.get(g).push(f);
   });
-%><select id="friendlist" name="friendlist" data-user-go="<%= flGo %>">
+%><select id="friendlist" name="friendlist" data-user-go="<%= flGo %>" aria-label="跳到好友的頁面">
   <option><%= locals.flLabel || '- My Friends -' %></option>
 <% flG.forEach(function(list, g){ %>        <optgroup label="<%= g %>">
 <% list.forEach(function(f){ %>              <option value="<%= f.name %>"><%= f.name %><% if (f.nick && f.nick !== f.name) { %>(<%= f.nick %>)<% } %></option>

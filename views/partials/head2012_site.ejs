@@ -255,7 +255,7 @@
         本站的 albums 表沒有個人分類欄位，也不能改 src/，所以拿站內分類
         （ALBUM_TOPICS，route 已經給了 topics 這個 local）湊：
         選了就跳到相簿總站的同一個分類。這條列在回報的「湊資料」清單裡。 %>
-    <select id="category" name="category" data-url-go="/albums?topic=">
+    <select id="category" name="category" data-url-go="/albums?topic=" aria-label="跳到相簿總站的分類">
       <option value=''>- Category -</option>
       <option value=''>- All -</option>
 <% (locals.topics || []).forEach(t => { %>      <option value="<%= t %>"><%= t %></option>

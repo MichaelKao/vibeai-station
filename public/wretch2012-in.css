@@ -238,3 +238,19 @@ html body div#bigcontainer div#container div#main div#sidebar ul li#ad_lrec div 
 .w2-gifts        { margin: 0; padding: 0; list-style: none; }
 .w2-gifts li     { padding: 2px 0; line-height: 1.7; }
 .w2-giftmsg      { color: #666; }
+
+
+/* --- 15. 標籤欄換成真的 <label> ------------------------------------------
+ * 版型那條 #msg_added li span{display:block;width:105px;float:left;
+ * text-align:right;border-bottom:1px solid #b8d7f0} 只認 <span>。
+ * 為了讓讀螢幕軟體唸得出欄位名稱（稽核抓到 14 個沒有標籤的輸入框），
+ * 欄位名稱那一格改成 <label for=…>，所以要補一條一模一樣的規則，
+ * 不然那一格會塌掉、整頁的標籤與輸入框錯開。
+ * 同一列裡的第二個 label（「再輸入一次」）是行內的，不套欄位格。 */
+#msg_added li > label:first-child {
+  display: block; width: 105px; float: left; text-align: right;
+  border-bottom: 1px solid #b8d7f0;
+}
+#msg_added li > label:not(:first-child) {
+  display: inline; width: auto; float: none; text-align: left; border-bottom: 0;
+}

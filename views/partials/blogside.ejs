@@ -154,7 +154,7 @@
           <a href="/<%= u.name %>/blog">全部文章</a>
           <br />
           <form action="/<%= u.name %>/blog" method="get" class="monthly">
-          <select name="ym" onChange="if(this.value)this.form.submit();">
+          <select name="ym" onChange="if(this.value)this.form.submit();" aria-label="跳到哪個月份的文章">
             <option value="">- 月份彙整 -</option>
             <% months.forEach(m=>{ %><option value="<%= m.ym %>" <%= curYm===m.ym ? 'selected' : '' %>><%= m.ym.slice(0,4) %> 年 <%= +m.ym.slice(5,7) %> 月(<%= m.n %>)</option>
             <% }) %>
@@ -204,12 +204,12 @@
           <%# 對應 src/server.js 的 site.get('/blog/search')：q 與 body。
               「標題」兩種模式都一定比對，所以那格固定勾選且不送出。 %>
           <form action="/<%= u.name %>/blog/search" method="get" >
-            <input type="text" name="q" id="blog_search_key" size="12" maxlength="30" value="<%= curK %>">
+            <input type="text" name="q" id="blog_search_key" size="12" maxlength="30" aria-label="在這個人的網誌裡搜尋" value="<%= curK %>">
             <input type="submit" id="blog_search_submit" value="搜尋">
             <br />
 
-            <input type="checkbox" class="blog_search_filter" value="1" checked disabled>標題
-            <input type="checkbox" name="body" class="blog_search_filter" value="1" <%= curInBody ? 'checked' : '' %>>內容
+            <label><input type="checkbox" class="blog_search_filter" value="1" checked disabled>標題</label>
+            <label><input type="checkbox" name="body" class="blog_search_filter" value="1" <%= curInBody ? 'checked' : '' %>>內容</label>
           </form>
         </div>
       </div>

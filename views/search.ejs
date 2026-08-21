@@ -43,7 +43,7 @@
 
           <form action="/search" method="GET" class="w2-searchform">
             <input type="text" name="q" value="<%= k %>" size="24" maxlength="40"
-                   placeholder="找相簿 / 找文章 / 找朋友" autofocus>
+                   placeholder="找相簿 / 找文章 / 找朋友" autofocus aria-label="搜尋關鍵字">
             <input type="submit" class="w2-btn" value="搜尋">
             <%# 目前的範圍要跟著表單走，不然在結果頁重搜一次會跳回「全部」 %>
             <% if (seType) { %><input type="hidden" name="type" value="<%= seType %>"><% } %>

@@ -206,7 +206,7 @@ document.addEventListener('click', function(e){
     <li class="reply_content">
       <form method="post" action="/<%= u.name %>/guestbook/<%= m.id %>/reply">
         <span>板主回覆：</span>
-        <textarea name="reply" rows="2" maxlength="500"><%= m.reply %></textarea>
+        <textarea name="reply" rows="2" maxlength="500" aria-label="回覆這則留言"><%= m.reply %></textarea>
         <input class="small-c" type="submit" value="回覆">
       </form>
       <form class="w2-del" method="post" action="/<%= u.name %>/guestbook/<%= m.id %>/del" onsubmit="return confirm('刪除這則留言？')">
