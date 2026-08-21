@@ -673,5 +673,43 @@ console.log('\n=== BBCode 不會被一篇文章拖垮（O(n²) 回歸）===');
   }
 }
 
+
+console.log('\n=== 自訂 CSS 擋得住逸出序列 ===');
+// ⚠ CSS 的逸出序列（\69 = i、\73 = s、\3C = <）是瀏覽器在解析**之前**還原的，
+// 所以「先過濾關鍵字再交給瀏覽器」的順序是錯的。稽核在 Chrome 實測
+// `@im\port url(...)` 真的載進了外部樣式表，等於整個 safeCss 形同虛設，
+// 連 \3C 都能拼出 </style> 做任意 HTML 注入。
+// 修法是先還原、再過濾、輸出還原後的字串，殘留的反斜線一律拿掉。
+{
+  const BS = String.fromCharCode(92);
+  const S = await reg('cssq','樣式');
+  const bad = [
+    ['@import 逸出一個字母', '@im' + BS + 'port url(//evil.example/x.css);'],
+    ['@import 逸出成十六進位', '@' + BS + '69 mport url(//evil.example/x.css);'],
+    ['expression', 'a{x:expre' + BS + '73 sion(alert(1))}'],
+    ['behavior', 'a{behavio' + BS + '72 :url(#d)}'],
+    ['url 裡的 javascript:', 'a{background:url(java' + BS + '73 cript:alert(1))}'],
+    ['雙反斜線拼出角括號', BS + BS + BS + '3C/style' + BS + BS + BS + '3E'],
+  ];
+  for (const [name, css] of bad) {
+    const fd = new FormData();
+    fd.append('nick','樣式'); fd.append('css', css + '#sentinel-cssq{color:red}');
+    await fetch(`${B}/cssq/settings`, {method:'POST',headers:{cookie:S},body:fd,redirect:'manual'});
+    const page = await text('/cssq');
+    // 頁面上有好幾個 <style>（版型、kukubar…），只看使用者那一塊：
+    // 用哨兵選擇器認出它，不然會誤判站上自己的 CSS（子選擇器本來就有 >）。
+    const mine = [...page.matchAll(/<style>([\s\S]*?)<\/style>/g)].map(m => m[1])
+      .find(s => s.includes('sentinel-cssq')) || '';
+    const leaked = /@\s*import|expression\s*\(|behavior\s*:|-moz-binding\s*:|javascript\s*:/i.test(mine)
+                || mine.includes('<') || mine.includes('>') || mine.includes(BS);
+    ok(`自訂 CSS：${name} 逸出不了`, mine.includes('sentinel-cssq') && !leaked, JSON.stringify(mine.slice(0,140)));
+  }
+  // 正常的 CSS 不能被誤殺
+  const fd = new FormData();
+  fd.append('nick','樣式'); fd.append('css','body{background:#fff}h1{color:red}');
+  await fetch(`${B}/cssq/settings`, {method:'POST',headers:{cookie:S},body:fd,redirect:'manual'});
+  ok('自訂 CSS：正常樣式照樣生效', (await text('/cssq')).includes('h1{color:red}'));
+}
+
 console.log(`\n===== ${pass} passed, ${fail} failed =====`);
 process.exit(fail?1:0);

