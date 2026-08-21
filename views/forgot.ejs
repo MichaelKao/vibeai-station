@@ -1,0 +1,78 @@
+<%
+  /* 忘記密碼 /forgot
+     ─────────────────────────────────────────────────────────────
+     原站沒有這一頁——當年的帳號是 Yahoo ID，密碼救援走 Yahoo 那邊。
+     我們自己做帳號系統，就得自己做這一頁。所以版面不抄任何存檔，
+     而是沿用本站既有的 .w2-auth 元件（跟 /login、/register 同一套）。
+
+     ⚠ 這一頁刻意**不告訴使用者帳號存不存在**：
+     不管找不找得到，送出後看到的都是同一段話。分開回應的話，這一頁就
+     變成「輸入帳號就能知道它有沒有註冊」的探測工具，還能順便撞出誰用
+     哪個信箱。後端也是同一個原則（見 src/server.js 的 app.post('/forgot')）。 */
+%>
+<%- include('partials/head2012', { title: '忘記密碼 - 無名小站' }) %>
+
+  <div class="bd big-bd clearfix">
+    <div class="main">
+
+      <div class="mod w2-auth">
+        <div class="hd"><h2>忘記密碼</h2></div>
+        <div class="bd">
+
+          <% if (sent) { %>
+          <%# 這段話對「有這個帳號」與「沒這個帳號」都一樣，是刻意的。 %>
+          <p class="w2-blog-count">如果這個帳號存在而且留過 E-mail，重設密碼的信已經寄出去了。</p>
+          <ul class="w2-note-list">
+            <li>信件可能會被丟進垃圾郵件，找不到的話那裡也翻一下。</li>
+            <li>連結 30 分鐘後失效，而且只能用一次。</li>
+            <li>沒收到信也可能是註冊時沒有留 E-mail —— 那種情況請
+                <a href="/help">聯絡站長</a>。</li>
+          </ul>
+          <p><a href="/login">回登入頁</a></p>
+
+          <% } else { %>
+          <% if (err) { %><p class="w2-formerr"><%= err %></p><% } %>
+          <% if (!hasMail) { %>
+          <%# 站台沒有設定寄信服務時要講實話，不要讓人按了之後空等。 %>
+          <p class="w2-formerr">這個站目前沒有設定寄信服務，密碼重設信寄不出去。請直接
+            <a href="/help">聯絡站長</a>。</p>
+          <% } %>
+
+          <p class="w2-blog-count">輸入你的帳號或註冊時用的 E-mail，我們會寄一封重設密碼的信給你。</p>
+
+          <form method="post" action="/forgot" class="w2-searchform">
+            <label for="forgot-who">帳號或 E-mail</label>
+            <input type="text" name="who" id="forgot-who" size="30" maxlength="60"
+                   autocomplete="username" required autofocus>
+            <input type="submit" class="w2-btn" value="寄出重設信">
+          </form>
+
+          <p class="w2-sub">
+            想起來了？<a href="/login">回登入頁</a>　·　還沒有帳號？<a href="/register">免費註冊</a>
+          </p>
+          <% } %>
+
+        </div>
+      </div>
+
+    </div>
+    <div class="side">
+      <div class="mod w2-auth-side">
+        <div class="hd"><h2>關於密碼</h2></div>
+        <div class="bd">
+          <ul>
+            <li>重設連結只能用一次，用過就失效。</li>
+            <li>改完密碼之後，**其他裝置上的登入會全部失效**，要重新登入一次。</li>
+            <li>沒有留 E-mail 的帳號沒辦法自助救回，可以先到
+                <a href="/settings">個人設定</a> 補一個。</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /#wrapper -->
+
+<div id="lower-wrapper" class="clearfix">
+  <div class="bd clearfix"></div>
+<%- include('partials/foot2012') %>

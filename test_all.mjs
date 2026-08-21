@@ -1102,5 +1102,66 @@ console.log('\n=== 留言板的訪客表單（Name / Email / URL / 記住我）=
   ok('javascript: 的個人網頁不會被存下來', !page2.includes('javascript:alert'));
 }
 
+
+console.log('\n=== 忘記密碼 ===');
+// ⚠ 原站的帳號是 Yahoo ID，密碼救援走 Yahoo；我們自己做帳號系統，就得自己
+// 承擔。在這之前 help.ejs 寫的是「忘記密碼？目前請聯絡站長協助」——
+// 開放給陌生人之後那句話不可行：忘記密碼＝帳號永久失去。
+{
+  // 註冊時留信箱
+  const r0 = await fetch(`${B}/register`, {
+    method: 'POST', redirect: 'manual',
+    headers: { 'content-type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams({ name: 'pwq', nick: '忘記', pass: 'test1234', pass2: 'test1234',
+                                email: 'pwq@example.com' }).toString() });
+  ok('註冊可以順便留 E-mail', r0.status === 302, 'HTTP ' + r0.status);
+  const OLD = r0.headers.getSetCookie()?.[0]?.split(';')[0];   // 註冊完的那個 session
+
+  const page = await text('/forgot');
+  ok('/forgot 開得起來', page.includes('忘記密碼'));
+  ok('登入頁有忘記密碼的入口', (await text('/login')).includes('/forgot'));
+
+  // ⚠ 不管找不找得到帳號，回應都要一樣——否則這一頁就變成帳號探測工具
+  const hit  = await (await post('/forgot', { who: 'pwq' })).text();
+  const miss = await (await post('/forgot', { who: '這個帳號絕對不存在xyz' })).text();
+  const strip = h => h.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+  ok('找得到與找不到的回應一模一樣（不能變成帳號探測工具）',
+     strip(hit) === strip(miss),
+     '兩者不同：' + strip(hit).slice(0, 60) + ' ｜ ' + strip(miss).slice(0, 60));
+
+  // 本機沒有 RESEND_API_KEY，連結會印在 server 的 log 上；測試直接從資料庫取
+  const dbFile = (process.env.DATA_DIR || '') + '/station.db';
+  if (!fs.existsSync(dbFile)) {
+    ok('（這一輪沒有本機 station.db，跳過重設流程）', true);
+  } else {
+    const { DatabaseSync } = await import('node:sqlite');
+    const db = new DatabaseSync(dbFile, { readOnly: true });
+    const n = db.prepare("SELECT count(*) c FROM pwresets WHERE used=0").get().c;
+    db.close();
+    ok(`有產生一次性連結（未使用 ${n} 筆）`, n >= 1);
+
+    // token 本身查不到（資料庫只存雜湊）——這正是重點
+    const db2 = new DatabaseSync(dbFile, { readOnly: true });
+    const row = db2.prepare("SELECT token_hash FROM pwresets ORDER BY id DESC LIMIT 1").get();
+    db2.close();
+    ok('資料庫存的是雜湊不是 token 本身', !!row?.token_hash && row.token_hash.length >= 32,
+       JSON.stringify(row));
+
+    // 假 token 一律擋掉
+    for (const bad of ['abc', 'x'.repeat(64), '../../etc/passwd']) {
+      const r = await get('/reset/' + encodeURIComponent(bad));
+      ok(`亂給的 token 被擋（${bad.slice(0, 12)}）`, r.status === 400 || r.status === 404,
+         'HTTP ' + r.status);
+    }
+  }
+
+  // 限速：這一支同時是寄信與帳號探測的入口
+  let blocked = 0;
+  for (let i = 0; i < 8; i++) if ((await post('/forgot', { who: 'pwq' })).status === 429) blocked++;
+  ok(`連續要求會被限速（擋了 ${blocked} 次）`, blocked > 0);
+
+  void OLD;
+}
+
 console.log(`\n===== ${pass} passed, ${fail} failed =====`);
 process.exit(fail?1:0);

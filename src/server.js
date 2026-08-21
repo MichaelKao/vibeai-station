@@ -2,6 +2,7 @@ import express from 'express';
 import session from 'express-session';
 import multer from 'multer';
 import path from 'node:path';
+import crypto from 'node:crypto';   // 重設密碼的一次性 token 用
 import { one, all, run, migrate, driver, close as closeDb } from './db.js';
 import { sessionStore, startVisitFlusher, bumpVisit, hasRedis, closeRedis, redisState } from './cache.js';
 import { hash, salt, check, requireLogin, requireOwner } from './auth.js';
@@ -9,6 +10,7 @@ import { save, remove, hasR2, diskFree, readImage } from './storage.js';
 import { UPLOAD_DIR } from './paths.js';
 import { render, EMOTES, safeCss, cut } from './format.js';
 import { fetchFeed, subUrlOk } from './feed.js';
+import { sendMail, resetMail, hasMail, mailState } from './mail.js';
 import { SITE_NAME, SITE_DESC, SITE_LOGO, CDN } from './config.js';
 import { ALBUM_TOPICS, BLOG_TOPICS, PLACES, MOODS, WEATHERS, ZODIACS, BLOODS, SEXES, CITIES, isAlbumTopic, isBlogTopic, isPlace } from './taxonomy.js';
 import { SKINS, isSkin, skinCss } from './skins.js';
@@ -342,7 +344,7 @@ app.get('/healthz', async (req, res) => {
   // ⚠ redis 這一欄要回報**實際狀態**，不是「有沒有設定 REDIS_URL」。
   // 原本寫 hasRedis（＝!!URL），於是 Redis 連不上而降級成 MemoryStore 時，
   // /healthz 照樣回報 redis——那是假訊號，比不回報更糟。
-  const out = { ok: true, db: driver, redis: redisState(), storage: hasR2 ? 'r2' : 'disk' };
+  const out = { ok: true, db: driver, redis: redisState(), storage: hasR2 ? 'r2' : 'disk', mail: mailState() };
   try {
     const t = Date.now();
     await one('SELECT 1 c');
@@ -505,13 +507,17 @@ app.post('/register',async (req,res)=>{
     :await one('SELECT 1 FROM users WHERE name=?',low0)?'這個帳號已經有人用了':null;
   if(err) return res.render('register',{err,form:req.body});
   const s=salt(), low=name.toLowerCase();
+  // 註冊時的 E-mail 是選填。⚠ 沒填就沒辦法自助救回密碼，
+  // 所以註冊表單上要把這件事寫出來（見 views/register.ejs）。
+  const regMail = /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(String(req.body.email||'').trim())
+    ? String(req.body.email).trim().toLowerCase().slice(0,60) : '';
   const first=!await one('SELECT 1 FROM users');
   // ⚠ 上面那個「這個帳號有人用了嗎」是先查再插，兩個請求同時進來就會都查到「沒人用」
   // （表單被雙擊就會發生）。Postgres 有 lower(name) 的唯一索引會擋下第二個，
   // 但那是一個 23505 例外 → 未攔就是 500。攔下來當成「已經有人用了」。
   let r;
   try {
-    r=await run('INSERT INTO users(name,pass,salt,nick,admin) VALUES(?,?,?,?,?)',low,hash(pass,s),s,cut(nick.trim(),20),(first||ADMIN_USERS.has(low))?1:0);
+    r=await run('INSERT INTO users(name,pass,salt,nick,admin,email) VALUES(?,?,?,?,?,?)',low,hash(pass,s),s,cut(nick.trim(),20),(first||ADMIN_USERS.has(low))?1:0,regMail);
   } catch (e) {
     if (/duplicate key|UNIQUE constraint/i.test(e.message))
       return res.render('register',{err:'這個帳號已經有人用了',form:req.body});
@@ -530,6 +536,98 @@ app.post('/login',async (req,res)=>{
   await signIn(req, u.id); res.redirect(safePath(req.body.next) || '/'+u.name);
 });
 app.post('/logout',(req,res)=>req.session.destroy(()=>res.redirect('/')));
+
+// ===== 忘記密碼 =====
+//
+// ⚠ 為什麼需要：原站的帳號是 Yahoo ID，密碼救援走 Yahoo；我們自己做帳號
+// 系統，就得自己承擔。在這之前 views/help.ejs 寫的是「忘記密碼？目前請
+// 聯絡站長協助」——開放給陌生人之後那句話不可行，忘記密碼＝帳號永久失去。
+//
+// 幾個刻意的決定，理由都寫在對應的地方：
+//   · 不管找不找得到帳號，回應**一模一樣**（避免變成帳號探測工具）
+//   · 存 token 的雜湊而不是 token 本身（資料庫外流也改不了任何人的密碼）
+//   · 連結只能用一次、30 分鐘過期
+//   · 重設成功會換 salt ＝ 其他裝置上的 session 全部失效（帳號被盜的人
+//     走這條路才有意義）
+const RESET_MINUTES = 30;
+const resetHash = t => hash(t, 'pwreset');   // 跟密碼共用同一支雜湊函式
+
+app.get('/forgot', (req, res) => res.render('forgot', { err: null, sent: false, hasMail }));
+
+app.post('/forgot', async (req, res) => {
+  const who = String(req.body.who || '').trim().slice(0, 60);
+  // 限速：這一支同時是「寄信」與「帳號探測」的入口，兩邊都要擋。
+  if (rateHit(req, 'forgot', 5))
+    return res.status(429).render('forgot', { err: rateMsg, sent: false, hasMail });
+
+  // ⚠ **不管找不找得到，回應都一樣。** 分開回應的話，這一頁就變成
+  // 「輸入帳號就能知道它存不存在」的探測工具，還能順便撞出誰用哪個信箱。
+  const done = () => res.render('forgot', { err: null, sent: true, hasMail });
+
+  if (!who) return res.render('forgot', { err: '請填帳號或註冊時用的 E-mail', sent: false, hasMail });
+
+  const u = await one(
+    "SELECT id,name,nick,email FROM users WHERE name=? OR (email!='' AND email=?)",
+    who.toLowerCase(), who.toLowerCase());
+  if (!u || !u.email) return done();          // 沒這個人、或沒留信箱：一樣的畫面
+
+  // 一次性 token。crypto.randomUUID 兩段接起來＝ 256 bit，猜不到。
+  const token = (crypto.randomUUID() + crypto.randomUUID()).replace(/-/g, '');
+  const exp = new Date(Date.now() + RESET_MINUTES * 60000).toISOString();
+  // 同一個人重新要求時，把之前還沒用的連結一起作廢——不然舊信裡的連結
+  // 還能用，使用者以為「我剛剛那封才算數」。
+  await run('UPDATE pwresets SET used=1 WHERE user_id=? AND used=0', u.id);
+  await run('INSERT INTO pwresets(user_id,token_hash,expires) VALUES(?,?,?)',
+    u.id, resetHash(token), exp);
+
+  const link = res.locals.origin + '/reset/' + token;
+  const mail = resetMail({ nick: u.nick, name: u.name, link, minutes: RESET_MINUTES });
+  const r = await sendMail({ to: u.email, ...mail });
+  // 寄不出去也走同一個畫面（不能讓使用者從結果反推信箱存不存在），
+  // 但 log 要留下來，站長才查得到。
+  if (!r.ok) console.error('[forgot] 寄信失敗：', r.error);
+  done();
+});
+
+// 重設頁：token 從網址來。
+async function resetRow(token) {
+  if (!token || token.length < 32) return null;
+  const row = await one(
+    "SELECT * FROM pwresets WHERE token_hash=? AND used=0 AND expires>?",
+    resetHash(String(token)), new Date().toISOString());
+  return row || null;
+}
+
+app.get('/reset/:token', async (req, res) => {
+  const row = await resetRow(req.params.token);
+  if (!row) return res.status(400).render('reset', { token: null, err: '這個連結已經失效了（可能過期、已經用過，或是網址被截斷）。請重新申請一次。' });
+  res.render('reset', { token: req.params.token, err: null });
+});
+
+app.post('/reset/:token', async (req, res) => {
+  if (rateHit(req, 'reset', 10))
+    return res.status(429).render('reset', { token: null, err: rateMsg });
+  const row = await resetRow(req.params.token);
+  if (!row) return res.status(400).render('reset', { token: null, err: '這個連結已經失效了。請重新申請一次。' });
+
+  const { pass = '', pass2 = '' } = req.body;
+  if (pass.length < 4)  return res.render('reset', { token: req.params.token, err: '密碼至少 4 碼' });
+  if (pass !== pass2)   return res.render('reset', { token: req.params.token, err: '兩次密碼不一致' });
+
+  // 換 salt ＝ 其他裝置上的 session 全部失效（見 locals 那段的說明）。
+  // 帳號被盜的人走這條路，就是為了把小偷踢出去。
+  const s = salt();
+  await run('UPDATE users SET pass=?,salt=? WHERE id=?', hash(pass, s), s, row.user_id);
+  await run('UPDATE pwresets SET used=1 WHERE id=?', row.id);
+  // 順手清掉這個人其他還沒用的連結
+  await run('UPDATE pwresets SET used=1 WHERE user_id=? AND used=0', row.user_id);
+
+  await signIn(req, row.user_id);             // 直接登入，不要再叫他打一次密碼
+  const u = await one('SELECT name FROM users WHERE id=?', row.user_id);
+  flash(req, '密碼已經換好了，其他裝置上的登入都已經失效。');
+  res.redirect('/' + (u?.name || ''));
+});
+
 
 // ===== 站長後台 =====
 // 被擋下來的畫面也要套版。原本是 res.status(403).send('forbidden')，
@@ -915,6 +1013,11 @@ site.get('/settings',requireLogin,requireOwner,async (req,res)=>res.render('sett
   subs:await all('SELECT * FROM subs WHERE user_id=? ORDER BY id',U(res).id)}));
 site.post('/settings',requireLogin,requireOwner,upload.single('avatar'),async(req,res)=>{
   const {nick,intro,music,css,css_blog,pass,pass2}=req.body, u=U(res);
+  // E-mail 只用在忘記密碼。格式不對就當成沒填（不要因為這個擋住整張表單），
+  // 但要在 flash 講一聲，不然使用者以為存好了。
+  const rawMail = String(req.body.email || '').trim().slice(0, 60);
+  const okMail = !rawMail || /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(rawMail);
+  const newMail = okMail ? rawMail.toLowerCase() : (u.email || '');
   let avatar=u.avatar, avatarErr='';
   // ⚠ fileFilter 擋掉的檔案 req.file 會是 undefined，跟「這次沒有要換頭貼」
   // 長得一模一樣，於是畫面顯示「設定已儲存」——使用者以為換好了，其實沒有。
@@ -950,7 +1053,7 @@ site.post('/settings',requireLogin,requireOwner,upload.single('avatar'),async(re
       }
     }
   }
-  await run('UPDATE users SET nick=?,intro=?,music=?,css=?,css_blog=?,avatar=?,theme=? WHERE id=?',cut((nick||'').trim()||u.nick, 20),(intro||'').slice(0,500),cleanMusic(music),(css||'').slice(0,20000),(css_blog||'').slice(0,20000),avatar,isSkin(req.body.theme)?(req.body.theme||''):'',u.id);
+  await run('UPDATE users SET nick=?,intro=?,music=?,css=?,css_blog=?,avatar=?,theme=?,email=? WHERE id=?',cut((nick||'').trim()||u.nick, 20),(intro||'').slice(0,500),cleanMusic(music),(css||'').slice(0,20000),(css_blog||'').slice(0,20000),avatar,isSkin(req.body.theme)?(req.body.theme||''):'',newMail,u.id);
   // 改密碼要先驗舊密碼。
   //
   // ⚠ 原本只要人在電腦前（借用、忘了登出、XSS 拿到一次請求的機會）就能
@@ -967,7 +1070,9 @@ site.post('/settings',requireLogin,requireOwner,upload.single('avatar'),async(re
     // 自己這一份要跟著更新，不然下一個請求會把操作者本人登出。
     req.session.sv = s.slice(0, 12);
   }
-  flash(req, avatarErr ? '設定已儲存，但大頭貼沒有換：'+avatarErr : '設定已儲存'); res.redirect(`/${u.name}/settings`);
+  flash(req, avatarErr ? '設定已儲存，但大頭貼沒有換：'+avatarErr
+    : !okMail ? '設定已儲存，但 E-mail 格式不對所以沒有更新'
+    : '設定已儲存'); res.redirect(`/${u.name}/settings`);
 });
 
 // ── 我的訂閱（原站側欄的 #boxRssList）────────────────────────────────────

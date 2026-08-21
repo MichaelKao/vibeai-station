@@ -269,6 +269,16 @@ export function schemaSql(forDriver = driver) {
     // 嘀咕（原站 www.wretch.cc/digu/<帳號>，噗浪式的一句話）。
     // 不併進 acts：acts 是「好友動態」的事件記錄（kind/title/url），
     // 嘀咕是使用者自己寫的內容，語意不同，混在一起之後兩邊都不好改。
+    // 重設密碼的一次性連結。
+    //
+    // ⚠ 存的是 token 的**雜湊**，不是 token 本身。資料庫萬一外流，
+    // 手上有這張表的人也沒辦法拿它去重設任何人的密碼——這跟密碼本身
+    // 存雜湊是同一個道理。
+    //
+    // used 一旦設 1 就不能再用：連結被轉寄、被瀏覽器預抓、被信箱掃描器
+    // 點過，都不該讓它還能第二次改密碼。
+    T('pwresets', `id ${PK}, ${fkUser}, token_hash TEXT, expires TEXT,
+      used INTEGER DEFAULT 0, ${created}`),
     T('digu', `id ${PK}, ${fkUser}, body TEXT, ${created}`),
   ].join('\n'));
 
@@ -308,6 +318,10 @@ export function schemaSql(forDriver = driver) {
     CREATE INDEX IF NOT EXISTS idx_pvotes_photo  ON photo_votes(photo_id);
     CREATE INDEX IF NOT EXISTS idx_videos_user   ON videos(user_id, id DESC);
     CREATE INDEX IF NOT EXISTS idx_digu_user     ON digu(user_id, id DESC);
+    -- 重設密碼的查詢一律用 token 的雜湊當條件，所以那一欄要有索引；
+    -- 過期清理則是掃 expires。
+    CREATE INDEX IF NOT EXISTS idx_pwreset_hash ON pwresets(token_hash);
+    CREATE INDEX IF NOT EXISTS idx_pwreset_exp  ON pwresets(expires);
     -- ⚠ 人氣排行榜（/rank 與首頁側欄）是 ORDER BY visits DESC LIMIT N，
     -- 沒有索引就要把整張 users 撈出來排序一次。站友一多，每一個訪客
     -- 開首頁都付這個代價。
@@ -342,6 +356,12 @@ const ADD_COLUMNS = [
   // 網誌迴響那邊早就有這兩欄了（comments.email / homepage），留言板漏掉。
   ['guestbook', 'email',    "TEXT DEFAULT ''"],
   ['guestbook', 'homepage', "TEXT DEFAULT ''"],
+  // 帳號的信箱。只用在**忘記密碼**這一件事上。
+  // ⚠ 原站的帳號是 Yahoo ID，密碼救援走 Yahoo；我們自己做帳號系統，
+  // 就得自己承擔。在這之前 help.ejs 寫的是「忘記密碼？請聯絡站長協助」，
+  // 那句話在開放給陌生人之後不可行。
+  // 選填：不填就是不能自助救回密碼（會在設定頁講清楚）。
+  ['users', 'email', "TEXT DEFAULT ''"],
   ['users',  'vip',    'INTEGER DEFAULT 0'],   // 認證／VIP 徽章 .vip_icon、相片牆 .vip_only
   ['photos', 'width',  'INTEGER DEFAULT 0'],   // 以下四欄給照片頁的 #exif 面板
   ['photos', 'height', 'INTEGER DEFAULT 0'],

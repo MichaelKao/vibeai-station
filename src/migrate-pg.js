@@ -29,6 +29,11 @@ export const MIGRATE_TABLES = [
   'guestbook', 'visitors', 'friend_groups', 'friends', 'favs', 'acts', 'sysmsg',
   'reports', 'notices', 'videos', 'digu', 'joins', 'join_members',
   'hala_topics', 'hala_posts', 'gifts', 'photo_votes', 'folders', 'subs',
+  // ⚠ 新增資料表時**一定要加進這份清單**。漏了不會有人發現——搬移的報表
+  // 只看清單裡的表，照樣印「所有表筆數一致」，那張表就靜靜地沒搬過去。
+  // assertNoMissingTable() 與 test_pg 的「搬移清單涵蓋所有資料表」就是
+  // 為了擋這件事（加 pwresets 的時候它立刻紅燈，證明那道防線有效）。
+  'pwresets',
 ];
 // 用 IDENTITY 主鍵的表，搬完要把序列推到 max(id)，否則之後 INSERT 會撞主鍵
 // 沒有 id 欄位的關聯表不用推序列（推了會找不到那個序列而報錯）。

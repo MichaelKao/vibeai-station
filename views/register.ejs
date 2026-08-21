@@ -37,6 +37,18 @@
                   <span class="w2-auth-hint">顯示在小站與留言上的名字</span>
                 </td>
               </tr>
+              <%# E-mail 是選填，但**沒填就沒辦法自助救回密碼**——
+                  這句話一定要寫在這裡，不能只寫「選填」。原站的帳號是
+                  Yahoo ID，救援走 Yahoo；我們自己做帳號就得自己承擔。 %>
+              <tr>
+                <th><label for="w2-email">E-mail</label></th>
+                <td>
+                  <input type="email" id="w2-email" name="email" size="24"
+                         maxlength="60" autocomplete="email" value="<%= f.email || '' %>">
+                  <span class="w2-auth-hint">選填，只用在忘記密碼。
+                    <b>沒有填的話，忘記密碼就救不回來了。</b></span>
+                </td>
+              </tr>
               <tr>
                 <th><label for="w2-pass">密碼</label></th>
                 <td>

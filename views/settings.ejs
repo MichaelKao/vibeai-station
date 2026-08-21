@@ -30,6 +30,14 @@
           <li><span>&nbsp;</span><span class="w2-sub">會出現在小站標題下方與名片上。</span></li>
           <li><span>大頭貼</span><img src="<%= u.avatar %>" width="90" height="90" alt="<%= u.nick %>"></li>
           <li><span>&nbsp;</span><input type="file" name="avatar" accept="image/*" id="set-avatar" aria-label="大頭貼檔案"> <span class="w2-sub">建議 90×90</span></li>
+          <%# E-mail 只用在忘記密碼。⚠ 沒填的帳號沒辦法自助救回密碼，
+              所以這裡要把後果講清楚，不要只寫「選填」。 %>
+          <li><label for="set-email">E-mail</label>
+            <input class="small-c" type="email" name="email" id="set-email" size="30"
+                   maxlength="60" autocomplete="email" value="<%= locals.u.email || '' %>">
+            <span class="w2-sub">只用在忘記密碼，不會公開。
+              <% if (!locals.u.email) { %><b>沒有填的話，忘記密碼就救不回來了。</b><% } %></span>
+          </li>
           <li><label for="set-oldpass">舊密碼</label>
             <input class="small-c" type="password" name="oldpass" id="set-oldpass" size="12" autocomplete="current-password">
             <span class="w2-sub">要換密碼才需要填</span></li>
