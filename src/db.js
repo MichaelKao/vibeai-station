@@ -308,6 +308,10 @@ export function schemaSql(forDriver = driver) {
     CREATE INDEX IF NOT EXISTS idx_pvotes_photo  ON photo_votes(photo_id);
     CREATE INDEX IF NOT EXISTS idx_videos_user   ON videos(user_id, id DESC);
     CREATE INDEX IF NOT EXISTS idx_digu_user     ON digu(user_id, id DESC);
+    -- ⚠ 人氣排行榜（/rank 與首頁側欄）是 ORDER BY visits DESC LIMIT N，
+    -- 沒有索引就要把整張 users 撈出來排序一次。站友一多，每一個訪客
+    -- 開首頁都付這個代價。
+    CREATE INDEX IF NOT EXISTS idx_users_visits  ON users(visits DESC);
   `);
 
   return stmts;

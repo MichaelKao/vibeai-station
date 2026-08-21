@@ -750,5 +750,35 @@ console.log('\n=== session 固定攻擊與跨站請求 ===');
   ok('擋下來之後文章沒有被建立', !(await text('/fixq/blog')).includes('csrf'));
 }
 
+
+console.log('\n=== 猜密碼要被擋，壞請求要回 400 ===');
+// ⚠ 稽核：登入與相簿／文章解鎖都可以無限次嘗試。相簿密碼上限 20 字，
+// 但大家實際設的是四位數字——一萬種組合，不限速幾秒就試完。
+// 做法是以「IP + 目標」滑動視窗計數，**成功就清掉**，所以正常使用者碰不到。
+{
+  await post('/register',{name:'ratelim',nick:'限速',pass:'test1234',pass2:'test1234'});
+  let blocked = 0, tried = 0;
+  for (let i = 0; i < 15; i++) {
+    const r = await post('/login',{name:'ratelim',pass:'wrong'+i});
+    tried++;
+    if (r.status === 429) blocked++;
+  }
+  ok(`連續猜 ${tried} 次密碼會被擋下來（擋了 ${blocked} 次）`, blocked > 0);
+  // 被擋之後連正確密碼也進不去——這就是重點，不然限速形同虛設
+  const r = await post('/login',{name:'ratelim',pass:'test1234'});
+  ok('被擋期間連正確密碼都不放行', r.status === 429, 'HTTP ' + r.status);
+}
+
+// ⚠ 壞掉的 multipart 原本回 500。那是**送出的東西有問題**，不是伺服器壞了：
+// 回 500 會讓監控誤報，也讓對方以為重試就會好。
+{
+  const A2 = await login('alpha');
+  const r = await fetch(`${B}/alpha/album`, {
+    method:'POST', redirect:'manual',
+    headers:{cookie:A2,'content-type':'multipart/form-data; boundary=----nope'},
+    body:'------nope\r\nContent-Disposition: form-data; name="x"' });   // 沒有收尾
+  ok('壞掉的 multipart 回 4xx 不是 500', r.status < 500, 'HTTP ' + r.status);
+}
+
 console.log(`\n===== ${pass} passed, ${fail} failed =====`);
 process.exit(fail?1:0);

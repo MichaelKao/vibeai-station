@@ -354,6 +354,47 @@ app.get('/blogs',async (req,res)=>{
 // 避免「第一個註冊的人就是站長」被誤佔（例如測試帳號）。
 const ADMIN_USERS = new Set((process.env.ADMIN_USERS||'').split(',').map(s=>s.trim().toLowerCase()).filter(Boolean));
 app.get('/register',(req,res)=>res.render('register',{err:null,form:{}}));
+// 猜密碼的速率限制。
+//
+// ⚠ 稽核指出登入、相簿解鎖、文章解鎖都可以無限次嘗試。相簿密碼上限 20 字，
+// 但實際上大家設的是四位數字——一萬種組合，不限速的話幾秒就試完了。
+//
+// 做法：以「來源 IP ＋ 目標」為鍵，滑動視窗計數。單一行程的 Map 就夠——
+// 這個服務綁著 /app/data 的 Volume，只會有一個執行個體（見 README 的部署說明）。
+// 哪天要開多個複本，這裡要改成 Redis（session 已經在用 Redis 了）。
+//
+// 成功就把計數清掉，所以正常使用者永遠碰不到；連續失敗才會被擋。
+const _tries = new Map();
+const RATE = { max: 10, windowMs: 10 * 60 * 1000 };   // 10 分鐘內 10 次
+function rateKey(req, what){
+  // trust proxy 已經開著，req.ip 會是 X-Forwarded-For 的第一個位址
+  return what + '|' + (req.ip || 'unknown');
+}
+function rateHit(req, what, max = RATE.max){
+  const key = rateKey(req, what), now = Date.now();
+  const hits = (_tries.get(key) || []).filter(t => now - t < RATE.windowMs);
+  hits.push(now);
+  _tries.set(key, hits);
+  // 順手把過期的鍵清掉，不然這個 Map 會一直長大
+  if (_tries.size > 5000)
+    for (const [k, v] of _tries) if (!v.length || now - v[v.length - 1] > RATE.windowMs) _tries.delete(k);
+  return hits.length > max;
+}
+// 登入是兩道鎖：
+//   帳號那道（10 次）擋的是「盯著某個人猛猜」
+//   IP 那道（60 次）擋的是「換帳號亂噴」
+// 只鎖 IP 不行——公司、學校、電信業者的 NAT 後面成千上萬人共用一個位址，
+// 一個人猜錯十次就把整棟樓鎖在外面。只鎖帳號也不行——那就變成可以慢慢
+// 掃過全站的帳號。兩道一起才擋得住，又不會誤傷。
+function loginBlocked(req, name){
+  const perName = rateHit(req, 'login:' + String(name || '').toLowerCase());
+  const perIp   = rateHit(req, 'login-ip', 60);
+  return perName || perIp;
+}
+const rateClear = (req, what) => _tries.delete(rateKey(req, what));
+const rateMsg = '嘗試太多次了，請等十分鐘再試。';
+
+
 // 登入／註冊成功時換一組全新的 session id（session fixation）。
 //
 // ⚠ 沒有這一步的話：攻擊者先自己開一個 session，想辦法讓受害者的瀏覽器
@@ -396,9 +437,11 @@ app.post('/register',async (req,res)=>{
 });
 app.get('/login',(req,res)=>res.render('login',{err:null,next:req.query.next||''}));
 app.post('/login',async (req,res)=>{
+  if (loginBlocked(req, req.body.name)) return res.status(429).render('login',{err:rateMsg,next:req.body.next||''});
   const u=await one('SELECT * FROM users WHERE name=?',String(req.body.name||'').toLowerCase());
   if(!check(u,req.body.pass||'')) return res.render('login',{err:'帳號或密碼錯誤',next:req.body.next||''});
   if(ADMIN_USERS.has(u.name) && !u.admin) await run('UPDATE users SET admin=1 WHERE id=?',u.id); // ADMIN_USERS 名單登入即補站長權限
+  rateClear(req, 'login:' + String(req.body.name||'').toLowerCase()); rateClear(req, 'login-ip');
   await signIn(req, u.id); res.redirect(safePath(req.body.next) || '/'+u.name);
 });
 app.post('/logout',(req,res)=>req.session.destroy(()=>res.redirect('/')));
@@ -1217,7 +1260,12 @@ site.get('/album/:id/wall',albumOf,async (req,res)=>{
     style: req.query.style==='angel' ? 'angel' : 'taylor',   // angel＝馬賽克、taylor＝瀑布
     photos:await all('SELECT id,url,thumb,caption,width,height FROM photos WHERE album_id=? ORDER BY id',a.id)});
 });
-site.post('/album/:id/unlock',albumOf,(req,res)=>{ const a=res.locals.album; if(req.body.pass===a.pass){ req.session.unlocked=[...(req.session.unlocked||[]),a.id]; return res.redirect(`/${U(res).name}/album/${a.id}`);} res.render('album_lock',{nav:'album',album:a,err:'密碼錯誤'}); });
+site.post('/album/:id/unlock',albumOf,(req,res)=>{
+  const a=res.locals.album;
+  if(rateHit(req,'album'+a.id)) return res.status(429).render('album_lock',{nav:'album',album:a,err:rateMsg});
+  if(req.body.pass===a.pass){ rateClear(req,'album'+a.id); req.session.unlocked=[...(req.session.unlocked||[]),a.id]; return res.redirect(`/${U(res).name}/album/${a.id}`); }
+  res.render('album_lock',{nav:'album',album:a,err:'密碼錯誤'});
+});
 site.post('/album/:id/edit',requireLogin,requireOwner,albumOf,async (req,res)=>{ await run('UPDATE albums SET title=?,descr=?,pass=?,topic=?,place=?,friends_only=? WHERE id=?',cut((req.body.title||'').trim()||res.locals.album.title, 40),(req.body.descr||'').slice(0,200),(req.body.pass||'').slice(0,20),isAlbumTopic(req.body.topic)?req.body.topic:'',isPlace(req.body.place)?req.body.place:'',req.body.friends_only?1:0,res.locals.album.id); res.redirect(`/${U(res).name}/album/${res.locals.album.id}`); });
 // ⚠ 順序是「先刪資料庫的列，再刪檔案」，不能反過來。
 // 反過來寫的話，只要 DELETE 因為任何原因失敗（連線斷、鎖、外鍵），
@@ -1590,7 +1638,8 @@ const postOf=async (req,res,next)=>{ const p=await one('SELECT * FROM posts WHER
 const postUnlocked=(req,res)=>!res.locals.post.pass||res.locals.isOwner||(req.session.unlockedPosts||[]).includes(res.locals.post.id);
 site.post('/blog/:id/unlock',postOf,async (req,res)=>{
   const p=res.locals.post;
-  if(req.body.pass===p.pass){ req.session.unlockedPosts=[...(req.session.unlockedPosts||[]),p.id]; return res.redirect(`/${U(res).name}/blog/${p.id}`); }
+  if(rateHit(req,'post'+p.id)) return res.status(429).render('post_lock',{nav:'blog',post:p,...await blogSide(res),err:rateMsg});
+  if(req.body.pass===p.pass){ rateClear(req,'post'+p.id); req.session.unlockedPosts=[...(req.session.unlockedPosts||[]),p.id]; return res.redirect(`/${U(res).name}/blog/${p.id}`); }
   res.render('post_lock',{nav:'blog',post:p,...await blogSide(res),err:'密碼錯誤'});
 });
 site.get('/blog/:id',postOf,async (req,res)=>{ const p=res.locals.post;
@@ -1789,13 +1838,31 @@ site.post('/guestbook/:id/del',requireLogin,requireOwner,async (req,res)=>{ awai
 
 app.use((req,res)=>res.status(404).render('msg',{title:'找不到頁面',msg:'找不到這個小站或頁面 (>_<)',back:'/'}));
 app.use((err,req,res,next)=>{
+  // ⚠ 使用者按停止、關分頁、或在上傳中途離開，都會走到這裡（ECONNABORTED /
+  // ECONNRESET / EPIPE / request aborted）。那**不是錯誤**，是每天都會發生
+  // 幾千次的正常現象。原本一律 console.error(err) 印整串堆疊，實測 94 秒
+  // 就寫了 12MB 的 log——真正的錯誤被埋在裡面找不到，Railway 的 log 也爆掉。
+  const aborted = req.aborted || err.type === 'request.aborted' ||
+    ['ECONNABORTED','ECONNRESET','EPIPE'].includes(err.code);
+  if (aborted) {
+    console.warn('[連線中斷]', req.method, req.originalUrl);
+    // 對方已經走了，回什麼都送不出去，只要把連線收乾淨。
+    return res.destroy();
+  }
   console.error(err);
   // 依錯誤種類給對的狀態碼與看得懂的訊息
   const tooBig = err.code==='LIMIT_FILE_SIZE';
+  // ⚠ 送一段壞掉的 multipart（boundary 對不上、標頭截斷）原本會 500。
+  // 那是**送出的東西有問題**，不是伺服器壞了：回 500 會讓監控誤報，
+  // 也讓對方以為重試就會好。multer 這幾個錯誤碼一律歸類成 400。
+  const badReq = err.code === 'LIMIT_UNEXPECTED_FILE' || err.code === 'LIMIT_PART_COUNT' ||
+    err.code === 'LIMIT_FIELD_COUNT' || err.code === 'LIMIT_FIELD_KEY' ||
+    err.code === 'LIMIT_FIELD_VALUE' || /Multipart|Unexpected end of form|Malformed part/i.test(err.message || '');
   const bodyBig = err.type==='entity.too.large' || err.status===413;
-  const code = tooBig || bodyBig ? 413 : 500;
+  const code = tooBig || bodyBig ? 413 : badReq ? 400 : 500;
   const msg = tooBig ? '圖片太大了（上限 8MB）'
     : bodyBig ? '送出的內容太長了，請縮短之後再試一次。'
+    : badReq ? '送出的資料格式不對，請重新整理頁面再試一次。'
     : '伺服器發生錯誤，請稍後再試';
   // ⚠ render 也可能失敗（樣板本身出錯、或缺 locals）。第二個參數收 callback，
   // 失敗時退回純文字——**絕對不能讓 Express 的預設錯誤頁把堆疊印給使用者看**
