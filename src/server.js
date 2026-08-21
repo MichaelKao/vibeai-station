@@ -1651,8 +1651,19 @@ const blogSide=async (res, forPost=null)=>({
   // （blog_2013_index_treehouse16.html 那位沒設分類，該存檔就沒有這個節點）。
   blogTopic:(await one("SELECT topic FROM posts WHERE user_id=? AND topic!='' GROUP BY topic ORDER BY count(*) DESC LIMIT 1",U(res).id))?.topic||'',
   moods:MOODS, weathers:WEATHERS, blogTopics:BLOG_TOPICS, places:PLACES});
-site.get('/blog',async (req,res)=>{ const cat=qs1(req.query.cat)||null, ym=/^\d{4}-\d{2}$/.test(qs1(req.query.ym))?qs1(req.query.ym):null, page=pageNo(req.query.p), per=10;
+site.get('/blog',async (req,res)=>{
+  const cat=qs1(req.query.cat)||null, ym=/^\d{4}-\d{2}$/.test(qs1(req.query.ym))?qs1(req.query.ym):null;
+  const page=pageNo(req.query.p);
   const day=/^\d{4}-\d{2}-\d{2}$/.test(qs1(req.query.d))?qs1(req.query.d):null;
+  // ⚠ 有篩選條件（分類／月份／某一天）時，原站印的是**精簡清單**，
+  // 不是全文。存檔 blog_2011_category_paginated_boogier.html 的每一列是
+  //     <td nowrap> 2011.08.31 <a href="/blog/boogier/16679631">標題</a> </td><td>作者</td>
+  // 一頁 500 列（列很短，所以放得下）。
+  //
+  // 我們原本不分模式，一律走網誌首頁那一套：一頁 10 篇全文。後果是
+  // 「想找某個月寫過什麼」要滑好幾十頁，而且每一頁都要跑 10 次 BBCode。
+  const archive = !!(cat || ym || day);
+  const per = archive ? 500 : 10;
   // 日曆顯示的月份：?cal= 優先，其次跟著目前篩選的月份／日期
   res.calYm=/^\d{4}-\d{2}$/.test(qs1(req.query.cal))?qs1(req.query.cal):(ym||(day?day.slice(0,7):null));
   let where='user_id=?'; const args=[U(res).id];
@@ -1660,7 +1671,12 @@ site.get('/blog',async (req,res)=>{ const cat=qs1(req.query.cat)||null, ym=/^\d{
   if(ym){ where+=' AND substr(created,1,7)=?'; args.push(ym); }
   if(day){ where+=' AND substr(created,1,10)=?'; args.push(day); }
   const total=(await one(`SELECT count(*) c FROM posts WHERE ${where}`,...args)).c;
-  res.render('blog',{nav:'blog',cat,ym,day,page,pages:Math.ceil(total/per),...await blogSide(res),posts:await all(`SELECT p.*,(SELECT count(*) FROM comments WHERE post_id=p.id) nc,(SELECT count(*) FROM trackbacks WHERE post_id=p.id) tb FROM posts p WHERE ${where} ORDER BY id DESC LIMIT ? OFFSET ?`,...args,per,(page-1)*per)}); });
+  // 彙整模式不需要內文，只要日期與標題——少撈一大塊資料
+  const cols = archive
+    ? 'id,title,created,category'
+    : 'p.*,(SELECT count(*) FROM comments WHERE post_id=p.id) nc,(SELECT count(*) FROM trackbacks WHERE post_id=p.id) tb';
+  res.render('blog',{nav:'blog',cat,ym,day,page,pages:Math.ceil(total/per),total,archive,...await blogSide(res),
+    posts:await all(`SELECT ${cols} FROM posts p WHERE ${where} ORDER BY id DESC LIMIT ? OFFSET ?`,...args,per,(page-1)*per)}); });
 // 搜尋這個網誌（側欄模組：☑標題 ☐內容）
 site.get('/blog/search',async (req,res)=>{
   const k=qs1(req.query.q).trim(), inBody=req.query.body==='1';

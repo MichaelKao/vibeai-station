@@ -2448,3 +2448,12 @@ html, html body, html body #hugewrapper {margin:0!important;padding:0 0 13px 0!i
 }
 
 * html div#kukubar-lower div.left-side {margin-left:8px!important;}
+
+/* 彙整清單（分類頁／月份頁）。
+   原站是 <td nowrap>日期 <a>標題</a></td><td>作者</td> 的表格，一頁 500 列。
+   我們原本一律印全文，「想找某個月寫過什麼」要滑好幾十頁。 */
+.w2-archive { width: 100%; border-collapse: collapse; font-size: 13px; }
+.w2-archive td { padding: 3px 6px; border-bottom: 1px dotted #ddd; vertical-align: top; }
+.w2-archive td:last-child { width: 6em; color: #999; text-align: right; }
+.w2-archive a { text-decoration: none; }
+.w2-archive a:hover { text-decoration: underline; }

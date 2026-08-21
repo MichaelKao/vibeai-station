@@ -986,5 +986,42 @@ console.log('\n=== 上一篇／下一篇要在同一個分類裡 ===');
      !/同分類上一篇[\s\S]{0,80}心情/.test(page) && !/同分類下一篇[\s\S]{0,80}心情/.test(page));
 }
 
+
+console.log('\n=== 分類頁／月份頁是精簡清單，不是全文 ===');
+// ⚠ 原站的分類頁與月份頁印的是**精簡清單**：
+//     <td nowrap> 2011.08.31 <a href="/blog/boogier/16679631">標題</a> </td><td>作者</td>
+// 一頁 500 列（列很短，所以放得下）。存檔：
+// blog_2011_category_paginated_boogier.html
+//
+// 我們原本不分模式，一律走網誌首頁那一套：一頁 10 篇全文。後果是
+// 「想找某個月寫過什麼」要滑好幾十頁，而且每一頁都要跑 10 次 BBCode。
+{
+  await post('/register',{name:'archq',nick:'彙整',pass:'test1234',pass2:'test1234'});
+  const A2 = await login('archq');
+  for (let i = 1; i <= 12; i++)
+    await post('/archq/blog/new',
+      {title:'彙整測試第'+i+'篇', body:'這裡是很長的內文'.repeat(30), category:'心情'}, A2);
+
+  const index = await text('/archq/blog');
+  ok('網誌首頁還是全文模式', !index.includes('w2-archive'));
+  // ⚠ 標題在同一頁上會出現好幾次（內文區、側欄的最新文章、彙整…），
+  // 直接數出現次數量不到「幾篇」。要數**不重複**的標題。
+  const uniqTitles = h => new Set(h.match(/彙整測試第\d+篇/g) || []).size;
+  ok(`網誌首頁一頁 10 篇（實際 ${uniqTitles(index)}）`, uniqTitles(index) <= 10);
+
+  const cat = await text('/archq/blog?cat=' + encodeURIComponent('心情'));
+  ok('分類頁是彙整清單', cat.includes('w2-archive'));
+  ok(`分類頁一頁放得下 12 篇（實際 ${uniqTitles(cat)}）`, uniqTitles(cat) === 12);
+  ok('彙整清單有日期', /<td nowrap>\d{4}\.\d{2}\.\d{2}/.test(cat),
+     (cat.match(/<td nowrap>[^<]*/) || ['(找不到)'])[0]);
+  ok('彙整清單不印全文', !cat.includes('這裡是很長的內文這裡是很長的內文'));
+  ok('分類頁講出總篇數', cat.includes('共 12 篇'), (cat.match(/共 \d+ 篇/) || ['(找不到)'])[0]);
+
+  // 月份頁同樣走彙整模式
+  const ym = new Date().toISOString().slice(0,7);
+  const mon = await text('/archq/blog?ym=' + ym);
+  ok('月份頁也是彙整清單', mon.includes('w2-archive'));
+}
+
 console.log(`\n===== ${pass} passed, ${fail} failed =====`);
 process.exit(fail?1:0);
