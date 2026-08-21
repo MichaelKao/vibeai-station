@@ -67,6 +67,32 @@ const post = (p, body, ck) => fetch(BASE + p, {
 
 // ── 2) 登入後的寫入也有洪水閘門 ──────────────────────────────────────
 // 原本只檢查 requireLogin，一次上限都沒有：可以腳本洗版別人的留言板。
+// ── 上鎖／好友限定的相簿不可以出現在任何公開清單 ──────────────────
+//
+// ⚠ 為什麼這一項值得一支測試：照片檔名是 randomUUID，猜不到，所以整套
+// 隱私其實是靠「不上鎖的相簿才印得出網址」這一條在守。只要有人在首頁、
+// 相簿總覽、地區地圖任何一個查詢裡漏寫一次 `pass='' AND friends_only=0`，
+// 那本相簿的封面網址就被印進公開 HTML——而網址一旦看過就永久有效，
+// 事後把相簿鎖回去也救不回來。
+//
+// 這種漏寫不會壞任何畫面，只會安靜地多印一張圖，所以人眼看不出來。
+{
+  const reg = await post('/register',
+    { name: 'locker1', nick: '鎖', pass: 'test1234', pass2: 'test1234' });
+  const CK = reg.headers.getSetCookie()?.[0]?.split(';')[0];
+  await post('/locker1/album', { title: '公開相簿AAA' }, CK);
+  await post('/locker1/album', { title: '密碼相簿BBB', pass: '1234' }, CK);
+  await post('/locker1/album', { title: '好友相簿CCC', friends_only: '1' }, CK);
+
+  for (const [url, what] of [['/', '首頁'], ['/albums', '相簿總覽']]) {
+    const h = await (await fetch(BASE + url)).text();   // 不帶 cookie＝路人
+    ok(`${what}沒有印出密碼相簿的標題`, !h.includes('密碼相簿BBB'),
+       '上鎖相簿出現在公開清單上，封面網址跟著被印進 HTML');
+    ok(`${what}沒有印出好友限定相簿的標題`, !h.includes('好友相簿CCC'),
+       '好友限定相簿出現在公開清單上，封面網址跟著被印進 HTML');
+  }
+}
+
 srv.kill('SIGKILL');
 await sleep(400);
 try { fs.rmSync(DIR, { recursive: true, force: true }); } catch { }
