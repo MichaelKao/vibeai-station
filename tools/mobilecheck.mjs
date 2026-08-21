@@ -1,0 +1,251 @@
+// 手機上會不會破版——真的用手機尺寸把每一頁畫出來量。
+//
+// ⚠ 為什麼要另外一支：tools/touchcheck.mjs 只量「按鈕夠不夠大」與「圖有沒有
+// alt」，而且只跑 9 個**未登入的站台層級**頁面。它從來沒有測過：
+//   1. 橫向破版（頁面比螢幕寬，要左右拖才看得完）——這是「手機不行」
+//      最常見的實際症狀，而且畫面看起來還「有東西」，所以自動化不測就不會發現
+//   2. 個人小站的頁面（/<帳號>、/blog、/album、/guestbook）
+//   3. 登入後才看得到的畫面
+//   4. 不同寬度（iPhone SE 320 是最窄的主流機，很多版型只在 375 以上才對）
+//
+// 破版的判斷：document.scrollWidth > clientWidth。單純知道「破了」沒有用，
+// 所以同時把**是哪一個元素撐出去的**找出來——不然要人工一層一層找。
+//
+//   node tools/mobilecheck.mjs                        測本機（先自己開站）
+//   BASE=https://station.vibeaico.com node tools/mobilecheck.mjs   測正式站
+import { chromium } from 'playwright-core';
+
+const CHROME = process.env.CHROME_PATH || 'C:/Program Files/Google/Chrome/Application/chrome.exe';
+const BASE = (process.env.BASE || 'http://localhost:3000').replace(/\/$/, '');
+
+// 三種寬度。320 是 iPhone SE（最窄的主流機），390 是現在最常見的，
+// 768 是平板直式——三者各自會踩到不同的 media query 斷點。
+const SIZES = [
+  { name: 'iPhone SE', width: 320, height: 568 },
+  { name: 'iPhone 14', width: 390, height: 844 },
+  { name: 'iPad 直式', width: 768, height: 1024 },
+];
+
+let pass = 0, fail = 0;
+const ok = (name, cond, extra = '') => {
+  cond ? pass++ : fail++;
+  console.log((cond ? '  PASS ' : '! FAIL ') + name + (cond ? '' : '  ' + extra));
+};
+
+const browser = await chromium.launch({ executablePath: CHROME, headless: !process.env.HEADED });
+
+// 先開一個一般的 context 註冊測試帳號，拿到 cookie 給後面的登入頁用。
+// ⚠ 一定要測登入後的畫面：站主自己看到的頁面（設定、發文、後台）跟訪客
+// 看到的完全不同，而那些正是他每天都在用的。
+const setup = await browser.newContext();
+const sp = await setup.newPage();
+const NAME = 'mtest' + Math.floor(Date.now() / 1000 % 100000);
+let COOKIES = [];
+try {
+  await sp.goto(BASE + '/register', { waitUntil: 'domcontentloaded' });
+  // ⚠ 一定要鎖定「包著 pass2 這一欄的那張表單」再送出。
+  // 直接 click('button[type=submit]') 會按到**頁首的搜尋鈕**——它在 DOM 裡
+  // 排在註冊表單前面，於是整支測試安靜地跑去 /search，cookie 拿不到，
+  // 所有需要登入的頁面全部被跳過，而報表還印「全部通過」。
+  const form = sp.locator('form:has(input[name=pass2])');
+  await form.locator('input[name=name]').fill(NAME);
+  await form.locator('input[name=nick]').fill('手機測試');
+  await form.locator('input[name=pass]').fill('test1234');
+  await form.locator('input[name=pass2]').fill('test1234');
+  await Promise.all([
+    sp.waitForNavigation({ waitUntil: 'domcontentloaded' }),
+    form.locator('button[type=submit], input[type=submit], button:not([type])').first().click(),
+  ]);
+  COOKIES = await setup.cookies();
+  console.log(`[setup] 測試帳號 ${NAME}，登入後網址 ${sp.url()}，cookie ${COOKIES.length} 個`);
+} catch (e) {
+  console.log('[setup] 註冊失敗，只測未登入的頁面：' + e.message);
+}
+await setup.close();
+
+// 要測的頁面。登入後才看得到的用 own:true 標。
+const PAGES = [
+  ['/', '首頁'],
+  ['/albums', '相簿總站'],
+  ['/blogs', '網誌總站'],
+  ['/rank', '人氣排行'],
+  ['/search?q=a', '搜尋結果'],
+  ['/video', '影音'],
+  ['/digu', '嘀咕總站'],
+  ['/hala', '哈啦'],
+  ['/join', '揪團'],
+  ['/help', '服務說明'],
+  ['/login', '登入'],
+  ['/register', '註冊'],
+  ['/shop', '無名小舖'],
+  [`/${NAME}`, '個人首頁', true],
+  [`/${NAME}/blog`, '網誌', true],
+  [`/${NAME}/album`, '相簿', true],
+  [`/${NAME}/guestbook`, '留言板', true],
+  [`/${NAME}/digu`, '嘀咕', true],
+  [`/${NAME}/friends`, '好友', true],
+  [`/${NAME}/settings`, '個人設定', true],
+  [`/${NAME}/blog/new`, '發表文章', true],
+  [`/${NAME}/files`, '網頁空間', true],
+  ['/points', '點數明細', true],
+  ['/vip', '認證申請', true],
+];
+
+// 找出「是誰撐出去的」。
+//
+// 在頁面裡跑：走一遍所有元素，回報右邊界超過視窗寬度的那些。
+// 只回報最外層的幾個——一個 table 撐出去的話它底下每一格都會超出，
+// 全部印出來只是噪音。
+const FIND_OVERFLOW = `(() => {
+  const w = document.documentElement.clientWidth;
+  const bad = [];
+  for (const el of document.querySelectorAll('body *')) {
+    const r = el.getBoundingClientRect();
+    if (r.width === 0 || r.height === 0) continue;
+    const right = r.right + window.scrollX;
+    if (right <= w + 1) continue;
+    // 祖先已經被記下來就跳過，只留最外層的那一個
+    if (bad.some(b => b.el.contains(el))) continue;
+    bad.push({ el, right });
+  }
+  return bad.slice(0, 4).map(b => {
+    const el = b.el;
+    const id = el.id ? '#' + el.id : '';
+    const cls = el.className && typeof el.className === 'string'
+      ? '.' + el.className.trim().split(/\\s+/).slice(0, 2).join('.') : '';
+    const txt = (el.textContent || '').trim().slice(0, 24).replace(/\\s+/g, ' ');
+    return el.tagName.toLowerCase() + id + cls +
+      ' 右邊界 ' + Math.round(b.right) + 'px' + (txt ? ' 「' + txt + '」' : '');
+  });
+})()`;
+
+for (const size of SIZES) {
+  console.log(`\n── ${size.name}（${size.width}px）────────────────────────────`);
+  const ctx = await browser.newContext({
+    viewport: { width: size.width, height: size.height },
+    isMobile: true, hasTouch: true, deviceScaleFactor: 2,
+  });
+  if (COOKIES.length) await ctx.addCookies(COOKIES);
+  const page = await ctx.newPage();
+
+  for (const [path, label, needsLogin] of PAGES) {
+    if (needsLogin && !COOKIES.length) continue;
+    let r;
+    try { r = await page.goto(BASE + path, { waitUntil: 'networkidle', timeout: 30000 }); }
+    catch (e) { ok(`${size.name} ${label} 開得起來`, false, e.message.slice(0, 60)); continue; }
+    if (!r || r.status() >= 400) { ok(`${size.name} ${label} 開得起來`, false, 'HTTP ' + (r && r.status())); continue; }
+
+    const m = await page.evaluate(() => ({
+      scrollW: document.documentElement.scrollWidth,
+      clientW: document.documentElement.clientWidth,
+      meta: document.querySelector('meta[name=viewport]')?.content || '',
+    }));
+
+    // ⚠ 沒有 viewport meta 的話，手機瀏覽器會假裝自己是 980px 寬的桌機再縮小，
+    // 整頁字小到看不見。這是「手機完全不能用」最經典的一種。
+    ok(`${size.name} ${label} 有 viewport meta`, /width=device-width/.test(m.meta),
+       'content=' + (m.meta || '(沒有)'));
+
+    // 容許 1px 的四捨五入
+    const over = m.scrollW - m.clientW;
+    if (over > 1) {
+      const who = await page.evaluate(FIND_OVERFLOW);
+      ok(`${size.name} ${label} 不會左右破版`, false,
+         `頁面寬 ${m.scrollW}px、螢幕 ${m.clientW}px，多出 ${over}px。撐出去的是：\n` +
+         who.map(s => '        ' + s).join('\n'));
+    } else {
+      ok(`${size.name} ${label} 不會左右破版`, true);
+    }
+  }
+  await ctx.close();
+}
+
+// ── 按得到嗎：有沒有東西蓋在按鈕上面 ────────────────────────────────
+//
+// ⚠ 破版只是「手機不行」的其中一種。另一種更氣人的是**按了沒反應**：
+// 畫面看起來完全正常，但某個浮層／固定工具列蓋在按鈕上，手指點下去
+// 被那一層吃掉。這種問題截圖看不出來、量寬度也量不到，只有真的去問
+// 「這個座標點下去會打到誰」才知道。
+//
+// 站上有一條固定在底部的工具列（kukubar，#footer-switch 那一條），
+// 在桌機上不礙事，在 568px 高的 iPhone SE 上它蓋掉的比例大得多。
+{
+  console.log('\n── 按得到嗎（有沒有東西蓋住）────────────────────────');
+  const ctx = await browser.newContext({
+    viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true, deviceScaleFactor: 2,
+  });
+  if (COOKIES.length) await ctx.addCookies(COOKIES);
+  const page = await ctx.newPage();
+
+  const CHECK = `(() => {
+    const out = [];
+    for (const el of document.querySelectorAll('a[href], button, input[type=submit]')) {
+      const r = el.getBoundingClientRect();
+      // 只看畫面上真的看得到、而且在視窗內的
+      if (r.width < 4 || r.height < 4) continue;
+      if (r.top < 0 || r.bottom > innerHeight || r.left < 0 || r.right > innerWidth) continue;
+      const cs = getComputedStyle(el);
+      if (cs.visibility === 'hidden' || cs.display === 'none' || +cs.opacity === 0) continue;
+      // ⚠ 被祖先裁切掉的元素要跳過，不然會誤判。
+      // 站上底部的工具列有幾個**收合的**下拉選單，收合的做法是外層
+      // overflow:hidden 把高度壓掉——裡面的連結還是有 getBoundingClientRect，
+      // 只是被裁在外面看不到。不濾掉的話，那幾條「熱門相簿」「人氣排行榜」
+      // 每次都會被報成「被工具列按鈕蓋住」，而它們本來就不該點得到。
+      // （第一版就是這樣誤報了四條，實測量出來連結在 y=61、按鈕在 y=819，
+      //   根本沒有重疊。）
+      let clipped = false;
+      for (let a = el.parentElement; a && a !== document.body; a = a.parentElement) {
+        const acs = getComputedStyle(a);
+        if (!/hidden|clip|scroll|auto/.test(acs.overflow + acs.overflowX + acs.overflowY)) continue;
+        const ar = a.getBoundingClientRect();
+        if (r.bottom <= ar.top + 1 || r.top >= ar.bottom - 1 ||
+            r.right <= ar.left + 1 || r.left >= ar.right - 1) { clipped = true; break; }
+      }
+      if (clipped) continue;
+      const x = r.left + r.width / 2, y = r.top + r.height / 2;
+      const hit = document.elementFromPoint(x, y);
+      if (!hit) continue;
+      // 打到自己或自己的小孩都算按得到
+      if (hit === el || el.contains(hit) || hit.contains(el)) continue;
+      const name = (el.textContent || el.value || '').trim().slice(0, 20) || el.tagName;
+      const blk = hit.tagName.toLowerCase() +
+        (hit.id ? '#' + hit.id : '') +
+        (typeof hit.className === 'string' && hit.className.trim()
+          ? '.' + hit.className.trim().split(/\\s+/)[0] : '');
+      out.push('「' + name + '」被 ' + blk + ' 蓋住');
+    }
+    return [...new Set(out)].slice(0, 6);
+  })()`;
+
+  for (const [path, label, needsLogin] of PAGES) {
+    if (needsLogin && !COOKIES.length) continue;
+    try {
+      const r = await page.goto(BASE + path, { waitUntil: 'networkidle', timeout: 30000 });
+      if (!r || r.status() >= 400) continue;
+    } catch { continue; }
+    // ⚠ 要在**兩個捲動位置**都量，而且只有兩次都被蓋住才算數。
+    //
+    // 底部那條工具列是 position:fixed——它跟著視窗走。所以「現在被它蓋住」
+    // 不等於「點不到」：使用者往下捲一點，那顆按鈕就從工具列底下出來了。
+    // 只看一個位置的話會誤報一整排（第一版就報了留言板側欄的四條連結，
+    // 實際上捲到底那一次是通過的）。
+    //
+    // 真正點不到的，是**捲到哪裡都還在別人下面**的那些。
+    await page.evaluate(() => window.scrollTo(0, 0));
+    await page.waitForTimeout(150);
+    const top = new Set(await page.evaluate(CHECK));
+    await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
+    await page.waitForTimeout(150);
+    const bottom = new Set(await page.evaluate(CHECK));
+    const blocked = [...top].filter(s => bottom.has(s));
+    ok(`${label} 沒有怎麼捲都點不到的按鈕`, blocked.length === 0,
+       '手指點下去會被別的東西吃掉，而且捲到哪裡都一樣：\n' +
+       blocked.map(s => '        ' + s).join('\n'));
+  }
+  await ctx.close();
+}
+
+
+await browser.close();
+console.log(`\n===== ${pass} passed, ${fail} failed =====`);
+process.exit(fail ? 1 : 0);

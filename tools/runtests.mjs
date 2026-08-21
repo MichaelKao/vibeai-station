@@ -214,7 +214,29 @@ if (!process.env.SKIP_BROWSER) {
   const r7 = spawnSync(process.execPath, ['tools/touchcheck.mjs'], {
     env: { ...process.env, BASE: b2, MSYS_NO_PATHCONV: '1' }, encoding: 'utf8',
   });
+  // 手機：版面與流程。
+  //
+  // ⚠ 上面那支 touchcheck 只量觸控目標大小與圖片 alt，而且只跑**未登入的
+  // 站台層級**頁面。使用者回報「手機端不行」之後才發現，它一項都測不到
+  // 真正的症狀：橫向破版、按鈕被浮層蓋住、個人小站的頁面、登入後的畫面。
+  //   mobilecheck  三種寬度 × 24 頁的破版與遮擋
+  //   mobileflow   用真的觸控（tap，不是 click）走完註冊→登入→發文→留言
+  const r9 = spawnSync(process.execPath, ['tools/mobilecheck.mjs'], {
+    env: { ...process.env, BASE: b2, MSYS_NO_PATHCONV: '1' }, encoding: 'utf8',
+  });
+  const r10 = spawnSync(process.execPath, ['tools/mobileflow.mjs'], {
+    env: { ...process.env, BASE: b2, MSYS_NO_PATHCONV: '1' }, encoding: 'utf8',
+  });
   srv2.kill();
+  for (const [nm, rr] of [['手機版面', r9], ['手機流程', r10]]) {
+    const o = (rr.stdout || '') + (rr.stderr || '');
+    const ln = o.split('\n').filter(l => l.includes('passed')).pop();
+    const fs2 = o.split('\n').filter(l => l.startsWith('! FAIL'));
+    console.log(`\n${nm}：${ln ? ln.trim() : '(沒有結果——測試根本沒跑完)'}`);
+    for (const f of fs2.slice(0, 20)) console.log('  ' + f.trim());
+    if (!ln) { bad += 1; console.log('  ' + o.trim().split('\n').slice(-8).join('\n  ')); }
+    if (fs2.length) bad += fs2.length;
+  }
   const out = (r.stdout || '') + (r.stderr || '');
   const line = out.split('\n').filter(l => l.includes('passed')).pop();
   const fails = out.split('\n').filter(l => l.startsWith('! FAIL'));

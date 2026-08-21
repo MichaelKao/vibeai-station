@@ -137,7 +137,11 @@
   <h4>New Album</h4>
   <div class="bd">
     <form method="post" action="/<%= u.name %>/album">
-      <table border="0" cellpadding="0" cellspacing="0">
+      <%# ⚠ class="w2b-form" 是為了讓 RWD 的表單規則吃得到這張表。
+          裡面的 <input size="24"> / size="40" 有固有寬度、不會跟著螢幕縮，
+          在 iPhone SE（320px）量出來整頁多 3px，可以左右拖。
+          視覺不變——w2b-form 在桌機上只是 width:100% 的表格。 %>
+      <table class="w2b-form" border="0" cellpadding="0" cellspacing="0">
         <tr>
           <th>相簿名稱</th>
           <td><input type="text" name="title" size="24" maxlength="40" required aria-label="相簿名稱"></td>

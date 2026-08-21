@@ -99,6 +99,94 @@
   /* 首頁站友介紹的引言塊寫死 296px ＋ 左右 padding，box-sizing 之外還會爆 */
   .emphatic { width: auto !important; max-width: 100% !important; box-sizing: border-box; }
 
+  /* ── 站上自製表單裡的輸入框 ────────────────────────────────────────
+   * ⚠ 上面那條只管到頁首與站內搜尋（#searchForm / #search_keyword），
+   * 站上**自己做的**那幾張表單（發文、相簿、留言、設定、網頁空間）沒有被
+   * 涵蓋到。這些欄位是用 HTML 的 size 屬性給寬度的，size 是「幾個字元寬」，
+   * 有固有寬度、不會跟著螢幕縮。
+   *
+   * 實測（tools/mobilecheck.mjs，iPhone SE 320px）：
+   *   發表文章  頁面寬 365px、螢幕 320px  → 多出 45px
+   *   相簿      頁面寬 323px             → 多出 3px
+   * 症狀是整頁可以左右拖，打字的時候右半邊在螢幕外——「手機不行」
+   * 最常被回報的就是這一種：畫面看起來有東西，但用不了。
+   *
+   * 這裡不挑個別欄位，直接讓所有自製表單的輸入元件流動化。
+   * box-sizing 一定要一起給，不然 padding 與 border 會再撐出去幾像素。 */
+  .w2b-form input[type=text], .w2b-form input:not([type]),
+  .w2b-form input[type=password], .w2b-form input[type=email],
+  .w2b-form input[type=url], .w2b-form input[type=number],
+  .w2b-form select, .w2b-form textarea,
+  .w2-form input[type=text], .w2-form input:not([type]),
+  .w2-form input[type=password], .w2-form input[type=email],
+  .w2-form input[type=url], .w2-form input[type=number],
+  .w2-form select, .w2-form textarea {
+    width: 100% !important; min-width: 0 !important; max-width: 100% !important;
+    box-sizing: border-box;
+  }
+
+  /* 標籤欄在最窄的機型上要讓位。76px 的固定標籤欄加上輸入框，320px 放不下。
+     ⚠ 只在 360px 以下才改，不然 390px 以上的機型會平白變醜——
+     那些機型量出來本來就沒有破版。 */
+  @media (max-width: 360px) {
+    .w2b-form th { width: 56px !important; padding-right: 4px !important; }
+  }
+
+  /* ── 底部固定工具列會吃掉頁面最後 25px ──────────────────────────
+   * kukubar-lower 是 position:fixed、bottom:0、height:25px 的一條工具列
+   * （原站就有，本站照做）。它永遠浮在畫面最下緣，所以**頁面捲到底時，
+   * 最後 25px 的內容一直躲在它下面**——那一段的連結看得到、點不到。
+   *
+   * 桌機上不太有感：捲到底通常是頁尾版權那一行。手機上很有感：
+   * 版面是直向堆疊的，被壓在下面的是側欄整塊（站內導覽的四條連結）。
+   * 實測 390px 的留言板頁，「人氣排行榜」正好落在 y=823，
+   * 而工具列從 819 開始——點下去被工具列吃掉。
+   *
+   * 給 body 補一段等高（多留一點餘裕）的下邊距，讓內容永遠捲得過它。
+   * 用 padding 不用 margin：body 的 margin 會跟背景色一起露出來。 */
+  body { padding-bottom: 40px; }
+
+  /* ── 絕對定位的區塊在窄螢幕會疊到按鈕上 ──────────────────────────
+   * ⚠ 這一類是「手機不行」裡最氣人的一種：畫面看起來完全正常，但手指
+   * 點下去被上面那一層吃掉，按鈕像壞了一樣。截圖看不出來、量寬度也量
+   * 不到——要真的去問「這個座標點下去會打到誰」才知道。
+   * （tools/mobilecheck.mjs 的最後一段就是在問這件事。）
+   *
+   * 成因都一樣：原站是 970px 的固定寬版面，這些區塊用 position:absolute
+   * 釘在某個角落，桌機上剛好落在空白處。窄螢幕下周圍的東西重排了，
+   * 絕對定位的那一塊卻還釘在原地，就壓到別人身上。
+   *
+   * 實測（tools/mobilecheck.mjs，390px）：
+   *   首頁      「登出」被 a.bgm-on 蓋住     → 手機上登不出去
+   *   相簿總站  「Logout」被 #search_keyword 蓋住
+   *             「WRETCH」「Yahoo!」被搜尋範圍的 label 蓋住
+   *
+   * 解法一律是「放回正常流」——不是調 z-index。調 z-index 只會換成
+   * 另一顆按鈕被蓋住，而且蓋住的關係還變得更難追。 */
+
+  /* 首頁「我的」模組右上角的背景音樂開關 */
+  .my-setting {
+    position: static !important; right: auto !important; top: auto !important;
+    text-align: right; margin-bottom: 4px;
+  }
+
+  /* 相簿總站頁首的搜尋列（原本 absolute + width:500px） */
+  #searchForm {
+    position: static !important; left: auto !important; top: auto !important;
+    width: auto !important; max-width: 100%; height: auto !important;
+    clear: both; padding: 4px 0;
+  }
+  /* 頁首那排連結浮動著，搜尋列放回流之後要先把浮動清掉，
+     不然它會擠到連結旁邊、兩邊都變得很窄。 */
+  #access_link { float: none !important; padding-left: 0 !important; height: auto !important; }
+  #access_link:after { content: ""; display: block; clear: both; }
+  /* ⚠ 這裡**不要**動搜尋範圍那四顆（#search_tab）。
+     它們是 float:left + width:43px + 背景圖籤，四顆加起來 229px，
+     390px 的螢幕本來就放得下。我一度在這裡加了 display:flex，
+     結果 flex 讓子元素不吃 float、圖籤排版整個垮掉——截圖上只剩
+     「相簿」看得到，另外三顆變成細條。自動化測試量不出這種壞法
+     （沒有破版、也沒有被蓋住），是看截圖才發現的。 */
+
   /* 網誌單篇的迴響／引用區整組寫死 300px */
   .total-comments-div, .trackback-url, .trackbacks-head,
   .comments-head, .comments-body, .comments-user, .comments-word,
@@ -353,6 +441,31 @@
   /* myspace 版型的招牌是 position:relative + left:300px（讓開左側的頭像）。
      窄螢幕堆疊之後那 300px 位移就是整頁右溢的來源。 */
   #bigcontainer #header h1 { left: 0 !important; }
+
+  /* ⚠ 但只把 left 歸零會換來另一個問題：#header 的底圖（版型的 GUESTBOOK
+     招牌，skin1911/header.gif，286×53，貼在 left top 10px）還在原地，
+     而 h1 回到 left:0 之後就**正好疊在那張圖上面**——站名跟招牌糊成一團，
+     兩個都讀不出來。實測 390px 的個人首頁截圖就是這樣。
+     原本的 left:300px 除了避開左側頭像，也順便避開了這張招牌。
+     窄螢幕沒有橫向空間可以避，就改成往下避：讓 h1 從招牌下緣開始。
+     63 = 圖高 53 ＋ 上緣 10。
+
+     ⚠ 讓開的方式必須是**父層的 padding-top，不能是 h1 的 margin-top**。
+     #header 上緣沒有 padding 也沒有 border，子元素的上外邊距會跟它
+     **合併**（margin collapsing）跑到外面去——結果是整個 #header 往下掉 63px，
+     h1 相對招牌還是在原位，畫面上多一塊空白而重疊照舊。
+     實測量到 h1.top 跟 header.top 都是 184，一模一樣，就是合併掉了。
+     padding 不會合併，而背景圖的原點預設是 padding-box，圖照樣貼在最上緣。 */
+  #bigcontainer #header {
+    padding-top: 63px; height: auto !important; min-height: 0 !important;
+  }
+  #bigcontainer #header h1 { top: 0 !important; margin-top: 0 !important; }
+
+  /* 站台說明跟招牌是同一組位移（padding-left:300px），一起歸零。
+     漏掉的話說明文字會整段縮在右邊三分之一，變成很窄的一直條。 */
+  #bigcontainer #description {
+    padding-left: 0 !important; padding-right: 0 !important; top: 0 !important;
+  }
 
   /* ── 7. 第三輪：BFC 縮排、寫死位移、剩下的固定寬欄 ────────────────
    * 這三種在寬螢幕都看不出來，一縮窄就現形。 */
