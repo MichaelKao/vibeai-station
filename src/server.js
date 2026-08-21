@@ -1687,7 +1687,7 @@ site.get('/blog',async (req,res)=>{
   // 彙整模式不需要內文，只要日期與標題——少撈一大塊資料
   const cols = archive
     ? 'id,title,created,category'
-    : 'p.*,(SELECT count(*) FROM comments WHERE post_id=p.id) nc,(SELECT count(*) FROM trackbacks WHERE post_id=p.id) tb';
+    : 'p.*,(SELECT count(*) FROM comments WHERE post_id=p.id) nc,(SELECT count(*) FROM trackbacks t WHERE t.post_id=p.id AND EXISTS(SELECT 1 FROM posts WHERE id=t.from_post)) tb';
   res.render('blog',{nav:'blog',cat,ym,day,page,pages:Math.ceil(total/per),total,archive,...await blogSide(res),
     posts:await all(`SELECT ${cols} FROM posts p WHERE ${where} ORDER BY id DESC LIMIT ? OFFSET ?`,...args,per,(page-1)*per)}); });
 // 搜尋這個網誌（側欄模組：☑標題 ☐內容）
@@ -1863,7 +1863,11 @@ site.get('/blog/:id',postOf,async (req,res)=>{ const p=res.locals.post;
   //   網址是 …/blog/<帳號>/<文章>&page=2#postComments 與 &tpage=2#trackbacks
   const cPer = 20, tPer = 30;
   const cN = (await one('SELECT count(*) c FROM comments WHERE post_id=?',p.id)).c;
-  const tN = (await one('SELECT count(*) c FROM trackbacks WHERE post_id=?',p.id)).c;
+  // 只算「來源文章還在」的引用，跟下面那份 JOIN 出來的清單同一個口徑。
+  // 舊資料裡已經有的孤兒（修這條之前刪掉的文章留下的）也就一起不算了。
+  const tN = (await one(
+    'SELECT count(*) c FROM trackbacks t WHERE t.post_id=? AND EXISTS(SELECT 1 FROM posts WHERE id=t.from_post)',
+    p.id)).c;
   const cPage = Math.min(pageNo(req.query.page), Math.max(1, Math.ceil(cN/cPer)));
   const tPage = Math.min(pageNo(req.query.tpage), Math.max(1, Math.ceil(tN/tPer)));
   res.render('post',{nav:'blog',post:p,...await blogSide(res, p),
@@ -1893,7 +1897,16 @@ site.get('/blog/:id/edit',requireLogin,requireOwner,postOf,async (req,res)=>res.
 site.post('/blog/:id/edit',requireLogin,requireOwner,postOf,async (req,res)=>{ const {title,body,category,mood,weather}=req.body;
   await run('UPDATE posts SET title=?,body=?,category=?,mood=?,weather=?,pass=?,topic=?,place=? WHERE id=?',(title||res.locals.post.title).trim().slice(0,100),(body||'').slice(0,50000),(category||'未分類').trim().slice(0,20)||'未分類',MOODS.includes(mood)?mood:'',WEATHERS.includes(weather)?weather:'',(req.body.pass||'').slice(0,20),isBlogTopic(req.body.topic)?req.body.topic:'',isPlace(req.body.place)?req.body.place:'',res.locals.post.id);
   res.redirect(`/${U(res).name}/blog/${res.locals.post.id}`); });
-site.post('/blog/:id/del',requireLogin,requireOwner,postOf,async (req,res)=>{ await run('DELETE FROM posts WHERE id=?',res.locals.post.id); res.redirect(`/${U(res).name}/blog`); });
+site.post('/blog/:id/del',requireLogin,requireOwner,postOf,async (req,res)=>{
+  const pid = res.locals.post.id;
+  // ⚠ trackbacks.from_post 沒有外鍵（只有 post_id 那一欄有 CASCADE）。
+  // 這篇文章如果曾經去引用別人，刪掉之後那一列會留在 trackbacks 裡變成孤兒：
+  // 對方文章的清單看不到它（清單是 JOIN posts，接不上就不見），
+  // 但「引用(N)」的數字還在算它——永遠對不上，而且沒有人知道為什麼。
+  // 加外鍵要對正式站做 migration，直接在刪除時清掉更簡單也更好懂。
+  await run('DELETE FROM trackbacks WHERE from_post=?', pid);
+  await run('DELETE FROM posts WHERE id=?', pid);
+  res.redirect(`/${U(res).name}/blog`); });
 // 上鎖文章：沒解鎖就不能回應、推薦、引用（引用會複製內文，等於繞過密碼）
 const needUnlocked=(req,res,next)=>postUnlocked(req,res)?next():res.redirect(`/${U(res).name}/blog/${res.locals.post.id}`);
 // 迴響（無名的表單欄位：暱稱／E-mail／個人網頁／記住我的資料／內容最多1000字）
@@ -2077,10 +2090,15 @@ site.get('/guestbook',async (req,res)=>{
       FROM guestbook g LEFT JOIN users au ON au.id=g.author_id
       WHERE g.user_id=? ORDER BY g.id DESC LIMIT ? OFFSET ?`,U(res).id,per,(page-1)*per)}); });
 site.post('/guestbook',async (req,res)=>{ const {author,subject,body,secret}=req.body; const who=res.locals.me?.nick||author;
+  // E-mail 與個人網頁：跟網誌迴響同一套驗證（見 site.post('/blog/:id/comment')）。
+  // ⚠ 原站的留言表單有 Name / Email / URL / Remember Me 四欄，我們只做了 Name。
+  const gbSite=(()=>{ try{ const x=String(req.body.homepage||'').trim(); if(!x) return '';
+    return ['http:','https:'].includes(new URL(x).protocol)?x.slice(0,200):''; }catch{ return ''; } })();
+  const gbMail=/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test((req.body.email||'').trim())?req.body.email.trim().slice(0,60):'';
   if(who?.trim()&&body?.trim()){
     // author_id 只有登入才有值：原版每一則留言的暱稱與大頭貼都連回留言者的小站，
     // 認證章也掛在那裡。訪客留言留 NULL，view 就退回純文字。
-    await run('INSERT INTO guestbook(user_id,author,author_id,subject,body,secret) VALUES(?,?,?,?,?,?)',U(res).id,who.trim().slice(0,20),res.locals.me?.id||null,(subject||'').trim().slice(0,40),body.trim().slice(0,500),secret?1:0);
+    await run('INSERT INTO guestbook(user_id,author,author_id,subject,body,secret,email,homepage) VALUES(?,?,?,?,?,?,?,?)',U(res).id,who.trim().slice(0,20),res.locals.me?.id||null,(subject||'').trim().slice(0,40),body.trim().slice(0,500),secret?1:0,gbMail,gbSite);
     // 通知板主有新留言：只有登入者會觸發，且 10 分鐘內只發一則，避免被灌爆。
     // ⚠ 節流條件要限定在**這一種**通知上（title）。
     // 原本只看「10 分鐘內有沒有任何 sysmsg」，於是站長一發群發公告，
@@ -2089,6 +2107,10 @@ site.post('/guestbook',async (req,res)=>{ const {author,subject,body,secret}=req
        !await one("SELECT 1 FROM sysmsg WHERE user_id=? AND title='你有新的留言' AND created>datetime('now','localtime','-10 minutes')",U(res).id))
       await run('INSERT INTO sysmsg(user_id,title,body) VALUES(?,?,?)',U(res).id,'你有新的留言',`${res.locals.me.nick} 在你的留言板留言了。`);
   }
+    // 「記住我的資料」——跟網誌迴響共用同一個 session.guest，
+    // 所以在留言板填過的暱稱／信箱／網頁，去網誌留迴響時也會自動帶入。
+    if(req.body.remember) req.session.guest={author:(author||'').slice(0,20),email:gbMail,homepage:gbSite};
+    else delete req.session.guest;
   res.redirect(`/${U(res).name}/guestbook`); });
 site.post('/guestbook/:id/reply',requireLogin,requireOwner,async (req,res)=>{ await run("UPDATE guestbook SET reply=?,reply_at=datetime('now','localtime') WHERE id=? AND user_id=?",(req.body.reply||'').trim().slice(0,500),req.params.id,U(res).id); res.redirect(`/${U(res).name}/guestbook`); });
 site.post('/guestbook/:id/del',requireLogin,requireOwner,async (req,res)=>{ await run('DELETE FROM guestbook WHERE id=? AND user_id=?',req.params.id,U(res).id); res.redirect(`/${U(res).name}/guestbook`); });

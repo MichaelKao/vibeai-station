@@ -107,6 +107,27 @@
             <% if (me) { %><b><%= me.nick %></b>
             <% } else { %><input class="small-c" type="text" name="author" size="20" maxlength="20" value="<%= guest && guest.nick ? guest.nick : '' %>" required><% } %>
           </li>
+          <%# ⚠ 原站的留言表單有 Name / Email / URL / Remember Me 四欄
+              （存檔 gb_gbook_addpost_a0913375433_20110625.html 逐字），
+              我們只做了 Name——留言者留不下聯絡方式，板主也沒辦法回連到
+              對方的站。網誌迴響那邊早就有這三欄了，留言板漏掉。
+              登入的人不必填（帳號本身就連得回去），所以只印給訪客。 %>
+          <% if (!me) { %>
+          <li><label for="gb-email">E-mail</label>
+            <input class="small-c" type="email" name="email" id="gb-email" size="30" maxlength="60"
+                   value="<%= (guest && guest.email) || '' %>">
+            <span class="w2-sub">不會公開，只有板主看得到</span>
+          </li>
+          <li><label for="gb-url">個人網頁</label>
+            <input class="small-c" type="url" name="homepage" id="gb-url" size="30" maxlength="200"
+                   placeholder="https://…" value="<%= (guest && guest.homepage) || '' %>">
+          </li>
+          <li><span>記住我的資料</span>
+            <label><input type="radio" name="remember" value="1" <%= guest ? 'checked' : '' %>> 是</label>
+            <label><input type="radio" name="remember" value="" <%= guest ? '' : 'checked' %>> 否</label>
+            <span class="w2-sub">下次留言（含網誌迴響）自動帶入</span>
+          </li>
+          <% } %>
           <li><span>悄悄話</span>
             <label><input type="checkbox" name="secret" value="1"> 只有板主看得到</label>
           </li>
@@ -187,7 +208,7 @@ document.addEventListener('click', function(e){
         <%# 悄悄話對外人**整格不輸出**（原版的 Sealed 留言就沒有這一格）；
             訪客留言沒有帳號可以連，原版是一張 No_Login_60.gif，我們用預設頭像。 %>
         <% if (!hide) { %><li class="msg_img"><% if (m.a_name) { %><a href="/<%= m.a_name %>/guestbook" target="_blank"><img src="<%= m.a_avatar %>" width="60" height="60" alt="<%= m.a_nick %>"></a><% } else { %><img src="/img/avatar.png" width="60" height="60" alt=""><% } %></li><% } %>
-        <li class="msg_man"><span>暱稱：</span><% if (hide) { %>悄悄話<% } else { %><%- include('partials/vipicon2012', { viUser: { vip: m.a_vip }, viStyle: 'auth' }) %><% if (m.a_name) { %><a href="/<%= m.a_name %>/guestbook" target="_blank"><%= m.author %></a><% } else { %><%= m.author %><% } %><% } %></li>
+        <li class="msg_man"><span>暱稱：</span><% if (hide) { %>悄悄話<% } else { %><%- include('partials/vipicon2012', { viUser: { vip: m.a_vip }, viStyle: 'auth' }) %><% if (m.a_name) { %><a href="/<%= m.a_name %>/guestbook" target="_blank"><%= m.author %></a><% } else if (m.homepage) { %><%# 訪客留了個人網頁就把暱稱連過去（原站行為）。外站連結一律 nofollow noopener，不要把權重與 window.opener 送出去。 %><a href="<%= m.homepage %>" target="_blank" rel="nofollow noopener"><%= m.author %></a><% } else { %><%= m.author %><% } %><% } %></li>
         <li class="msg_title"><span>主題：</span><strong><%= hide ? '悄悄話' : (m.subject || '無標題') %></strong><cite><% if (m.secret) { %><img src="/img/wretch2012/gb/lock.gif" width="21" height="16" alt="悄悄話"><% } %></cite></li>
         <li class="msg_date"><span>時間：</span><%= m.created %>
           &nbsp;<a href="/report?kind=guestbook&amp;target=<%= m.id %>&amp;url=<%= encodeURIComponent("/" + u.name + "/guestbook") %>" class="reportlink" data-kind="guestbook" data-id="<%= m.id %>">檢舉</a></li>

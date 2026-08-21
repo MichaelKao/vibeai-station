@@ -1058,5 +1058,49 @@ console.log('\n=== 側欄的「文章日曆」點下去有整頁月曆 ===');
     ok('月份亂給不會壞 '+q, (await get('/schedq/blog?schedule=1'+q)).status === 200);
 }
 
+
+console.log('\n=== 留言板的訪客表單（Name / Email / URL / 記住我）===');
+// ⚠ 原站的留言表單有四欄（存檔 gb_gbook_addpost_a0913375433_20110625.html 逐字：
+// cookie_name / email / url / rem），我們只做了 Name——留言者留不下聯絡方式，
+// 板主也沒辦法回連到對方的站。網誌迴響那邊早就有這三欄了，留言板漏掉。
+{
+  await post('/register',{name:'gbq',nick:'留言板',pass:'test1234',pass2:'test1234'});
+
+  // ⚠ 表單在「我要留言」那個頁籤底下（?tab=new），不是留言列表那一頁。
+  const form = await text('/gbq/guestbook?tab=new');
+  ok('訪客看得到 E-mail 欄', form.includes('name="email"'));
+  ok('訪客看得到個人網頁欄', form.includes('name="homepage"'));
+  ok('訪客看得到「記住我的資料」', form.includes('name="remember"'));
+
+  // 留一則帶網址的留言
+  const r = await fetch(`${B}/gbq/guestbook`, {
+    method:'POST', redirect:'manual',
+    headers:{'content-type':'application/x-www-form-urlencoded'},
+    body:new URLSearchParams({author:'路過的人',body:'哈囉',
+      email:'someone@example.com', homepage:'https://example.com/me', remember:'1'}).toString() });
+  const ck = r.headers.getSetCookie()?.[0]?.split(';')[0];
+  ok('訪客留言送得出去', r.status === 302, 'HTTP ' + r.status);
+
+  const page = await text('/gbq/guestbook');
+  ok('暱稱連到他留的個人網頁', /<a href="https:\/\/example\.com\/me"[^>]*>路過的人<\/a>/.test(page),
+     (page.match(/路過的人[\s\S]{0,60}/) || ['(找不到)'])[0].replace(/\s+/g,' '));
+  ok('E-mail 不會被印在公開頁面上', !page.includes('someone@example.com'));
+
+  // 記住我的資料：下一次表單要自動帶入
+  if (ck) {
+    const again = await text('/gbq/guestbook?tab=new', ck);
+    ok('「記住我」之後表單會帶入上次填的網址', again.includes('https://example.com/me'),
+       (again.match(/name="homepage"[^>]*/) || ['(找不到)'])[0]);
+  }
+
+  // 亂七八糟的網址不能存進去（跟網誌迴響同一套驗證）
+  await fetch(`${B}/gbq/guestbook`, {
+    method:'POST', redirect:'manual',
+    headers:{'content-type':'application/x-www-form-urlencoded'},
+    body:new URLSearchParams({author:'壞網址',body:'哈囉',homepage:'javascript:alert(1)'}).toString() });
+  const page2 = await text('/gbq/guestbook');
+  ok('javascript: 的個人網頁不會被存下來', !page2.includes('javascript:alert'));
+}
+
 console.log(`\n===== ${pass} passed, ${fail} failed =====`);
 process.exit(fail?1:0);

@@ -336,6 +336,12 @@ const ADD_COLUMNS = [
   // 那一則也顯示成同一分鐘。舊資料這一欄是空的，view 會退回顯示留言時間。
   ['comments',  'reply_at', "TEXT DEFAULT ''"],
   ['guestbook', 'reply_at', "TEXT DEFAULT ''"],
+  // 留言者的 E-mail 與個人網頁。⚠ 原站的留言表單有 Name / Email / URL /
+  // Remember Me 四欄（存檔 gb_gbook_addpost_a0913375433_20110625.html 逐字），
+  // 我們只做了 Name——留言者留不下聯絡方式，板主也沒辦法回連到對方的站。
+  // 網誌迴響那邊早就有這兩欄了（comments.email / homepage），留言板漏掉。
+  ['guestbook', 'email',    "TEXT DEFAULT ''"],
+  ['guestbook', 'homepage', "TEXT DEFAULT ''"],
   ['users',  'vip',    'INTEGER DEFAULT 0'],   // 認證／VIP 徽章 .vip_icon、相片牆 .vip_only
   ['photos', 'width',  'INTEGER DEFAULT 0'],   // 以下四欄給照片頁的 #exif 面板
   ['photos', 'height', 'INTEGER DEFAULT 0'],
