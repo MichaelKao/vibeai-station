@@ -647,7 +647,7 @@ site.get('/',async (req,res)=>{
   if(!res.locals.isOwner){ await bumpHits(u); u.visits++;
     if(res.locals.me && !await one("SELECT 1 FROM visitors WHERE user_id=? AND who=? AND created>datetime('now','localtime','-1 hour')",u.id,res.locals.me.name)) await run('INSERT INTO visitors(user_id,who) VALUES(?,?)',u.id,res.locals.me.name); }
   res.render('home',{nav:'user',
-    albums:await all(`SELECT a.*,(SELECT count(*) FROM photos WHERE album_id=a.id) n FROM albums a WHERE user_id=? ORDER BY id DESC LIMIT 6`,u.id),
+    albums:await hideLockedCovers(req,res,await all(`SELECT a.*,(SELECT count(*) FROM photos WHERE album_id=a.id) n FROM albums a WHERE user_id=? ORDER BY id DESC LIMIT 6`,u.id)),
     posts:await all('SELECT * FROM posts WHERE user_id=? ORDER BY id DESC LIMIT 5',u.id),
     // visitors 存的是「當時的帳號名」字串，不是外鍵：帳號被刪掉之後那一列還在，
     // 側欄照樣連過去就是一條 404 死連結。這裡只列帳號還在的（側欄本來就只放最近幾位）。
@@ -1035,7 +1035,7 @@ site.get('/album',async (req,res)=>{
   res.render('album',{nav:'album',topics:ALBUM_TOPICS,places:PLACES,
     page,pages:Math.ceil(total/per),total,
     quota:{used:await usedBytes(U(res).id),total:USER_QUOTA,mb:MB},
-    albums:await all(`SELECT a.*,(SELECT count(*) FROM photos WHERE album_id=a.id) n FROM albums a WHERE user_id=? ORDER BY id DESC LIMIT ? OFFSET ?`,U(res).id,per,(page-1)*per)});
+    albums:await hideLockedCovers(req,res,await all(`SELECT a.*,(SELECT count(*) FROM photos WHERE album_id=a.id) n FROM albums a WHERE user_id=? ORDER BY id DESC LIMIT ? OFFSET ?`,U(res).id,per,(page-1)*per))});
 });
 site.post('/album',requireLogin,requireOwner,async (req,res)=>{ const t=(req.body.title||'').trim().slice(0,40); if(t) await run('INSERT INTO albums(user_id,title,descr,pass,topic,place,friends_only) VALUES(?,?,?,?,?,?,?)',U(res).id,t,(req.body.descr||'').slice(0,200),(req.body.pass||'').slice(0,20),isAlbumTopic(req.body.topic)?req.body.topic:'',isPlace(req.body.place)?req.body.place:'',req.body.friends_only?1:0); res.redirect(`/${U(res).name}/album`); });
 // ⚠ 先擋掉非數字的 :id 再查資料庫。
@@ -1051,6 +1051,32 @@ const albumAllowed=async (req,res)=>{
   if(!a.friends_only || res.locals.isOwner) return true;
   return !!(res.locals.me && await isFriend(U(res).id, res.locals.me.id));
 };
+
+// ⚠ 相簿清單上的**封面**要跟著權限走。
+// 相簿頁、幻燈片、相片牆、照片頁四個入口都擋對了，但站主的相簿清單
+// （/:name/album）與小站首頁（/:name）是直接把 a.cover 印出來——
+// 於是上鎖與好友限定相簿的封面縮圖對任何未登入的人都是公開的。
+// 更糟的是縮圖與大圖的檔名只差一個 `_t`，而 /uploads 是 express.static
+// 直出、不查權限，所以拿到縮圖網址就等於拿到 1024px 大圖（稽核實測 200）。
+//
+// 這裡不把相簿藏起來——原站鎖住的相簿仍然會列出名稱加一個鎖頭圖示，
+// 藏起來反而不像原站。只是把封面換成通用的預設圖。
+//
+// 大圖可由縮圖網址推得這件事，是 /uploads 這條靜態路徑的結構問題，
+// 要徹底解決得讓私密檔案走一支會查權限的路由；這一版先把網址不外流。
+async function hideLockedCovers(req, res, rows){
+  if (res.locals.isOwner) return rows;
+  const locked = rows.filter(a => a.pass || a.friends_only);
+  if (!locked.length) return rows;
+  const friend = res.locals.me ? await isFriend(U(res).id, res.locals.me.id) : false;
+  const unlocked = req.session.unlocked || [];
+  for (const a of locked){
+    const okFriend = !a.friends_only || friend;
+    const okPass   = !a.pass || unlocked.includes(a.id);
+    if (!(okFriend && okPass)) a.cover = '';
+  }
+  return rows;
+}
 site.get('/album/:id',albumOf,async (req,res)=>{
   const a=res.locals.album;
   if(!await albumAllowed(req,res)) return res.status(403).render('msg',{title:'好友限定',msg:'這本相簿是好友限定，只有 '+U(res).nick+' 的好友才看得到。',back:'/'+U(res).name+'/album'});

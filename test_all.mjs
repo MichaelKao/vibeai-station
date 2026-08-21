@@ -611,5 +611,42 @@ console.log('\n=== 上限在併發下守得住（不能是先讀再寫）===');
   ok(`併發訂閱不會超過 5（實際 ${sn}）`, sn>0 && sn<=5);
 }
 
+
+console.log('\n=== 上鎖／好友限定相簿的封面不外流 ===');
+// ⚠ 稽核實測：站主自己的兩頁相簿清單（/:name/album 與 MyPage）
+// 把上鎖與好友限定相簿的封面縮圖直接印給任何人看，而 /uploads 是
+// express.static 直出，縮圖網址去掉 _t 就是 1024px 大圖（HTTP 200）。
+// 所以「看得到封面」等於「看得到裡面的照片」。相簿本身照原站列出來
+// （含鎖頭圖示），只是封面換成預設圖。
+{
+  const K = await reg('lockq','鎖鎖');
+  await post('/lockq/album',{title:'密碼本',pass:'1234'},K);
+  await post('/lockq/album',{title:'好友本',friends_only:'1'},K);
+  await post('/lockq/album',{title:'公開本'},K);
+  const mine = await text('/lockq/album',K);
+  const ids = {};
+  // 標題那顆連結長這樣：<a href="/lockq/album/3">公開本</a>
+  for (const m of mine.matchAll(/\/lockq\/album\/(\d+)">([^<]{2,6}本)</g)) ids[m[2]] = +m[1];
+  const up = async id => {
+    const g = new FormData();
+    g.append('photos', new Blob([png(200,150,id%5)],{type:'image/png'}), 'c.png');
+    await fetch(`${B}/lockq/album/${id}/upload`, {method:'POST',headers:{cookie:K},body:g,redirect:'manual'});
+  };
+  for (const k of ['密碼本','好友本','公開本']) if (ids[k]) await up(ids[k]);
+  ok('三本相簿都建起來也上傳了封面', Object.keys(ids).length===3, JSON.stringify(ids));
+  const thumbs = h => new Set(h.match(/\/uploads\/[^"]+_t\.jpg/g) || []).size;
+  ok('站主自己看得到全部三張封面', thumbs(await text('/lockq/album',K))===3);
+  for (const [page,name] of [['/lockq/album','相簿清單'],['/lockq','MyPage']]) {
+    const anon = await text(page);
+    const n = thumbs(anon);
+    ok(`路人在${name}只看得到公開本的封面（實際 ${n} 張）`, n===1);
+    ok(`${name}仍然列出上鎖相簿的標題（照原站）`, anon.includes('密碼本') && anon.includes('好友本'));
+  }
+  // 輸入正確密碼之後，那一本的封面就該回來
+  await post(`/lockq/album/${ids['密碼本']}/unlock`,{pass:'1234'},A);
+  const after = thumbs(await text('/lockq/album',A));
+  ok(`解鎖之後看得到兩張封面（實際 ${after} 張）`, after===2);
+}
+
 console.log(`\n===== ${pass} passed, ${fail} failed =====`);
 process.exit(fail?1:0);
