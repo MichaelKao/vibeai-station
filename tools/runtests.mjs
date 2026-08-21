@@ -349,5 +349,23 @@ if (!process.env.SKIP_BROWSER) {
   if (fails.length) bad += fails.length;
 }
 
+
+// ── 分頁（自己開站，不需要 Chrome）────────────────────────────────
+// 使用者明確要求「所有頁面都能分頁」。這一支真的塞資料進去，逐一驗
+// 分頁列有沒有出現、點下一頁是不是換了內容、邊界頁碼會不會壞、
+// 以及空清單有沒有話講（一片空白使用者分不出是沒東西還是壞了）。
+{
+  const r = spawnSync(process.execPath, ['tools/pagercheck.mjs'], {
+    env: { ...process.env, PORT: '3493', MSYS_NO_PATHCONV: '1' }, encoding: 'utf8',
+  });
+  const out = (r.stdout || '') + (r.stderr || '');
+  const line = out.split('\n').filter(l => l.includes('passed')).pop();
+  const fails = out.split('\n').filter(l => l.startsWith('! FAIL'));
+  console.log(`\n分頁：${line ? line.trim() : '(沒有結果——測試根本沒跑完)'}`);
+  for (const f of fails.slice(0, 20)) console.log('  ' + f.trim());
+  if (!line) { bad += 1; }
+  if (fails.length) bad += fails.length;
+}
+
 console.log(bad ? `\n共 ${bad} 項失敗` : '\n全部通過');
 process.exit(bad ? 1 : 0);
