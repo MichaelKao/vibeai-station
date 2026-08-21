@@ -2161,63 +2161,76 @@ async function calendar(uid, ym){
 }
 
 // 當年網誌側欄常見模組：分類、最新文章、最新迴響、月份彙整
-const blogSide=async (res, forPost=null)=>({
-  cats:await all('SELECT category,count(*) n FROM posts WHERE user_id=? GROUP BY category',U(res).id),
-  recent:await all('SELECT id,title FROM posts WHERE user_id=? ORDER BY id DESC LIMIT 8',U(res).id),
-  recentC:await all('SELECT c.author,c.post_id,p.title FROM comments c JOIN posts p ON p.id=c.post_id WHERE p.user_id=? ORDER BY c.id DESC LIMIT 5',U(res).id),
-  months:await all("SELECT substr(created,1,7) ym, count(*) n FROM posts WHERE user_id=? GROUP BY ym ORDER BY ym DESC",U(res).id),
-  cal:await calendar(U(res).id, res.calYm),
-  // 側欄自訂欄位（原站的 #boxFolder，可以有很多個）
-  folders:await all('SELECT * FROM folders WHERE user_id=? ORDER BY seq,id',U(res).id),
-  // 我的訂閱（原站的 #boxRssList）。這裡只讀資料庫裡上一次抓到的結果，
-  // **不等外部網站**——順手在背景更新，下一次進來就是新的。
-  // 直接 await 的話每一頁網誌都會被別人家的 RSS 拖慢。
-  subs:await (async () => {
-    const rows = await all("SELECT * FROM subs WHERE user_id=? AND last_title!='' ORDER BY id",U(res).id);
-    refreshSubs(U(res).id).catch(e=>console.error('[subs]',e.message));
-    return rows;
-  })(),
-  // 「歷史上的今天」：**跟這一篇同月同日**、但不同年發過的文。
-  //
-  // ⚠ 錨點是「這一篇文章的日期」，不是「伺服器的今天」。
-  // 原本寫成 new Date()，結果每一篇文章印出來的內容**完全一樣**、跟那篇的日期無關
-  // （多代理稽核抓到：2026-03-05 的文章印的是「去年的今天」）。
+// 網誌側欄：十次查詢，平行送。
+//
+// ⚠ 原本是一個物件字面量，十個屬性各自 `await`。物件字面量**是依序求值的**，
+// 所以那是十次一條接一條的往返，不是一次拿十份。而這支函式**網誌相關的
+// 每一頁都會呼叫**（列表、單篇、彙整、搜尋、發文、編輯…），所以它的成本
+// 要乘上站上絕大多數的頁面瀏覽。
+//
+// ⚠ 這裡**故意不做快取**（首頁那邊有做）。側欄印的是「我的分類」「最新文章」
+// 「最新迴響」——站主剛發完一篇文，回到網誌看到側欄還是舊的，他會以為
+// 發文失敗又發一次。那是拿使用者體驗換速度，不划算。平行化沒有這個代價。
+const blogSide = async (res, forPost = null) => {
+  const uid = U(res).id;
+  // 「歷史上的今天」的錨點是**這一篇文章的日期**，不是伺服器的今天。
+  // ⚠ 原本寫成 new Date()，結果每一篇文章印出來的內容完全一樣、跟那篇的
+  // 日期無關（稽核抓到：2026-03-05 的文章印的是「去年的今天」）。
   // 列表頁沒有「這一篇」，那裡才用今天。
-  //
-  // created 是 'YYYY-MM-DD HH:MM:SS' 字串，substr(created,6,5) 就是 'MM-DD'——
-  // 兩個驅動都有 substr，不用寫方言分支。
-  // 時區用台北，不要靠行程的 TZ：正式站的容器是 UTC，差 8 小時會在跨日前後抓錯天。
-  onThisDay:await (async () => {
-    const anchor = forPost && forPost.created
-      ? String(forPost.created)
-      : new Date().toLocaleDateString('sv-SE', { timeZone: 'Asia/Taipei' });
-    return all(
-      "SELECT id,title,created FROM posts WHERE user_id=? AND substr(created,6,5)=? "
-      + "AND substr(created,1,4)!=? AND id!=? ORDER BY created DESC LIMIT 5",
-      U(res).id, anchor.slice(5, 10), anchor.slice(0, 4), forPost ? forPost.id : 0);
-  })(),
-  // 側欄「最新引用」：blogside.ejs 讀 locals.trackbacks，但一直沒人給它，
-  // 所以站上明明有引用，那一格永遠印「尚無引用」。
-  // 側欄「最新引用」＝**別人引用了我哪一篇**，所以要 join t.from_post
-  // 取「引用者那一篇」的作者。之前 join 的是 t.post_id（＝被引用的、我自己那篇），
-  // 撈出來的 uname 永遠是站主本人，側欄整排印「, by 我自己」。
-  //
-  // key 叫 sideTbs 不叫 trackbacks：單篇文章頁（site.get('/blog/:id')）自己也傳一個
-  // trackbacks（那一篇的引用清單），而它是接在 ...blogSide(res) 後面展開的，
-  // 同名會把側欄這份蓋掉——文章頁的側欄就只看得到這一篇的引用，通常是「尚無引用」。
-  sideTbs:await all(`SELECT fp.id pid,fp.title,fu.name uname,t.created
-    FROM trackbacks t
-    JOIN posts mine ON mine.id=t.post_id
-    JOIN posts fp   ON fp.id=t.from_post
-    JOIN users fu   ON fu.id=fp.user_id
-    WHERE mine.user_id=? ORDER BY t.id DESC LIMIT 5`,U(res).id),
-  // #blogCategory 是「這個網誌屬於哪個站內分類」，原版是站方給整個網誌貼的標籤
-  // （blog_2012_default_skin_afuuu.html:1690），不是單篇文章的 category。
-  // users 表沒有這個欄位，先從站主自己文章最常用的 topic 推導出來——
-  // 沒有任何文章設過 topic 就回空字串，整塊不印，跟原版一樣
-  // （blog_2013_index_treehouse16.html 那位沒設分類，該存檔就沒有這個節點）。
-  blogTopic:(await one("SELECT topic FROM posts WHERE user_id=? AND topic!='' GROUP BY topic ORDER BY count(*) DESC LIMIT 1",U(res).id))?.topic||'',
-  moods:MOODS, weathers:WEATHERS, blogTopics:BLOG_TOPICS, places:PLACES});
+  // 時區用台北，不要靠行程的 TZ：正式站的容器是 UTC，差 8 小時會在跨日
+  // 前後抓錯天。
+  const anchor = forPost && forPost.created
+    ? String(forPost.created)
+    : new Date().toLocaleDateString('sv-SE', { timeZone: 'Asia/Taipei' });
+
+  const [cats, recent, recentC, months, cal, folders, subs, onThisDay, sideTbs, topicRow] =
+    await Promise.all([
+      all('SELECT category,count(*) n FROM posts WHERE user_id=? GROUP BY category', uid),
+      all('SELECT id,title FROM posts WHERE user_id=? ORDER BY id DESC LIMIT 8', uid),
+      all('SELECT c.author,c.post_id,p.title FROM comments c JOIN posts p ON p.id=c.post_id WHERE p.user_id=? ORDER BY c.id DESC LIMIT 5', uid),
+      all("SELECT substr(created,1,7) ym, count(*) n FROM posts WHERE user_id=? GROUP BY ym ORDER BY ym DESC", uid),
+      calendar(uid, res.calYm),
+      // 側欄自訂欄位（原站的 #boxFolder，可以有很多個）
+      all('SELECT * FROM folders WHERE user_id=? ORDER BY seq,id', uid),
+      // 我的訂閱（原站的 #boxRssList）。這裡只讀資料庫裡上一次抓到的結果，
+      // **不等外部網站**——順手在背景更新，下一次進來就是新的。
+      // 直接 await 的話每一頁網誌都會被別人家的 RSS 拖慢。
+      (async () => {
+        const rows = await all("SELECT * FROM subs WHERE user_id=? AND last_title!='' ORDER BY id", uid);
+        refreshSubs(uid).catch(e => console.error('[subs]', e.message));
+        return rows;
+      })(),
+      // 「歷史上的今天」：跟錨點同月同日、但不同年發過的文。
+      // created 是 'YYYY-MM-DD HH:MM:SS' 字串，substr(created,6,5) 就是 'MM-DD'——
+      // 兩個驅動都有 substr，不用寫方言分支。
+      all("SELECT id,title,created FROM posts WHERE user_id=? AND substr(created,6,5)=? "
+        + "AND substr(created,1,4)!=? AND id!=? ORDER BY created DESC LIMIT 5",
+        uid, anchor.slice(5, 10), anchor.slice(0, 4), forPost ? forPost.id : 0),
+      // 側欄「最新引用」＝**別人引用了我哪一篇**，所以要 join t.from_post
+      // 取「引用者那一篇」的作者。之前 join 的是 t.post_id（＝被引用的、我自己
+      // 那篇），撈出來的 uname 永遠是站主本人，側欄整排印「, by 我自己」。
+      //
+      // key 叫 sideTbs 不叫 trackbacks：單篇文章頁自己也傳一個 trackbacks
+      // （那一篇的引用清單），而它是接在 ...blogSide(res) 後面展開的，
+      // 同名會把側欄這份蓋掉——文章頁的側欄就只看得到這一篇的引用，
+      // 通常是「尚無引用」。
+      all(`SELECT fp.id pid,fp.title,fu.name uname,t.created
+        FROM trackbacks t
+        JOIN posts mine ON mine.id=t.post_id
+        JOIN posts fp   ON fp.id=t.from_post
+        JOIN users fu   ON fu.id=fp.user_id
+        WHERE mine.user_id=? ORDER BY t.id DESC LIMIT 5`, uid),
+      // #blogCategory 是「這個網誌屬於哪個站內分類」，原版是站方給整個網誌貼的
+      // 標籤（blog_2012_default_skin_afuuu.html:1690），不是單篇文章的 category。
+      // users 表沒有這個欄位，先從站主自己文章最常用的 topic 推導出來——
+      // 沒有任何文章設過 topic 就回空字串，整塊不印，跟原版一樣。
+      one("SELECT topic FROM posts WHERE user_id=? AND topic!='' GROUP BY topic ORDER BY count(*) DESC LIMIT 1", uid),
+    ]);
+
+  return { cats, recent, recentC, months, cal, folders, subs, onThisDay, sideTbs,
+    blogTopic: topicRow?.topic || '',
+    moods: MOODS, weathers: WEATHERS, blogTopics: BLOG_TOPICS, places: PLACES };
+};
 site.get('/blog',async (req,res)=>{
   const cat=qs1(req.query.cat)||null, ym=/^\d{4}-\d{2}$/.test(qs1(req.query.ym))?qs1(req.query.ym):null;
   let page=pageNo(req.query.p);
