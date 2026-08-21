@@ -85,6 +85,15 @@
             <% }) %>
           </ol>
         </div>
+          <%# 分頁：這一區原本硬砍 30 筆，第 31 筆之後點不到。
+              縮到單一範圍才分得了頁（一個 ?p= 沒辦法同時指四個清單），
+              沒縮範圍時這裡是預覽，給一條「看全部」把人帶去該範圍。 %>
+          <% if (sOne) { %>
+          <%- include('partials/pager2012', { pgPage: sPage, pgPages: sPages, pgId: 'search_users_pages',
+                pgHref: n => seQ(seType) + '&p=' + n }) %>
+          <% } else if (seC.users > sPer) { %>
+          <p class="w2-more">符合的站友有 <%= seC.users %> 位，這裡先列前 <%= sPer %> 位。</p>
+          <% } %>
       </div>
       <% } %>
 
@@ -106,6 +115,15 @@
             <% }) %>
           </ul>
           <% if (albums.length) { %><p class="w2-more"><a href="/albums">更多相簿</a></p><% } %>
+          <%# 分頁：這一區原本硬砍 30 筆，第 31 筆之後點不到。
+              縮到單一範圍才分得了頁（一個 ?p= 沒辦法同時指四個清單），
+              沒縮範圍時這裡是預覽，給一條「看全部」把人帶去該範圍。 %>
+          <% if (sOne) { %>
+          <%- include('partials/pager2012', { pgPage: sPage, pgPages: sPages, pgId: 'search_albums_pages',
+                pgHref: n => seQ(seType) + '&p=' + n }) %>
+          <% } else if (seC.albums > sPer) { %>
+          <p class="w2-more"><a href="<%= seQ('photo') %>">看全部 <%= seC.albums %> 筆 →</a></p>
+          <% } %>
         </div>
       </div>
       <% } %>
@@ -132,6 +150,15 @@
             <% }) %>
           </ol>
           <% if (posts.length) { %><p class="w2-more"><a href="/blogs">更多網誌</a></p><% } %>
+          <%# 分頁：這一區原本硬砍 30 筆，第 31 筆之後點不到。
+              縮到單一範圍才分得了頁（一個 ?p= 沒辦法同時指四個清單），
+              沒縮範圍時這裡是預覽，給一條「看全部」把人帶去該範圍。 %>
+          <% if (sOne) { %>
+          <%- include('partials/pager2012', { pgPage: sPage, pgPages: sPages, pgId: 'search_posts_pages',
+                pgHref: n => seQ(seType) + '&p=' + n }) %>
+          <% } else if (seC.posts > sPer) { %>
+          <p class="w2-more"><a href="<%= seQ('site') %>">看全部 <%= seC.posts %> 筆 →</a></p>
+          <% } %>
         </div>
       </div>
       <% } %>
@@ -154,6 +181,15 @@
             <% }) %>
           </ol>
           <% if (seV.length) { %><p class="w2-more"><a href="/video">更多影音</a></p><% } %>
+          <%# 分頁：這一區原本硬砍 30 筆，第 31 筆之後點不到。
+              縮到單一範圍才分得了頁（一個 ?p= 沒辦法同時指四個清單），
+              沒縮範圍時這裡是預覽，給一條「看全部」把人帶去該範圍。 %>
+          <% if (sOne) { %>
+          <%- include('partials/pager2012', { pgPage: sPage, pgPages: sPages, pgId: 'search_videos_pages',
+                pgHref: n => seQ(seType) + '&p=' + n }) %>
+          <% } else if (seC.videos > sPer) { %>
+          <p class="w2-more"><a href="<%= seQ('video') %>">看全部 <%= seC.videos %> 筆 →</a></p>
+          <% } %>
         </div>
       </div>
       <% } %>

@@ -46,7 +46,9 @@
             <br />
 
             <% if (k) { %>
-            <p>「<b><%= k %></b>」找到 <b><%= rows.length %></b> 篇</p>
+            <%# 數字要印**命中總數**，不是這一頁的筆數。原本印 rows.length，
+                而後端硬砍 50 筆，所以命中 300 篇也永遠顯示「找到 50 篇」。 %>
+            <p>「<b><%= k %></b>」找到 <b><%= total %></b> 篇</p>
             <table>
               <% rows.forEach(p => { %>
               <tr>
@@ -60,6 +62,11 @@
               <tr><td nowrap>找不到符合的文章</td><td></td></tr>
               <% } %>
             </table>
+            <%# 分頁：搜尋結果原本硬砍 50 筆，更舊的文章怎麼點都到不了，
+                而這一頁的用途正好就是翻舊文。 %>
+            <%- include('partials/pager2012', { pgPage: page, pgPages: pages, pgId: 'blog_search_pages',
+                  pgHref: n => '/' + u.name + '/blog/search?q=' + encodeURIComponent(k)
+                             + (inBody ? '&body=1' : '') + '&p=' + n }) %>
             <br />
             <% } %>
           </div>

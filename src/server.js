@@ -309,9 +309,20 @@ app.get('/search',async (req,res)=>{
               where:"v.title LIKE ? ESCAPE '\\' OR v.descr LIKE ? ESCAPE '\\'", args:[like,like] },
   };
   const cnt = async (key,s) => k && want.has(key) ? (await one(`SELECT count(*) c ${s.from} WHERE ${s.where}`,...s.args)).c : 0;
+  // ⚠ 每一區原本硬砍 30 筆又沒有分頁：搜「小明」命中 2000 篇文章，
+  // 標題誠實地寫著「文章（2000）」，底下卻只有 30 筆，第 31 筆之後
+  // 不管怎麼點都到不了。使用者的結論是「這個搜尋是假的」。
+  //
+  // 分頁只在「範圍縮到單一區」的時候有意義（四區同頁的話一個 ?p= 沒辦法
+  // 同時指四個清單）。所以：選了範圍就真的分頁；沒選範圍是預覽，
+  // 每一區印 20 筆＋一個「看全部 N 筆」連到該範圍。
+  const sPer = 20, sOne = want.size === 1;
+  const sTotal = k && sOne ? await (async()=>{ let n=0; for(const key of want) n=Math.max(n, await cnt(key,W[key])); return n; })() : 0;
+  const sPage = sOne ? clampPage(pageNo(req.query.p), Math.ceil(sTotal/sPer)) : 1;
   const list = async (key,cols,order,s) => k && want.has(key)
-    ? await all(`SELECT ${cols} ${s.from} WHERE ${s.where} ORDER BY ${order} DESC LIMIT 30`,...s.args) : [];
-  res.render('search',{k,type,
+    ? await all(`SELECT ${cols} ${s.from} WHERE ${s.where} ORDER BY ${order} DESC LIMIT ? OFFSET ?`,
+        ...s.args, sPer, (sPage-1)*sPer) : [];
+  res.render('search',{k,type, sPage, sPer, sOne, sPages:Math.max(1,Math.ceil(sTotal/sPer)),
     // ⚠ 一定要 ORDER BY。原本三條都沒有排序又只取 30 筆，
     // 結果永遠是 rowid 最小（**最舊**）的 30 筆——新內容一律搜不到。
     users:  await list('users','name,nick,avatar','id',W.users),
@@ -1890,11 +1901,20 @@ site.get('/blog',async (req,res)=>{
 site.get('/blog/search',async (req,res)=>{
   const k=qs1(req.query.q).trim(), inBody=req.query.body==='1';
   const like=likeArg(k);
-  const rows = k ? await all(
-    inBody ? "SELECT * FROM posts WHERE user_id=? AND pass='' AND (title LIKE ? ESCAPE '\\' OR body LIKE ? ESCAPE '\\') ORDER BY id DESC LIMIT 50"
-           : "SELECT * FROM posts WHERE user_id=? AND (title LIKE ? ESCAPE '\\') ORDER BY id DESC LIMIT 50",
-    ...(inBody ? [U(res).id,like,like] : [U(res).id,like])) : [];
-  res.render('blog_search',{nav:'blog',k,inBody,rows,...await blogSide(res)});
+  // ⚠ 原本硬砍 50 筆又沒有分頁：站主找自己三年前寫過什麼，關鍵字一命中
+  // 上百篇就只看得到最新的 50 篇，更舊的怎麼點都到不了——而這一頁的用途
+  // 正好就是「翻舊文」。改成分頁。
+  const per=20;
+  const wh = inBody
+    ? "user_id=? AND pass='' AND (title LIKE ? ESCAPE '\\' OR body LIKE ? ESCAPE '\\')"
+    : "user_id=? AND (title LIKE ? ESCAPE '\\')";
+  const args = inBody ? [U(res).id,like,like] : [U(res).id,like];
+  const total = k ? (await one(`SELECT count(*) c FROM posts WHERE ${wh}`,...args)).c : 0;
+  const page = clampPage(pageNo(req.query.p), Math.ceil(total/per));
+  const rows = k ? await all(`SELECT * FROM posts WHERE ${wh} ORDER BY id DESC LIMIT ? OFFSET ?`,
+    ...args, per, (page-1)*per) : [];
+  res.render('blog_search',{nav:'blog',k,inBody,rows,total,page,per,
+    pages:Math.max(1,Math.ceil(total/per)),...await blogSide(res)});
 });
 // RSS
 // ── 看地圖 ───────────────────────────────────────────────────────────────
