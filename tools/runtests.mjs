@@ -59,7 +59,7 @@ for (let i = 0; i < 80; i++) {
 }
 
 let bad = 0;
-for (const [name, file] of [['回歸測試', 'test_all.mjs'], ['SQL 方言', 'test_pg.mjs'], ['SSRF 防護', 'test_ssrf.mjs'], ['啟動搬移', 'test_migrate.mjs']]) {
+for (const [name, file] of [['回歸測試', 'test_all.mjs'], ['SQL 方言', 'test_pg.mjs'], ['SSRF 防護', 'test_ssrf.mjs'], ['啟動搬移', 'test_migrate.mjs'], ['回頭路', 'tools/navback.mjs']]) {
   const r = spawnSync(process.execPath, [file], {
     env: { ...process.env, BASE: base, DATA_DIR: DIR }, encoding: 'utf8',
   });
@@ -158,6 +158,35 @@ if (!process.env.SKIP_BROWSER) {
   const line = out.split('\n').filter(l => l.includes('passed')).pop();
   const fails = out.split('\n').filter(l => l.startsWith('! FAIL'));
   console.log(`\n瀏覽器流程：${line ? line.trim() : '(沒有結果——測試根本沒跑完)'}`);
+  for (const f of fails.slice(0, 20)) console.log('  ' + f.trim());
+  if (!line) { bad += 1; console.log('  ' + out.trim().split('\n').slice(-8).join('\n  ')); }
+  if (fails.length) bad += fails.length;
+}
+
+
+// ── 頁籤／範圍切換（要 Chrome）────────────────────────────────────────
+// 為什麼要單獨一支：uicheck --dead 找的是「點了完全沒反應」的控制項，
+// 但搜尋範圍那四顆是 radio+label，點下去 radio 真的會被選起來——對它來說
+// 算「有反應」，所以它對 /albums 回報 0 問題，而使用者實際的感受是
+// 「那排頁籤不能點」（後端當時根本不讀 type）。這一支點完還會比對結果頁。
+if (!process.env.SKIP_BROWSER) {
+  const srv2 = spawn(process.execPath, ['src/server.js'], {
+    env: { ...process.env, DATA_DIR: DIR, PORT: '3132' },
+    stdio: ['ignore', 'ignore', 'inherit'],
+  });
+  const b2 = 'http://127.0.0.1:3132';
+  for (let i = 0; i < 80; i++) {
+    try { if ((await fetch(b2 + '/')).ok) break; } catch { }
+    await sleep(500);
+  }
+  const r = spawnSync(process.execPath, ['tools/tabclick.mjs'], {
+    env: { ...process.env, BASE: b2, MSYS_NO_PATHCONV: '1' }, encoding: 'utf8',
+  });
+  srv2.kill();
+  const out = (r.stdout || '') + (r.stderr || '');
+  const line = out.split('\n').filter(l => l.includes('passed')).pop();
+  const fails = out.split('\n').filter(l => l.startsWith('! FAIL'));
+  console.log(`\n頁籤切換：${line ? line.trim() : '(沒有結果——測試根本沒跑完)'}`);
   for (const f of fails.slice(0, 20)) console.log('  ' + f.trim());
   if (!line) { bad += 1; console.log('  ' + out.trim().split('\n').slice(-8).join('\n  ')); }
   if (fails.length) bad += fails.length;
