@@ -198,6 +198,11 @@ if (!process.env.SKIP_BROWSER) {
     env: { ...process.env, BASE: b2, MSYS_NO_PATHCONV: '1',
            USER_NAME: 'alpha', USER_PASS: 'test1234' }, encoding: 'utf8',
   });
+  // 客製化：自訂 CSS／版型／音樂盒真的套到畫面上了嗎
+  const r6 = spawnSync(process.execPath, ['tools/customcheck.mjs'], {
+    env: { ...process.env, BASE: b2, MSYS_NO_PATHCONV: '1',
+           USER_NAME: 'alpha', USER_PASS: 'test1234' }, encoding: 'utf8',
+  });
   srv2.kill();
   const out = (r.stdout || '') + (r.stderr || '');
   const line = out.split('\n').filter(l => l.includes('passed')).pop();
@@ -230,6 +235,14 @@ if (!process.env.SKIP_BROWSER) {
   for (const f of fails5.slice(0, 20)) console.log('  ' + f.trim());
   if (!line5) { bad += 1; console.log('  ' + out5.trim().split('\n').slice(-8).join('\n  ')); }
   if (fails5.length) bad += fails5.length;
+
+  const out6 = (r6.stdout || '') + (r6.stderr || '');
+  const line6 = out6.split('\n').filter(l => l.includes('passed')).pop();
+  const fails6 = out6.split('\n').filter(l => l.startsWith('! FAIL'));
+  console.log(`\n客製化：${line6 ? line6.trim() : '(沒有結果——測試根本沒跑完)'}`);
+  for (const f of fails6.slice(0, 20)) console.log('  ' + f.trim());
+  if (!line6) { bad += 1; console.log('  ' + out6.trim().split('\n').slice(-8).join('\n  ')); }
+  if (fails6.length) bad += fails6.length;
 }
 
 console.log(bad ? `\n共 ${bad} 項失敗` : '\n全部通過');
