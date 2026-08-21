@@ -312,6 +312,12 @@ export function schemaSql(forDriver = driver) {
     -- 沒有索引就要把整張 users 撈出來排序一次。站友一多，每一個訪客
     -- 開首頁都付這個代價。
     CREATE INDEX IF NOT EXISTS idx_users_visits  ON users(visits DESC);
+    -- /blogs 是 WHERE p.pass='' ORDER BY p.views DESC, p.id DESC LIMIT 20。
+    -- idx_posts_views 只有 views，資料庫還是得先掃出所有 pass='' 的列再排序。
+    -- 這一條把過濾條件與排序鍵放進同一個索引，變成直接讀前 20 筆。
+    -- 分類頁（?topic=）另外一條。
+    CREATE INDEX IF NOT EXISTS idx_posts_pub    ON posts(pass, views DESC, id DESC);
+    CREATE INDEX IF NOT EXISTS idx_posts_topic  ON posts(topic, pass, views DESC, id DESC);
   `);
 
   return stmts;
