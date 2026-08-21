@@ -1,5 +1,10 @@
 {
   "$schema": "https://railway.com/railway.schema.json",
   "build": { "builder": "NIXPACKS" },
-  "deploy": { "startCommand": "pnpm start", "restartPolicyType": "ON_FAILURE", "healthcheckPath": "/" }
+  "deploy": {
+    "_comment_startCommand": "⚠ 這裡原本是 `pnpm start`，那會讓每一次部署都被標成 CRASHED 並寄一封信。原因在 deploy log 裡看得一清二楚：容器停止時我們的 node 是乾淨收工的（[shutdown] 收到 SIGTERM → 現有請求都跑完了 → 收工，離開代碼 0），但下一行就是 `ELIFECYCLE Command failed.`——SIGTERM 是送給整個 cgroup 的，pnpm 自己也收到，它結束子行程之後**以非零離開**。Railway 看到非零就判定 crash。改成直接跑 node，讓訊號直達我們自己的關機流程，中間不要多一層會擅自改寫離開代碼的殼。",
+    "startCommand": "node src/server.js",
+    "restartPolicyType": "ON_FAILURE",
+    "healthcheckPath": "/healthz"
+  }
 }
