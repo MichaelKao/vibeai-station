@@ -119,7 +119,24 @@ async function siteNotices(){
 
 // locals
 app.use(async (req,res,next)=>{
-  res.locals.me = req.session.uid ? await one('SELECT id,name,nick,avatar,admin,vip FROM users WHERE id=?',req.session.uid) : null;
+  // session 綁著當時的 salt。改密碼會換一組 salt，於是**其他裝置**上那些
+  // 還帶著舊 salt 的 session 下一個請求就自動失效。
+  //
+  // ⚠ 原本改完密碼只有「新密碼從此生效」，已經登入的 session 一個都不會斷。
+  // 帳號被盜的人改了密碼，以為安全了，其實小偷那邊還開著。
+  // express-session 沒有「列出某個使用者的所有 session」的能力（store 是
+  // 用 session id 當鍵的），所以改成在每個請求驗一次，不必掃 store。
+  res.locals.me = null;
+  if (req.session.uid){
+    const me = await one('SELECT id,name,nick,avatar,admin,vip,salt FROM users WHERE id=?', req.session.uid);
+    if (me && (!req.session.sv || req.session.sv === me.salt.slice(0, 12))){
+      req.session.sv = me.salt.slice(0, 12);
+      delete me.salt;
+      res.locals.me = me;
+    } else {
+      delete req.session.uid; delete req.session.sv;   // 密碼已被更換，這份 session 作廢
+    }
+  }
   res.locals.u = null; res.locals.nav=''; res.locals.flash = req.session.flash; delete req.session.flash;
   // 站台自己的絕對網址。分享列與「引用網址」原本只印站內相對路徑，
   // 靠頁尾那段 JS 補 location.origin——**沒有 JS 就複製到一段沒用的路徑**
@@ -224,7 +241,22 @@ app.get('/rank',async (req,res)=>res.render('rank',{
   posts: await all(`SELECT p.*,u.name uname,u.nick FROM posts p JOIN users u ON u.id=p.user_id WHERE p.pass='' ORDER BY p.views DESC LIMIT 30`)}));
 app.get('/search',async (req,res)=>{
   const k=qs1(req.query.q).trim(), like=likeArg(k);
-  // 三區的 WHERE 條件抽出來共用，count 與清單才不會分歧。
+  // 搜尋範圍 type：原站頁首那四顆 radio（相簿／網誌／影音／網頁，name=type）。
+  //
+  // ⚠ 這四顆原本是**擺著好看的**——views/albums.ejs 印了 radio，但這支路由
+  // 根本沒讀 type，點哪一顆送出來的結果都一樣。使用者的感受就是「不能點」。
+  // 現在真的分範圍，而且順便省掉不需要的查詢（原本每次都跑四組 count）。
+  //
+  // 「網頁」原站送去 Yahoo 網頁搜尋，本站不連外，當成「全部」。
+  // 值同時來自兩處表單，兩邊的命名不一樣，都要接住：
+  //   views/albums.ejs 頁首那四顆      photo / site / video / web
+  //   head2012_site.ejs 個人頁的搜尋列   article / photo / video
+  const SCOPES = { photo:['albums'], site:['posts'], article:['posts'],
+                   video:['videos'],
+                   web:['users','albums','posts','videos'] };
+  const type = SCOPES[qs1(req.query.type)] ? qs1(req.query.type) : '';
+  const want = new Set(SCOPES[type] || ['users','albums','posts','videos']);
+  // 各區的 WHERE 條件抽出來共用，count 與清單才不會分歧。
   // ⚠ 分歧的後果不只是數字不準：posts 那條的 `pass=''` 少寫一次，
   // 數字就會把上鎖文章算進去，變成另一種外洩。
   const W = {
@@ -234,18 +266,24 @@ app.get('/search',async (req,res)=>{
     // 上鎖文章不讓內文被搜出來，只比對標題
     posts:  { from:'FROM posts p JOIN users u ON u.id=p.user_id',
               where:"p.title LIKE ? ESCAPE '\\' OR (p.pass='' AND p.body LIKE ? ESCAPE '\\')", args:[like,like] },
+    videos: { from:'FROM videos v JOIN users u ON u.id=v.user_id',
+              where:"v.title LIKE ? ESCAPE '\\' OR v.descr LIKE ? ESCAPE '\\'", args:[like,like] },
   };
-  const cnt = async s => k ? (await one(`SELECT count(*) c ${s.from} WHERE ${s.where}`,...s.args)).c : 0;
-  res.render('search',{k,
+  const cnt = async (key,s) => k && want.has(key) ? (await one(`SELECT count(*) c ${s.from} WHERE ${s.where}`,...s.args)).c : 0;
+  const list = async (key,cols,order,s) => k && want.has(key)
+    ? await all(`SELECT ${cols} ${s.from} WHERE ${s.where} ORDER BY ${order} DESC LIMIT 30`,...s.args) : [];
+  res.render('search',{k,type,
     // ⚠ 一定要 ORDER BY。原本三條都沒有排序又只取 30 筆，
     // 結果永遠是 rowid 最小（**最舊**）的 30 筆——新內容一律搜不到。
-    users:k?await all(`SELECT name,nick,avatar ${W.users.from} WHERE ${W.users.where} ORDER BY id DESC LIMIT 30`,...W.users.args):[],
-    albums:k?await all(`SELECT a.*,u.name uname ${W.albums.from} WHERE ${W.albums.where} ORDER BY a.id DESC LIMIT 30`,...W.albums.args):[],
-    posts:k?await all(`SELECT p.*,u.name uname ${W.posts.from} WHERE ${W.posts.where} ORDER BY p.id DESC LIMIT 30`,...W.posts.args):[],
+    users:  await list('users','name,nick,avatar','id',W.users),
+    albums: await list('albums','a.*,u.name uname','a.id',W.albums),
+    posts:  await list('posts','p.*,u.name uname','p.id',W.posts),
+    videos: await list('videos','v.*,u.name uname','v.id',W.videos),
     // 標題的數字要是**真的命中數**，不是這一頁的筆數。
     // 原本 view 直接印 users.length，那永遠是 min(命中數, 30)——
     // 搜到 2000 個帳號也只會顯示「站友（30）」。
-    counts:{ users:await cnt(W.users), albums:await cnt(W.albums), posts:await cnt(W.posts) }});
+    counts:{ users:await cnt('users',W.users), albums:await cnt('albums',W.albums),
+             posts:await cnt('posts',W.posts), videos:await cnt('videos',W.videos) }});
 });
 app.get('/help',(req,res)=>res.render('help'));
 
@@ -750,7 +788,22 @@ site.post('/settings',requireLogin,requireOwner,upload.single('avatar'),async(re
     catch (e) { if(e && e.code==='BAD_IMAGE') avatarErr=e.message; else throw e; }
   }
   await run('UPDATE users SET nick=?,intro=?,music=?,css=?,css_blog=?,avatar=?,theme=? WHERE id=?',cut((nick||'').trim()||u.nick, 20),(intro||'').slice(0,500),cleanMusic(music),(css||'').slice(0,20000),(css_blog||'').slice(0,20000),avatar,isSkin(req.body.theme)?(req.body.theme||''):'',u.id);
-  if(pass){ if(pass!==pass2) {flash(req,'兩次密碼不一致，其他設定已儲存');return res.redirect(`/${u.name}/settings`);} const s=salt(); await run('UPDATE users SET pass=?,salt=? WHERE id=?',hash(pass,s),s,u.id); }
+  // 改密碼要先驗舊密碼。
+  //
+  // ⚠ 原本只要人在電腦前（借用、忘了登出、XSS 拿到一次請求的機會）就能
+  // 直接把密碼換掉，帳號當場易主。多驗一次舊密碼，攻擊者光有 session 沒有用。
+  if(pass){
+    if(!check(await one('SELECT * FROM users WHERE id=?', u.id), req.body.oldpass || '')){
+      flash(req,'舊密碼不對，密碼沒有更換，其他設定已儲存');
+      return res.redirect(`/${u.name}/settings`);
+    }
+    if(pass!==pass2){ flash(req,'兩次密碼不一致，其他設定已儲存'); return res.redirect(`/${u.name}/settings`); }
+    if(pass.length<4){ flash(req,'密碼至少 4 碼，密碼沒有更換，其他設定已儲存'); return res.redirect(`/${u.name}/settings`); }
+    const s=salt(); await run('UPDATE users SET pass=?,salt=? WHERE id=?',hash(pass,s),s,u.id);
+    // 換了 salt＝其他裝置的 session 全數失效（見上面 locals 那段）。
+    // 自己這一份要跟著更新，不然下一個請求會把操作者本人登出。
+    req.session.sv = s.slice(0, 12);
+  }
   flash(req, avatarErr ? '設定已儲存，但大頭貼沒有換：'+avatarErr : '設定已儲存'); res.redirect(`/${u.name}/settings`);
 });
 

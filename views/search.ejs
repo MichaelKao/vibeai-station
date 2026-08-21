@@ -10,14 +10,27 @@
      原站的搜尋結果頁沒有存檔（Yahoo 搜尋是另一個網域），照 §3-A
      用既有元件組，不自創新的視覺。
 
-     表單契約不動：action="/search"、GET、欄位名 q
-     （src/server.js 的 app.get('/search') 只讀 q）。
+     表單契約：action="/search"、GET、欄位名 q ＋ type（搜尋範圍）。
 
-     資料來自 app.get('/search')：k / users / albums / posts。 */
+     ⚠ type 這個欄位原本是**擺著好看的**——views/albums.ejs 頁首那四顆
+     radio（相簿／網誌／影音／網頁）印出來了，但 src/server.js 的
+     app.get('/search') 根本沒讀它，點哪一顆結果都一樣。使用者的感受
+     就是「那排頁籤不能點」。現在後端真的分範圍，這一頁也把範圍做成
+     **純連結**的頁籤：沒有 JS 也切得動，網址可以直接分享。
+
+     資料來自 app.get('/search')：k / type / users / albums / posts / videos。 */
+  const seC = locals.counts || { users: users.length, albums: albums.length, posts: posts.length, videos: 0 };
+  const seV = locals.videos || [];
   /* 標題的數字要用**真的命中數**（後端傳來的 counts），不是這一頁的筆數。
-     三區各自 LIMIT 30，用 .length 的話搜到 2000 筆也只會顯示 30。 */
-  const seC = locals.counts || { users: users.length, albums: albums.length, posts: posts.length };
-  const seTotal = seC.users + seC.albums + seC.posts;
+     各區各自 LIMIT 30，用 .length 的話搜到 2000 筆也只會顯示 30。 */
+  const seTotal = seC.users + seC.albums + seC.posts + seC.videos;
+  const seType  = locals.type || '';
+  /* 值照抄原站的 name=type。'' ＝ 全部；'web' 原站是送去 Yahoo 網頁搜尋，
+     本站不連外，當成全部。 */
+  const seTabs = [['', '全部'], ['photo', '相簿'], ['site', '網誌'], ['video', '影音'], ['web', '網頁']];
+  const seQ    = t => '/search?q=' + encodeURIComponent(k) + (t ? '&type=' + t : '');
+  const seShow = s => !seType || seType === 'web'
+                   || ({ photo: 'albums', site: 'posts', article: 'posts', video: 'videos' })[seType] === s;
 %>
 <%- include('partials/head2012', { title: (k ? k + ' - ' : '') + '搜尋 - 無名小站' }) %>
 
@@ -32,12 +45,19 @@
             <input type="text" name="q" value="<%= k %>" size="24" maxlength="40"
                    placeholder="找相簿 / 找文章 / 找朋友" autofocus>
             <input type="submit" class="w2-btn" value="搜尋">
+            <%# 目前的範圍要跟著表單走，不然在結果頁重搜一次會跳回「全部」 %>
+            <% if (seType) { %><input type="hidden" name="type" value="<%= seType %>"><% } %>
           </form>
 
           <% if (k) { %>
+          <p class="w2-search-scope">
+<%# article 是個人頁搜尋列用的別名，等同 site，頁籤要標在「網誌」那顆上 %>
+<% const seOn = seType === 'article' ? 'site' : seType; %>
+<% seTabs.forEach(t => { %>            <a href="<%= seQ(t[0]) %>"<% if (seOn === t[0]) { %> class="on"<% } %>><%= t[1] %></a>
+<% }) %>          </p>
           <p class="w2-blog-count">「<%= k %>」找到 <b><%= seTotal %></b> 筆</p>
           <% } else { %>
-          <p class="w2-blog-count">輸入關鍵字，會同時找站友、相簿與網誌文章。</p>
+          <p class="w2-blog-count">輸入關鍵字，會同時找站友、相簿、網誌文章與影音。</p>
           <% } %>
 
         </div>
@@ -45,6 +65,7 @@
 
       <% if (k) { %>
 
+      <% if (seShow('users')) { %>
       <div class="mod w2-auth" id="users">
         <div class="hd"><h2>站友（<%= seC.users %>）</h2></div>
         <div class="bd">
@@ -65,7 +86,9 @@
           </ol>
         </div>
       </div>
+      <% } %>
 
+      <% if (seShow('albums')) { %>
       <div class="mod w2-auth" id="albums">
         <div class="hd"><h2>相簿（<%= seC.albums %>）</h2></div>
         <div class="bd">
@@ -85,7 +108,9 @@
           <% if (albums.length) { %><p class="w2-more"><a href="/albums">更多相簿</a></p><% } %>
         </div>
       </div>
+      <% } %>
 
+      <% if (seShow('posts')) { %>
       <div class="mod w2-auth" id="posts">
         <div class="hd"><h2>網誌（<%= seC.posts %>）</h2></div>
         <div class="bd">
@@ -109,20 +134,46 @@
           <% if (posts.length) { %><p class="w2-more"><a href="/blogs">更多網誌</a></p><% } %>
         </div>
       </div>
+      <% } %>
+
+      <% if (seShow('videos')) { %>
+      <div class="mod w2-auth" id="videos">
+        <div class="hd"><h2>影音（<%= seC.videos %>）</h2></div>
+        <div class="bd">
+          <% if (!seV.length) { %><p class="w2-note">找不到相符的影音。</p><% } %>
+          <ol class="w2-bloglist w2-nothumb">
+            <% seV.forEach(v => { %>
+            <li>
+              <div class="content">
+                <p class="meta"><a class="uname" href="/<%= v.uname %>"><%= v.uname %></a>
+                  <span class="topic"><%= v.views %> 人次</span></p>
+                <%# 單支影音沒有獨立頁面（只有 /:name/video 列表），連到那個人的影音頁 %>
+                <h3><a class="skin-main-link" href="/<%= v.uname %>/video"><%= v.title %></a></h3>
+              </div>
+            </li>
+            <% }) %>
+          </ol>
+          <% if (seV.length) { %><p class="w2-more"><a href="/video">更多影音</a></p><% } %>
+        </div>
+      </div>
+      <% } %>
 
       <% } %>
 
     </div>
     <div class="side">
 
-      <% if (k) { %>
+      <%# 縮了範圍就不印這一塊：範圍外的 count 一律是 0（後端根本沒查），
+          印出來會變成「站友（0）」但其實有七個，比不印更誤導。 %>
+      <% if (k && (!seType || seType === 'web')) { %>
       <div class="mod w2-auth-side">
         <div class="hd"><h2>搜尋結果</h2></div>
         <div class="bd">
           <ul>
-            <li><a href="#users">站友（<%= seC.users %>）</a></li>
-            <li><a href="#albums">相簿（<%= seC.albums %>）</a></li>
-            <li><a href="#posts">網誌（<%= seC.posts %>）</a></li>
+            <li><a href="<%= seQ('') %>#users">站友（<%= seC.users %>）</a></li>
+            <li><a href="<%= seQ('') %>#albums">相簿（<%= seC.albums %>）</a></li>
+            <li><a href="<%= seQ('') %>#posts">網誌（<%= seC.posts %>）</a></li>
+            <li><a href="<%= seQ('') %>#videos">影音（<%= seC.videos %>）</a></li>
           </ul>
         </div>
       </div>

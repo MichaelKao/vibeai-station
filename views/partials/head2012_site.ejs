@@ -140,8 +140,8 @@
     <div class="right-side">
         <div id="wretch-search" class="bar-block">
             <%# 站內搜尋：src/server.js 的 app.get('/search') 只讀 q，所以輸入框 name 是 q。
-                三顆 radio（name=type）是原站的服務切換，後端沒有這個參數、會被忽略，
-                但 .service-list 與 legend 的版面要靠它們，照原樣留著。 %>
+                三顆 radio（name=type）是原站的服務切換。後端本來不吃 type、點哪顆都一樣，
+                現在 app.get('/search') 真的分範圍了：article→網誌、photo→相簿、video→影音。 %>
             <form method="get" action="/search" name="searchForm">
                             <fieldset>
                     <legend><%= w2Service %><span>選擇服務</span></legend>
@@ -211,8 +211,22 @@
         <%# 認證章：原版在 #banner 的第一個節點（非 VIP 就整塊沒有） %>
         <%- include('vipicon2012', { viUser: w2Owner, viStyle: 'silver' }) %>
         <% if (w2Head === 'list') { %>
+        <%# 回相簿總站的入口。
+            ⚠ 原站的麵包屑就是從「NAME's Album」開始的，沒有總站那一層——
+            從 /albums 點進一本相簿之後，唯一回得去的路是左上角那個「Album」
+            字（current-service 連結）。它看起來像標籤不像連結，實測有人
+            找不到，只好一路點回首頁。這裡在最前面補一層，樣式沿用同一組
+            font.normal-a，版面寬度不變。 %>
+        <a href="/albums"><font class="normal-a">無名相簿</font></a><font class="normal-a"> &gt; </font>
         <a href="/<%= w2Owner.name %>/album"><%= w2Owner.name %>'s AlbumList</a>
         <% } else { %>
+        <%# 回相簿總站的入口。
+            ⚠ 原站的麵包屑就是從「NAME's Album」開始的，沒有總站那一層——
+            從 /albums 點進一本相簿之後，唯一回得去的路是左上角那個「Album」
+            字（current-service 連結）。它看起來像標籤不像連結，實測有人
+            找不到，只好一路點回首頁。這裡在最前面補一層，樣式沿用同一組
+            font.normal-a，版面寬度不變。 %>
+        <a href="/albums"><font class="normal-a">無名相簿</font></a><font class="normal-a"> &gt; </font>
         <a href="/<%= w2Owner.name %>/album"><font style="text-decoration: underline;" class="normal-a"><%= w2Owner.name %>'s Album</font></a>
         <font class="normal-a">&gt; <%= locals.w2Crumb || (w2Book ? w2Book.title : '') %></font>
           <% if (w2Book && w2Book.descr) { %>
