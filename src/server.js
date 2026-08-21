@@ -75,6 +75,36 @@ app.use(session({
   // Railway 是反向代理，協定寫在 X-Forwarded-Proto 裡。
   cookie: { maxAge: 30*864e5, httpOnly: true, sameSite: 'lax', secure: 'auto' },
 }));
+// 跨站請求偽造（CSRF）：擋在所有會改變狀態的請求前面。
+//
+// ⚠ 稽核指出全站沒有任何 CSRF 防護。session cookie 已經是 SameSite=Lax，
+// 現代瀏覽器不會把 cookie 帶進跨站的 POST，所以實務上擋掉了絕大部分；
+// 但那是「靠瀏覽器的預設值」，同網域底下的其他子網域、舊瀏覽器、
+// 以及未來哪天把 sameSite 調鬆都會破功。這裡再加一道自己驗的。
+//
+// 用 Origin／Referer 比對而不是發 token，理由是：token 要在**每一支表單**
+// 都塞一個 hidden input，全站上百個表單漏掉一個就是一個壞掉的按鈕，
+// 而且使用者自訂 CSS／版型改版時很容易被弄丟。Origin 這一層不碰版型，
+// 涵蓋每一支現有與未來的表單。
+//
+// 判斷規則：**有帶就一定要對**。
+// 現代瀏覽器送 POST 一定會帶 Origin，所以真正的跨站攻擊一定會被抓到。
+// 兩個都沒帶的才放行——那是非瀏覽器的客戶端（curl、RSS 閱讀器、測試），
+// 它們身上本來就沒有受害者的 cookie，不是 CSRF 的攻擊面。
+const SAFE_METHODS = new Set(['GET', 'HEAD', 'OPTIONS']);
+app.use((req, res, next) => {
+  if (SAFE_METHODS.has(req.method)) return next();
+  const here = req.get('host');
+  const src = req.get('origin') || req.get('referer');
+  if (!src || !here) return next();
+  let host;
+  try { host = new URL(src).host; } catch { return next(); }   // 壞掉的標頭當作沒帶
+  if (host === here) return next();
+  res.status(403).type('text/plain; charset=utf-8')
+     .send('這個請求看起來是從別的網站送過來的，為了安全起見擋下來了。');
+});
+
+
 const upload = multer({storage:multer.memoryStorage(),limits:{fileSize:8*1024*1024,files:20},fileFilter:(r,f,cb)=>cb(null,/^image\/(jpeg|png|gif|webp)$/.test(f.mimetype))});
 
 // 站方公告：kukubar 的 <p class="announcement"> 與各頁的公告區都接這裡。
@@ -286,6 +316,26 @@ app.get('/blogs',async (req,res)=>{
 // 避免「第一個註冊的人就是站長」被誤佔（例如測試帳號）。
 const ADMIN_USERS = new Set((process.env.ADMIN_USERS||'').split(',').map(s=>s.trim().toLowerCase()).filter(Boolean));
 app.get('/register',(req,res)=>res.render('register',{err:null,form:{}}));
+// 登入／註冊成功時換一組全新的 session id（session fixation）。
+//
+// ⚠ 沒有這一步的話：攻擊者先自己開一個 session，想辦法讓受害者的瀏覽器
+// 帶著**同一個** session id（共用電腦、被塞 cookie 的子網域、網址參數…），
+// 受害者登入之後那個 id 就升級成已登入狀態，攻擊者手上那份也跟著生效。
+// regenerate() 會丟掉舊 id 另發一組，舊的那份永遠停在未登入。
+//
+// flash 訊息存在 session 裡，regenerate 會一起清掉，所以要先撈起來再放回去。
+function signIn(req, uid){
+  return new Promise((resolve, reject) => {
+    const keep = req.session.flash;
+    req.session.regenerate(err => {
+      if (err) return reject(err);
+      req.session.uid = uid;
+      if (keep) req.session.flash = keep;
+      resolve();
+    });
+  });
+}
+
 app.post('/register',async (req,res)=>{
   const {name='',nick='',pass='',pass2=''}=req.body;
   const err = !/^[a-z0-9_]{3,20}$/i.test(name)?'帳號限 3~20 位英數字或底線':!nick.trim()?'請填暱稱':pass.length<4?'密碼至少 4 碼':pass!==pass2?'兩次密碼不一致':await one('SELECT 1 FROM users WHERE name=?',String(name||'').toLowerCase())?'這個帳號已經有人用了':null;
@@ -304,14 +354,14 @@ app.post('/register',async (req,res)=>{
     throw e;
   }
   await run('INSERT INTO albums(user_id,title) VALUES(?,?)',r.lastInsertRowid,'我的相簿');
-  req.session.uid=Number(r.lastInsertRowid); flash(req,'歡迎加入 vibeai 小站！'); res.redirect('/'+name.toLowerCase());
+  await signIn(req, Number(r.lastInsertRowid)); flash(req,'歡迎加入 vibeai 小站！'); res.redirect('/'+name.toLowerCase());
 });
 app.get('/login',(req,res)=>res.render('login',{err:null,next:req.query.next||''}));
 app.post('/login',async (req,res)=>{
   const u=await one('SELECT * FROM users WHERE name=?',String(req.body.name||'').toLowerCase());
   if(!check(u,req.body.pass||'')) return res.render('login',{err:'帳號或密碼錯誤',next:req.body.next||''});
   if(ADMIN_USERS.has(u.name) && !u.admin) await run('UPDATE users SET admin=1 WHERE id=?',u.id); // ADMIN_USERS 名單登入即補站長權限
-  req.session.uid=u.id; res.redirect(safePath(req.body.next) || '/'+u.name);
+  await signIn(req, u.id); res.redirect(safePath(req.body.next) || '/'+u.name);
 });
 app.post('/logout',(req,res)=>req.session.destroy(()=>res.redirect('/')));
 

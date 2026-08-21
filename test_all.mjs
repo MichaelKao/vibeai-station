@@ -711,5 +711,44 @@ console.log('\n=== 自訂 CSS 擋得住逸出序列 ===');
   ok('自訂 CSS：正常樣式照樣生效', (await text('/cssq')).includes('h1{color:red}'));
 }
 
+
+console.log('\n=== session 固定攻擊與跨站請求 ===');
+// ⚠ 稽核抓到兩件事：
+//   1. 登入／註冊沒有 regenerate session，攻擊者先拿到一個 session id、
+//      想辦法讓受害者用同一個登入，那個 id 就升級成已登入。
+//   2. 全站沒有任何 CSRF 防護（只靠 cookie 的 SameSite=Lax）。
+{
+  await post('/register',{name:'fixq',nick:'固定',pass:'test1234',pass2:'test1234'});
+  // 先拿一個「還沒登入」的 session：隨便打一支會寫 session 的頁面
+  const pre = (await post('/login',{name:'fixq',pass:'wrong'})).headers.getSetCookie()?.[0]?.split(';')[0];
+  const r = await post('/login',{name:'fixq',pass:'test1234'}, pre);
+  const after = r.headers.getSetCookie()?.[0]?.split(';')[0];
+  ok('登入成功會換一組新的 session id', !!after && after !== pre);
+  if (pre) {
+    // 舊的那份不能因為別人登入就跟著變成已登入
+    const old = await text('/', pre);
+    ok('攻擊者手上的舊 session 仍然是未登入', !old.includes('/fixq/settings'));
+  }
+
+  // 跨站送過來的 POST 要被擋
+  const cross = await fetch(`${B}/fixq/blog/new`, {
+    method:'POST', redirect:'manual',
+    headers:{cookie:after, origin:'https://evil.example', 'content-type':'application/x-www-form-urlencoded'},
+    body:new URLSearchParams({title:'csrf',body:'x',category:'心情'}).toString() });
+  ok('跨站 Origin 的 POST 被擋（403）', cross.status===403, 'HTTP '+cross.status);
+  const crossRef = await fetch(`${B}/fixq/blog/new`, {
+    method:'POST', redirect:'manual',
+    headers:{cookie:after, referer:'https://evil.example/x', 'content-type':'application/x-www-form-urlencoded'},
+    body:new URLSearchParams({title:'csrf',body:'x',category:'心情'}).toString() });
+  ok('跨站 Referer 的 POST 被擋（403）', crossRef.status===403, 'HTTP '+crossRef.status);
+  // 同站的照樣過
+  const same = await fetch(`${B}/fixq/blog/new`, {
+    method:'POST', redirect:'manual',
+    headers:{cookie:after, origin:B, 'content-type':'application/x-www-form-urlencoded'},
+    body:new URLSearchParams({title:'正常',body:'x',category:'心情'}).toString() });
+  ok('同站 Origin 的 POST 照樣過', same.status===302, 'HTTP '+same.status);
+  ok('擋下來之後文章沒有被建立', !(await text('/fixq/blog')).includes('csrf'));
+}
+
 console.log(`\n===== ${pass} passed, ${fail} failed =====`);
 process.exit(fail?1:0);
