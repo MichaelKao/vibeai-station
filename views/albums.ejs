@@ -127,6 +127,22 @@
           <div class="search_control">
             <input type="text" name="q" id="search_keyword" size="40" value="" accesskey="S" title="請在這裡輸入（熱鍵：S）" autocomplete="off" />
             <input type="submit" id="search_submit" value="相簿搜尋" />
+            <%# 送出鈕的字跟著選到的範圍走。原站是 JS 做的，這裡照做一份。
+                ⚠ 這是**漸進增強**：沒有 JS 的時候按鈕字不會變，但範圍照樣
+                送得出去（radio 本來就在表單裡），功能不依賴這段。 %>
+            <script>
+            (function(){
+              var LABEL = { photo:'相簿搜尋', site:'網誌搜尋', video:'影音搜尋', web:'網頁搜尋' };
+              var box = document.getElementById('search_tab');
+              var btn = document.getElementById('search_submit');
+              var key = document.getElementById('search_keyword');
+              if (!box || !btn) return;
+              box.addEventListener('change', function(e){
+                var v = e.target && e.target.value;
+                if (LABEL[v]) { btn.value = LABEL[v]; if (key) key.title = LABEL[v]; }
+              });
+            })();
+            </script>
           </div>
           <div id="Hot_Keyword">
             <span>Keyword:</span>

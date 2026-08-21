@@ -262,3 +262,28 @@ td#ad_word   .w2-ad-in { display: block; }
                    border: 2px dashed #A13636; background: rgba(255,232,232,.35); }
 .w2a-crop form   { margin-top: 10px; }
 .w2a-crop input[type=number] { width: 5em; }
+
+/* ── 搜尋範圍那四顆頁籤的「選中」外觀 ─────────────────────────────────
+ * ⚠ 使用者連續回報兩次「這四個不能點」。實際情況是：點得到（label 會把
+ * radio 選起來），但**畫面上完全看不出來**——版型的選中樣式是
+ *   .wrapper > label.Aclick { background: select-album.png }
+ * 靠 class 決定，而原站是用一段 JS 把 Aclick/Bclick/Sclick/Wclick 搬到
+ * 被點的那一顆上。我們沒有那段 JS，class 又寫死在 HTML 裡，
+ * 所以無論點哪一顆，亮的永遠是「相簿」。
+ *
+ * 用 :checked + label 直接把選中狀態接到 radio 上，不需要 JS，
+ * 而且鍵盤操作（方向鍵切 radio）也會跟著亮。
+ * 原本那四條 .Xclick 留著不動（IE 的 * html 版本也還在），
+ * 這裡只是多一組同樣效果、由狀態驅動的規則。 */
+#search_tab input[type=radio]:checked + label { color: #000; }
+#search_tab #searchType_album:checked + label { background: url(/img/wretch2012/albumindex/select-album.png) no-repeat center center; }
+#search_tab #searchType_blog:checked  + label { background: url(/img/wretch2012/albumindex/select-blog.png)  no-repeat center center; }
+#search_tab #searchType_video:checked + label { background: url(/img/wretch2012/albumindex/select-video.png) no-repeat center center; }
+#search_tab #searchType_web:checked   + label { background: url(/img/wretch2012/albumindex/select-web.png)   no-repeat center center; }
+/* 沒被選到的那幾顆要退回未選中的底圖——.Aclick 是寫死在 HTML 上的，
+   不蓋掉的話「相簿」那顆會一直亮著。 */
+#search_tab input[type=radio]:not(:checked) + label {
+  background: url(/img/wretch2012/albumindex/search_tab_static.png) no-repeat center center;
+}
+/* 鍵盤走到哪一顆要看得出來（radio 本身在版型裡是隱藏的） */
+#search_tab input[type=radio]:focus-visible + label { outline: 2px solid #c30; outline-offset: -2px; }
