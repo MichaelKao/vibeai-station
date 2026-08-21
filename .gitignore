@@ -20,3 +20,4 @@ _r.json
 # 大軍代理跑分析時留下的暫存腳本
 tmp_*.mjs
 tools/_*.mjs
+dbg_tmp.mjs
