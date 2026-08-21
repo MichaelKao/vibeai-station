@@ -8,7 +8,7 @@
 
 <%- include('partials/gbtop', { here: 'favs', head: u.nick + ' 的收藏' }) %>
 
-<div id="search">共 <b><%= favs.length %></b> 篇</div>
+<div id="search">共 <b><%= total %></b> 篇</div>
 
 <div class="msg_body">
   <% if (!favs.length) { %>
@@ -23,6 +23,9 @@
     </tr>
     <% }) %>
   </table>
+  <%# 分頁：收藏原本硬砍 100 筆，第 101 篇之後看不到。 %>
+  <%- include('partials/pager2012', { pgPage: page, pgPages: pages,
+        pgHref: n => '/' + u.name + '/favs?p=' + n }) %>
   <% } %>
 </div>
 

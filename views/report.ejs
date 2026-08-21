@@ -22,12 +22,16 @@
         請說明你認為這則<%= rpKind %>有什麼問題，站長會盡快處理。
         <% if (url) { %><br>被檢舉的位置：<a href="<%= url %>"><%= url %></a><% } %>
       </p>
+      <%# ⚠ 理由只打空白時，後端原本照樣顯示「已送出檢舉，站長會盡快處理」，
+          但資料庫一筆都沒進去。使用者安心離開，那件事永遠沒有人處理。
+          現在會退回這一頁並指出缺什麼，填過的理由也帶回來。 %>
+      <% if (locals.err) { %><p class="w2-formerr"><%= err %></p><% } %>
       <form method="post" action="/report">
         <input type="hidden" name="kind" value="<%= kind %>">
         <input type="hidden" name="target" value="<%= target %>">
         <input type="hidden" name="url" value="<%= url %>">
         <p><textarea name="reason" rows="5" cols="50" maxlength="500" required
-                     placeholder="例如：內容涉及侵權、廣告灌水、不當言論…"></textarea></p>
+                     placeholder="例如：內容涉及侵權、廣告灌水、不當言論…"><%= (locals.form && form.reason) || '' %></textarea></p>
         <p>
           <button type="submit">送出檢舉</button>
           <% if (url) { %>　<a href="<%= url %>">取消，回上一層</a><% } %>

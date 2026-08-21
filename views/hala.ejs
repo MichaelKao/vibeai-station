@@ -67,10 +67,14 @@
       <div class="mod w2-auth-side">
         <div class="hd"><h2>開一個主題</h2></div>
         <div class="bd">
+          <%# ⚠ 發表失敗原本是 302 回這一頁——標題與內文一起不見，
+              畫面上沒有任何訊息，使用者只會覺得「發表鈕壞了」。
+              現在會 render 回來（302 會丟掉 req.body）並帶回填過的內容。 %>
+          <% if (locals.formErr) { %><p class="w2-formerr"><%= formErr %></p><% } %>
           <form method="post" action="/hala">
-            <p><input type="text" name="title" placeholder="標題" maxlength="60" required aria-label="主題標題"></p>
-            <p><input type="text" name="cat" placeholder="分類（可留空）" maxlength="10" aria-label="看板分類"></p>
-            <p><textarea name="body" rows="5" maxlength="3000" placeholder="想問什麼？" required aria-label="主題內容"></textarea></p>
+            <p><input type="text" name="title" value="<%= (locals.form && form.title) || '' %>" placeholder="標題" maxlength="60" required aria-label="主題標題"></p>
+            <p><input type="text" name="cat" value="<%= (locals.form && form.cat) || '' %>" placeholder="分類（可留空）" maxlength="10" aria-label="看板分類"></p>
+            <p><textarea name="body" rows="5" maxlength="3000" placeholder="想問什麼？" required aria-label="主題內容"><%= (locals.form && form.body) || '' %></textarea></p>
             <p><input type="submit" class="w2-btn" value="發表"></p>
           </form>
         </div>

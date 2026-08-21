@@ -28,7 +28,8 @@
             <table class="w2-auth-form">
               <tr>
                 <th><label for="w2-name">帳號</label></th>
-                <td><input type="text" id="w2-name" name="name" size="24" autocomplete="username" autofocus></td>
+                <td><%# ⚠ 一定要回填。原本登入失敗後帳號欄是空的，每試一次密碼就要重打一次帳號。 %>
+                    <input type="text" id="w2-name" name="name" size="24" autocomplete="username" value="<%= locals.name || '' %>" autofocus></td>
               </tr>
               <tr>
                 <th><label for="w2-pass">密碼</label></th>

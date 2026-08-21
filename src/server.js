@@ -380,10 +380,17 @@ app.post('/report',async (req,res)=>{
   const {kind,target,url,reason}=req.body;
   // 只收站內相對路徑；擋掉 javascript: 與 //host（否則會變成後台的 XSS／開放轉址）
   const safeUrl = safePath(url);
-  if(reason?.trim())
-    await run('INSERT INTO reports(kind,target_id,url,reason,reporter) VALUES(?,?,?,?,?)',
-      String(kind||'').slice(0,20), +target||0, safeUrl,
-      reason.trim().slice(0,500), res.locals.me?.name||'訪客');
+  // ⚠ 成功訊息原本在 if 外面——理由只打空白時，資料庫一筆都沒進去，
+  // 畫面卻照樣顯示「已送出檢舉，站長會盡快處理」。使用者就這樣安心離開，
+  // 而那件事永遠不會有人處理，他也不會再檢舉第二次。
+  // 成功訊息只能出現在**真的寫進去**的那一條路上。
+  if(!reason?.trim())
+    return res.status(400).render('report',{kind:String(kind||'').slice(0,20),
+      target:+target||0, url:safeUrl,
+      err:'請寫下檢舉理由，站長需要知道發生什麼事', form:req.body});
+  await run('INSERT INTO reports(kind,target_id,url,reason,reporter) VALUES(?,?,?,?,?)',
+    String(kind||'').slice(0,20), +target||0, safeUrl,
+    reason.trim().slice(0,500), res.locals.me?.name||'訪客');
   res.render('msg',{title:'已送出檢舉',msg:'謝謝你的回報，站長會盡快處理。',back:safeUrl||'/'});
 });
 
@@ -391,11 +398,14 @@ app.post('/report',async (req,res)=>{
 app.get('/albums',async (req,res)=>{
   const topic=isAlbumTopic(req.query.topic)?req.query.topic:null;
   const place=isPlace(req.query.place)?req.query.place:null;
-  const page=pageNo(req.query.p), per=20;      // 無名一頁 20 本（5×4）
+  let page=pageNo(req.query.p), per=20;      // 無名一頁 20 本（5×4）
   let where="a.pass='' AND a.friends_only=0 AND a.cover!=''"; const args=[];
   if(topic){ where+=' AND a.topic=?'; args.push(topic); }
   if(place){ where+=' AND a.place=?'; args.push(place); }
   const total=(await one(`SELECT count(*) c FROM albums a WHERE ${where}`,...args)).c;
+  // 頁碼夾在 1..pages（見 clampPage 的說明）：超出範圍要退回最後一頁，
+  // 不能印出「還沒有…」的空狀態——那會跟同一頁上的總數自相矛盾。
+  page = clampPage(page, Math.ceil(total / per));
   res.render('albums',{ topic, place, page, pages:Math.ceil(total/per), total,
     topics:ALBUM_TOPICS, places:PLACES,
     counts:Object.fromEntries((await all("SELECT topic,count(*) n FROM albums WHERE pass='' AND friends_only=0 AND cover!='' AND topic!='' GROUP BY topic")).map(r=>[r.topic,r.n])),
@@ -406,10 +416,13 @@ app.get('/albums',async (req,res)=>{
 // ===== 網誌總站：依站內分類瀏覽 =====
 app.get('/blogs',async (req,res)=>{
   const topic=isBlogTopic(req.query.topic)?req.query.topic:null;
-  const page=pageNo(req.query.p), per=20;
+  let page=pageNo(req.query.p), per=20;
   let where="p.pass=''"; const args=[];
   if(topic){ where+=' AND p.topic=?'; args.push(topic); }
   const total=(await one(`SELECT count(*) c FROM posts p WHERE ${where}`,...args)).c;
+  // 頁碼夾在 1..pages（見 clampPage 的說明）：超出範圍要退回最後一頁，
+  // 不能印出「還沒有…」的空狀態——那會跟同一頁上的總數自相矛盾。
+  page = clampPage(page, Math.ceil(total / per));
   res.render('blogs',{ topic, page, pages:Math.ceil(total/per), total, topics:BLOG_TOPICS,
     counts:Object.fromEntries((await all("SELECT topic,count(*) n FROM posts WHERE pass='' AND topic!='' GROUP BY topic")).map(r=>[r.topic,r.n])),
     // 帶出作者頭像：原版網誌總站每一則前面就是作者的封面圖
@@ -530,7 +543,11 @@ app.get('/login',(req,res)=>res.render('login',{err:null,next:req.query.next||''
 app.post('/login',async (req,res)=>{
   if (loginBlocked(req, req.body.name)) return res.status(429).render('login',{err:rateMsg,next:req.body.next||''});
   const u=await one('SELECT * FROM users WHERE name=?',String(req.body.name||'').toLowerCase());
-  if(!check(u,req.body.pass||'')) return res.render('login',{err:'帳號或密碼錯誤',next:req.body.next||''});
+  // ⚠ 原本沒有把 name 傳回去，於是每試一次密碼就要重打一次帳號。
+  // 密碼本來就常常要試兩三次，這件小事會讓人非常煩躁。
+  if(!check(u,req.body.pass||''))
+    return res.render('login',{err:'帳號或密碼錯誤',next:req.body.next||'',
+      name:String(req.body.name||'').slice(0,20)});
   if(ADMIN_USERS.has(u.name) && !u.admin) await run('UPDATE users SET admin=1 WHERE id=?',u.id); // ADMIN_USERS 名單登入即補站長權限
   rateClear(req, 'login:' + String(req.body.name||'').toLowerCase()); rateClear(req, 'login-ip');
   await signIn(req, u.id); res.redirect(safePath(req.body.next) || '/'+u.name);
@@ -715,8 +732,11 @@ for(const [seg,dest] of Object.entries(SECTION)){
 // SECTION 裡（那是 /video/<帳號> 這種舊網址的轉址），所以已經是保留字；
 // `join` 要另外加進 RESERVED，不然會有人註冊得到這個帳號名把整頁蓋掉。
 app.get('/video',async (req,res)=>{
-  const page=pageNo(req.query.p), per=20;
+  let page=pageNo(req.query.p), per=20;
   const total=(await one('SELECT count(*) c FROM videos')).c;
+  // 頁碼夾在 1..pages（見 clampPage 的說明）：超出範圍要退回最後一頁，
+  // 不能印出「還沒有…」的空狀態——那會跟同一頁上的總數自相矛盾。
+  page = clampPage(page, Math.ceil(total / per));
   res.render('videos',{ page, pages:Math.ceil(total/per), total,
     videos:await all(`SELECT v.*,u.name uname,u.nick FROM videos v JOIN users u ON u.id=v.user_id
       ORDER BY v.id DESC LIMIT ? OFFSET ?`,per,(page-1)*per),
@@ -725,16 +745,22 @@ app.get('/video',async (req,res)=>{
 });
 
 app.get('/digu',async (req,res)=>{
-  const page=pageNo(req.query.p), per=30;
+  let page=pageNo(req.query.p), per=30;
   const total=(await one('SELECT count(*) c FROM digu')).c;
+  // 頁碼夾在 1..pages（見 clampPage 的說明）：超出範圍要退回最後一頁，
+  // 不能印出「還沒有…」的空狀態——那會跟同一頁上的總數自相矛盾。
+  page = clampPage(page, Math.ceil(total / per));
   res.render('digus',{ page, pages:Math.ceil(total/per), total,
     digus:await all(`SELECT d.*,u.name uname,u.nick,u.avatar FROM digu d JOIN users u ON u.id=d.user_id
       ORDER BY d.id DESC LIMIT ? OFFSET ?`,per,(page-1)*per) });
 });
 
 app.get('/join',async (req,res)=>{
-  const page=pageNo(req.query.p), per=20;
+  let page=pageNo(req.query.p), per=20;
   const total=(await one('SELECT count(*) c FROM joins')).c;
+  // 頁碼夾在 1..pages（見 clampPage 的說明）：超出範圍要退回最後一頁，
+  // 不能印出「還沒有…」的空狀態——那會跟同一頁上的總數自相矛盾。
+  page = clampPage(page, Math.ceil(total / per));
   res.render('joins',{ page, pages:Math.ceil(total/per), total,
     joins:await all(`SELECT j.*,u.name uname,u.nick,u.avatar,
         (SELECT count(*) FROM join_members WHERE join_id=j.id) n
@@ -787,12 +813,15 @@ app.post('/join/:id/in',requireLogin,async (req,res)=>{
 // 沒有必要照抄，功能是一樣的。
 const GIRL_TOPICS = ['女生個人', '男生個人'];
 app.get('/svcs/wretch_girl',async (req,res)=>{
-  const page=pageNo(req.query.p), per=24;
+  let page=pageNo(req.query.p), per=24;
   const topic=GIRL_TOPICS.includes(req.query.topic)?req.query.topic:null;
   const where=`a.pass='' AND a.friends_only=0 AND a.topic IN (${GIRL_TOPICS.map(()=>'?').join(',')})`
     + (topic?' AND a.topic=?':'');
   const args=[...GIRL_TOPICS, ...(topic?[topic]:[])];
   const total=(await one(`SELECT count(*) c FROM photos p JOIN albums a ON a.id=p.album_id WHERE ${where}`,...args)).c;
+  // 頁碼夾在 1..pages（見 clampPage 的說明）：超出範圍要退回最後一頁，
+  // 不能印出「還沒有…」的空狀態——那會跟同一頁上的總數自相矛盾。
+  page = clampPage(page, Math.ceil(total / per));
   res.render('wretchgirl',{ page, pages:Math.ceil(total/per), total, topic, topics:GIRL_TOPICS,
     photos:await all(`SELECT p.id,p.thumb,p.url,p.caption,p.views,a.title atitle,a.id aid,
         u.name uname,u.nick,a.topic,
@@ -819,6 +848,22 @@ app.post('/svcs/wretch_girl/:pid/vote',requireLogin,async (req,res)=>{
 //
 // 網址保留原站的 /hala/viewtopic.php?t=<id>，這樣存檔裡那些連結原封不動就會通；
 // 另外提供比較好讀的 /hala/<id>。
+// 哈啦首頁要印的東西。抽成函式是為了讓「發表失敗」那條路也能 render 同一頁
+// ——原本失敗是 302 回 /hala，使用者剛打好的標題與內文一起不見。
+// 302 會丟掉 req.body，所以一定要 render 而不是 redirect。
+async function halaPage(req){
+  let page=pageNo(req.query.p), per=20;
+  const total=(await one('SELECT count(*) c FROM hala_topics')).c;
+  // 頁碼夾在 1..pages（見 clampPage 的說明）：超出範圍要退回最後一頁，
+  // 不能印出「還沒有…」的空狀態——那會跟同一頁上的總數自相矛盾。
+  page = clampPage(page, Math.ceil(total / per));
+  return { page, pages:Math.ceil(total/per), total,
+    topics:await all(`SELECT t.*,u.name uname,u.nick,
+        (SELECT count(*) FROM hala_posts WHERE topic_id=t.id) n
+      FROM hala_topics t LEFT JOIN users u ON u.id=t.user_id
+      ORDER BY t.official DESC, t.id DESC LIMIT ? OFFSET ?`,per,(page-1)*per) };
+}
+
 app.get('/hala',async (req,res)=>{
   // ?q=rss 這種捷徑：站上其他頁面（相簿的 RSS HOWTO）要連到「某一篇說明」，
   // 但種子重灌之後主題 id 會變，寫死 id 會指到別篇。改成用關鍵字找官方主題，
@@ -828,13 +873,7 @@ app.get('/hala',async (req,res)=>{
       likeArg(qs1(req.query.q)),likeArg(qs1(req.query.q)));
     if(hit) return res.redirect('/hala/'+hit.id);
   }
-  const page=pageNo(req.query.p), per=20;
-  const total=(await one('SELECT count(*) c FROM hala_topics')).c;
-  res.render('hala',{ page, pages:Math.ceil(total/per), total,
-    topics:await all(`SELECT t.*,u.name uname,u.nick,
-        (SELECT count(*) FROM hala_posts WHERE topic_id=t.id) n
-      FROM hala_topics t LEFT JOIN users u ON u.id=t.user_id
-      ORDER BY t.official DESC, t.id DESC LIMIT ? OFFSET ?`,per,(page-1)*per) });
+  res.render('hala', await halaPage(req));
 });
 const halaTopic=async (req,res,id)=>{
   // ⚠ id 可能是 undefined（/hala/viewtopic.php 沒帶 t）或陣列（?t[]=x）。
@@ -846,8 +885,15 @@ const halaTopic=async (req,res,id)=>{
     LEFT JOIN users u ON u.id=t.user_id WHERE t.id=?`,id);
   if(!t) return null;
   await run('UPDATE hala_topics SET views=views+1 WHERE id=?',t.id);
-  return { t, posts:await all(`SELECT p.*,u.name uname,u.nick,u.avatar FROM hala_posts p
-    LEFT JOIN users u ON u.id=p.user_id WHERE p.topic_id=? ORDER BY p.id`,t.id) };
+  // ⚠ 回覆原本是一次全撈：一串熱門主題累積上千則回覆時，這一頁會把全部
+  // BBCode 都算過一遍再吐出來——伺服器慢、手機直接卡住，而且使用者要滑
+  // 半天才找得到最新那幾則。改成分頁（跟原站哈啦區一樣一頁 20 則）。
+  const per=20;
+  const total=(await one('SELECT count(*) c FROM hala_posts WHERE topic_id=?',t.id)).c;
+  const page=clampPage(pageNo(req.query.p), Math.ceil(total/per));
+  return { t, page, per, total, pages:Math.max(1,Math.ceil(total/per)),
+    posts:await all(`SELECT p.*,u.name uname,u.nick,u.avatar FROM hala_posts p
+    LEFT JOIN users u ON u.id=p.user_id WHERE p.topic_id=? ORDER BY p.id LIMIT ? OFFSET ?`,t.id,per,(page-1)*per) };
 };
 // 原站網址：/hala/viewtopic.php?t=<id>
 app.get('/hala/viewtopic.php',async (req,res,next)=>{
@@ -861,7 +907,13 @@ app.get('/hala/:id',async (req,res,next)=>{
 app.post('/hala',requireLogin,async (req,res)=>{
   const title=(req.body.title||'').trim().slice(0,60);
   const body=(req.body.body||'').trim().slice(0,3000);
-  if(!title||!body) return res.redirect('/hala');
+  // ⚠ 原本是 302 回 /hala——標題與內文一起不見，畫面上沒有任何訊息，
+  // 使用者只會覺得「這顆發表鈕壞了」，還要靠瀏覽器上一頁才知道字還在。
+  // 改成 render 回去並把填過的內容帶回來（302 會丟掉 req.body）。
+  if(!title||!body)
+    return res.status(400).render('hala', { ...await halaPage(req),
+      formErr: !title ? '主題標題不能是空白' : '主題內容不能是空白',
+      form: req.body });
   const r=await run('INSERT INTO hala_topics(user_id,title,body,cat) VALUES(?,?,?,?)',
     res.locals.me.id,title,body,(req.body.cat||'').slice(0,10));
   res.redirect('/hala/'+Number(r.lastInsertRowid));
@@ -872,7 +924,12 @@ app.post('/hala/:id/reply',requireLogin,async (req,res)=>{
   const body=(req.body.body||'').trim().slice(0,3000);
   if(body) await run('INSERT INTO hala_posts(topic_id,user_id,author,body) VALUES(?,?,?,?)',
     t.id,res.locals.me.id,res.locals.me.nick,body);
-  res.redirect('/hala/'+t.id+'#last');
+  // ⚠ 回覆改成分頁之後，還固定跳第一頁的話，使用者送出後看到的是最舊的
+  // 20 則，自己那一則不在畫面上——跟「沒送出去」長得一模一樣。跳最後一頁。
+  const per=20;
+  const total=(await one('SELECT count(*) c FROM hala_posts WHERE topic_id=?',t.id)).c;
+  const last=Math.max(1,Math.ceil(total/per));
+  res.redirect('/hala/'+t.id+(last>1?'?p='+last:'')+'#last');
 });
 
 // ===== 個人小站 =====
@@ -892,6 +949,17 @@ export const pageNo = v => {
   const n = Math.floor(Number(qs1(v)));
   return Number.isSafeInteger(n) && n >= 1 ? Math.min(n, 1e6) : 1;
 };
+
+// 把頁碼夾在 1..pages 之間。
+//
+// ⚠ pageNo() 只擋上下限，不知道總共有幾頁。後果是：點到過期的分頁連結、
+// 或把網址上的頁碼改大（書籤、別人貼的舊連結、刪過資料之後的舊頁碼），
+// 使用者看到的是一張空清單加上「還沒有文章」「這本相簿還沒有照片」——
+// 而同一個畫面上還印著「90 pictures」。稽核實測抓到的原話是
+// 「畫面公然自相矛盾」，使用者的感受是「資料被刪光了」。
+//
+// 夾住之後，超出範圍會退回最後一頁（看得到東西），而不是一片空白。
+const clampPage = (n, pages) => Math.min(Math.max(1, n), Math.max(1, pages || 1));
 
 // 分組名一律從 friend_groups 撈（group_id=0 就是原站的 Default group）。
 // ⚠ 這個子查詢要放在 SELECT 裡，不能 JOIN friend_groups——
@@ -1000,8 +1068,11 @@ site.get('/',async (req,res)=>{
 });
 // 誰來我家（完整名單）
 site.get('/visitors',async (req,res)=>{
-  const page=pageNo(req.query.p), per=50;
+  let page=pageNo(req.query.p), per=50;
   const total=(await one('SELECT count(*) c FROM visitors WHERE user_id=?',U(res).id)).c;
+  // 頁碼夾在 1..pages（見 clampPage 的說明）：超出範圍要退回最後一頁，
+  // 不能印出「還沒有…」的空狀態——那會跟同一頁上的總數自相矛盾。
+  page = clampPage(page, Math.ceil(total / per));
   res.render('visitors',{nav:'user',page,pages:Math.ceil(total/per),total,
     rows:await all('SELECT v.*,u.nick,u.avatar FROM visitors v LEFT JOIN users u ON u.name=v.who WHERE v.user_id=? ORDER BY v.id DESC LIMIT ? OFFSET ?',U(res).id,per,(page-1)*per),
     visitors:await all('SELECT * FROM visitors WHERE user_id=? ORDER BY id DESC LIMIT 8',U(res).id),
@@ -1395,11 +1466,13 @@ site.get('/friends',async (req,res)=>{
   const cateRaw=(req.query.cateSelect||'').trim().slice(0,10);
   const cate=/^-?\d+$/.test(cateRaw)?cateRaw:'';
   const q=(req.query.search_id||'').trim().slice(0,20);
-  const page=pageNo(req.query.p);
+  let page=pageNo(req.query.p);
   const {from,where,grp,args}=friendQuery(uid,rel,cate==='-1'?'':cate,q);
   // 好友的好友會透過不同的共同好友重複撈到同一個人，一定要 DISTINCT；
   // 也因為 DISTINCT，排序只能用 SELECT 出來的欄位（PG 會擋 f.created）。
   const total=(await one(`SELECT count(*) c FROM (SELECT DISTINCT u.id ${from} WHERE ${where}) t`,...args)).c;
+  // 頁碼夾在 1..pages（見 clampPage 的說明）：超出範圍退回最後一頁。
+  page = clampPage(page, Math.ceil(total / FRIEND_PER));
   const rows=await all(
     `SELECT DISTINCT u.id,u.name,u.nick,u.avatar,u.intro,u.vip,${grp} grp ${from} WHERE ${where}
      ORDER BY grp, u.name LIMIT ? OFFSET ?`, ...args, FRIEND_PER, (page-1)*FRIEND_PER);
@@ -1441,14 +1514,22 @@ site.post('/friends',(req,res)=>{
 
 // 相簿
 site.get('/album',async (req,res)=>{
-  const page=pageNo(req.query.p), per=20;    // 無名一頁 20 本（5x4）
+  let page=pageNo(req.query.p), per=20;    // 無名一頁 20 本（5x4）
   const total=(await one('SELECT count(*) c FROM albums WHERE user_id=?',U(res).id)).c;
+  // 頁碼夾在 1..pages（見 clampPage 的說明）：超出範圍要退回最後一頁，
+  // 不能印出「還沒有…」的空狀態——那會跟同一頁上的總數自相矛盾。
+  page = clampPage(page, Math.ceil(total / per));
   res.render('album',{nav:'album',topics:ALBUM_TOPICS,places:PLACES,
     page,pages:Math.ceil(total/per),total,
     quota:{used:await usedBytes(U(res).id),total:USER_QUOTA,mb:MB},
     albums:await hideLockedCovers(req,res,await all(`SELECT a.*,(SELECT count(*) FROM photos WHERE album_id=a.id) n FROM albums a WHERE user_id=? ORDER BY id DESC LIMIT ? OFFSET ?`,U(res).id,per,(page-1)*per))});
 });
-site.post('/album',requireLogin,requireOwner,async (req,res)=>{ const t=(req.body.title||'').trim().slice(0,40); if(t) await run('INSERT INTO albums(user_id,title,descr,pass,topic,place,friends_only) VALUES(?,?,?,?,?,?,?)',U(res).id,t,(req.body.descr||'').slice(0,200),(req.body.pass||'').slice(0,20),isAlbumTopic(req.body.topic)?req.body.topic:'',isPlace(req.body.place)?req.body.place:'',req.body.friends_only?1:0); res.redirect(`/${U(res).name}/album`); });
+site.post('/album',requireLogin,requireOwner,async (req,res)=>{ const t=(req.body.title||'').trim().slice(0,40);
+  // ⚠ 原本是「有標題才建，然後無條件 redirect」——標題只打空白時什麼都
+  // 沒發生：相簿沒建立、剛打好的說明與密碼也一起不見，畫面上沒有任何訊息。
+  // 使用者只會覺得「這顆按鈕壞了」。
+  if(!t){ flash(req,'相簿名稱不能是空白，這本相簿沒有建立'); return res.redirect(`/${U(res).name}/album`); }
+  await run('INSERT INTO albums(user_id,title,descr,pass,topic,place,friends_only) VALUES(?,?,?,?,?,?,?)',U(res).id,t,(req.body.descr||'').slice(0,200),(req.body.pass||'').slice(0,20),isAlbumTopic(req.body.topic)?req.body.topic:'',isPlace(req.body.place)?req.body.place:'',req.body.friends_only?1:0); res.redirect(`/${U(res).name}/album`); });
 // ⚠ 先擋掉非數字的 :id 再查資料庫。
 // `/album/rss` 這種**同一層的具名路由**如果註冊在 `/album/:id` 後面，就會先被
 // 這一支接走、把 'rss' 當成相簿編號送進 SQL：SQLite 只是靜靜回空（看起來像 404），
@@ -1608,13 +1689,21 @@ site.get('/photo/:pid',async (req,res,next)=>{
   res.render('photo',{nav:'album',p,
     first:ids[0],last:ids[ids.length-1],prev:ids[i-1],next:ids[i+1],idx:i+1,total:ids.length,
     strip:await all('SELECT id,thumb,url,caption FROM photos WHERE album_id=? ORDER BY id',p.aid),
-    comments:await all('SELECT * FROM photo_comments WHERE photo_id=? ORDER BY id',p.id)});
+    // ⚠ 照片迴響原本一次全撈：一張被瘋傳的照片累積上百則之後，單張照片頁
+    // 會拖著一整串迴響一起載，手機上光是捲到下一張就要滑很久。改成分頁。
+    ...(await (async()=>{
+      const per=20;
+      const total=(await one('SELECT count(*) c FROM photo_comments WHERE photo_id=?',p.id)).c;
+      const page=clampPage(pageNo(req.query.cp), Math.ceil(total/per));
+      return { cPage:page, cPages:Math.max(1,Math.ceil(total/per)), cTotal:total,
+        comments:await all('SELECT * FROM photo_comments WHERE photo_id=? ORDER BY id LIMIT ? OFFSET ?',p.id,per,(page-1)*per) };
+    })())});
 });
 // ⚠ 這一支要查**兩種**權限，只查密碼是不夠的。
 // 相簿頁／幻燈片／相片牆／照片頁四個入口都同時查 albumUnlocked（密碼）
 // 與 albumAllowed（好友限定），唯獨這裡只查了密碼——
 // 於是非好友雖然看不到好友限定相簿的照片，**卻留得了言**（多代理稽核實測寫得進去）。
-site.post('/photo/:pid/comment',async (req,res)=>{ const p=await one('SELECT p.id,p.album_id,a.pass,a.friends_only FROM photos p JOIN albums a ON a.id=p.album_id WHERE p.id=? AND a.user_id=?',req.params.pid,U(res).id); if(!p) return res.redirect('/'+U(res).name+'/album'); res.locals.album={id:p.album_id,pass:p.pass,friends_only:p.friends_only}; if(!await albumAllowed(req,res)) return res.status(403).render('msg',{title:'好友限定',msg:'這本相簿是好友限定，只有 '+U(res).nick+' 的好友才留得了言。',back:'/'+U(res).name+'/album'}); if(!albumUnlocked(req,res)) return res.status(403).render('msg',{title:'沒有權限',msg:'相簿已上鎖',back:'/'+U(res).name+'/album'}); if(req.body.body?.trim()) await run('INSERT INTO photo_comments(photo_id,author,body) VALUES(?,?,?)',p.id,cut(res.locals.me?.nick||req.body.author||'訪客', 20),req.body.body.trim().slice(0,300)); res.redirect(`/${U(res).name}/photo/${req.params.pid}`); });
+site.post('/photo/:pid/comment',async (req,res)=>{ const p=await one('SELECT p.id,p.album_id,a.pass,a.friends_only FROM photos p JOIN albums a ON a.id=p.album_id WHERE p.id=? AND a.user_id=?',req.params.pid,U(res).id); if(!p) return res.redirect('/'+U(res).name+'/album'); res.locals.album={id:p.album_id,pass:p.pass,friends_only:p.friends_only}; if(!await albumAllowed(req,res)) return res.status(403).render('msg',{title:'好友限定',msg:'這本相簿是好友限定，只有 '+U(res).nick+' 的好友才留得了言。',back:'/'+U(res).name+'/album'}); if(!albumUnlocked(req,res)) return res.status(403).render('msg',{title:'沒有權限',msg:'相簿已上鎖',back:'/'+U(res).name+'/album'}); if(req.body.body?.trim()) await run('INSERT INTO photo_comments(photo_id,author,body) VALUES(?,?,?)',p.id,cut(res.locals.me?.nick||req.body.author||'訪客', 20),req.body.body.trim().slice(0,300)); const cn=(await one('SELECT count(*) c FROM photo_comments WHERE photo_id=?',p.id)).c; const lastP=Math.max(1,Math.ceil(cn/20)); res.redirect(`/${U(res).name}/photo/${req.params.pid}`+(lastP>1?'?cp='+lastP:'')+'#comments'); });
 // ── 切割照片（原站照片頁工具列那顆「切割照片(NEW)」）────────────────────
 // 零存檔：assets_src2/spec/shot.md:493 的截圖逐字轉寫看得到這顆按鈕
 // （2012 英文版工具列「搜尋更多 切割照片(NEW) Report this Picture」），
@@ -1758,7 +1847,7 @@ const blogSide=async (res, forPost=null)=>({
   moods:MOODS, weathers:WEATHERS, blogTopics:BLOG_TOPICS, places:PLACES});
 site.get('/blog',async (req,res)=>{
   const cat=qs1(req.query.cat)||null, ym=/^\d{4}-\d{2}$/.test(qs1(req.query.ym))?qs1(req.query.ym):null;
-  const page=pageNo(req.query.p);
+  let page=pageNo(req.query.p);
   const day=/^\d{4}-\d{2}-\d{2}$/.test(qs1(req.query.d))?qs1(req.query.d):null;
   // ⚠ 有篩選條件（分類／月份／某一天）時，原站印的是**精簡清單**，
   // 不是全文。存檔 blog_2011_category_paginated_boogier.html 的每一列是
@@ -1789,6 +1878,8 @@ site.get('/blog',async (req,res)=>{
   if(ym){ where+=' AND substr(created,1,7)=?'; args.push(ym); }
   if(day){ where+=' AND substr(created,1,10)=?'; args.push(day); }
   const total=(await one(`SELECT count(*) c FROM posts WHERE ${where}`,...args)).c;
+  // 頁碼夾在 1..pages（見 clampPage 的說明）：超出範圍退回最後一頁。
+  page = clampPage(page, Math.ceil(total / per));
   // 彙整模式不需要內文，只要日期與標題——少撈一大塊資料
   const cols = archive
     ? 'id,title,created,category'
@@ -1941,6 +2032,19 @@ site.post('/blog/new',requireLogin,requireOwner,async (req,res)=>{ const {title,
       formErr: !title?.trim() ? '標題不能是空白' : '內容不能是空白',
       form: req.body});
   }
+  // ⚠ 內文原本是 body.slice(0,50000) 直接存——超過就**靜靜切掉**。
+  // 使用者貼一篇長文（整理的歌詞、小說、課堂筆記），編輯器不擋、沒有字數
+  // 提示，發表後文章結尾斷在半句話，而原稿已經被截斷存進資料庫，
+  // 站上任何地方都救不回來。
+  // 寧可退回編輯頁、保留全文，讓使用者自己決定要刪哪一段。
+  const BODY_MAX = 50000;
+  if (body.length > BODY_MAX) {
+    return res.render('post_edit',{nav:'blog',post:null,photos:await myPhotos(res),emotes:EMOTES,
+      ...await blogSide(res),
+      formErr: `內文最多 ${BODY_MAX.toLocaleString()} 字，目前 ${body.length.toLocaleString()} 字，` +
+        `請刪掉 ${(body.length - BODY_MAX).toLocaleString()} 字再發表（你打的內容都還在下面）`,
+      form: req.body});
+  }
   const r=await run('INSERT INTO posts(user_id,title,body,category,mood,weather,pass,topic,place) VALUES(?,?,?,?,?,?,?,?,?)',U(res).id,cut(title.trim(), 100),body.slice(0,50000),(category||'未分類').trim().slice(0,20)||'未分類',MOODS.includes(mood)?mood:'',WEATHERS.includes(weather)?weather:'',(req.body.pass||'').slice(0,20),isBlogTopic(req.body.topic)?req.body.topic:'',isPlace(req.body.place)?req.body.place:'');
   await act(U(res).id,'blog',cut(title.trim(), 100),`/${U(res).name}/blog/${r.lastInsertRowid}`);
   res.redirect(`/${U(res).name}/blog/${r.lastInsertRowid}`); });
@@ -2017,7 +2121,13 @@ const needUnlocked=(req,res,next)=>postUnlocked(req,res)?next():res.redirect(`/$
 // 迴響（無名的表單欄位：暱稱／E-mail／個人網頁／記住我的資料／內容最多1000字）
 site.post('/blog/:id/comment',postOf,needUnlocked,async (req,res)=>{
   const b=req.body;
-  if(b.body?.trim()){
+  // ⚠ 原本是「有內容才寫，否則直接 302 到 #comments」——迴響沒送出，
+  // 但畫面跳到迴響區，看起來就像成功了，使用者要滑一遍才發現自己那則不在。
+  if(!b.body?.trim()){
+    flash(req,'迴響內容不能是空白，這則沒有送出');
+    return res.redirect(`/${U(res).name}/blog/${res.locals.post.id}#postComments`);
+  }
+  {
     const site1=(()=>{ try{ const x=String(b.homepage||'').trim(); if(!x) return '';
       return ['http:','https:'].includes(new URL(x).protocol)?x.slice(0,200):''; }catch{ return ''; } })();
     const email=/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test((b.email||'').trim())?b.email.trim().slice(0,60):'';
@@ -2068,15 +2178,34 @@ site.post('/blog/:id/fav',requireLogin,postOf,needUnlocked,async (req,res)=>{
   }
   res.redirect(`/${U(res).name}/blog/${pid}`); });
 // 我的收藏
-site.get('/favs',async (req,res)=>res.render('favs',{nav:'user',
-  favs:await all('SELECT p.id,p.title,p.created,u.name uname,u.nick FROM favs f JOIN posts p ON p.id=f.post_id JOIN users u ON u.id=p.user_id WHERE f.user_id=? ORDER BY f.created DESC LIMIT 100',U(res).id),
-  visitors:await all('SELECT * FROM visitors WHERE user_id=? ORDER BY id DESC LIMIT 8',U(res).id),
-  friends:await all('SELECT u.name,u.nick FROM friends f JOIN users u ON u.id=f.friend_id WHERE f.user_id=? LIMIT 12',U(res).id)}));
+// 收藏
+// ⚠ 原本是 LIMIT 100 又沒有分頁：收藏滿一百篇之後，第 101 篇起永遠看不到，
+// 而頁面上還印著「共 N 篇」——使用者會以為收藏被吃掉了。改成跟 /digu、
+// /video 同一套分頁。
+site.get('/favs',async (req,res)=>{
+  const uid=U(res).id, per=20;
+  let page=pageNo(req.query.p);
+  const total=(await one('SELECT count(*) c FROM favs WHERE user_id=?',uid)).c;
+  page = clampPage(page, Math.ceil(total / per));
+  res.render('favs',{nav:'user', page, per, total, pages:Math.max(1,Math.ceil(total/per)),
+    favs:await all('SELECT p.id,p.title,p.created,u.name uname,u.nick FROM favs f JOIN posts p ON p.id=f.post_id JOIN users u ON u.id=p.user_id WHERE f.user_id=? ORDER BY f.created DESC LIMIT ? OFFSET ?',uid,per,(page-1)*per),
+    visitors:await all('SELECT * FROM visitors WHERE user_id=? ORDER BY id DESC LIMIT 8',uid),
+    friends:await all('SELECT u.name,u.nick FROM friends f JOIN users u ON u.id=f.friend_id WHERE f.user_id=? LIMIT 12',uid)});
+});
 // 好友動態
-site.get('/feed',requireLogin,requireOwner,async (req,res)=>res.render('feed',{nav:'user',
-  acts:await all('SELECT a.*,u.name uname,u.nick,u.avatar FROM acts a JOIN users u ON u.id=a.user_id WHERE a.user_id IN (SELECT friend_id FROM friends WHERE user_id=?) ORDER BY a.id DESC LIMIT 50',U(res).id),
-  visitors:await all('SELECT * FROM visitors WHERE user_id=? ORDER BY id DESC LIMIT 8',U(res).id),
-  friends:await all('SELECT u.name,u.nick FROM friends f JOIN users u ON u.id=f.friend_id WHERE f.user_id=? LIMIT 12',U(res).id)}));
+// 好友動態
+// ⚠ 原本 LIMIT 50 又沒有分頁：好友多一點，兩天的動態就把 50 則塞滿，
+// 再往前的全部看不到，頁面上卻寫「共 50 則動態」。改成分頁。
+site.get('/feed',requireLogin,requireOwner,async (req,res)=>{
+  const uid=U(res).id, per=20;
+  let page=pageNo(req.query.p);
+  const total=(await one('SELECT count(*) c FROM acts WHERE user_id IN (SELECT friend_id FROM friends WHERE user_id=?)',uid)).c;
+  page = clampPage(page, Math.ceil(total / per));
+  res.render('feed',{nav:'user', page, per, total, pages:Math.max(1,Math.ceil(total/per)),
+    acts:await all('SELECT a.*,u.name uname,u.nick,u.avatar FROM acts a JOIN users u ON u.id=a.user_id WHERE a.user_id IN (SELECT friend_id FROM friends WHERE user_id=?) ORDER BY a.id DESC LIMIT ? OFFSET ?',uid,per,(page-1)*per),
+    visitors:await all('SELECT * FROM visitors WHERE user_id=? ORDER BY id DESC LIMIT 8',uid),
+    friends:await all('SELECT u.name,u.nick FROM friends f JOIN users u ON u.id=f.friend_id WHERE f.user_id=? LIMIT 12',uid)});
+});
 // 引用：在自己的網誌建立一篇引用文，並在原文登記
 site.post('/blog/:id/trackback',requireLogin,postOf,needUnlocked,async (req,res)=>{
   const p=res.locals.post, me=res.locals.me; if(me.id===U(res).id) return res.redirect(`/${U(res).name}/blog/${p.id}`);
@@ -2105,9 +2234,16 @@ const ytId = s => {
   return '';
 };
 site.get('/video',async (req,res)=>{
-  const page=pageNo(req.query.p), per=12;
+  let page=pageNo(req.query.p), per=12;
   const total=(await one('SELECT count(*) c FROM videos WHERE user_id=?',U(res).id)).c;
-  res.render('video',{nav:'video',page,pages:Math.ceil(total/per),total,
+  // 頁碼夾在 1..pages（見 clampPage 的說明）：超出範圍要退回最後一頁，
+  // 不能印出「還沒有…」的空狀態——那會跟同一頁上的總數自相矛盾。
+  page = clampPage(page, Math.ceil(total / per));
+  // 上一次送出失敗時填過的內容（見 site.post('/:name/video')）。
+  // 用完即刪：重新整理一次之後不該還黏在表單上。
+  const videoForm = req.session.videoForm || null;
+  delete req.session.videoForm;
+  res.render('video',{ videoForm,nav:'video',page,pages:Math.ceil(total/per),total,
     videos:await all('SELECT * FROM videos WHERE user_id=? ORDER BY id DESC LIMIT ? OFFSET ?',U(res).id,per,(page-1)*per),
     visitors:await all('SELECT * FROM visitors WHERE user_id=? ORDER BY id DESC LIMIT 8',U(res).id),
     friends:await all('SELECT u.name,u.nick FROM friends f JOIN users u ON u.id=f.friend_id WHERE f.user_id=? LIMIT 12',U(res).id)});
@@ -2118,7 +2254,15 @@ site.post('/video',requireLogin,requireOwner,async (req,res)=>{
     await run('INSERT INTO videos(user_id,title,vid,url,descr) VALUES(?,?,?,?,?)',
       U(res).id,title,vid,'https://www.youtube.com/watch?v='+vid,(req.body.descr||'').trim().slice(0,200));
     await act(U(res).id,'video',title,`/${U(res).name}/video`);
-  } else flash(req,'請貼上 YouTube 影片網址（例如 https://www.youtube.com/watch?v=…）');
+  } else {
+    // ⚠ 原本只 flash 然後 302——剛打好的影片標題與說明一起被清空。
+    // 使用者要重打一次才能再試，而他多半只是網址複製錯了。
+    // 把填過的內容放進 session，下一頁的表單再拿出來回填。
+    flash(req,'請貼上 YouTube 影片網址（例如 https://www.youtube.com/watch?v=…）');
+    req.session.videoForm = { title: String(req.body.title||'').slice(0,60),
+      url: String(req.body.url||'').slice(0,300),
+      descr: String(req.body.descr||'').slice(0,200) };
+  }
   res.redirect(`/${U(res).name}/video`);
 });
 site.post('/video/:id/del',requireLogin,requireOwner,async (req,res)=>{
@@ -2129,8 +2273,11 @@ site.post('/video/:id/del',requireLogin,requireOwner,async (req,res)=>{
 // 原站 www.wretch.cc/digu/<帳號>：噗浪式的一句話短訊息。
 // 留言板側欄的名片小卡（.myDigu .digu .digu_date）印的就是最新那一則。
 site.get('/digu',async (req,res)=>{
-  const page=pageNo(req.query.p), per=20;
+  let page=pageNo(req.query.p), per=20;
   const total=(await one('SELECT count(*) c FROM digu WHERE user_id=?',U(res).id)).c;
+  // 頁碼夾在 1..pages（見 clampPage 的說明）：超出範圍要退回最後一頁，
+  // 不能印出「還沒有…」的空狀態——那會跟同一頁上的總數自相矛盾。
+  page = clampPage(page, Math.ceil(total / per));
   res.render('digu',{nav:'digu',page,pages:Math.ceil(total/per),total,
     digus:await all('SELECT * FROM digu WHERE user_id=? ORDER BY id DESC LIMIT ? OFFSET ?',U(res).id,per,(page-1)*per),
     visitors:await all('SELECT * FROM visitors WHERE user_id=? ORDER BY id DESC LIMIT 8',U(res).id),
@@ -2161,7 +2308,7 @@ site.get('/guestbook',async (req,res)=>{
   const tab = ['sys','new','bulletin'].includes(req.query.tab) ? req.query.tab : 'list';
   // 原版留言板一頁 10 則（gb_guestbook_a000000010_20131226.html 數得出來），
   // 我們原本寫 15，分頁列的頁數就跟原版對不起來。
-  const page=pageNo(req.query.p),per=10;
+  let page=pageNo(req.query.p),per=10;
   // 側欄那張名片小卡（#namecard）用得到：好友下拉 ＋ 最新一則嘀咕
   const side={
     gbFriends:await all(`SELECT u.name,u.nick,${GRP_NAME} grp FROM friends f JOIN users u ON u.id=f.friend_id WHERE f.user_id=? ORDER BY grp, u.name LIMIT 300`,U(res).id),
@@ -2176,18 +2323,28 @@ site.get('/guestbook',async (req,res)=>{
     if(!res.locals.me) return res.redirect('/login?next='+encodeURIComponent(req.originalUrl));
     if(!res.locals.isOwner) return res.status(403).render('msg',{title:'沒有權限',msg:'系統訊息只有本人看得到',back:`/${U(res).name}/guestbook`});
     const total=(await one('SELECT count(*) c FROM sysmsg WHERE user_id=?',U(res).id)).c;
+  // 頁碼夾在 1..pages（見 clampPage 的說明）：超出範圍要退回最後一頁，
+  // 不能印出「還沒有…」的空狀態——那會跟同一頁上的總數自相矛盾。
+  page = clampPage(page, Math.ceil(total / per));
     await run('UPDATE sysmsg SET seen=1 WHERE user_id=?',U(res).id);
-    return res.render('guestbook',{nav:'gb',tab,page,pages:Math.ceil(total/per),total,...side,
+  // 上一次送出失敗時填過的內容（見 site.post('/guestbook')）。用完即刪。
+  const gbForm = req.session.gbForm || null;
+  delete req.session.gbForm;
+    return res.render('guestbook',{ gbForm,nav:'gb',tab,page,pages:Math.ceil(total/per),total,...side,
       sys:await all('SELECT * FROM sysmsg WHERE user_id=? ORDER BY id DESC LIMIT ? OFFSET ?',U(res).id,per,(page-1)*per),unread:0});
   }
   if(tab==='bulletin'){
     // 原版的 #tab_bulletin 是**站方公告**（發文者一律 wretchoffice），人人可見、會分頁。
     // 跟上面那個私人信箱是兩回事，所以是兩個頁籤而不是把 sys 改掉。
     const total=(await one('SELECT count(*) c FROM notices')).c;
+    // 頁碼夾在 1..pages（見 clampPage 的說明）：超出範圍退回最後一頁。
+    page = clampPage(page, Math.ceil(total / per));
     return res.render('guestbook',{nav:'gb',tab,page,pages:Math.ceil(total/per),total,...side,unread,
       bulletins:(await all('SELECT * FROM notices ORDER BY id DESC LIMIT ? OFFSET ?',per,(page-1)*per)).map(bulletinRow)});
   }
   const total=(await one('SELECT count(*) c FROM guestbook WHERE user_id=?',U(res).id)).c;
+  // 頁碼夾在 1..pages（見 clampPage 的說明）：超出範圍退回最後一頁。
+  page = clampPage(page, Math.ceil(total / per));
   res.render('guestbook',{nav:'gb',tab,page,pages:Math.ceil(total/per),total,...side,unread,
     // 帶出留言者的帳號／暱稱／大頭貼／認證狀態——原版那三樣都在留言的表頭
     // （msg_img 的大頭貼、msg_man 的連結、.vip_icon）。LEFT JOIN：訪客留言沒有帳號。
@@ -2200,7 +2357,21 @@ site.post('/guestbook',async (req,res)=>{ const {author,subject,body,secret}=req
   const gbSite=(()=>{ try{ const x=String(req.body.homepage||'').trim(); if(!x) return '';
     return ['http:','https:'].includes(new URL(x).protocol)?x.slice(0,200):''; }catch{ return ''; } })();
   const gbMail=/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test((req.body.email||'').trim())?req.body.email.trim().slice(0,60):'';
-  if(who?.trim()&&body?.trim()){
+  // ⚠ 原本是「有填才寫，否則一路 302 到留言列表」——訪客寫了一長段話、
+  // 暱稱欄不小心留了空白（required 擋不住空白字元），送出後畫面跳到列表，
+  // 沒有紅字、沒有提示，自己那則留言不在上面。第一反應是「站長把我刪了」
+  // 或「這個留言板壞了」，而打的字已經不見（要按上一頁才救得回來）。
+  //
+  // 用 session 帶回填過的內容：留言表單在 ?tab=new 那一頁，
+  // 這裡必須 redirect（要換頁籤），所以不能像其他表單那樣直接 render。
+  if(!who?.trim() || !body?.trim()){
+    flash(req, !who?.trim() ? '暱稱不能是空白，這則留言沒有送出' : '內容不能是空白，這則留言沒有送出');
+    req.session.gbForm = { author: String(author||'').slice(0,20),
+      subject: String(subject||'').slice(0,40), body: String(body||'').slice(0,500),
+      email: gbMail, homepage: gbSite };
+    return res.redirect(`/${U(res).name}/guestbook?tab=new`);
+  }
+  {
     // author_id 只有登入才有值：原版每一則留言的暱稱與大頭貼都連回留言者的小站，
     // 認證章也掛在那裡。訪客留言留 NULL，view 就退回純文字。
     await run('INSERT INTO guestbook(user_id,author,author_id,subject,body,secret,email,homepage) VALUES(?,?,?,?,?,?,?,?)',U(res).id,who.trim().slice(0,20),res.locals.me?.id||null,(subject||'').trim().slice(0,40),body.trim().slice(0,500),secret?1:0,gbMail,gbSite);

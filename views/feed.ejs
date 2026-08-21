@@ -9,7 +9,7 @@
 
 <%- include('partials/gbtop', { here: 'feed', head: u.nick + ' 的好友動態' }) %>
 
-<div id="search">共 <b><%= acts.length %></b> 則動態</div>
+<div id="search">共 <b><%= total %></b> 則動態</div>
 
 <div class="msg_body">
   <% if (!acts.length) { %>
@@ -30,6 +30,9 @@
     </tr>
     <% }) %>
   </table>
+  <%# 分頁：動態原本硬砍 50 則。 %>
+  <%- include('partials/pager2012', { pgPage: page, pgPages: pages,
+        pgHref: n => '/' + u.name + '/feed?p=' + n }) %>
   <% } %>
 </div>
 

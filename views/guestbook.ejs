@@ -97,6 +97,10 @@
   <div id="msg_added">
     <h2>我要留言</h2>
     <div class="msg_body">
+      <%# ⚠ 送出失敗（暱稱或內容只有空白）時，原本整則留言就這樣不見了，
+          而畫面還跳到留言列表——看起來像成功。後端現在把填過的內容放進
+          session，這裡拿出來回填，錯誤原因走 flash 顯示在頁面上方。 %>
+      <% const gf = locals.gbForm || {}; %>
       <form method="post" action="/<%= u.name %>/guestbook">
         <ul>
           <li class="add_img"><img src="<%= u.avatar %>" width="90" height="90" alt="<%= u.nick %>"></li>
@@ -105,7 +109,7 @@
           </li>
           <li class="add_name"><span>暱稱</span>
             <% if (me) { %><b><%= me.nick %></b>
-            <% } else { %><input class="small-c" type="text" name="author" size="20" maxlength="20" value="<%= guest && guest.nick ? guest.nick : '' %>" required><% } %>
+            <% } else { %><input class="small-c" type="text" name="author" size="20" maxlength="20" value="<%= gf.author || (guest && guest.nick) || '' %>" required><% } %>
           </li>
           <%# ⚠ 原站的留言表單有 Name / Email / URL / Remember Me 四欄
               （存檔 gb_gbook_addpost_a0913375433_20110625.html 逐字），
@@ -132,7 +136,7 @@
             <label><input type="checkbox" name="secret" value="1"> 只有板主看得到</label>
           </li>
           <li><span>主題</span>
-            <input class="small-c" type="text" name="subject" size="36" maxlength="40">
+            <input class="small-c" type="text" name="subject" value="<%= gf.subject || '' %>" size="36" maxlength="40">
           </li>
           <li><span>表情圖案</span>
             <span class="w2-emo">
@@ -140,7 +144,7 @@
             </span>
           </li>
           <li><span>內容</span>
-            <textarea class="small-c" name="body" id="content_data" cols="50" rows="10" maxlength="500" required></textarea>
+            <textarea class="small-c" name="body" id="content_data" cols="50" rows="10" maxlength="500" required><%= gf.body || '' %></textarea>
           </li>
           <li><span>&nbsp;</span>
             <input class="small-c" type="submit" name="leavemsg" value="送出">

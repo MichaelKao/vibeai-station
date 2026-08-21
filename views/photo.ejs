@@ -229,17 +229,20 @@
 <%# ── 迴響（本站加的，理由見檔頭）───────────────────────────────────────── %>
 <a name="comments"></a>
 <div class="w2a-cmt">
-  <h4>迴響(<%= comments.length %>)</h4>
+  <h4>迴響(<%= cTotal %>)</h4>
 <% if (!comments.length) { %>
   <div class="empty">還沒有人留下迴響。</div>
 <% } else { %>
   <ol>
 <% comments.forEach((c, ci) => { %>    <li>
-      <span class="who"><%= ci + 1 %>樓 <%= c.author %></span>
+      <span class="who"><%= (cPage - 1) * 20 + ci + 1 %>樓 <%= c.author %></span>
       <span class="when"><%= String(c.created).slice(0, 16) %></span>
       <div class="body"><%= c.body %></div>
     </li>
 <% }) %>  </ol>
+  <%# 分頁：照片迴響原本一次全撈。 %>
+  <%- include('partials/pager2012', { pgPage: cPage, pgPages: cPages, pgId: 'photo_comment_pages',
+        pgHref: n => phPath + '?cp=' + n + '#comments' }) %>
 <% } %>
   <div class="bd">
     <form method="post" action="<%= phPath %>/comment">

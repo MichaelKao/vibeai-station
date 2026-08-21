@@ -103,13 +103,17 @@
     <% if (isOwner) { %>
     <div class="w2-panel">
       <div class="w2-h3">新增影片</div>
+      <%# ⚠ 網址貼錯被退回時，原本剛打好的標題與說明會一起被清空——
+          使用者多半只是複製錯網址，卻要整組重打。後端把填過的內容放進
+          session（見 site.post('/:name/video')），這裡拿出來回填。 %>
+      <% const vf = locals.videoForm || {}; %>
       <form method="post" action="/<%= u.name %>/video">
         <table class="w2-rows">
           <tr><td width="90">影片網址</td>
-            <td><input type="text" name="url" size="46" maxlength="200" required
+            <td><input type="text" name="url" value="<%= vf.url || '' %>" size="46" maxlength="200" required
                        placeholder="https://www.youtube.com/watch?v=..."></td></tr>
-          <tr><td>標題</td><td><input type="text" name="title" size="30" maxlength="60"></td></tr>
-          <tr><td>說明</td><td><input type="text" name="descr" size="46" maxlength="200"></td></tr>
+          <tr><td>標題</td><td><input type="text" name="title" value="<%= vf.title || '' %>" size="30" maxlength="60"></td></tr>
+          <tr><td>說明</td><td><input type="text" name="descr" value="<%= vf.descr || '' %>" size="46" maxlength="200"></td></tr>
           <tr><td></td><td><input type="submit" value="新增">
             <span class="w2-note">目前支援 YouTube 網址</span></td></tr>
         </table>

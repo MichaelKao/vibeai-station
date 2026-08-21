@@ -116,6 +116,55 @@ for (const L of LISTS) {
     const r = await get(`${L.url}${sep}p=${bad}`, CK);
     ok(`${L.name}：頁碼 ${bad} 不會壞`, r.status === 200, 'HTTP ' + r.status);
   }
+
+  // 超出範圍的頁碼要退回**最後一頁**，不是印空狀態。
+  //
+  // ⚠ 這是實測抓到的原話「畫面公然自相矛盾」：相簿頁同時印著
+  // 「90 pictures」和「這本相簿還沒有照片」。使用者點到過期的分頁連結、
+  // 或別人貼了一個舊頁碼的網址，看到的就是一片空白＋一個總數，
+  // 直覺是「我的資料被刪光了」。
+  {
+    const over  = await text(`${L.url}${sep}p=999999`, CK);
+    const lastH = await text(`${L.url}${sep}p=${wantPages}`, CK);
+    ok(`${L.name}：頁碼超出範圍時退回最後一頁，不是空狀態`,
+       L.count(over) > 0 && L.count(over) === L.count(lastH),
+       `p=999999 印了 ${L.count(over)} 筆（最後一頁是 ${L.count(lastH)} 筆）` +
+       '——超出範圍卻給空清單，畫面會跟旁邊的總數自相矛盾');
+  }
+}
+
+// 哈啦主題的回覆
+//
+// ⚠ 回覆原本是一次全撈、完全沒有分頁——一串熱門主題累積上千則之後，
+// 這一頁要把每一則的 BBCode 都算過再吐出去，手機直接卡住。
+// 而且送出回覆之後要跳到**最後一頁**，不然使用者看不到自己剛打的那則，
+// 跟「沒送出去」長得一模一樣。
+{
+  const r = await post('/hala', { title: '分頁主題', body: '內容' }, CK);
+  const tid = (r.headers.get('location') || '').match(/\/hala\/(\d+)/)?.[1];
+  ok('哈啦：主題發得出來', !!tid, 'location=' + r.headers.get('location'));
+  if (tid) {
+    const N = 23, per = 20;
+    for (let n = 1; n <= N; n++) await post(`/hala/${tid}/reply`, { body: '回覆' + n }, CK);
+    const cnt = h => new Set(h.match(/回覆\d+(?!\d)/g) || []).size;
+    const p1 = await text(`/hala/${tid}`, CK);
+    ok(`哈啦回覆：第一頁只印 ${per} 則（實際 ${cnt(p1)}）`, cnt(p1) === per,
+       `塞了 ${N} 則卻一次全印出來——沒有分頁`);
+    ok('哈啦回覆：分頁列有出現', /page_control/.test(p1));
+    ok('哈啦回覆：總數印的是全部不是本頁', p1.includes('<b>' + N + '</b>'),
+       '頁面上寫「回覆 20」，但其實有 23 則');
+    const p2 = await text(`/hala/${tid}?p=2`, CK);
+    ok(`哈啦回覆：第二頁有東西（${cnt(p2)} 則）`, cnt(p2) === N - per);
+    const over = await text(`/hala/${tid}?p=999999`, CK);
+    ok('哈啦回覆：頁碼超出範圍退回最後一頁', cnt(over) === N - per,
+       `p=999999 印了 ${cnt(over)} 則，應該跟最後一頁一樣是 ${N - per} 則`);
+    // 送出之後要看得到自己那則
+    const rr = await post(`/hala/${tid}/reply`, { body: '回覆999' }, CK);
+    const loc = rr.headers.get('location') || '';
+    ok('哈啦回覆：送出後跳到最後一頁（看得到自己剛打的）', /\?p=2/.test(loc),
+       'location=' + loc + '——跳回第一頁的話，畫面上只有最舊的 20 則，' +
+       '使用者會以為回覆沒送出去');
+  }
 }
 
 // 空狀態：新帳號的每一種清單都要有話講，不能是一片空白

@@ -21,7 +21,7 @@
         <div class="bd">
 
           <p class="w2-blog-count">
-            <a href="/hala">← 回哈啦</a>　瀏覽 <b><%= t.views %></b>　回覆 <b><%= posts.length %></b>
+            <a href="/hala">← 回哈啦</a>　瀏覽 <b><%= t.views %></b>　回覆 <b><%= total %></b>
             <% if (t.cat) { %>　分類：<%= t.cat %><% } %>
           </p>
 
@@ -34,7 +34,7 @@
               <td class="w2-hala-body"><%- render(t.body) %></td>
             </tr>
             <% posts.forEach((p, i) => { %>
-            <tr<% if (i === posts.length - 1) { %> id="last"<% } %>>
+            <tr<% if (i === posts.length - 1 && page === pages) { %> id="last"<% } %>>
               <td class="w2-hala-who">
                 <% if (p.uname) { %><a href="/<%= p.uname %>"><%= p.nick || p.author %></a><% } else { %><%= p.author %><% } %><br>
                 <span class="w2-sub"><%= p.created.slice(5, 16) %></span>
@@ -43,6 +43,9 @@
             </tr>
             <% }) %>
           </table>
+          <%# 分頁：回覆原本一次全撈，熱門主題會塞爆整頁。 %>
+          <%- include('partials/pager2012', { pgPage: page, pgPages: pages,
+                pgHref: n => '/hala/' + t.id + '?p=' + n }) %>
 
           <% if (me) { %>
           <form method="post" action="/hala/<%= t.id %>/reply" class="w2-halareply">
