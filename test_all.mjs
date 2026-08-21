@@ -648,5 +648,30 @@ console.log('\n=== 上鎖／好友限定相簿的封面不外流 ===');
   ok(`解鎖之後看得到兩張封面（實際 ${after} 張）`, after===2);
 }
 
+
+console.log('\n=== BBCode 不會被一篇文章拖垮（O(n²) 回歸）===');
+// ⚠ 成對標記原本用惰性量詞的正規表示式，碰到「有開沒關」會退化成 O(n²)：
+// 12 萬字的 [b] 要 647ms、48 萬字的 [color=#fff] 要 3682ms，全部卡在
+// event loop 上。內文是存起來的，貼一篇之後每個訪客瀏覽都重算一次——
+// 不用登入就能把整站拖垮。改成 indexOf 的線性掃描之後同樣的輸入 <5ms。
+// 這裡打的是真的 HTTP 路徑（存進資料庫→再讀出來 render），不是單元測試。
+{
+  const bombs = {
+    '[b] 開頭沒收尾':      '[b]'.repeat(16000),
+    '[color] 開頭沒收尾':  '[color=#fff]'.repeat(4100),
+    '[color] 無效色碼':    '[color=#gg]'.repeat(4500),
+    '[color=] 屬性沒收尾': '[color=#fff'.repeat(4500) + '][/color]',
+  };
+  for (const [name, body] of Object.entries(bombs)) {
+    await post('/alpha/blog/new', {title:'bomb', body, category:'心情'}, A);
+    const list = await text('/alpha/blog', A);
+    const pid  = Math.max(...[...list.matchAll(/\/alpha\/blog\/(\d+)/g)].map(m=>+m[1]));
+    const t0 = Date.now();
+    const r  = await get(`/alpha/blog/${pid}`);
+    const ms = Date.now() - t0;
+    ok(`${name}：頁面照樣開得起來（${ms}ms）`, r.status === 200 && ms < 2000, `HTTP ${r.status}`);
+  }
+}
+
 console.log(`\n===== ${pass} passed, ${fail} failed =====`);
 process.exit(fail?1:0);
