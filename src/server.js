@@ -477,9 +477,26 @@ function signIn(req, uid){
   });
 }
 
+// 帳號名是不是站台保留字。
+//
+// ⚠ 寫成函式而不是直接用 RESERVED，是因為 const RESERVED 宣告在這一行**後面**
+// （它要等 SECTION 先建好），直接引用會踩到 TDZ：整個行程在載入 server.js 時
+// 就丟 ReferenceError: Cannot access 'SECTION' before initialization，站根本起不來。
+// function 宣告會提升，而它真正被呼叫的時候（有請求進來）兩個都早就初始化好了。
+function isReserved(name){ return RESERVED.has(String(name || '').toLowerCase()); }
+
+
 app.post('/register',async (req,res)=>{
   const {name='',nick='',pass='',pass2=''}=req.body;
-  const err = !/^[a-z0-9_]{3,20}$/i.test(name)?'帳號限 3~20 位英數字或底線':!nick.trim()?'請填暱稱':pass.length<4?'密碼至少 4 碼':pass!==pass2?'兩次密碼不一致':await one('SELECT 1 FROM users WHERE name=?',String(name||'').toLowerCase())?'這個帳號已經有人用了':null;
+  // ⚠ RESERVED 原本**只用在路由上**（/:name 這一層遇到保留字就 next()），
+  // 註冊完全沒有比對。於是任何人都可以註冊 admin／login／rank／albums…，
+  // 註冊得到之後小站首頁 /<帳號> 永遠打不開——Express 先配到站台那條路由。
+  // 使用者只會覺得「我註冊完就再也進不去自己的小站」，而且沒有任何提示。
+  const low0 = String(name || '').toLowerCase();
+  const err = !/^[a-z0-9_]{3,20}$/i.test(name)?'帳號限 3~20 位英數字或底線'
+    :isReserved(low0)?'這個帳號是站台保留字，請換一個'
+    :!nick.trim()?'請填暱稱':pass.length<4?'密碼至少 4 碼':pass!==pass2?'兩次密碼不一致'
+    :await one('SELECT 1 FROM users WHERE name=?',low0)?'這個帳號已經有人用了':null;
   if(err) return res.render('register',{err,form:req.body});
   const s=salt(), low=name.toLowerCase();
   const first=!await one('SELECT 1 FROM users');
@@ -755,9 +772,6 @@ app.post('/hala/:id/reply',requireLogin,async (req,res)=>{
 });
 
 // ===== 個人小站 =====
-const RESERVED=new Set(['login','register','logout','rank','search','help','admin','uploads','img','style.css','favicon.ico',
-  'join','hala','svcs',
-  ...Object.keys(SECTION)]);
 // ── 查詢字串的兩個共用守門員 ────────────────────────────────────────────
 //
 // qs1：把查詢參數變成**單一字串**。
@@ -782,6 +796,21 @@ const GRP_NAME = "COALESCE((SELECT name FROM friend_groups WHERE id=f.group_id),
 
 const site=express.Router({mergeParams:true});
 autoAsync(site);   // 個人小站的路由同樣需要 async 錯誤轉交（理由見檔頭 wrapAsync）
+
+// 不能拿來當帳號的名字。
+//
+// ⚠ 這份名單漏了好幾個**已經存在的站台層級路由**：albums / blogs / video /
+// digu / report / healthz / bgm。註冊得到這些名字的人，小站首頁 /<帳號>
+// 永遠打不開——Express 會先配到站台那條路由。使用者只會覺得
+// 「我註冊完就再也進不去自己的小站」，而且完全沒有提示。
+//
+// 名單要跟著路由一起長。新增任何 app.get('/xxx') 的站台頁面時，
+// xxx 一定要加進來（或者放進 SECTION，那份會自動併入）。
+const RESERVED=new Set(['login','register','logout','rank','search','help','admin','uploads','img','style.css','favicon.ico',
+  'join','hala','svcs',
+  // 站台層級的總站與工具頁
+  'albums','blogs','video','digu','report','healthz','bgm','robots.txt','sitemap.xml',
+  ...Object.keys(SECTION)]);
 
 // 數字型路由參數的守門員。
 //
@@ -1715,7 +1744,16 @@ const myPhotos = async res => await all(`SELECT p.id,p.thumb,p.url FROM photos p
   WHERE a.user_id=? ORDER BY p.id DESC LIMIT 40`, U(res).id);
 site.get('/blog/new',requireLogin,requireOwner,async (req,res)=>res.render('post_edit',{nav:'blog',post:null,photos:await myPhotos(res),emotes:EMOTES,...await blogSide(res)}));
 site.post('/blog/new',requireLogin,requireOwner,async (req,res)=>{ const {title,body,category,mood,weather}=req.body;
-  if(!title?.trim()||!body?.trim()) return res.redirect(`/${U(res).name}/blog/new`);
+  // ⚠ 原本是「標題或內容是空的就 302 回 /blog/new」——那一跳把使用者
+  // **剛打完的整篇文章丟掉**，而且一個字都不解釋。有人打了半小時的文章，
+  // 標題不小心只按到空白鍵，按下發表，回到一張全空的表單。
+  // 現在把填過的內容原樣送回表單，並且講清楚缺什麼。
+  if(!title?.trim()||!body?.trim()){
+    return res.render('post_edit',{nav:'blog',post:null,photos:await myPhotos(res),emotes:EMOTES,
+      ...await blogSide(res),
+      formErr: !title?.trim() ? '標題不能是空白' : '內容不能是空白',
+      form: req.body});
+  }
   const r=await run('INSERT INTO posts(user_id,title,body,category,mood,weather,pass,topic,place) VALUES(?,?,?,?,?,?,?,?,?)',U(res).id,cut(title.trim(), 100),body.slice(0,50000),(category||'未分類').trim().slice(0,20)||'未分類',MOODS.includes(mood)?mood:'',WEATHERS.includes(weather)?weather:'',(req.body.pass||'').slice(0,20),isBlogTopic(req.body.topic)?req.body.topic:'',isPlace(req.body.place)?req.body.place:'');
   await act(U(res).id,'blog',cut(title.trim(), 100),`/${U(res).name}/blog/${r.lastInsertRowid}`);
   res.redirect(`/${U(res).name}/blog/${r.lastInsertRowid}`); });
@@ -2012,6 +2050,40 @@ const visitFlusher = startVisitFlusher(async (userId, n) => {
 });
 
 const PORT=process.env.PORT||3000;
+// ===== 讓 crash 看得見 =====
+//
+// ⚠ 這支程式原本**完全沒有** unhandledRejection / uncaughtException 的處理。
+// Node 從 15 起，任何一個沒接住的 promise rejection 都會直接把行程殺掉，
+// 而預設印出來的東西常常只有一行 message，看不出是哪一條路徑。
+// 在 Railway 上的樣子就是「Deploy Crashed」信一封接一封、站自己重啟，
+// 而沒有人知道為什麼——實際發生過，連續二十小時每隔十幾分鐘一封。
+//
+// 兩種情況分開處理，理由不一樣：
+//
+//   unhandledRejection：**記下來，不要結束行程**。
+//     這幾乎都是某一條請求路徑上漏接的 await（例如某個第三方 RSS 逾時）。
+//     為了那一個請求把所有正在用站的人一起踢掉，代價完全不成比例。
+//     記完之後行程繼續服務，log 裡有完整堆疊可以回頭修。
+//
+//   uncaughtException：**記下來，然後收工重啟**。
+//     這代表同步程式碼炸了，行程的狀態可能已經不一致（連線、交易、暫存），
+//     繼續跑下去會用壞掉的狀態回應使用者。走正常的關機流程讓平台重啟。
+process.on('unhandledRejection', (reason, promise) => {
+  const e = reason instanceof Error ? reason : new Error(String(reason));
+  console.error('[未接住的 rejection] 行程繼續服務，但這條路徑要修：');
+  console.error(e.stack || e.message);
+  void promise;
+});
+process.on('uncaughtException', err => {
+  console.error('[未接住的例外] 狀態可能已經不一致，收工讓平台重啟：');
+  console.error(err?.stack || String(err));
+  // shutdown() 是下面宣告的 function，會提升；真的被呼叫時早就定義好了。
+  try { shutdown('uncaughtException'); } catch { process.exit(1); }
+  // 關機流程萬一自己卡住，10 秒後硬退，不要讓行程掛在那裡不生不死。
+  setTimeout(() => process.exit(1), 10_000).unref?.();
+});
+
+
 const server = app.listen(PORT,()=>{
   console.log(`vibeai 小站 → http://localhost:${PORT}　資料庫 ${driver}　session ${hasRedis?'redis':'memory'}`);
   // 灌示範資料（見 src/seed-demo.js 的用法與安全說明）。

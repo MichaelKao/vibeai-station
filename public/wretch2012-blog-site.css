@@ -208,3 +208,8 @@ html > body #content #push button.push { margin: 0 0 0 2px; }
   color: inherit; font: inherit; cursor: pointer;
 }
 .w2-linkbtn:hover { text-decoration: underline; }
+
+/* 發文表單的錯誤訊息。原站的錯誤是另開一頁，本站留在原地把填過的內容
+   保住，所以需要一個就地顯示的位置。 */
+.w2-formerr { margin: 6px 0; padding: 6px 10px; border: 1px solid #e0a0a0;
+              background: #fff4f4; color: #c33; font-size: 13px; }

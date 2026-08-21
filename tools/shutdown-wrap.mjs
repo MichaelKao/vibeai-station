@@ -9,4 +9,8 @@
 // 走的是**和正式站完全相同的那一段 handler**，只有「訊號怎麼來的」不一樣。
 // 驗的是我們寫的關機邏輯，不是作業系統的訊號傳遞。
 await import('../src/server.js');
-process.on('message', m => { if (m === 'term') process.emit('SIGTERM'); });
+process.on('message', m => {
+  if (m === 'term') process.emit('SIGTERM');
+  // 給 tools/crashcheck 用：故意製造一個沒接住的 rejection
+  if (m === 'reject') Promise.reject(new Error('測試用的未接住 rejection'));
+});

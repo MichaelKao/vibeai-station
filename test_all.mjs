@@ -869,5 +869,53 @@ console.log('\n=== 迴響與引用要分頁 ===');
      (both.match(/href="[^"]*page=3[^"]*"/) || ['(找不到)'])[0]);
 }
 
+
+console.log('\n=== 顏文字不能改到網址、保留字、發文不吃掉內容 ===');
+// ⚠ 顏文字取代原本是對整份 HTML 做全域字串取代，而且排在 [img] 與裸網址
+// 自動連結**之後**——網址裡出現 orz／XD／zzz／T_T 就會被換成 emoji，
+// 圖破掉、連結 404。使用者只會看到「我貼的圖不會出現」，永遠猜不到原因。
+{
+  await post('/register',{name:'emoq',nick:'顏文字',pass:'test1234',pass2:'test1234'});
+  const E = await login('emoq');
+  await post('/emoq/blog/new',
+    {title:'網址測試',body:'[img]http://example.com/XD.png[/img]\nhttp://example.com/orz/a.jpg',category:'心情'},E);
+  const list = await text('/emoq/blog',E);
+  const pid = Math.max(...[...list.matchAll(/\/emoq\/blog\/(\d+)/g)].map(m=>+m[1]));
+  const html = await text(`/emoq/blog/${pid}`);
+  ok('網址裡的 XD 不會被換成 emoji', html.includes('example.com/XD.png'),
+     (html.match(/example\.com\/[^"]*\.png/) || ['(找不到)'])[0]);
+  ok('網址裡的 orz 不會被換成 emoji', html.includes('example.com/orz/a.jpg'),
+     (html.match(/example\.com\/[^"<]*a\.jpg/) || ['(找不到)'])[0]);
+
+  // 正常的顏文字還是要能用
+  await post('/emoq/blog/new',{title:'心情',body:'今天心情 XD 真的 orz',category:'心情'},E);
+  const l2 = await text('/emoq/blog',E);
+  const p2 = Math.max(...[...l2.matchAll(/\/emoq\/blog\/(\d+)/g)].map(m=>+m[1]));
+  const h2 = await text(`/emoq/blog/${p2}`);
+  ok('內文裡的顏文字照樣變成 emoji', h2.includes('😆') && h2.includes('🙇'));
+}
+
+// ⚠ RESERVED 名單漏了好幾個已經存在的站台路由。註冊得到這些名字的人，
+// 小站首頁 /<帳號> 永遠打不開——Express 會先配到站台那條路由，
+// 使用者只會覺得「我註冊完就再也進不去自己的小站」，而且完全沒有提示。
+for (const n of ['albums','blogs','video','digu','report','healthz','bgm']) {
+  const r = await post('/register',{name:n,nick:'x',pass:'test1234',pass2:'test1234'});
+  const body = await r.text();
+  ok(`保留字擋得住：${n}`, body.includes('已經有人用了') || body.includes('不能用') || body.includes('保留'),
+     'HTTP ' + r.status);
+}
+
+// ⚠ 發文時標題只打空白，原本是 302 回空表單——使用者剛打完的整篇文章
+// 就這樣消失，而且一個字都不解釋。
+{
+  const E2 = await login('emoq');
+  const long = '這是我打了很久的內容'.repeat(20);
+  const r = await post('/emoq/blog/new',{title:'   ',body:long,category:'心情'},E2);
+  const html = await r.text();
+  ok('標題空白不會把內容吃掉', html.includes(long.slice(0, 30)),
+     'HTTP ' + r.status + '（有沒有把內容送回來）');
+  ok('標題空白會講原因', html.includes('標題不能是空白'), 'HTTP ' + r.status);
+}
+
 console.log(`\n===== ${pass} passed, ${fail} failed =====`);
 process.exit(fail?1:0);

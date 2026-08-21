@@ -289,5 +289,21 @@ if (!process.env.SKIP_BROWSER) {
   if (fails.length) bad += fails.length;
 }
 
+
+// ── 沒接住的錯誤不會把站弄死（自己開站）──────────────────────────
+{
+  const r = spawnSync(process.execPath, ['tools/crashcheck.mjs'], {
+    env: { ...process.env, MSYS_NO_PATHCONV: '1' }, encoding: 'utf8',
+  });
+  const out = (r.stdout || '') + (r.stderr || '');
+  const line = out.split(String.fromCharCode(10)).filter(l => l.includes('passed')).pop();
+  const fails = out.split(String.fromCharCode(10)).filter(l => l.startsWith('! FAIL'));
+  console.log(`
+崩潰防護：${line ? line.trim() : '(沒有結果——測試根本沒跑完)'}`);
+  for (const f of fails.slice(0, 20)) console.log('  ' + f.trim());
+  if (!line) { bad += 1; }
+  if (fails.length) bad += fails.length;
+}
+
 console.log(bad ? `\n共 ${bad} 項失敗` : '\n全部通過');
 process.exit(bad ? 1 : 0);

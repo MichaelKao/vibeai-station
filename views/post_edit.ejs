@@ -37,10 +37,14 @@
           <div class="articletext">
 
             <form method="post">
+              <%# ⚠ 標題或內容空白時，後端原本是 302 回這一頁——那一跳把使用者
+                  剛打完的整篇文章丟掉，而且一個字都不解釋。現在把填過的內容
+                  原樣送回來（locals.form），並在這裡講清楚缺什麼。 %>
+              <% if (locals.formErr) { %><p class="w2-formerr"><%= formErr %></p><% } %>
             <table class="w2b-form">
               <tr>
                 <th><label for="ed_title">標題</label></th>
-                <td><input id="ed_title" name="title" size="48" maxlength="100" value="<%= post ? post.title : '' %>" required></td>
+                <td><input id="ed_title" name="title" size="48" maxlength="100" value="<%= post ? post.title : (locals.form?.title || '') %>" required></td>
               </tr>
               <tr>
                 <th><label for="ed_cat">個人分類</label></th>
@@ -85,7 +89,7 @@
 
               <tr>
                 <th><label for="body">內容</label></th>
-                <td><textarea id="body" name="body" cols="56" rows="18" required><%= post ? post.body : '' %></textarea>
+                <td><textarea id="body" name="body" cols="56" rows="18" required><%= post ? post.body : (locals.form?.body || '') %></textarea>
                   <span class="w2b-hint">可用 [b]粗體[/b]、[i]斜體[/i]、[u]底線[/u]、[color=#f60]顏色[/color]、[img]圖片網址[/img]，網址會自動變連結。</span></td>
               </tr>
 

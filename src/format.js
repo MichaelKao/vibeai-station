@@ -157,6 +157,37 @@ function colorTag(h){
 }
 
 
+// 顏文字取代，但跳過 HTML 標籤本身與 <a>…</a> 的內容。
+//
+// 標籤裡（href/src 等屬性）不能動，理由見 render() 裡的說明。
+// <a> 的**內容**也要跳過：自動連結印出來的文字就是那個網址，
+// 在那裡把 orz 換成 🙇，畫面上看到的網址跟實際連過去的就對不起來。
+//
+// 使用者自己打的字不會在 <a> 裡面（BBCode 沒有手動連結語法），
+// 所以整段跳過是安全的。
+function emoteOutsideTags(h){
+  // 內文的 < 在 esc() 就已經變成 &lt;，所以這裡切到的一定是我們自己產的標籤
+  const parts = h.split(/(<[^>]*>)/);
+  let inA = 0, out = '';
+  for (const part of parts){
+    if (part.startsWith('<')){
+      if (/^<a\b/i.test(part)) inA++;
+      else if (/^<\/a\s*>/i.test(part)) inA = Math.max(0, inA - 1);
+      out += part;
+      continue;
+    }
+    if (inA || !part) { out += part; continue; }
+    let t = part;
+    for (const [k, v] of EMOTES) {
+      const k2 = esc(k).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      t = t.replace(new RegExp(k2, 'g'), v);
+    }
+    out += t;
+  }
+  return out;
+}
+
+
 export function render(body){
   let h = esc(body);
 
@@ -178,11 +209,18 @@ export function render(body){
   h = h.replace(/(^|[\s(])((?:https?:\/\/)[^\s<>"']+)/g,
     (m, pre, u) => `${pre}<a href="${u}" rel="nofollow noopener" target="_blank">${u}</a>`);
 
-  // 顏文字
-  for (const [k, v] of EMOTES) {
-    const k2 = esc(k).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    h = h.replace(new RegExp(k2, 'g'), v);
-  }
+  // 顏文字。只換「標籤外面、而且不在連結裡」的文字。
+  //
+  // ⚠ 這一步原本是對整份 HTML 做全域字串取代，而且排在 [img] 與裸網址
+  // 自動連結**之後**——於是網址裡只要出現顏文字的字面，就會被換掉：
+  //     http://example.com/orz/photo.jpg
+  //       → <a href="http://example.com/🙇/photo.jpg">…    連結 404
+  //     [img]http://example.com/XD.png[/img]
+  //       → <img src="http://example.com/😆.png">          圖破掉
+  //     http://example.com/a?q=T_T                          查詢參數被改掉
+  // zzz、XD、orz、T_T、^^、:) 這些在網址裡一點都不罕見（相簿名稱、
+  // 檔名、追蹤參數），使用者只會看到「我貼的圖不會出現」，永遠猜不到原因。
+  h = emoteOutsideTags(h);
 
   return h.replace(/\n/g, '<br>');
 }
