@@ -332,6 +332,12 @@ app.get('/search',async (req,res)=>{
 // 這一支把「現在到底接到什麼」講清楚。
 //
 // 不印任何密鑰或連線字串，只印「有沒有」與 ping 得通不通，可以公開。
+// 測試用：故意丟例外的路由，只有 ASYNC_ERR_ROUTE=1 才掛上去。
+// 用來驗「async handler 丟例外會走到錯誤中介層，而不是把行程殺掉」
+// （tools/asyncerr.mjs）。正式站不會有這個環境變數，所以這條路由不存在。
+if (process.env.ASYNC_ERR_ROUTE === '1')
+  app.get('/__asyncerr', async () => { throw new Error('__asyncerr 測試用例外'); });
+
 app.get('/healthz', async (req, res) => {
   // ⚠ redis 這一欄要回報**實際狀態**，不是「有沒有設定 REDIS_URL」。
   // 原本寫 hasRedis（＝!!URL），於是 Redis 連不上而降級成 MemoryStore 時，
@@ -931,7 +937,18 @@ site.post('/settings',requireLogin,requireOwner,upload.single('avatar'),async(re
       if (s.url && s.url !== s.thumb) await remove(s.url);
       await remove(u.avatar);
     }
-    catch (e) { if(e && e.code==='BAD_IMAGE') avatarErr=e.message; else throw e; }
+    catch (e) {
+      // ⚠ 原本只有 BAD_IMAGE 會被接住，其他一律 throw——也就是說 R2 掛掉、
+      // 磁碟滿了、網路瞬斷的時候，整個 handler 拋出去變成 500，
+      // **同一張表單裡的暱稱、自我介紹、自訂 CSS、音樂盒全部一起被丟掉**，
+      // 而且畫面只說「伺服器發生錯誤」。使用者改了半天的設定就這樣沒了。
+      // 頭貼換不成是一件小事，不該拖著整張表單陪葬：記下原因，其他照存。
+      if (e && e.code === 'BAD_IMAGE') avatarErr = e.message;
+      else {
+        console.error('[avatar] 存檔失敗', e?.message);
+        avatarErr = '大頭貼暫時存不進去（儲存服務有問題），其他設定已經存好了，請稍後再換一次。';
+      }
+    }
   }
   await run('UPDATE users SET nick=?,intro=?,music=?,css=?,css_blog=?,avatar=?,theme=? WHERE id=?',cut((nick||'').trim()||u.nick, 20),(intro||'').slice(0,500),cleanMusic(music),(css||'').slice(0,20000),(css_blog||'').slice(0,20000),avatar,isSkin(req.body.theme)?(req.body.theme||''):'',u.id);
   // 改密碼要先驗舊密碼。
@@ -1089,16 +1106,41 @@ site.post('/folders/:id/del',requireLogin,requireOwner,async (req,res)=>{
 //   guestbook / comments 的 author_id 指向這個人。**SQLite 會重用被刪掉的 id**，
 //                       下一個註冊的人就繼承了這些留言——別人的留言板上
 //                       會出現冒名的頭像與連結。所以要把參照打成 NULL。
+// 刪帳號。
+//
+// ⚠ 順序原本是「先刪光所有照片檔 → 最後才刪資料列」，跟專案其他地方
+// （相簿刪除、照片刪除）「先刪列、再刪檔」的規則相反。差別在中途失敗的時候：
+//   先刪檔：檔案沒了、資料列還在 → 站上到處是破圖，而且**修不回來**
+//   先刪列：資料列沒了、檔案還在 → 只是留下沒人參照的孤兒檔，之後可以掃
+// 破圖是使用者看得到的損壞，孤兒檔只是浪費空間。所以一律先刪列。
 async function purgeUser(id){
-  for(const p of await all('SELECT p.url,p.thumb FROM photos p JOIN albums a ON a.id=p.album_id WHERE a.user_id=?',id)){
-    await remove(p.url); if(p.thumb&&p.thumb!==p.url) await remove(p.thumb); }
-  const u=await one('SELECT name,avatar FROM users WHERE id=?',id);
-  if(u?.avatar && u.avatar!=='/img/avatar.png') await remove(u.avatar);
-  await run('DELETE FROM friends WHERE user_id=? OR friend_id=?',id,id);
-  if(u?.name) await run('DELETE FROM visitors WHERE who=?',u.name);
-  await run('UPDATE guestbook SET author_id=NULL WHERE author_id=?',id);
-  await run('UPDATE comments SET author_id=NULL WHERE author_id=?',id);
-  await run('DELETE FROM users WHERE id=?',id);
+  const u = await one('SELECT name,avatar FROM users WHERE id=?', id);
+  // 先把要刪的檔案清單抓下來（列刪掉之後就查不到了）
+  const files = await all('SELECT p.url,p.thumb FROM photos p JOIN albums a ON a.id=p.album_id WHERE a.user_id=?', id);
+  if (u?.avatar && u.avatar !== '/img/avatar.png') files.push({ url: u.avatar, thumb: null });
+
+  await run('DELETE FROM friends WHERE user_id=? OR friend_id=?', id, id);
+  if (u?.name) await run('DELETE FROM visitors WHERE who=?', u.name);
+  await run('UPDATE guestbook SET author_id=NULL WHERE author_id=?', id);
+  await run('UPDATE comments SET author_id=NULL WHERE author_id=?', id);
+  // ⚠ 哈啦討論串與禮物**不能跟著帳號一起消失**。
+  // schemaSql 裡 hala_topics.user_id 是 ON DELETE CASCADE，hala_posts 又
+  // CASCADE 在 topic_id 上——一個人退站，他開過的每一串討論連同**別人寫的
+  // 回覆**全部一起不見；gifts 同理，別人收到的禮物也會被刪掉。
+  // 那是別人的內容，不該由他的退站決定。改成把作者改掉、內容留著
+  // （author_id=NULL 之後畫面上顯示成已退站的使用者）。
+  await run('UPDATE hala_topics SET user_id=NULL WHERE user_id=?', id);
+  await run('UPDATE hala_posts  SET user_id=NULL WHERE user_id=?', id);
+  await run('UPDATE gifts SET from_id=NULL WHERE from_id=?', id);
+  await run('DELETE FROM users WHERE id=?', id);
+
+  // 列都刪乾淨了才動檔案。單一個檔案刪不掉不能讓整個流程停在一半——
+  // 那會留下「一半的帳號」，比孤兒檔糟得多。
+  for (const f of files) {
+    await remove(f.url).catch(e => console.error('[purge] 刪檔失敗', f.url, e.message));
+    if (f.thumb && f.thumb !== f.url)
+      await remove(f.thumb).catch(e => console.error('[purge] 刪檔失敗', f.thumb, e.message));
+  }
 }
 
 // 刪除自己的帳號（需再次輸入密碼），連同照片一起清掉
@@ -1154,7 +1196,10 @@ site.post('/friendgroups/:id/del',requireLogin,requireOwner,async (req,res)=>{
 site.get('/card',async (req,res)=>res.render('card',{nav:'card',
   // 收到的禮物顯示在名片頁（原站的送禮物就是掛在個人資料上）
   gifts:await all(`SELECT g.kind,g.msg,g.created,u2.name fname,u2.nick fnick
-    FROM gifts g JOIN users u2 ON u2.id=g.from_id WHERE g.to_id=? ORDER BY g.id DESC LIMIT 12`,U(res).id),
+    -- ⚠ 一定要 LEFT JOIN。送禮的人退站之後 from_id 會變成 NULL（見 purgeUser 的說明），
+    -- INNER JOIN 會讓那份禮物**從收禮者的頁面上消失**——別人送你的東西，
+    -- 不該因為他退站就不見。
+    FROM gifts g LEFT JOIN users u2 ON u2.id=g.from_id WHERE g.to_id=? ORDER BY g.id DESC LIMIT 12`,U(res).id),
   giftKinds:GIFTS,
   zodiacs:ZODIACS,bloods:BLOODS,sexes:SEXES,cities:CITIES,
   visitors:await all('SELECT * FROM visitors WHERE user_id=? ORDER BY id DESC LIMIT 8',U(res).id),
@@ -1402,7 +1447,15 @@ site.post('/album/:id/upload',requireLogin,requireOwner,albumOf,upload.array('ph
   const a=res.locals.album; let first=null;
   const files=req.files||[];
   const incoming=files.reduce((n,f)=>n+f.size,0);
-  const err=await quotaError(U(res).id,incoming);
+  // ⚠ 配額是「先查再寫」，跟 /subs、/folders 的上限是同一個型態的問題：
+  // 查完到真的寫進去之間有空隙，同時送三批上傳就三批都通過檢查，
+  // 三批都寫進去（稽核實測超出 22%，檔案夠大的話可以超出好幾 GB）。
+  //
+  // 修法和那兩處一致：用同一個使用者的鎖把「檢查 → 存檔 → 寫入」框起來，
+  // 讓同一個人的上傳排隊。不同使用者互不影響，所以不會變成全站瓶頸。
+  // （為什麼不能只靠 SQL：配額要 SUM 全部照片的 bytes，沒辦法寫成一句
+  //   INSERT … WHERE，而且中間還夾著寫檔案這種資料庫管不到的動作。）
+  const err = await withLock('quota:' + U(res).id, () => quotaError(U(res).id, incoming));
   if(err) return res.status(413).render('msg',{title:'空間不足',msg:err,back:`/${U(res).name}/album/${a.id}`});
   // save() 回傳的尺寸與 EXIF 要一起寫進來，照片頁的 #exif 面板才有東西可印。
   // ⚠ 讀不懂的檔案（偽造 MIME 的文字檔、執行檔、像素炸彈）會拋 BadImage，

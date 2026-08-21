@@ -305,5 +305,20 @@ if (!process.env.SKIP_BROWSER) {
   if (fails.length) bad += fails.length;
 }
 
+
+// ── async route 的例外會走到錯誤中介層（自己開站）────────────────
+{
+  const r = spawnSync(process.execPath, ['tools/asyncerr.mjs'], {
+    env: { ...process.env, MSYS_NO_PATHCONV: '1' }, encoding: 'utf8',
+  });
+  const out = (r.stdout || '') + (r.stderr || '');
+  const line = out.split('\n').filter(l => l.includes('passed')).pop();
+  const fails = out.split('\n').filter(l => l.startsWith('! FAIL'));
+  console.log(`\nasync 錯誤轉交：${line ? line.trim() : '(沒有結果——測試根本沒跑完)'}`);
+  for (const f of fails.slice(0, 20)) console.log('  ' + f.trim());
+  if (!line) { bad += 1; }
+  if (fails.length) bad += fails.length;
+}
+
 console.log(bad ? `\n共 ${bad} 項失敗` : '\n全部通過');
 process.exit(bad ? 1 : 0);

@@ -179,7 +179,9 @@
         <ul class="w2-gifts">
           <% gifts.forEach(g => { %>
           <li><img src="/img/wretch2012/gb/Smileys/<%= GIFT_ICON[g.kind] || 'biggrin' %>.gif" width="18" height="18" alt="">
-            <a href="/<%= g.fname %>"><%= g.fnick %></a>
+            <%# 送禮的人退站之後 fname/fnick 會是 null（purgeUser 把 from_id 設成 NULL，
+                禮物本身留著——那是收禮者的東西）。這時候印成不可點的「已退站的朋友」。 %>
+            <% if (g.fname) { %><a href="/<%= g.fname %>"><%= g.fnick %></a><% } else { %><span class="w2-sub">已退站的朋友</span><% } %>
             <% if (g.msg) { %><span class="w2-giftmsg">「<%= g.msg %>」</span><% } %>
             <span class="w2-sub"><%= g.created.slice(5,10) %></span></li>
           <% }) %>
