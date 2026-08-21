@@ -254,40 +254,97 @@ const cleanMusic = s => (s||'').split('\n').map(x=>x.trim())
   .slice(0,30).join('\n').slice(0,2000);
 
 // ===== 全站 =====
+// 首頁：十一次查詢平行送，並且快取。
+//
+// ⚠ 原本是把十一個 `await` 直接寫在 res.render 的物件字面量裡。物件字面量
+// **是依序求值的**，所以那不是「一次拿十一份資料」，是十一次一條接一條的
+// 往返。本機是 SQLite（同一個行程，感覺不出來），正式站是跨網路的
+// Postgres——每次往返都要付延遲，而且整段期間都佔著連線池裡的一條連線
+// （池只有 10 條），所以人一多就排隊。
+//
+// 本機 Postgres 前後對照：單人 16ms→6ms、30 併發 p50 198ms→95ms。
+//
+// ⚠ 光加快取會製造**雪崩**（cache stampede）：
+// 只寫「過期就重查」的話，快取到期的那一瞬間，同時進來的每一個請求都會
+// 判定 miss，然後每一個都去跑那十一次查詢——十個人同時來就是一百一十次
+// 查詢瞬間灌進只有十條連線的池子，比完全不做快取還糟（沒快取時至少
+// 請求是散開的）。所以這裡有兩道處理：
+//   單飛         同一時間只准一個請求去重查，其他人等同一個 Promise
+//   過期先給舊的 有舊資料就先送出去，重查在背景進行
+// 首頁的熱門榜晚幾秒更新沒有人會發現；讓人等三秒才有感覺。
+const HOME_TTL = 15_000;
+let homeCache = { at: 0, data: null };
+let homeInflight = null;
+// 首頁真的重建了幾次。開在 /healthz 上，一來維運看得到快取有沒有在做事，
+// 二來讓測試可以**量機制而不是量症狀**——雪崩的症狀（變慢）只有在
+// 資料庫夠慢的時候才看得出來，本機 SQLite 快到量不出差別，
+// 於是「有沒有防雪崩」這件事在本機就變成測不到的。改成數重建次數：
+// 快取到期時同時來十個人，這個數字只該加一。
+let homeBuilds = 0;
+const homeRefresh = build => {
+  if (!homeInflight)
+    homeInflight = (homeBuilds++, build())
+      .then(d => { homeCache = { at: Date.now(), data: d }; return d; })
+      .finally(() => { homeInflight = null; });
+  return homeInflight;
+};
+
 app.get('/', async (req,res)=>{
   // 左側那個日期小工具（#wfp-archive）的日期連結指向 /?date=YYYY-MM-DD——
   // 原站點下去會看到那一天的首頁。我們照抄了整組 DOM 卻**從來沒處理過這個參數**，
   // 所以 11 個日期連結點下去畫面完全一樣，使用者會覺得「這東西是壞的」。
   // 帶了合法日期就只看那天（含）以前的內容，跟原站「回到那一天的首頁」語意一致。
   const day = /^\d{4}-\d{2}-\d{2}$/.test(req.query.date||'') ? req.query.date : null;
-  const dayWhere = day ? " AND substr(a.created,1,10)<=?" : "";
-  const dayWhereP = day ? " AND substr(p.created,1,10)<=?" : "";
-  const dayArgs = day ? [day] : [];
-  res.render('index',{
-    day,
-    hotAlbums: await all(`SELECT a.*,u.name uname,u.nick FROM albums a JOIN users u ON u.id=a.user_id WHERE a.pass='' AND a.friends_only=0 AND a.cover!=''${dayWhere} ORDER BY a.views DESC LIMIT 8`,...dayArgs),
-    newPhotos: await all(`SELECT p.*,a.title atitle,a.id aid,u.name uname FROM photos p JOIN albums a ON a.id=p.album_id JOIN users u ON u.id=a.user_id WHERE a.pass='' AND a.friends_only=0${dayWhereP} ORDER BY p.id DESC LIMIT 8`,...dayArgs),
-    // 熱門網誌：左縮圖右文字，取作者最新一張照片當縮圖（同 2005 首頁）
-    hotPosts: await all(`SELECT p.*,u.name uname,u.nick,
-        (SELECT ph.thumb FROM photos ph JOIN albums al ON al.id=ph.album_id
-         WHERE al.user_id=p.user_id AND al.pass='' AND al.friends_only=0 ORDER BY ph.id DESC LIMIT 1) pthumb
-      FROM posts p JOIN users u ON u.id=p.user_id WHERE p.pass='' ORDER BY p.views DESC LIMIT 6`),
-    featAlbums: await all(`SELECT a.*,u.name uname,u.nick FROM albums a JOIN users u ON u.id=a.user_id
-      WHERE a.featured=1 AND a.pass='' AND a.friends_only=0 AND a.cover!='' ORDER BY a.id DESC LIMIT 4`),
-    // 站長精選也要縮圖：跟 hotPosts 同一招（作者最新一張公開照片），
-    // 再帶出 u.avatar 當第二層退路。都沒有才會落到 user_cover.gif 那張卡通圖，
-    // 那張圖擺在「投稿精選」這種以人為主的模組裡特別假。
-    featPosts: await all(`SELECT p.*,u.name uname,u.nick,u.avatar,
-        (SELECT ph.thumb FROM photos ph JOIN albums al ON al.id=ph.album_id
-         WHERE al.user_id=p.user_id AND al.pass='' AND al.friends_only=0 ORDER BY ph.id DESC LIMIT 1) pthumb
-      FROM posts p JOIN users u ON u.id=p.user_id WHERE p.featured=1 AND p.pass='' ORDER BY p.id DESC LIMIT 5`),
-    newUsers: await all(`SELECT name,nick,avatar FROM users ORDER BY id DESC LIMIT 8`),
-    // 帶出 avatar：名家專欄／投稿精選那幾格會用它當代表圖。
-    // 之前只 SELECT name/nick，view 只好去 hotAlbums 裡找那個人的照片，
-    // 找不到就印卡通預設圖——排行榜上的人不一定在那幾個清單裡，所以常常找不到。
-    rank: await all(`SELECT name,nick,visits,avatar FROM users ORDER BY visits DESC LIMIT 10`),
-    notices: await all(`SELECT * FROM notices ORDER BY id DESC LIMIT 5`),
-    stats:{users:(await one('SELECT count(*) c FROM users')).c,photos:(await one('SELECT count(*) c FROM photos')).c,posts:(await one('SELECT count(*) c FROM posts')).c}});
+
+  const build = async () => {
+    const dayWhere  = day ? " AND substr(a.created,1,10)<=?" : "";
+    const dayWhereP = day ? " AND substr(p.created,1,10)<=?" : "";
+    const dayArgs   = day ? [day] : [];
+    const [hotAlbums, newPhotos, hotPosts, featAlbums, featPosts,
+           newUsers, rank, notices, cUsers, cPhotos, cPosts] = await Promise.all([
+      all(`SELECT a.*,u.name uname,u.nick FROM albums a JOIN users u ON u.id=a.user_id WHERE a.pass='' AND a.friends_only=0 AND a.cover!=''${dayWhere} ORDER BY a.views DESC LIMIT 8`,...dayArgs),
+      all(`SELECT p.*,a.title atitle,a.id aid,u.name uname FROM photos p JOIN albums a ON a.id=p.album_id JOIN users u ON u.id=a.user_id WHERE a.pass='' AND a.friends_only=0${dayWhereP} ORDER BY p.id DESC LIMIT 8`,...dayArgs),
+      // 熱門網誌：左縮圖右文字，取作者最新一張照片當縮圖（同 2005 首頁）
+      all(`SELECT p.*,u.name uname,u.nick,
+          (SELECT ph.thumb FROM photos ph JOIN albums al ON al.id=ph.album_id
+           WHERE al.user_id=p.user_id AND al.pass='' AND al.friends_only=0 ORDER BY ph.id DESC LIMIT 1) pthumb
+        FROM posts p JOIN users u ON u.id=p.user_id WHERE p.pass='' ORDER BY p.views DESC LIMIT 6`),
+      all(`SELECT a.*,u.name uname,u.nick FROM albums a JOIN users u ON u.id=a.user_id
+        WHERE a.featured=1 AND a.pass='' AND a.friends_only=0 AND a.cover!='' ORDER BY a.id DESC LIMIT 4`),
+      // 站長精選也要縮圖：跟 hotPosts 同一招（作者最新一張公開照片），
+      // 再帶出 u.avatar 當第二層退路。都沒有才會落到 user_cover.gif 那張卡通圖，
+      // 那張圖擺在「投稿精選」這種以人為主的模組裡特別假。
+      all(`SELECT p.*,u.name uname,u.nick,u.avatar,
+          (SELECT ph.thumb FROM photos ph JOIN albums al ON al.id=ph.album_id
+           WHERE al.user_id=p.user_id AND al.pass='' AND al.friends_only=0 ORDER BY ph.id DESC LIMIT 1) pthumb
+        FROM posts p JOIN users u ON u.id=p.user_id WHERE p.featured=1 AND p.pass='' ORDER BY p.id DESC LIMIT 5`),
+      all(`SELECT name,nick,avatar FROM users ORDER BY id DESC LIMIT 8`),
+      // 帶出 avatar：名家專欄／投稿精選那幾格會用它當代表圖。
+      // 之前只 SELECT name/nick，view 只好去 hotAlbums 裡找那個人的照片，
+      // 找不到就印卡通預設圖——排行榜上的人不一定在那幾個清單裡，所以常常找不到。
+      all(`SELECT name,nick,visits,avatar FROM users ORDER BY visits DESC LIMIT 10`),
+      all(`SELECT * FROM notices ORDER BY id DESC LIMIT 5`),
+      one('SELECT count(*) c FROM users'),
+      one('SELECT count(*) c FROM photos'),
+      one('SELECT count(*) c FROM posts'),
+    ]);
+    return { day, hotAlbums, newPhotos, hotPosts, featAlbums, featPosts,
+      newUsers, rank, notices,
+      stats:{ users:cUsers.c, photos:cPhotos.c, posts:cPosts.c } };
+  };
+
+  // ⚠ 帶 ?date= 的請求**完全不碰快取**：那是「回到那一天的首頁」，每個日期
+  // 的結果都不一樣，共用快取會讓使用者點日期看到別天的內容——而且畫面
+  // 看起來完全正常、沒有任何錯誤，只是內容是錯的。
+  if (day) return res.render('index', await build());
+
+  const age = Date.now() - homeCache.at;
+  if (homeCache.data && age < HOME_TTL) return res.render('index', homeCache.data);
+  if (homeCache.data) {                 // 過期但有舊的：先給舊的，背景重查
+    homeRefresh(build).catch(e => console.error('[home]', e.message));
+    return res.render('index', homeCache.data);
+  }
+  res.render('index', await homeRefresh(build));   // 第一次：只有一個人真的去查
 });
 app.get('/rank',async (req,res)=>res.render('rank',{
   users: await all('SELECT name,nick,visits,avatar FROM users ORDER BY visits DESC LIMIT 50'),
@@ -375,7 +432,10 @@ app.get('/healthz', async (req, res) => {
   // ⚠ redis 這一欄要回報**實際狀態**，不是「有沒有設定 REDIS_URL」。
   // 原本寫 hasRedis（＝!!URL），於是 Redis 連不上而降級成 MemoryStore 時，
   // /healthz 照樣回報 redis——那是假訊號，比不回報更糟。
-  const out = { ok: true, db: driver, redis: redisState(), storage: hasR2 ? 'r2' : 'disk', mail: mailState() };
+  // homeBuilds：首頁快取真的重建了幾次。維運可以拿它判斷快取有沒有在做事
+  // （每 15 秒最多加一；如果它跟著請求數一起長，就是快取沒生效或雪崩了）。
+  const out = { ok: true, db: driver, redis: redisState(), storage: hasR2 ? 'r2' : 'disk',
+                mail: mailState(), homeBuilds };
   try {
     const t = Date.now();
     await one('SELECT 1 c');

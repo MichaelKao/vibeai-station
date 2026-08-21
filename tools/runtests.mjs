@@ -112,7 +112,27 @@ if (!process.env.SKIP_PG) {
     // 症狀是 test_all 第一步「註冊三個帳號」就失敗（alpha 已存在），
     // 整串連鎖紅燈，看起來像「剛改壞了」。用不重複的資料庫名就完全避開。
     const DBNAME = 'w2_' + Date.now().toString(36);
-    spawnSync('docker', ['exec', CN, 'psql', '-U', 'postgres', '-c', 'CREATE DATABASE ' + DBNAME], { encoding: 'utf8' });
+    // ⚠ CREATE DATABASE 的結果一定要檢查，而且要重試。
+    //
+    // 之前這一行的回傳值直接丟掉。而 `pg_isready` 會在容器**第一次啟動的
+    // 初始化階段**就回報 ready——那時 Postgres 跑的是內部的暫時伺服器，
+    // 之後還會重啟一次。撞上那個窗口的話 CREATE DATABASE 失敗，
+    // 接著 app 連一個不存在的資料庫，開不起來，報表印一句
+    // 「server 沒起來，跳過」就過去了。
+    //
+    // 後果不是「少跑一支測試」，是**正式站用的資料庫引擎沒有被驗過**，
+    // 而且沒有人會注意到——同一種「測試靜默沒跑」的問題，這是第三次了
+    // （前兩次是 SESSION_SECRET 擋住開機、Docker 沒開）。所以這裡寧可吵。
+    let dbMade = false, dbErr = '';
+    for (let i = 0; i < 20 && !dbMade; i++) {
+      const r = spawnSync('docker', ['exec', CN, 'psql', '-U', 'postgres',
+        '-c', 'CREATE DATABASE ' + DBNAME], { encoding: 'utf8' });
+      if (r.status === 0) { dbMade = true; break; }
+      dbErr = ((r.stderr || '') + (r.stdout || '')).trim().split('\n').pop() || '';
+      await sleep(1000);
+    }
+    if (!dbMade) console.log(`\n⚠ Postgres：建不出測試資料庫（${dbErr}）——` +
+      '下面的 Postgres 測試會全部跳過，而正式站跑的正是 Postgres。');
     const PGURL = 'postgresql://postgres:pw@127.0.0.1:' + PGPORT + '/' + DBNAME;
     // ⚠ SESSION_SECRET 一定要給。
     // src/server.js 判斷「是不是正式站」的方式是「有沒有 DATABASE_URL」，
@@ -141,7 +161,14 @@ if (!process.env.SKIP_PG) {
       console.log(`\nPostgres 測試：**server 沒起來**（${pgBase}），跳過。`);
       console.log('  ' + (pgErr.trim().split('\n').slice(-8).join('\n  ') || '(沒有錯誤輸出)'));
     }
-    for (const [name, file] of pgUp ? [['回歸測試（Postgres）', 'test_all.mjs'], ['Postgres 行為', 'test_pgbehavior.mjs']] : []) {
+    // ⚠ loadcheck 一定要在這裡也跑一次。
+    // 它的「快取到期不會雪崩」那一條在 SQLite 上**沒有鑑別力**：SQLite 在
+    // 同一個行程裡，第一個請求查完了第二個才到，根本沒有雪崩的窗口——
+    // 實測把防護整個拿掉，SQLite 照樣回報「重建 1 次」，同一份程式碼對
+    // Postgres 則是「重建 7 次」。所以那一條真正的驗證只發生在這一輪。
+    for (const [name, file] of pgUp ? [['回歸測試（Postgres）', 'test_all.mjs'],
+                                       ['Postgres 行為', 'test_pgbehavior.mjs'],
+                                       ['併發負載（Postgres）', 'tools/loadcheck.mjs']] : []) {
       const r = spawnSync(process.execPath, [file], { env: { ...pgEnv, BASE: pgBase }, encoding: 'utf8' });
       const out = (r.stdout || '') + (r.stderr || '');
       const line = out.split('\n').filter(l => l.includes('passed')).pop();
