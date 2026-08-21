@@ -62,6 +62,49 @@ await migrate();
 const after = (await one('SELECT count(*) c FROM friend_groups')).c;
 ok('重跑不會多出重複的分組', before === after, `${before} → ${after}`);
 
+
+console.log('\n=== 搬到 Postgres 不會默默少欄位 ===');
+// ⚠ src/migrate-pg.js 原本只跑 schemaSql('postgres') 就開始搬資料，
+// **沒有跑 addColumns 那一批後補欄位**。於是 vip、照片的 width/height/
+// taken/camera、留言者帳號…這些欄位在目標端根本不存在，搬移時被
+// 「只搬目標表有的欄位」那一段默默濾掉，而核對只比筆數，照樣印
+// 「所有表筆數一致，可以設 DB_DRIVER=postgres 了」。
+// 站長照著做，資料就這樣少了幾欄，而且沒有任何人會知道。
+//
+// 這一組不需要 Postgres：直接比對「搬移會建出來的欄位集合」與
+// 「來源資料庫實際有的欄位集合」，兩邊必須一致。
+{
+  const dbmod = await import('./src/db.js');
+  const { schemaSql, addColumnSql } = dbmod;
+
+  // 搬移端會建出來的欄位（建表 + 後補欄位）
+  const built = {};
+  for (const sql of [].concat(schemaSql('postgres')))
+    for (const m of sql.matchAll(/CREATE TABLE IF NOT EXISTS (\w+)\s*\(([\s\S]*?)\);/g)) {
+      built[m[1]] = new Set(m[2].split(/,(?![^(]*\))/)
+        .map(c => c.trim().split(/\s+/)[0])
+        .filter(c => c && !/^(PRIMARY|FOREIGN|UNIQUE|CHECK|CONSTRAINT|--)/i.test(c)));
+    }
+  let added = 0;
+  for (const sql of addColumnSql('postgres')) {
+    const m = sql.match(/ALTER TABLE (\w+) ADD COLUMN IF NOT EXISTS (\w+)/);
+    if (m && built[m[1]]) { built[m[1]].add(m[2]); added++; }
+  }
+  ok(`搬移會補上 addColumns 那一批欄位（${added} 欄）`, added > 0);
+
+  // 來源（本機 sqlite）實際有的欄位
+  const tables = Object.keys(built);
+  const missing = [];
+  for (const t of tables) {
+    let cols;
+    try { cols = await dbmod.all(`SELECT name FROM pragma_table_info('${t}')`); }
+    catch { continue; }
+    for (const c of cols) if (!built[t].has(c.name)) missing.push(`${t}.${c.name}`);
+  }
+  ok(`來源的每一欄在 Postgres 端都建得出來（缺 ${missing.length} 欄）`,
+     missing.length === 0, missing.join(' '));
+}
+
 console.log(`\n===== ${pass} passed, ${fail} failed =====`);
 // SQLite 的檔案控制代碼在行程結束前不一定放得掉，Windows 會 EPERM。
 // 暫存目錄留著沒關係（開頭會先砍掉舊的），不要讓清理失敗蓋掉測試結果。

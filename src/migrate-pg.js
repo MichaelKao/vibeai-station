@@ -16,7 +16,7 @@
 //   - 搬移失敗不會讓站台起不來（呼叫端會接住），只是記錄錯誤
 
 import fs from 'node:fs';
-import { schemaSql } from './db.js';
+import { schemaSql, addColumnSql } from './db.js';
 
 // 依存關係順序：被外鍵參照的表要先搬。
 // ⚠ 新增資料表時**一定要同步加進這裡**。漏了的話搬移會安靜地把那張表整個丟掉，
@@ -68,7 +68,10 @@ export async function migrateSqliteToPg({ sqlitePath, pgUrl }) {
     assertNoMissingTable();          // 清單漏表就在這裡失敗，不要搬到一半才發現
     // 目標端建表（用 PG 方言，與站台目前跑哪個驅動無關）
     for (const sql of schemaSql('postgres')) await pool.query(sql);
-    console.log('[migrate] Postgres 建表完成');
+    // 後補欄位一定要跟著跑。少了這一步，靠 addColumns 加上去的欄位
+    // 在目標端不存在，資料會在下面「只搬目標表有的欄位」那一段被默默濾掉。
+    for (const sql of addColumnSql()) await pool.query(sql);
+    console.log('[migrate] Postgres 建表與補欄位完成');
 
     // 目標非空就整個跳過，避免重跑造成重複
     for (const t of TABLES) {
@@ -82,6 +85,7 @@ export async function migrateSqliteToPg({ sqlitePath, pgUrl }) {
     const { DatabaseSync } = await import('node:sqlite');
     const src = new DatabaseSync(sqlitePath, { readOnly: true });
     const report = [];
+    const lostCols = [];   // [表名, [被丟掉的欄位…]]
 
     for (const t of TABLES) {
       let rows;
@@ -94,6 +98,12 @@ export async function migrateSqliteToPg({ sqlitePath, pgUrl }) {
         (await pool.query('SELECT column_name FROM information_schema.columns WHERE table_name=$1', [t]))
           .rows.map(r => r.column_name));
       const cols = Object.keys(rows[0]).filter(c => targetCols.has(c));
+      // ⚠ 來源有、目標沒有的欄位＝**這一欄的資料會整個不見**。
+      // 原本這裡靜靜地濾掉就算了，核對又只比筆數，於是搬移印出
+      // 「所有表筆數一致」而實際上少了幾欄。少資料比搬移失敗更糟——
+      // 失敗至少會被發現。這裡記下來，最後當成失敗處理。
+      const dropped = Object.keys(rows[0]).filter(c => !targetCols.has(c));
+      if (dropped.length) lostCols.push([t, dropped]);
       const list = cols.map(c => `"${c}"`).join(',');
       const ph = cols.map((_, i) => '$' + (i + 1)).join(',');
 
@@ -128,8 +138,12 @@ export async function migrateSqliteToPg({ sqlitePath, pgUrl }) {
       if (!okRow) bad++;
       console.log(`[migrate]   ${okRow ? 'OK ' : '!! '} ${t.padEnd(16)} 來源 ${String(from).padStart(6)} → 目標 ${String(to).padStart(6)}`);
     }
-    if (bad) console.error(`[migrate] 有 ${bad} 張表筆數對不上，先不要設 DB_DRIVER=postgres`);
-    else console.log('[migrate] 所有表筆數一致，可以設 DB_DRIVER=postgres 了');
+    for (const [t, cols] of lostCols)
+      console.error(`[migrate]   !! ${t.padEnd(16)} 這幾欄目標端沒有，資料已經遺失：${cols.join(', ')}`);
+    if (bad || lostCols.length)
+      console.error(`[migrate] 有 ${bad} 張表筆數對不上、${lostCols.length} 張表少了欄位，`
+        + '先不要設 DB_DRIVER=postgres');
+    else console.log('[migrate] 逐表筆數與欄位都一致，可以設 DB_DRIVER=postgres 了');
   } finally {
     await pool.end();
   }

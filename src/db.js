@@ -366,6 +366,22 @@ const ADD_COLUMNS = [
   ['posts', 'place', "TEXT DEFAULT ''"],
 ];
 
+// 後補欄位的 SQL（只給 Postgres 用）。
+//
+// ⚠ 為什麼要單獨開這一支：addColumns() 是走 db.js 自己那條連線的，
+// 搬移腳本 src/migrate-pg.js 用的是它自己開的 pg Pool，呼叫不到。
+// 原本搬移只跑 schemaSql('postgres') 就開始搬——於是**所有靠 addColumns
+// 後補的欄位在目標端根本不存在**（vip、照片的 width/height/taken/camera、
+// 留言者帳號…），搬移時被「只搬目標表有的欄位」那一段默默濾掉，
+// 而核對只比筆數，照樣印「所有表筆數一致，可以設 DB_DRIVER=postgres 了」。
+// 站長照著做，資料就這樣少了幾欄，而且沒有任何人會知道。
+export function addColumnSql(forDriver = 'postgres') {
+  if (forDriver !== 'postgres') throw new Error('addColumnSql 目前只供 Postgres 搬移使用');
+  return ADD_COLUMNS.map(([table, col, type]) =>
+    `ALTER TABLE ${table} ADD COLUMN IF NOT EXISTS ${col} ${type}`);
+}
+
+
 export async function addColumns(forDriver = driver) {
   for (const [table, col, type] of ADD_COLUMNS) {
     try {
