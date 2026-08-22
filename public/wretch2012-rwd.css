@@ -487,6 +487,46 @@
   #wfp-navigation, #wfp-navigation nav, #wfp-navigation nav ul,
   #wfp-universal-header, #wfp-universal-header header { height: auto !important; }
 
+  /* 首頁腰帶的四個分類頁籤：選中那一格的高亮遮罩寫死 190×87px。
+   *
+   * `.tabs-cell:before` 是一個絕對定位的遮罩（平常 opacity:0，選中才顯示），
+   * 尺寸寫死 190×87、top:-7px。桌機上格子正好 180px 寬，遮罩剛好蓋住自己。
+   * 窄螢幕下格子被壓窄、四格改成直向排列，遮罩卻還是 190×87 停在原地——
+   * 變成一塊蓋住隔壁的大色塊，把「生活」那一格的標題與說明整個遮掉。
+   *
+   * ⚠ 又是「容器變了但寫死的尺寸沒跟著變」。自動化測不到：遮罩本身不算
+   * 溢出，被蓋住的也不是按鈕（是純文字），所以每一道檢查都是綠的。
+   * 逐屏看首頁第 5 屏才看到。
+   *
+   * 讓遮罩跟著自己的格子走就好，不要用寫死的尺寸。 */
+  .tabs-cell { width: auto !important; height: auto !important; }
+  .tabs-cell:before,
+  .tabs-cell span.fixIEBefore {
+    width: 100% !important; height: 100% !important;
+    top: 0 !important; left: 0 !important;
+    /* ⚠ 遮罩要壓在文字**後面**。原本 z-index:1、而 .tabs-content 沒有設，
+     * 於是遮罩畫在文字上面——桌機上沒事是因為遮罩往上偏 7px、只蓋到
+     * 格子上緣的空白；一旦改成剛好蓋住整格，就連自己格子的標題與說明
+     * 一起遮掉了（畫面上「旅遊」那一格只剩一塊綠色）。 */
+    z-index: 0 !important;
+  }
+
+  /* 每篇文章的社群分享列：容器高度寫死 32px。
+   *
+   * 桌機上那一列（Facebook／Plurk／即時通／發文／找知識）剛好排成一行、
+   * 32px 放得下。手機 390px 放不下，它會換成兩行——但 .social-wrapper 還是
+   * 32px 高，**第二行整個溢出容器，後面的文章內文就畫在它上面**。
+   * 實際畫面：「第一段內容。」壓在「分享到 X」的按鈕上，兩者糊在一起。
+   *
+   * ⚠ 這是網誌列表與單篇文章頁——站上最多人看的兩頁。而自動化完全測不到：
+   * 沒有橫向溢出、按鈕也還點得到（元素在該在的位置，只是被文字蓋住）。
+   * 逐屏看截圖才發現的，代理與我各自獨立看到同一處。
+   *
+   * 跟第 9 節那幾條同一個成因：容器高度沒跟著內容長。
+   * float 的子元素要靠 overflow 或 clearfix 撐起父層，這裡用 overflow:hidden。 */
+  .social-wrapper { height: auto !important; overflow: hidden; }
+  .social-widget { height: auto !important; }
+
   /* 相簿總站：搜尋列在原版是絕對定位在 80px 高的 #header 裡。
      上面第 1-B 節把它改回正常流之後它變成 691px 高，
      卻還擠在只有 80px 的 #header 裡——溢出來的部分蓋住底下整個左欄與中欄，
@@ -652,8 +692,16 @@
 
   /* 混合區頁籤的說明面板（.tabs-content）是 absolute，定位在頁籤格裡。
      970px 時它剛好落在頁籤列自己的範圍內；窄螢幕頁籤換行之後，
-     它會往下蓋住 .bd 裡的文章連結。改回正常流，跟著頁籤排。 */
-  #wfp-hybrid .tabs .tabs-content { position: static !important; }
+     它會往下蓋住 .bd 裡的文章連結。改回正常流，跟著頁籤排。
+
+     ⚠ 用 relative，不能用 static。
+     這一條原本寫 static，那確實解決了「蓋住下方連結」，但也**讓 z-index
+     失效**（static 元素的 z-index 完全不作用）。而同一格裡的 .tabs-cell:before
+     是選中狀態的綠色遮罩，於是遮罩畫在文字上面——首頁腰帶「旅遊」那一格
+     只剩一塊純綠色，標題與說明整個看不見。
+     relative 兩件事都滿足：留在正常流（不會往下蓋），z-index 又有效。
+     基礎樣式已經給了 z-index:3，比遮罩的 0 高，這樣文字就在上面。 */
+  #wfp-hybrid .tabs .tabs-content { position: relative !important; }
 
   /* myspace 版型的頁籤帶：`ul#main_tab` 是 position:absolute，
      靠 `a.message`（message.gif 120×39，高 55px）撐出帶子的高度，

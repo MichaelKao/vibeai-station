@@ -179,10 +179,31 @@ for (const size of SIZES) {
     try {
       const r = await page.goto(BASE + url, { waitUntil: 'networkidle', timeout: 40000 });
       if (!r) continue;
-      // ⚠ 整頁截圖，不是只截視窗——摺線以下的問題（被工具列蓋住、
-      // 表格溢出、頁尾疊在一起）只有整頁才看得到。
-      await page.screenshot({ path: path.join(OUT, `${label}_${size.tag}.png`), fullPage: true });
-      n++;
+      if (process.env.STRIP) {
+        // ⚠ 逐屏模式：一個視窗一張，人怎麼捲就怎麼看。
+        //
+        // 整頁截圖（下面那個分支）有兩個會害人誤判的陷阱：
+        //   1. 長頁面縮到看不見——首頁 7000px、人氣排行 12000px，
+        //      縮到能顯示的尺寸只剩一百多像素寬，細節全糊掉。
+        //   2. position:fixed 的元素只會被畫一次，落在頁面中段，
+        //      看起來像蓋住內容（實際上它一直貼在視窗下緣）。
+        // 五組代理審查整頁截圖時，這兩個陷阱各害它們誤報了一輪。
+        // 逐屏截圖兩個問題都沒有。
+        const h = await page.evaluate(() => document.body.scrollHeight);
+        const screens = Math.min(+(process.env.MAXSCREENS || 5),
+                                 Math.max(1, Math.ceil(h / size.height)));
+        for (let i = 0; i < screens; i++) {
+          await page.evaluate(y => window.scrollTo(0, y), i * size.height);
+          await page.waitForTimeout(350);
+          await page.screenshot({
+            path: path.join(OUT, `${label}_${size.tag}_${String(i + 1).padStart(2, '0')}.png`) });
+          n++;
+        }
+      } else {
+        // 整頁截圖：一般長度的頁面用這個看得比較快
+        await page.screenshot({ path: path.join(OUT, `${label}_${size.tag}.png`), fullPage: true });
+        n++;
+      }
     } catch (e) { console.log(`  ✗ ${label} ${size.tag}：${e.message.slice(0, 50)}`); }
   }
   await ctx.close();
