@@ -93,6 +93,26 @@
   }
   #wfp-navigation ul li { flex: 0 0 auto; }
 
+  /* ── 頂部工具列（kukubar）：右半邊是絕對定位，窄螢幕會壓到左半邊 ──
+   * 那一條由 .left-side（無名小站 ＋ 服務下拉）與 .right-side（暱稱 ＋
+   * 我的小站 ＋ Yahoo!）組成，right-side 是 position:absolute。
+   * 970px 的版面裡兩邊各據一方；320px 下絕對定位的右半邊往左壓，
+   * 實測 #wretch-service(96–173) 與 #wretch-login(138–239) **重疊 35px**——
+   * 畫面上暱稱「版面巡檢」的第一個字被服務下拉的箭頭蓋掉，只剩「面巡檢」。
+   *
+   * ⚠ 每一個登入狀態的頁面都看得到，而自動化測不到：沒有橫向溢出，
+   * 被蓋住的是文字不是按鈕。是逐屏看 320px 截圖才發現的。
+   *
+   * 跟主導覽列同一個解法：讓它排成一列、不准壓縮，放不下就自己橫向捲。 */
+  #kukubar-upper {
+    display: flex; flex-wrap: nowrap;
+    overflow-x: auto; -webkit-overflow-scrolling: touch;
+  }
+  #kukubar-upper .left-side, #kukubar-upper .right-side {
+    position: static !important; flex: 0 0 auto; display: flex;
+    left: auto !important; right: auto !important; top: auto !important;
+  }
+
   /* 今日主題那疊照片是絕對定位的，窄螢幕會飛出去——改成正常流 */
   #wfp-cover .stack { height: auto !important; }
   #wfp-cover .stack .block,

@@ -20,11 +20,16 @@ const BASE = (process.env.BASE || 'http://localhost:3000').replace(/\/$/, '');
 const OUT = path.resolve(process.env.OUT || 'shots');
 fs.mkdirSync(OUT, { recursive: true });
 
-const SIZES = [
+const ALL_SIZES = [
   { tag: '320', width: 320, height: 568 },
   { tag: '390', width: 390, height: 844 },
   { tag: '768', width: 768, height: 1024 },
 ];
+// ⚠ 只想重看某一種寬度時不必整批重截（一輪要十幾分鐘）。
+// ONLY=320 就只跑那一種。
+const SIZES = process.env.ONLY
+  ? ALL_SIZES.filter(s => s.tag === process.env.ONLY)
+  : ALL_SIZES;
 
 const browser = await chromium.launch({ executablePath: CHROME, headless: true });
 
