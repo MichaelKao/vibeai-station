@@ -162,7 +162,7 @@ const PAGES = [
   [`/${NAME}/album/${ALBUM_ID}`, '單本相簿', true],
   [`/${NAME}/card`, '名片', true],
   [`/${NAME}/blog/map`, '文章地圖', true],
-  [`/${NAME}/blog/search?q=a`, '網誌搜尋', true],
+  [`/${NAME}/blog/search?q=手機`, '網誌搜尋', true],
   [`/${NAME}/blog/${POST_ID}/edit`, '編輯文章', true],
   [`/${NAME}/album/${ALBUM_ID}/wall`, '相片牆', true],
   [`/${NAME}/favs`, '我的收藏', true],   // ⚠ 收藏掛在小站底下，不是 /favs

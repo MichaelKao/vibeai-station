@@ -164,5 +164,15 @@ ok('還原之後看得到那篇文章', body.includes('演練文章'),
 srv2.kill('SIGKILL');
 
 console.log(`\n===== ${pass} passed, ${fail} failed =====`);
-console.log(allMatch ? '備份與還原這條路是通的。' : '⚠ 筆數對不上，這份備份不能信。');
-process.exit(fail ? 1 : 0);
+// ⚠ 「筆數一致」單獨看是會騙人的。
+// 站台如果根本沒連上資料庫，每一張表都是 0 筆——備份的是空的、還原回來
+// 也是空的，`before === after` 成立，於是這一支會印「這條路是通的」，
+// 而實際上什麼都沒有驗到。實測撞過一次（app 連不上 Postgres 的那次）。
+// 所以結論必須同時看「有沒有失敗項」與「備份前真的有資料」。
+const hadData = before.users > 0 && before.posts > 0;
+console.log(
+  fail ? '⚠ 有失敗項，這一輪不算驗過。'
+  : !hadData ? '⚠ 備份前資料庫是空的——0 筆還原成 0 筆不算驗證，這一輪不算數。'
+  : allMatch ? '備份與還原這條路是通的。'
+  : '⚠ 筆數對不上，這份備份不能信。');
+process.exit(fail || !hadData ? 1 : 0);

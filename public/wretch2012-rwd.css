@@ -75,6 +75,24 @@
   nav ul, #nav ul { display: flex; flex-wrap: wrap; }
   nav li, #nav li { float: none !important; }
 
+  /* ⚠ 站台導覽列（網誌／相簿／影音／揪團／嘀咕／手機）要例外處理。
+   *
+   * 那六顆是**精靈圖**：每顆 <a> 靠 padding-left:48px 讓出左邊放圖示的位置
+   * （wretch2012.css 的 #wfp-navigation ul li.blog a 等六條）。
+   * 上面那條 flex-wrap:wrap 一套下去，窄螢幕會把每一顆壓縮到比自然寬度小，
+   * 文字就退回圖示上面——實際畫面是六個字全部疊在自己的圖示上，糊成一團。
+   * 這是每一個站台頁面都看得到的，而自動化完全測不出來
+   * （沒有溢出、按鈕也還點得到），是逐張看截圖才發現的。
+   *
+   * 不改圖示位置（那要重算六組精靈座標，很容易錯），改成「不准壓縮，
+   * 放不下就讓這一條自己橫向捲」——手機上很常見的作法，
+   * 而且每一顆都維持原本的樣子。 */
+  #wfp-navigation ul {
+    flex-wrap: nowrap !important;
+    overflow-x: auto; -webkit-overflow-scrolling: touch;
+  }
+  #wfp-navigation ul li { flex: 0 0 auto; }
+
   /* 今日主題那疊照片是絕對定位的，窄螢幕會飛出去——改成正常流 */
   #wfp-cover .stack { height: auto !important; }
   #wfp-cover .stack .block,
@@ -195,9 +213,87 @@
    *
    * -webkit-overflow-scrolling 是給 iOS 用的，沒有它在 Safari 上捲起來
    * 沒有慣性，感覺很卡。 */
-  .w2-admin-rows, .w2-rows {
+  /* ⚠ 只給後台那張八欄的表，**不要給 .w2-rows**。
+   *
+   * 我第一版寫成 `.w2-admin-rows, .w2-rows`，結果把站上十個頁面的表格
+   * 全部弄壞了（點數明細、收藏、好友動態、網頁空間、嘀咕、影音、
+   * 認證申請、訪客、好友、個人首頁）。
+   * 原因：把 <table> 設成 display:block，**表格排版就整個消失**——
+   * 儲存格退化成一般的行內盒子，欄位不再對齊。實際畫面是
+   *     時間        項目      增減      ← 標題列還有欄位
+   *     2026-08-22 18:04註冊見面禮+100  ← 資料列全部黏在一起
+   * 而自動化完全測不出來（沒有溢出、沒有被蓋住），是看截圖才發現的。
+   *
+   * 正確做法：外層當捲動容器，**內層的 tbody 補回 display:table**，
+   * 表格排版才保得住。width:max-content 讓它照內容撐開再去捲。 */
+  .w2-admin-rows {
     display: block; overflow-x: auto; -webkit-overflow-scrolling: touch;
     max-width: 100%;
+  }
+  .w2-admin-rows > tbody {
+    display: table; width: max-content; min-width: 100%;
+  }
+
+  /* ⚠ 清單表格要撐滿容器，不然欄位之間看不出間隔。
+   *
+   * 上面第 3 節那條 `table { width: auto !important }` 是為了讓寫死
+   * width="700" 的表格縮小，但它連 .w2-rows{width:100%} 一起蓋掉了，
+   * 結果表格縮到剛好包住內容——實測點數明細在 390px 的容器裡只有 197px 寬。
+   * 欄位其實**有正確對齊**（不是塌陷），只是各欄剛好被文字填滿、
+   * 中間沒有空隙，讀起來變成「2026-08-22 18:24註冊見面禮+100」。
+   *
+   * ⚠ 我一開始誤判成「表格排版壞掉」，還去改了不相干的地方。
+   * 是實際量了表格寬度（197 vs 容器 390）才看出來是縮寬，不是塌陷。
+   * 撐滿容器之後各欄自然拉開，就讀得出欄位了。 */
+  .w2-rows, .w2-card { width: 100% !important; }
+
+  /* ── HTML 的 nowrap 屬性在窄螢幕要放行 ──────────────────────────
+   * 原站的清單很多是 <td nowrap>——2012 年的版面 700px 寬，標題也短，
+   * 不換行看起來比較整齊。但 nowrap 的意思是「無論如何都不准換行」，
+   * 所以只要有一個長標題，整張表格就被撐到超出螢幕。
+   * 實測：網誌搜尋在 320px 下頁面寬 430px（多 110px），撐出去的正是
+   * 那個 <td nowrap> 裡的長標題。
+   *
+   * ⚠ 這一條原本測不到，因為 mobilecheck 搜尋用的關鍵字是 'a'——
+   * **搜不到任何結果**，結果表格根本沒被畫出來。是截圖用了會命中的
+   * 關鍵字才爆出來的。測試用的資料要能真的產生內容，否則等於沒測。
+   *
+   * 放行是安全的：日期那種沒有空白的字串本來就不會被拆開，
+   * 中文則本來就可以逐字換行。 */
+  td[nowrap], th[nowrap], [nowrap] { white-space: normal !important; }
+
+  /* ── 嘀咕／好友那套版型的頁首：頭像 200px ＋ 標題 3em ────────────
+   * 原版是 200×200 的大頭像 float:left，標題用 margin-left:210px 讓開它，
+   * 字級 3em（約 48px）。在 970px 的版面裡很好看。
+   *
+   * 320px 螢幕上剩給標題的寬度只有 110px，於是 48px 的字被擠成
+   * 「版面 / 巡檢 / 的嘀 / 咕」四行直排，佔掉半個畫面——實際截圖就長這樣。
+   * ⚠ 自動化完全測不出來：沒有溢出（它乖乖換行了）、按鈕也點得到。
+   * 是逐張看截圖才發現的。
+   *
+   * 頭像縮到 120、標題字級收到 1.6em，兩邊都還看得清楚，
+   * 也不用動原版的版面結構。 */
+  #header .Pcover, #header .Pcover span { width: 120px !important; height: 120px !important; }
+  #header .Pcover img { max-width: 120px; height: auto; }
+  #header .Ptext, #header #menu { margin-left: 130px !important; }
+  #header h1 { font-size: 1.6em !important; }
+  /* ⚠ 讓開頭像之後，右邊剩下的寬度就很窄了，裡面的東西一律不准超過它。
+   * 好友頁的分組清單寫死 .il{width:250px}，130＋250 就爆出螢幕——
+   * 這是我把 margin 從 210 改成 130 之後才現形的（原本 210＋250 更寬，
+   * 但那時候 #menu 被別的規則蓋掉了，所以沒現形）。 */
+  #header .Ptext, #header #menu { max-width: calc(100% - 130px); box-sizing: border-box; }
+  .il { width: auto !important; max-width: 100%; }
+
+  /* ⚠ 最窄的螢幕上，「頭像在左、文字在右」這個結構本身就不成立：
+   * 讓開 130px 的頭像之後只剩 190px，導覽連結（MyPage／相簿／網誌／
+   * 留言板／名片／好友／影音）怎麼排都會擠出去——我用 calc 擠了幾次，
+   * 只是把溢出從 100px 縮到 4px，那是在跟數字角力，不是解決問題。
+   * 360px 以下改成上下堆疊：頭像一行、文字一行，兩邊都完整。 */
+  @media (max-width: 360px) {
+    #header .Pcover { float: none !important; margin: 0 auto 8px; }
+    #header .Ptext, #header #menu {
+      margin-left: 0 !important; max-width: 100% !important;
+    }
   }
 
   /* 裁切照片的舞台圖寫死 max-width:640px，那比手機螢幕還寬——
@@ -750,6 +846,21 @@
   #browse_album > li { display: block; margin-right: 0; }
   /* 導覽列六顆擠成兩排 */
   nav li a, #nav li a { padding-left: 8px; padding-right: 8px; font-size: 12px; }
+
+  /* ⚠ 但站台導覽列（網誌／相簿／影音／揪團／嘀咕／手機）要例外。
+   * 那六顆是精靈圖，靠 padding-left:48~50px 讓出左邊放圖示的位置。
+   * 上面那條把內距壓成 8px，圖示的位置就沒了——**文字直接落在圖示上**，
+   * 六個字全部糊成一團，而且是每一個站台頁面都看得到。
+   * （那條規則原本的用意是「把六顆擠進兩排」；現在這一條導覽列已經改成
+   *   放不下就自己橫向捲，不需要再擠了，見上面 #wfp-navigation ul 那段。）
+   * 內距值照抄 wretch2012.css 的原始六條，不自己另外算。 */
+  #wfp-navigation ul li a { padding-right: 20px !important; font-size: 116% !important; }
+  #wfp-navigation ul li.blog a   { padding-left: 48px !important; }
+  #wfp-navigation ul li.album a  { padding-left: 50px !important; }
+  #wfp-navigation ul li.video a  { padding-left: 49px !important; }
+  #wfp-navigation ul li.join a   { padding-left: 50px !important; }
+  #wfp-navigation ul li.digu a   { padding-left: 49px !important; }
+  #wfp-navigation ul li.mobile a { padding-left: 40px !important; }
 
   /* 相簿縮圖格：原本一排五格 120px，手機改一排兩格 */
   #ad_square td, .grid, .gridclass { display: inline-block; width: 46% !important; }
