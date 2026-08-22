@@ -255,8 +255,12 @@ td#ad_word   .w2-ad-in { display: block; }
  * 配色沿用 skin 1/189 既有色盤，不新增視覺語言。
  */
 .w2a-crop        { padding: 12px; text-align: left; }
+/* ⚠ touch-action:none 是手機上拖得出選取範圍的必要條件。
+   沒有它，瀏覽器會把手指的移動解讀成「捲動頁面」，
+   pointermove 根本不會送到這裡——使用者的感受是「裁切壞了」。 */
 .w2a-crop-stage  { position: relative; display: inline-block; line-height: 0;
-                   border: 1px solid #ccc; cursor: crosshair; user-select: none; }
+                   border: 1px solid #ccc; cursor: crosshair; user-select: none;
+                   touch-action: none; }
 .w2a-crop-stage img { max-width: 640px; height: auto; }
 .w2a-crop-sel    { position: absolute; display: none; box-sizing: border-box;
                    border: 2px dashed #A13636; background: rgba(255,232,232,.35); }

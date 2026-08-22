@@ -132,6 +132,80 @@
     .w2b-form th { width: 56px !important; padding-right: 4px !important; }
   }
 
+  /* ── iPhone 一點輸入框就把整頁放大 ────────────────────────────────
+   * ⚠ 這是 iOS 獨有的行為，Chromium 上完全不存在，所以先前所有的手機測試
+   * 都測不到——但它就是真實 iPhone 使用者說「這網站在手機上很難用」的來源。
+   *
+   * Safari 認為字級小於 16px 的輸入框「太小看不清楚」，於是使用者一點進去
+   * 打字，**整個頁面就自動放大**，而且打完不會縮回去：版面歪掉，要自己
+   * 雙指縮回原狀。登入、註冊、忘記密碼這三頁尤其致命——那是新使用者
+   * 碰到的第一個畫面，而且他正在打帳號密碼。
+   *
+   * 實測（tools/safaricheck.mjs，真的 WebKit 引擎）：
+   *   登入      name 14.04px、pass 14.04px
+   *   註冊      name/nick/pass 14.04px、email 12.87px
+   *   忘記密碼  who 14.04px
+   *   頁首搜尋  q 12.09px（每一頁都有）
+   *
+   * 原站是 2012 年的桌機站，滿滿都是 12px 的輸入框，直接搬過來必踩。
+   * 解法不是把字改大——那會動到桌機的還原度。這一整支只在 999px 以下
+   * 生效，所以只有窄螢幕的輸入框變成 16px，桌機一個像素都不會變。
+   *
+   * 16px 是 Safari 的門檻值，不是設計選擇；小數點以下都不行。
+   *
+   * ⚠ 只調字級會**把版面頂爆**。HTML 的 size="24" 是「二十四個字元寬」，
+   * 字變大，欄位就跟著變寬——我第一版只寫 font-size，結果名片頁在 320px
+   * 多出 93px（table.w2-card 被裡面的欄位撐開），而那一頁改動之前是好的。
+   * 所以字級與寬度上限必須成對出現。 */
+  input[type=text], input[type=password], input[type=email], input[type=url],
+  input[type=search], input[type=number], input[type=tel], input:not([type]),
+  textarea, select {
+    font-size: 16px !important;
+    max-width: 100%;
+    box-sizing: border-box;
+  }
+
+  /* 名片頁的標籤欄寫死 .sidetitle{width:660px} ＋ 左右各 20px 內距。
+     那是 600px 版面裡的兩欄表，窄螢幕下它自己就比螢幕寬——
+     實測 iPhone SE 整頁多 93px、iPhone 14 多 23px。
+     ⚠ 內距也要一起收：width:auto 蓋不掉 padding，40px 在 320px 螢幕上
+     等於吃掉八分之一的寬度。 */
+  td.sidetitle, .sidetitle {
+    width: auto !important;
+    padding-left: 6px !important; padding-right: 6px !important;
+  }
+  /* 值欄的 HTML width="450" 同理 */
+  td.side[width] { width: auto !important; }
+
+  /* ⚠ 表格版面裡，光給輸入框 max-width:100% 沒有用。
+     100% 是「容器的 100%」，而在表格裡**容器的寬度正是由輸入框的固有寬度
+     決定的**——互相決定，等於沒有限制。名片頁的 <input size="40"> 在 16px
+     字級下大約 380px，加上標籤欄剛好把表格頂成 413px（實測就是這個數字）。
+     要打斷這個循環，得給一個明確的寬度，讓儲存格不必遷就內容。 */
+  td input[type=text], td input[type=password], td input[type=email],
+  td input[type=url], td input[type=search], td textarea {
+    width: 100% !important;
+  }
+
+  /* ── 欄位很多的資料表：讓它自己橫向捲，不要把整頁撐爛 ──────────────
+   * ⚠ 後台的站友清單有八欄（ID／帳號／暱稱／人氣／佔用／認證／站長／刪除），
+   * 那是**資料表**，硬擠進 320px 只會每一欄都變成一個字一行、更難讀。
+   * 這一類的正解是讓表格在自己的框裡左右捲，頁面本身不動——
+   * 這也是這支檔案開頭寫的原則：「table 讓它可以橫向捲而不是把整頁撐爛」。
+   *
+   * -webkit-overflow-scrolling 是給 iOS 用的，沒有它在 Safari 上捲起來
+   * 沒有慣性，感覺很卡。 */
+  .w2-admin-rows, .w2-rows {
+    display: block; overflow-x: auto; -webkit-overflow-scrolling: touch;
+    max-width: 100%;
+  }
+
+  /* 裁切照片的舞台圖寫死 max-width:640px，那比手機螢幕還寬——
+     實測 iPhone SE 整頁多出 306px。
+     ⚠ 縮小是安全的：座標換算用的是 img.width / img.naturalWidth，
+     跟著實際顯示尺寸算，不是寫死 640。 */
+  .w2a-crop-stage img { max-width: 100% !important; }
+
   /* ── 底部固定工具列會吃掉頁面最後 25px ──────────────────────────
    * kukubar-lower 是 position:fixed、bottom:0、height:25px 的一條工具列
    * （原站就有，本站照做）。它永遠浮在畫面最下緣，所以**頁面捲到底時，

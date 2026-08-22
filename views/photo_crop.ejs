@@ -87,9 +87,24 @@
     f.x.value = Math.round(x / s); f.y.value = Math.round(y / s);
     f.w.value = Math.round(w / s); f.h.value = Math.round(h / s);
   }
-  stage.addEventListener('mousedown', function (e) { e.preventDefault(); start = pos(e); paint(start, start); });
-  stage.addEventListener('mousemove', function (e) { if (start) paint(start, pos(e)); });
-  window.addEventListener('mouseup', function () { start = null; });
+  /* ⚠ 用 pointer 事件，不要用 mouse 事件。
+     原本只綁了 mousedown/mousemove/mouseup——**手機上完全沒有反應**。
+     手指拖曳產生的是 touch 事件，不是 mouse；瀏覽器雖然會在放開手指後
+     補送一組模擬的 mouse 事件，但那是「點一下」不是「拖曳」，所以
+     選取範圍永遠是 0×0，使用者只會覺得「這個裁切壞了」。
+     pointer 事件同時涵蓋滑鼠、觸控與觸控筆，一組就夠。
+
+     setPointerCapture：手指拖到圖片外面時，事件仍然送回 stage，
+     不然拖出邊界就斷掉。搭配 CSS 的 touch-action:none——沒有那一行的話，
+     瀏覽器會把手指的移動當成捲動頁面，拖不出任何範圍。 */
+  stage.addEventListener('pointerdown', function (e) {
+    e.preventDefault();
+    if (stage.setPointerCapture) { try { stage.setPointerCapture(e.pointerId); } catch (x) {} }
+    start = pos(e); paint(start, start);
+  });
+  stage.addEventListener('pointermove', function (e) { if (start) paint(start, pos(e)); });
+  window.addEventListener('pointerup', function () { start = null; });
+  window.addEventListener('pointercancel', function () { start = null; });
 })();
 </script>
 

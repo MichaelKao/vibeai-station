@@ -44,7 +44,7 @@ const setup = await browser.newContext();
 const sp = await setup.newPage();
 const NAME = 'mtest' + Math.floor(Date.now() / 1000 % 100000);
 let COOKIES = [];
-let POST_ID = '1', ALBUM_ID = '1', PHOTO_ID = '', HALA_ID = '';
+let POST_ID = '1', ALBUM_ID = '1', PHOTO_ID = '', HALA_ID = '', JOIN_ID = '';
 try {
   await sp.goto(BASE + '/register', { waitUntil: 'domcontentloaded' });
   // ⚠ 一定要鎖定「包著 pass2 這一欄的那張表單」再送出。
@@ -101,6 +101,16 @@ try {
     });
     try { fs.rmSync(tmpImg, { force: true }); } catch {}
   } catch (e) { console.log('[setup] 上傳照片失敗，單張照片頁會跳過：' + e.message.slice(0, 60)); }
+  // 開一團，才有 /join/:id 可以測
+  try {
+    await sp.goto(BASE + '/join', { waitUntil: 'domcontentloaded' });
+    const jf = sp.locator('form:has(textarea)').first();
+    await jf.locator('input[name=title]').fill('手機版面測試揪團');
+    await jf.locator('textarea').first().fill('說明');
+    await Promise.all([sp.waitForNavigation({ waitUntil: 'domcontentloaded' }),
+      jf.locator('button[type=submit], input[type=submit]').first().click()]);
+    JOIN_ID = (sp.url().match(/\/join\/(\d+)/) || [])[1] || '';
+  } catch { /* 沒有就跳過那一頁 */ }
   // 發一則哈啦主題，才有 /hala/:id 可以測
   try {
     await sp.goto(BASE + '/hala', { waitUntil: 'domcontentloaded' });
@@ -167,6 +177,15 @@ const PAGES = [
   [`/${NAME}/feed`, '好友動態', true],
   ['/svcs/wretch_girl', '愛正妹', false],
   ['/report', '檢舉', false],
+  // 第三批：把「全站 51 條 GET vs 手機測了幾條」清到只剩非視覺的頁面
+  // （RSS、轉址、healthz、舊網址別名那些沒有版面可言的）。
+  ...(PHOTO_ID ? [[`/${NAME}/photo/${PHOTO_ID}/crop`, '裁切照片', true]] : []),
+  ...(JOIN_ID ? [[`/join/${JOIN_ID}`, '揪團內頁', false]] : []),
+  // ⚠ 用一個一定無效的 token。重點不是「還原密碼成功長怎樣」，
+  // 而是**失敗的那一頁**——連結過期是最常發生的情況（信件隔天才點開），
+  // 而那一頁如果在手機上破版，使用者正處在「進不去自己帳號」的焦慮裡。
+  ['/reset/thistokenisnotvalid', '重設密碼（連結失效）', false],
+  ['/admin', '後台', true],   // 不是站長會被擋掉，下面有處理
 ];
 
 // 找出「是誰撐出去的」。
@@ -211,7 +230,28 @@ for (const size of SIZES) {
     let r;
     try { r = await page.goto(BASE + path, { waitUntil: 'networkidle', timeout: 30000 }); }
     catch (e) { ok(`${size.name} ${label} 開得起來`, false, e.message.slice(0, 60)); continue; }
-    if (!r || r.status() >= 400) { ok(`${size.name} ${label} 開得起來`, false, 'HTTP ' + (r && r.status())); continue; }
+    // ⚠ 後台只有站長進得去。測試帳號不是站長就會被擋，那不是壞掉——
+    // 但也不能默默當成通過，不然「後台在手機上破版」永遠不會被發現。
+    // 印一行說它被跳過了，讓人知道這一頁**沒有**被驗到。
+    if (label === '後台' && r.status() === 403) {
+      console.log(`  （跳過 ${size.name} 後台：這個測試帳號不是站長。` +
+        '要驗後台的版面，跑的時候給 ADMIN_USERS=' + NAME + '）');
+      continue;
+    }
+    // ⚠ 有些頁面**正確的行為就是回 4xx**，但它們仍然要畫出一個看得懂的畫面。
+    // 重設密碼的連結失效（信件隔天才點開，最常發生）就是這種：回 400 是對的，
+    // 但那一頁如果在手機上破版，使用者正處在「進不去自己帳號」的焦慮裡。
+    // 所以這裡不能一律把 4xx 當成失敗——要區分「壞掉」與「合理的錯誤頁」。
+    const expectErr = label.includes('連結失效');
+    if (!r || (r.status() >= 400 && !(expectErr && r.status() === 400))) {
+      ok(`${size.name} ${label} 開得起來`, false, 'HTTP ' + (r && r.status())); continue;
+    }
+    if (expectErr) {
+      const t = await page.textContent('body');
+      ok(`${size.name} ${label} 有講清楚發生什麼事`,
+         /失效|過期|重新|無效|再試/.test(t),
+         '只回 400 卻沒有說明，使用者不知道該怎麼辦：' + t.slice(0, 80).replace(/\s+/g, ' '));
+    }
 
     const m = await page.evaluate(() => ({
       scrollW: document.documentElement.scrollWidth,

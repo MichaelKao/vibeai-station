@@ -136,6 +136,66 @@ for (const d of DEVICES) {
   await ctx.close();
 }
 
+// ── iOS Safari 專屬的坑 ──────────────────────────────────────────────
+//
+// 這幾項在 Chromium 上**完全不存在**，所以前面所有測試都測不到，
+// 但它們就是真實 iPhone 使用者說「這網站在手機上很難用」的來源。
+{
+  console.log('\n── iOS Safari 專屬的坑 ────────────────────────────');
+  const ctx = await browser.newContext({
+    viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true, deviceScaleFactor: 3,
+  });
+  if (COOKIES.length) await ctx.addCookies(COOKIES);
+  const p = await ctx.newPage();
+
+  // 1) 輸入框字級 < 16px → iOS 一聚焦就把整頁放大
+  //
+  // ⚠ 這是 iPhone 上最惱人也最常見的一個，而且**只有 iOS 會這樣**：
+  // Safari 認為小於 16px 的輸入框「太小看不清楚」，於是使用者一點進去打字，
+  // 整個頁面就自動縮放，打完還不會縮回去——版面歪掉、要自己雙指縮回原狀。
+  // 原站是 2012 年的桌機站，滿滿都是 12px 的輸入框，直接搬過來必踩。
+  //
+  // 站上的版型刻意保留 12px 字級（還原度），所以解法不是把字改大，
+  // 是在 RWD 圖層裡只對「窄螢幕的輸入框」給 16px。
+  for (const [url, label] of [['/login', '登入'], ['/register', '註冊'],
+                              ['/forgot', '忘記密碼'], [`/${N}/blog/new`, '發表文章'],
+                              [`/${N}/guestbook?tab=new`, '留言']]) {
+    try {
+      const r = await p.goto(BASE + url, { waitUntil: 'networkidle', timeout: 30000 });
+      if (!r || r.status() >= 400) continue;
+    } catch { continue; }
+    const small = await p.evaluate(() => {
+      const bad = [];
+      for (const el of document.querySelectorAll(
+        'input[type=text],input[type=password],input[type=email],input[type=url],' +
+        'input[type=search],input[type=number],input:not([type]),textarea,select')) {
+        const r = el.getBoundingClientRect();
+        if (r.width < 4 || r.height < 4) continue;      // 看不到的不算
+        const fs = parseFloat(getComputedStyle(el).fontSize);
+        if (fs < 16) bad.push((el.name || el.id || el.tagName.toLowerCase()) + ' ' + fs + 'px');
+      }
+      return [...new Set(bad)].slice(0, 5);
+    });
+    ok(`${label} 的輸入框在 iOS 不會一點就放大整頁`, small.length === 0,
+       '字級小於 16px：' + small.join('、') +
+       '——iPhone 使用者一點進去打字，整頁就被自動放大，打完也不會縮回去');
+  }
+
+  // 2) 100vh 在 iOS 會把網址列的高度算進去
+  // ⚠ 結果是頁面底部被網址列蓋掉一截，最常見的災情是「送出鈕看不到」。
+  const vh = await p.evaluate(() => {
+    const bad = [];
+    for (const el of document.querySelectorAll('body *')) {
+      const s = el.style.height + ' ' + el.style.minHeight;
+      if (/100vh/.test(s)) bad.push(el.tagName.toLowerCase() + (el.id ? '#' + el.id : ''));
+    }
+    return bad.slice(0, 5);
+  });
+  ok('沒有用 100vh 撐高度（iOS 會把網址列算進去）', vh.length === 0, vh.join('、'));
+
+  await ctx.close();
+}
+
 await browser.close();
 console.log(`\n===== ${pass} passed, ${fail} failed =====`);
 console.log('[清理] 測試帳號 ' + N);
