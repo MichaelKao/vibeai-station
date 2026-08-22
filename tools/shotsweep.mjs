@@ -190,5 +190,29 @@ for (const size of SIZES) {
 }
 await browser.close();
 console.log(`\n共 ${n} 張，存在 ${OUT}`);
-console.log(`[清理] 測試帳號 ${N}`);
-fs.writeFileSync(path.join(OUT, '_account.txt'), N);
+
+// ⚠ 真的把測試帳號刪掉，不要只是印一行「清理」。
+//
+// 這一支原本只印 `[清理] 測試帳號 X` 就結束——**根本沒刪**。
+// 對正式站跑了兩輪之後，人氣排行的第 42～44 名全是測試帳號
+// （版面巡檢、溢出測試…），而且是後來逐屏看排行榜截圖才發現的。
+// 訊息說做了、實際沒做，比不印還糟：看的人會以為清乾淨了。
+//
+// 刪除走帳號自己的路徑（要密碼），密碼對不上就跳過——萬一哪天名字
+// 撞到真人的帳號，這一道會擋住。
+try {
+  const form = o => new URLSearchParams(o).toString();
+  const H = { 'content-type': 'application/x-www-form-urlencoded', origin: BASE };
+  const r = await fetch(BASE + '/login', { method: 'POST', redirect: 'manual',
+    headers: H, body: form({ name: N, pass: 'test1234' }) });
+  const ck = r.headers.getSetCookie()?.[0]?.split(';')[0];
+  if (r.status === 302 && ck) {
+    await fetch(BASE + `/${N}/settings/delete`, { method: 'POST', redirect: 'manual',
+      headers: { ...H, cookie: ck, referer: BASE + `/${N}/settings` },
+      body: form({ pass: 'test1234' }) });
+  }
+  const gone = (await fetch(BASE + '/' + N)).status === 404;
+  console.log(`[清理] 測試帳號 ${N}：${gone ? '已刪除' : '⚠ 刪不掉，請手動處理'}`);
+} catch (e) {
+  console.log(`[清理] 測試帳號 ${N}：⚠ 刪除時出錯（${e.message.slice(0, 40)}），請手動處理`);
+}
