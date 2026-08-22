@@ -336,6 +336,49 @@
    * 用 padding 不用 margin：body 的 margin 會跟背景色一起露出來。 */
   body { padding-bottom: 40px; }
 
+  /* 「投稿精選」「名家專欄」的文章列（article.article）。
+     原站把每一層都寫死高度：標題 18px、縮圖 80px、摘要 68px——桌機版
+     字級剛好塞得下。手機版字級調大（iOS 不放大頁面的最低 16px）之後就
+     撐破了：標題被 overflow:hidden 裁掉一半，摘要則整段溢出去壓在下一
+     則的標題上（實測 768px 疊了 487x37px）。窄螢幕把高度放開讓它自己長。 */
+  .article, .article > header, .article h3, .article h3 > a,
+  .article .content, .article .content > a, .article .description,
+  .article .thumbnail {
+    height: auto !important;
+    max-height: none !important;
+  }
+  .article h3, .article h3 > a, .article .description { overflow: visible !important; }
+
+  /* 首頁「名家專欄」的分類頁籤（娛樂／流行／運動／創作／社會）。
+     手機版有一條通用的「li 不浮動、寬度放滿」規則，套到這一排就變成
+     一格一行的直排，整塊高度從 48px 撐到 215px，下面的排行清單也跟著
+     被擠壓。這排本來就該是橫的一列，改用 flex 排並允許橫向捲動——
+     跟站台導覽列同樣的處理方式。 */
+  .hd .nav ul.skin-tab {
+    display: flex !important;
+    flex-wrap: nowrap !important;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  .hd .nav ul.skin-tab > li {
+    float: none !important;
+    width: auto !important;
+    flex: 0 0 auto;
+  }
+
+  /* 首頁「熱門網誌」黑底區：桌機版把「站長精選」清單用 position:absolute
+     釘在右欄底部（.recommended-links{bottom:0;position:absolute}）。窄螢幕
+     下左欄的 .mix-article 變成滿寬，兩塊就落在同一個位置——實測 768px 下
+     標題與摘要真的相交（站長精選 73x19px、摘要 475x37px），不是相鄰誤判。
+     窄螢幕改回一般文件流，讓它排在文章下面。 */
+  .article-wrapper .recommended-links {
+    position: static !important;
+    float: none !important;
+    width: auto !important;
+    border-width: 1px 0 0 0 !important;
+    margin-top: 10px;
+  }
+
   /* ── 絕對定位的區塊在窄螢幕會疊到按鈕上 ──────────────────────────
    * ⚠ 這一類是「手機不行」裡最氣人的一種：畫面看起來完全正常，但手指
    * 點下去被上面那一層吃掉，按鈕像壞了一樣。截圖看不出來、量寬度也量

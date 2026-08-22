@@ -60,8 +60,26 @@ for (let i = 0; i < 60; i++) {
   if (inPg(['psql', PGURL, '-c', 'select 1']).status === 0) { ready = true; break; }
   await sleep(1000);
 }
-ok('Postgres 起得來', ready);
+ok('Postgres 起得來（容器內連得上）', ready);
 if (!ready) process.exit(1);
+
+// ⚠ 上面那一關是在**容器裡**用 psql 驗的，證明的只是容器連得到自己。
+// 站台是跑在 Windows 這一端，走的是 Docker 發布出來的埠——兩邊不是同時
+// 就緒的。只驗容器那一關會早幾秒放行，站台就在埠還沒轉發好的時候啟動，
+// migrate 直接 ECONNREFUSED，接著整場演練一路失敗，錯誤訊息看起來卻像
+// 「備份還原壞了」。實測就是這樣掉進去的。所以本機這一端要另外驗一次。
+const net = await import('node:net');
+const tcpOk = () => new Promise(r => {
+  const c = net.connect(+PGPORT, '127.0.0.1');
+  const done = v => { c.destroy(); r(v); };
+  c.on('connect', () => done(true));
+  c.on('error', () => done(false));
+  setTimeout(() => done(false), 1000);
+});
+let local = false;
+for (let i = 0; i < 60; i++) { if (await tcpOk()) { local = true; break; } await sleep(1000); }
+ok('本機這一端也連得上（埠已轉發）', local);
+if (!local) process.exit(1);
 
 console.log('\n── 2. 讓站台建表並塞資料 ─────────────────────────────');
 const srv = spawn(process.execPath, ['src/server.js'], {
