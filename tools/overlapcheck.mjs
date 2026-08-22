@@ -23,21 +23,12 @@ const WIDTHS = (process.env.WIDTHS || '320,390,768').split(',').map(Number);
 let pass = 0, fail = 0;
 const ok = (n, c, e = '') => { c ? pass++ : fail++; console.log((c ? '  PASS ' : '! FAIL ') + n + (c ? '' : '\n' + e)); };
 
-const PAGES = [['/', '首頁'], ['/albums', '相簿總站'], ['/blogs', '網誌總站'],
-  ['/rank', '人氣排行'], ['/hala', '哈啦'], ['/shop', '小舖'], ['/login', '登入'],
-  ['/register', '註冊'], ['/wretch01', '個人首頁'], ['/wretch01/blog', '網誌'],
-  ['/wretch01/album', '相簿'], ['/wretch01/guestbook', '留言板'], ['/wretch01/card', '名片']];
+// 找出**看得見的**疊字。給 overlapcheck 自己用，也給 mobilecheck 匯入——
+// 那一支已經建好了登入帳號與文章／相簿／照片，44 個頁面一次全驗到，
+// 不必在這裡重造一份頁面清單。
+export async function findOverlaps(page) {
+  return await page.evaluate(async () => {
 
-const browser = await chromium.launch({ executablePath: CHROME, headless: true });
-for (const W of WIDTHS) {
-  console.log(`\n── ${W}px ──────────────────────────────────`);
-  const ctx = await browser.newContext({ viewport: { width: W, height: 900 }, isMobile: true, hasTouch: true });
-  const page = await ctx.newPage();
-  for (const [url, name] of PAGES) {
-    try {
-      await page.goto(BASE + url, { waitUntil: 'networkidle', timeout: 30000 });
-    } catch { console.log(`  -    ${name} 開不起來，略過`); continue; }
-    const hits = await page.evaluate(async () => {
       const sleep = ms => new Promise(r => setTimeout(r, ms));
       const clip = e => {
         // ⚠ 跨行的 inline 元素（例如公告清單裡換行的 <a>），
@@ -103,11 +94,35 @@ for (const W of WIDTHS) {
          B 「${B.textContent.trim().slice(0, 14)}」 ${pa(B)}`);
       }
       return [...new Set(out)].slice(0, 6);
-    });
-    ok(`${name} 沒有看得見的疊字`, hits.length === 0, hits.map(h => '       ' + h).join('\n'));
-  }
-  await ctx.close();
+  });
 }
-await browser.close();
-console.log(`\n===== ${pass} passed, ${fail} failed =====`);
-process.exit(fail ? 1 : 0);
+
+const PAGES = [['/', '首頁'], ['/albums', '相簿總站'], ['/blogs', '網誌總站'],
+  ['/rank', '人氣排行'], ['/hala', '哈啦'], ['/shop', '小舖'], ['/login', '登入'],
+  ['/register', '註冊'], ['/wretch01', '個人首頁'], ['/wretch01/blog', '網誌'],
+  ['/wretch01/album', '相簿'], ['/wretch01/guestbook', '留言板'], ['/wretch01/card', '名片']];
+
+// ⚠ 這一支同時是「可以單獨跑的工具」與「被 mobilecheck 匯入的函式庫」。
+// 沒有這道守門的話，光是 import 就會把下面整段主程式跑起來——開瀏覽器、
+// 跑 13 頁、最後還 process.exit()，把匯入它的那一支測試整個帶走。
+if (process.argv[1] && process.argv[1].endsWith('overlapcheck.mjs')) {
+
+  const browser = await chromium.launch({ executablePath: CHROME, headless: true });
+  for (const W of WIDTHS) {
+    console.log(`\n── ${W}px ──────────────────────────────────`);
+    const ctx = await browser.newContext({ viewport: { width: W, height: 900 }, isMobile: true, hasTouch: true });
+    const page = await ctx.newPage();
+    for (const [url, name] of PAGES) {
+      try {
+        await page.goto(BASE + url, { waitUntil: 'networkidle', timeout: 30000 });
+      } catch { console.log(`  -    ${name} 開不起來，略過`); continue; }
+      const hits = await findOverlaps(page);
+      ok(`${name} 沒有看得見的疊字`, hits.length === 0, hits.map(h => '       ' + h).join('\n'));
+    }
+    await ctx.close();
+  }
+  await browser.close();
+  console.log(`\n===== ${pass} passed, ${fail} failed =====`);
+  process.exit(fail ? 1 : 0);
+  
+}

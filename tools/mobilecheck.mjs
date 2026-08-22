@@ -14,6 +14,7 @@
 //   node tools/mobilecheck.mjs                        測本機（先自己開站）
 //   BASE=https://station.vibeaico.com node tools/mobilecheck.mjs   測正式站
 import { chromium } from 'playwright-core';
+import { findOverlaps } from './overlapcheck.mjs';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -274,6 +275,13 @@ for (const size of SIZES) {
     } else {
       ok(`${size.name} ${label} 不會左右破版`, true);
     }
+
+    // 疊字：兩塊字真的疊在一起、而且看得見。判定與量法都在 overlapcheck.mjs，
+    // 這裡只是借用——那一支自己的頁面清單只有 13 頁（都是未登入看得到的），
+    // 而這裡已經建好帳號與文章／相簿／照片，44 頁一次全驗到。
+    const ovl = await findOverlaps(page);
+    ok(`${size.name} ${label} 沒有看得見的疊字`, ovl.length === 0,
+       ovl.map(h => '        ' + h).join(String.fromCharCode(10)));
   }
   await ctx.close();
 }
