@@ -341,13 +341,23 @@
      字級剛好塞得下。手機版字級調大（iOS 不放大頁面的最低 16px）之後就
      撐破了：標題被 overflow:hidden 裁掉一半，摘要則整段溢出去壓在下一
      則的標題上（實測 768px 疊了 487x37px）。窄螢幕把高度放開讓它自己長。 */
-  .article, .article > header, .article h3, .article h3 > a,
+  /* 選擇器要含裸 <article>：站方公告那一塊的 article 沒有 class，
+     只寫 .article 會漏掉它。 */
+  article, .article, article > header, .article > header,
+  article h3, article h3 > a, .article h3, .article h3 > a,
+  article .content, article .content > a, article .description,
   .article .content, .article .content > a, .article .description,
-  .article .thumbnail {
+  article .thumbnail, .article .thumbnail {
     height: auto !important;
     max-height: none !important;
   }
+  article h3, article h3 > a, article .description,
   .article h3, .article h3 > a, .article .description { overflow: visible !important; }
+
+  /* 「更多站方公告」是 position:absolute 釘在固定的 top，靠的是上面那段
+     摘要不會超過寫死的高度。手機版字級大一級之後摘要就長過去，兩者疊在
+     一起（實測 85x36px）。窄螢幕讓它回到文件流，排在摘要後面。 */
+  article p.more, .article p.more { position: static !important; margin-top: 4px; }
 
   /* 首頁「名家專欄」的分類頁籤（娛樂／流行／運動／創作／社會）。
      手機版有一條通用的「li 不浮動、寬度放滿」規則，套到這一排就變成

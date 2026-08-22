@@ -272,9 +272,15 @@ if (!process.env.SKIP_BROWSER) {
   const r12 = spawnSync(process.execPath, ['tools/safaricheck.mjs'], {
     env: { ...process.env, BASE: b2, MSYS_NO_PATHCONV: '1' }, encoding: 'utf8',
   });
+  // 疊字：截圖審查在這件事上最不可靠——相鄰常被當成相疊，真的疊字反而
+  // 漏掉。這一支用量的：相交、不是螢幕外的無障礙標籤、而且捲過去之後
+  // 那個點畫出來的真的是它們其中一個。首頁「投稿精選」就是它抓出來的。
+  const r13 = spawnSync(process.execPath, ['tools/overlapcheck.mjs'], {
+    env: { ...process.env, BASE: b2, MSYS_NO_PATHCONV: '1' }, encoding: 'utf8',
+  });
   srv2.kill();
   for (const [nm, rr] of [['手機版面', r9], ['手機流程', r10], ['手機上傳', r11],
-                          ['Safari 引擎', r12]]) {
+                          ['Safari 引擎', r12], ['文字疊字', r13]]) {
     const o = (rr.stdout || '') + (rr.stderr || '');
     const ln = o.split('\n').filter(l => l.includes('passed')).pop();
     const fs2 = o.split('\n').filter(l => l.startsWith('! FAIL'));
