@@ -854,7 +854,22 @@
    * （那條規則原本的用意是「把六顆擠進兩排」；現在這一條導覽列已經改成
    *   放不下就自己橫向捲，不需要再擠了，見上面 #wfp-navigation ul 那段。）
    * 內距值照抄 wretch2012.css 的原始六條，不自己另外算。 */
-  #wfp-navigation ul li a { padding-right: 20px !important; font-size: 116% !important; }
+  /* ⚠ 高度要鎖回 36px。
+   * ico_sprite.png 是一張直向排列的精靈圖，原版的 <a> 高 36px，剛好只露出
+   * 自己那一格。上面第 9 節的 `#wfp-navigation … { height:auto !important }`
+   * （當初為了「換兩排時高度要跟著長」而加）讓 <a> 長到 56px，
+   * **精靈圖的下一排就從底下露出來**——畫面上是「網誌」「相簿」下方各多
+   * 一個莫名其妙的小圖示。現在導覽列改成單排橫捲，不需要長高了。
+   * overflow:hidden 是保險：字級萬一被別的規則放大也不會再露出來。 */
+  #wfp-navigation ul li a {
+    padding-right: 20px !important; font-size: 116% !important;
+    height: 36px !important; line-height: 36px !important; overflow: hidden;
+    /* ⚠ 上下內距也要歸零。另有一條規則給了 padding:10px 0（為了把觸控目標
+     * 撐大），跟 36px 的高度加起來還是 56px，精靈圖照樣露出下一排。
+     * 36px 高仍然過得了觸控門檻（WCAG AA 是 24px，tools/touchcheck.mjs
+     * 用的也是這個值），而且那正是原版的高度。 */
+    padding-top: 0 !important; padding-bottom: 0 !important;
+  }
   #wfp-navigation ul li.blog a   { padding-left: 48px !important; }
   #wfp-navigation ul li.album a  { padding-left: 50px !important; }
   #wfp-navigation ul li.video a  { padding-left: 49px !important; }
