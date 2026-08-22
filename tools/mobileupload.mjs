@@ -9,6 +9,7 @@
 //
 //   BASE=http://127.0.0.1:3000 node tools/mobileupload.mjs
 import { chromium } from 'playwright-core';
+import { deleteTestAccount } from './cleanup.mjs';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -135,5 +136,5 @@ if (aid) {
 await browser.close();
 try { fs.rmSync(TMP, { recursive: true, force: true }); } catch {}
 console.log(`\n===== ${pass} passed, ${fail} failed =====`);
-console.log('[清理] 測試帳號 ' + N);
+await deleteTestAccount(BASE, N);
 process.exit(fail ? 1 : 0);

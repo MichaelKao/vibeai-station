@@ -77,8 +77,13 @@ const tcpOk = () => new Promise(r => {
   setTimeout(() => done(false), 1000);
 });
 let local = false;
-for (let i = 0; i < 60; i++) { if (await tcpOk()) { local = true; break; } await sleep(1000); }
-ok('本機這一端也連得上（埠已轉發）', local);
+for (let i = 0; i < 90; i++) { if (await tcpOk()) { local = true; break; } await sleep(1000); }
+// 這一關偶爾會失敗（Docker 的埠轉發有時就是慢，或前一輪的容器還沒收乾淨）。
+// 失敗時要把診斷資訊印出來——只丟一個 FAIL 會讓人以為是備份還原壞了。
+const diag = local ? '' : ['docker ps：', spawnSync('docker', ['ps', '-a', '--filter', 'name=' + CN,
+  '--format', '{{.Names}} {{.Status}} {{.Ports}}'], { encoding: 'utf8' }).stdout || '(沒有這個容器)',
+  '容器 log 末幾行：', (spawnSync('docker', ['logs', '--tail', '5', CN], { encoding: 'utf8' }).stderr || '').slice(-300)].join(String.fromCharCode(10) + "  ");
+ok('本機這一端也連得上（埠已轉發）', local, diag);
 if (!local) process.exit(1);
 
 console.log('\n── 2. 讓站台建表並塞資料 ─────────────────────────────');

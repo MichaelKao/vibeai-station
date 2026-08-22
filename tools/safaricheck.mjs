@@ -13,6 +13,7 @@
 //
 //   BASE=https://station.vibeaico.com node tools/safaricheck.mjs
 import { webkit } from 'playwright-core';
+import { deleteTestAccount } from './cleanup.mjs';
 
 const BASE = (process.env.BASE || 'http://localhost:3000').replace(/\/$/, '');
 let pass = 0, fail = 0;
@@ -198,5 +199,5 @@ for (const d of DEVICES) {
 
 await browser.close();
 console.log(`\n===== ${pass} passed, ${fail} failed =====`);
-console.log('[清理] 測試帳號 ' + N);
+await deleteTestAccount(BASE, N);
 process.exit(fail ? 1 : 0);
